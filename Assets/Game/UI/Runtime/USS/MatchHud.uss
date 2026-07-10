@@ -1,0 +1,123 @@
+.match-hud {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+}
+
+.match-hud-chrome {
+    background-color: rgba(10, 8, 18, 0.72);
+    border-width: 1px;
+    border-color: rgba(212, 168, 72, 0.45);
+    border-radius: 6px;
+}
+
+.match-hud__top-bar {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 12px;
+    height: 44px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.match-hud__phase {
+    min-width: 88px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(228, 184, 96);
+    letter-spacing: 1px;
+}
+
+.match-hud__time {
+    min-width: 72px;
+    margin-left: 20px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(252, 244, 228);
+    -unity-text-align: middle-left;
+}
+
+.match-hud__gold {
+    min-width: 88px;
+    margin-left: 20px;
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(255, 214, 96);
+    -unity-text-align: middle-left;
+}
+
+.match-hud__bounty-popup {
+    margin-left: 8px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(140, 255, 140);
+    letter-spacing: 0.5px;
+}
+
+.match-hud__bounty-popup--hidden {
+    display: none;
+}
+
+.match-hud__start-countdown {
+    margin-left: 20px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(180, 220, 255);
+    letter-spacing: 0.5px;
+}
+
+.match-hud__start-countdown--hidden {
+    display: none;
+}
+
+.match-hud__barracks-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.match-hud__barracks-timer {
+    position: absolute;
+    width: 56px;
+    height: 32px;
+    margin-left: -28px;
+    margin-top: -16px;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 1), 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.match-hud__barracks-timer--inactive {
+    color: rgba(220, 220, 220, 0.55);
+}
+
+.match-hud__results {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(8, 6, 14, 0.82);
+}
+
+.match-hud__results--hidden {
+    display: none;
+}
+
+.match-hud__results-title {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: rgb(255, 214, 96);
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+}

@@ -1,0 +1,39 @@
+/* MainMenu — раскладка */
+
+.menu--hidden {
+    display: none;
+}
+
+.menu__layout {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 56px;
+    padding-right: 56px;
+    padding-bottom: 44px;
+}
+
+.menu__brand {
+    flex-grow: 1;
+    max-width: 500px;
+    margin-right: 40px;
+    align-items: flex-start;
+}
+
+.menu__brand-head {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.menu__actions {
+    width: 400px;
+    min-width: 320px;
+    max-width: 400px;
+    flex-shrink: 0;
+}
+
+.menu__overlay--hidden {
+    display: none;
+}

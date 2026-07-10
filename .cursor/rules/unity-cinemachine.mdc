@@ -1,0 +1,50 @@
+---
+description: "Cinemachine 3 — cameras, rigs, MCP manage_camera"
+globs:
+  - "**/*Camera*.cs"
+  - "**/*Cinemachine*.cs"
+  - "**/*.unity"
+alwaysApply: false
+---
+
+# Cinemachine (CM3)
+
+## Policy
+
+- **All gameplay cameras** use Cinemachine 3 (`Unity.Cinemachine`), not manual `Camera.transform` animation.
+- **Main Camera** keeps `Camera`, `AudioListener`, URP `UniversalAdditionalCameraData`, and **`CinemachineBrain`**.
+- Virtual cameras: **`CinemachineCamera`** + body/aim components (`CinemachineFollow`, `CinemachineRotationComposer`, …).
+- Follow targets: assign `CinemachineCamera.Target.TrackingTarget` / `LookAtTarget` to the **Player root** (or `MenuShowcase` in MainMenu). Use [`GameplayCameraBinder`](Assets/Game/Scripts/Runtime/Gameplay/Cameras/GameplayCameraBinder.cs) when binding at runtime.
+- Do **not** add a `CameraTarget` child — visual bob stays on `Model`; Player root Y is physics-stable.
+
+## Scene layout
+
+```
+--- CAMERAS ---
+  Main Camera       # Brain + Unity Camera
+  GameCamera        # CinemachineCamera (default vcam)
+  CameraBinder      # GameplayCameraBinder → Player / MenuShowcase
+```
+
+Reuse [`Prefabs/Cameras/`](Assets/Game/Prefabs/Cameras/) for level scenes. Rig prefab leaves `_followTarget` null; scene instances wire Player.
+
+## Code
+
+- Namespace: `Game.Gameplay.Cameras`
+- Assembly: `Game.Gameplay` → reference `Unity.Cinemachine`
+- Do **not** use CM2 types (`CinemachineVirtualCamera`, `CinemachineFreeLook` legacy API).
+
+## 2D
+
+Orthographic projects: set lens on `CinemachineCamera`; see `unity-2d.mdc`.
+
+## MCP
+
+- Tool group: **core** (default on)
+- Tool: `manage_camera` — prefers Cinemachine when package installed (`ping` → `cinemachine: true`)
+- Actions: `create_camera`, `set_target`, `set_lens`, `set_priority`, `list_cameras`
+- After MCP camera edits: `read_console` + verify Brain on Main Camera
+
+## @Docs
+
+Cinemachine 3.1 manual — see `unity-docs.mdc` (not_indexed URL).

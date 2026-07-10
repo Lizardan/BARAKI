@@ -1,0 +1,30 @@
+---
+description: "ProBuilder greybox — feature.worldbuilding, MCP probuilder group"
+globs:
+  - "**/*ProBuilder*"
+  - "**/Scenes/Levels/**"
+alwaysApply: false
+---
+
+# ProBuilder / Worldbuilding
+
+## Source
+
+- Package: **transitive** via `com.unity.feature.worldbuilding` (not a direct manifest line)
+- Lock version: see `ProjectBootstrap/manifest.snapshot.json` → `transitive_notable.com.unity.probuilder`
+
+## Policy
+
+- **Greybox / blockout only** — ProBuilder meshes for layout and iteration
+- **Production art**: bake/export to standard meshes or replace before ship; do not ship editable ProBuilder on runtime props without intent
+- Keep ProBuilder objects under `--- LEVEL ---` or dedicated `Greybox/` subfolder
+
+## MCP
+
+- Activate group: **`probuilder`** → `manage_probuilder` (**experimental**)
+- Verify mesh results in Scene view; prefer small, reviewable edits
+
+## When not to use
+
+- UI (UI Toolkit only)
+- Final environment art — use DCC import pipeline instead

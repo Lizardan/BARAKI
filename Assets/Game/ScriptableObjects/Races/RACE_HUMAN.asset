@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6aa8de6ec80d93c47bd5956b28b6d44d, type: 3}
+  m_Name: RACE_HUMAN
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.RaceDefinition
+  _id: RACE_HUMAN
+  _displayName: "\u041B\u044E\u0434\u0438"
+  _melee: {fileID: 11400000, guid: c3161221ff71c1142bc81386e6c26839, type: 2}
+  _ranged: {fileID: 11400000, guid: 004fa1a4a1537dc499b6d03c91b4e9f4, type: 2}
+  _caster: {fileID: 11400000, guid: 0cedd399a86910347a41b8f50da56c6e, type: 2}
+  _siege: {fileID: 11400000, guid: 23782d519172bae4096bc5777fadc395, type: 2}
+  _flying: {fileID: 11400000, guid: 64a2b1e711e58e9478738d651ed65df8, type: 2}
+  _super: {fileID: 11400000, guid: 60fc6d08f63bc63478b575b061221290, type: 2}
+  _heroes:
+  - {fileID: 11400000, guid: 2a00da9fac288bd4f8c5989953189176, type: 2}
+  - {fileID: 11400000, guid: 1e19ea11647442f4f9db0c9cd51c0dde, type: 2}
+  - {fileID: 11400000, guid: cf45f96ded94778498eeb9b450ba8cf0, type: 2}
+  _positivePassiveIds:
+  - PASSIVE_HUMAN_STEEL_ARMS
+  - PASSIVE_HUMAN_FORTIFIED_LINE
+  _negativePassiveId: PASSIVE_HUMAN_LEVY_TAX

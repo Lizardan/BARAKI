@@ -1,0 +1,33 @@
+---
+description: "Entities / ECS — opt-in via feature.ecs, not default gameplay"
+globs:
+  - "**/Entities/**"
+  - "**/*System.cs"
+  - "**/*Authoring.cs"
+alwaysApply: false
+---
+
+# ECS (feature.ecs)
+
+## Package
+
+`com.unity.feature.ecs` → `com.unity.entities@6.5.0` (Unity 6.5)
+
+## Policy
+
+- **Default gameplay** in this template: **MonoBehaviour** + `Game.Gameplay` / `Game.Core` (see `unity-core.mdc`)
+- **ECS is opt-in**: use only when explicitly starting an Entities-based feature
+- If using ECS:
+  - Separate folder: `Assets/Game/Scripts/Runtime/Entities/` with its own asmdef referencing `Unity.Entities`
+  - Do not mix `IComponentData` systems with UniRx UI bindings in the same class
+  - Subscenes / baking: follow Unity Entities manual
+
+## MCP
+
+- **core** + **docs** (`unity_reflect` for Entities APIs) — **MCP-first** when Editor connected
+- `manage_scene`, `manage_components`, `manage_gameobject`, `manage_prefabs` for subscenes/baking setup
+- No dedicated ECS MCP group
+
+## When to choose ECS
+
+Large entity counts, simulation-heavy logic, DOTS rendering path — not required for template samples.

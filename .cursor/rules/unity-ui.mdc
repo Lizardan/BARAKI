@@ -1,0 +1,108 @@
+---
+description: "UI Toolkit — UXML, USS, MVVM with UniRx/UniTask bridge (no uGUI)"
+globs: ["**/UI*.cs", "**/*.uxml", "**/*.uss", "**/UI/Runtime/**/*.cs"]
+alwaysApply: false
+---
+
+# UI Toolkit (not UGUI)
+
+**Do not** use `com.unity.ugui`, Canvas, or `UnityEngine.UI` for new UI.
+
+Stack: **UI Toolkit** + **UniRx** (`ReactiveProperty`, `ReactiveCommand`) + **UniTask** (async UI flows).
+
+Bindings: `Assets/Game/UI/Runtime/Extensions/` — mirrors legacy UniRx/UniTask uGUI API on `UnityEngine.UIElements.*`.
+
+## Folder layout
+
+```
+Assets/Game/UI/Runtime/
+├── Bindings/       # UIBindingScope (required)
+├── Extensions/     # UniRx + UniTask UITK bridge
+├── Controllers/
+├── ViewModels/
+├── Views/
+├── UXML/
+└── USS/
+```
+
+PanelSettings: `Assets/Game/Settings/UI/`.
+
+## MCP workflow (`manage_ui`)
+
+When Unity Editor is connected — **MCP-first** (`unity-mcp.mdc`). Activate group **ui** before UI work.
+
+1. `create` / `update` UXML and USS
+2. `link_stylesheet` — wire USS to UXML (use `<ui:Style>`, not bare `<Style>`)
+3. `attach_ui_document` — bind UXML to scene `UIDocument` (do not hand-edit `.unity` YAML)
+4. `get_visual_tree` — verify resolved sizes/positions/colors
+5. Play mode → `render_ui` — visual check (call twice in play mode for PNG)
+6. Controllers / ViewModels — **MCP-first** (`create_script`, `apply_text_edits`); file tools only for large refactors or Editor offline
+
+## Main menu (sample)
+
+`MainMenu.unity` → `--- UI ---/MainMenu` with `MainMenuController`, `MainMenu.uxml`, `MainMenu.uss`.
+
+| Piece | Role |
+|-------|------|
+| `MainMenuViewModel` | `PlayCommand`, `QuitCommand`, sound/volume reactive props |
+| `MainMenuController` | Binds UI, fade-out on Play, keyboard shortcuts |
+| `GameAudio` (`Game.Core`) | Global `AudioListener.volume` from menu toggles |
+| `GameSession` (`Game.Core`) | `Begin()` when Play pressed; gameplay systems subscribe |
+| `GameplayReveal` (`Game.Gameplay`) | Eases key light after `GameSession.Started` |
+
+VFX sample prefab is **not** wired to the menu — reference only (`unity-vfx.mdc`).
+
+## UIBindingScope (required)
+
+Every screen with reactive bindings:
+
+```csharp
+_bindingScope = new UIBindingScope(rootVisualElement);
+_bindingScope.Add(viewModel.Title.SubscribeToText(titleLabel));
+_bindingScope.Add(viewModel.PlayCommand.BindTo(playButton));
+// OnDestroy: _bindingScope.Dispose();
+```
+
+Scope also disposes on `DetachFromPanelEvent`. On dispose, only unregisters panel callbacks when `_root.panel != null`.
+
+## UI callback lifecycle
+
+Register transient UI callbacks in **`OnEnable`**, unregister in **`OnDisable`** — not in `OnDestroy` via `UIDocument.rootVisualElement` (null after panel detach → NRE).
+
+```csharp
+private VisualElement _root;
+
+private void OnEnable()
+{
+    _root ??= _uiDocument.rootVisualElement;
+    _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
+}
+
+private void OnDisable()
+{
+    _root?.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+}
+```
+
+## uGUI → UI Toolkit API map
+
+| Legacy uGUI (removed) | UI Toolkit (use) |
+|-----------------------|------------------|
+| `Text` | `Label` / `TextElement` |
+| `SubscribeToInteractable(Selectable)` | `SubscribeToEnabled(VisualElement)` |
+| `InputField` | `TextField` |
+| `Dropdown` (int index) | `DropdownField` + `OnIndexChangedAsObservable` |
+| `ScrollRect` | `ScrollView` |
+
+## Controller pattern
+
+- **ViewModel:** `ReactiveProperty`, `ReactiveCommand` — no `VisualElement` references
+- **Controller:** `[RequireComponent(typeof(UIDocument))]`, creates `UIBindingScope`, wires bindings
+- Async scene load: `await SceneManager.LoadSceneAsync("Game").ToUniTask(cancellationToken)` from MainMenu Play
+- MainMenu fades out in-place, then loads `Game.unity` (separate gameplay scene)
+- **Mouse only:** `UiNavigationPolicy.ConfigureMouseOnly` on menu/HUD roots — no keyboard focus or WASD/arrow navigation
+
+## UXML / USS
+
+- Name elements for `root.Q<T>("Name")`
+- USS variables on `:root`; hide with `display: none` or `.menu--hidden`

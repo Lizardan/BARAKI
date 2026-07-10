@@ -1,0 +1,130 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+
+    <Style src="../USS/FantasyTheme.uss" />
+
+    <Style src="../USS/MatchHud.uss" />
+
+    <Style src="../USS/MatchBottomDock.uss" />
+
+    <ui:VisualElement name="MatchHudRoot" class="match-hud" picking-mode="Ignore">
+
+        <ui:VisualElement name="TopBar" class="match-hud__top-bar match-hud-chrome" picking-mode="Position">
+
+            <ui:Label name="PhaseLabel" text="—" class="match-hud__phase" />
+
+            <ui:Label name="TimeLabel" text="00:00" class="match-hud__time" />
+
+            <ui:Label name="GoldLabel" text="0" class="match-hud__gold" />
+
+            <ui:Label name="BountyPopupLabel" text="" class="match-hud__bounty-popup match-hud__bounty-popup--hidden" />
+
+            <ui:Label name="StartCountdownLabel" text="" class="match-hud__start-countdown" />
+
+        </ui:VisualElement>
+
+        <ui:VisualElement name="BarracksTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
+
+        <ui:VisualElement name="ResultsOverlay" class="match-hud__results match-hud__results--hidden" picking-mode="Ignore">
+
+            <ui:Label name="ResultsTitle" text="" class="match-hud__results-title" />
+
+        </ui:VisualElement>
+
+        <ui:VisualElement name="BottomDock" class="match-bottom-dock" picking-mode="Position">
+
+            <ui:VisualElement name="MinimapPanel" class="match-bottom-dock__panel match-dock-panel">
+
+                <ui:VisualElement class="match-dock-panel__inner match-minimap__panel-body">
+
+                    <ui:VisualElement name="MinimapCanvas" class="match-bottom-dock__minimap-canvas">
+
+                        <ui:VisualElement name="MinimapGeometryLayer" class="match-minimap__geometry-layer" picking-mode="Ignore" />
+
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <ui:VisualElement name="ContextStrip" class="match-bottom-dock__context match-dock-panel">
+
+                <ui:VisualElement class="match-dock-panel__inner match-panel__content-root">
+
+                    <ui:VisualElement class="match-context-strip__mode match-context-strip__mode--hidden" name="UnitContext" picking-mode="Ignore">
+
+                        <ui:VisualElement class="match-context-strip__unit-row">
+
+                            <ui:VisualElement name="UnitPortrait" class="match-context-strip__portrait" />
+
+                            <ui:VisualElement name="UnitStatGrid" class="match-context-strip__stat-grid">
+
+                                <ui:Label name="UnitHpStat" text="HP: —" class="match-context-strip__stat-line" />
+
+                                <ui:Label name="UnitDamageStat" text="Урон: —" class="match-context-strip__stat-line" />
+
+                                <ui:Label name="UnitArmorStat" text="Броня: —" class="match-context-strip__stat-line" />
+
+                                <ui:Label name="UnitRangeStat" text="Дальность: —" class="match-context-strip__stat-line" />
+
+                                <ui:Label name="UnitSpeedStat" text="Скорость: —" class="match-context-strip__stat-line" />
+
+                                <ui:Label name="UnitManaStat" text="Мана: —" class="match-context-strip__stat-line" />
+
+                            </ui:VisualElement>
+
+                        </ui:VisualElement>
+
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="match-context-strip__mode match-context-strip__mode--hidden" name="ResearchContext" picking-mode="Ignore">
+
+                        <ui:Label name="ResearchLabel" text="Нет активного исследования" class="match-context-strip__research-label" />
+
+                        <ui:ProgressBar name="ResearchProgress" high-value="1" value="0" class="match-context-strip__research-bar" />
+
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="ContextEmptyOverlay" class="match-panel__empty-overlay" picking-mode="Ignore" />
+
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <ui:VisualElement name="InspectorPanel" class="match-bottom-dock__panel match-bottom-dock__panel--right match-dock-panel">
+
+                <ui:VisualElement name="InspectorPanelBody" class="match-dock-panel__inner match-inspector__panel-body match-panel__content-root">
+
+                    <ui:VisualElement name="InspectorHeader" class="match-inspector__header">
+
+                        <ui:Label name="InspectorTitle" text="" class="match-inspector__title" />
+
+                        <ui:Label name="InspectorOwner" text="" class="match-inspector__owner" />
+
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="InspectorBody" class="match-inspector__body">
+
+                        <ui:Label name="InspectorHp" text="" class="match-inspector__hp" />
+
+                        <ui:Label name="InspectorMeta" text="" class="match-inspector__meta" />
+
+                        <ui:Label name="InspectorBadge" text="" class="match-inspector__badge" />
+
+                    </ui:VisualElement>
+
+                    <ui:Label name="InspectorReadonly" text="" class="match-inspector__readonly" />
+
+                    <ui:ScrollView name="InspectorActions" class="match-inspector__actions" />
+
+                    <ui:VisualElement name="InspectorEmptyOverlay" class="match-panel__empty-overlay" picking-mode="Ignore" />
+
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+
+</ui:UXML>
+

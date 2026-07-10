@@ -1,0 +1,54 @@
+---
+description: "Route @Docs to pinned Unity 6.5 and package documentation"
+alwaysApply: true
+---
+
+# Unity Docs (@Docs) — Universal Template
+
+Installed versions (source of truth: `Packages/manifest.json`; @Docs index: `.cursor/docs-sources.json`):
+Unity **6000.5**, Input **1.19**, URP **17.5**.
+
+When manifest and indexed @Docs differ, **installed version wins for API** — verify via Coplay MCP `unity_reflect`; use @Docs for manuals and tutorials.
+
+## Priority order
+
+1. **Project code** (`Assets/Game/`) and applicable `.cursor/rules/` — conventions and existing patterns.
+2. **Coplay MCP** — when Editor is connected: scenes, assets, UI, components, console, tests, API reflect (see `unity-mcp.mdc` MCP-first policy).
+3. **@Docs** or **MCP docs tools** — manuals and tutorials when MCP reflect is insufficient.
+
+## MCP docs workflow
+
+Activate **docs** group when needed — see `unity-mcp.mdc` § Session startup.
+
+| Condition | Use |
+|-----------|-----|
+| Unity Editor connected, docs group active | `unity_reflect` → `unity_docs` |
+| Editor offline or MCP unavailable | `@Docs` only |
+| Shader/material names | `manage_asset` search first, then reflect/docs |
+
+Workflow: `unity_reflect search` → `get_type` → `get_member` → `unity_docs get_doc` (if examples needed).
+
+## Which @Docs to use (default template)
+
+| Topic | @Docs name |
+|-------|------------|
+| General editor, UI Toolkit, scripting | `Unity 6.5 Manual` |
+| URP setup, renderer assets, volumes | `Unity 6.5 Manual` |
+| URP scripting API (`Universal.*`) | `URP 17.5 API` |
+| Input actions, PlayerInput, bindings | `Input System 1.19` (when package installed) |
+| `UnityEngine.*` class reference | `Unity 6.5 Manual` + `unity_reflect` |
+| Cinemachine 3.1 | not_indexed URL in `docs-sources.json` + `unity_reflect` |
+| VFX Graph 17.5 | not_indexed URL in `docs-sources.json` + `unity_reflect` |
+
+Combine at most **1–2** @Docs per task.
+
+## Do NOT use @Docs when
+
+- Unity Editor is connected — use `unity_reflect` / `unity_docs` first (`unity-mcp.mdc`).
+- Renaming, formatting, or small edits in existing project scripts — use MCP script tools or project code.
+- The answer is in project files, MCP visual tree, or `read_console` output.
+- A scoped rule already covers project convention.
+
+## After package upgrades
+
+Update this rule and `.cursor/docs-sources.json` when `Packages/manifest.json` versions change.

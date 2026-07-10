@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6aa8de6ec80d93c47bd5956b28b6d44d, type: 3}
+  m_Name: RACE_BUG
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.RaceDefinition
+  _id: RACE_BUG
+  _displayName: "\u0416\u0443\u043A\u0438"
+  _melee: {fileID: 11400000, guid: 0a8f2005428e0634d9180adbd5bf0adf, type: 2}
+  _ranged: {fileID: 11400000, guid: 17f152f200745374ca9b64255849ec66, type: 2}
+  _caster: {fileID: 11400000, guid: c927dd1f0b9c2fb4a9e95cb6e75ab67f, type: 2}
+  _siege: {fileID: 11400000, guid: dc1ce407cf6022440bb8a5cffdb5aefa, type: 2}
+  _flying: {fileID: 11400000, guid: 96e0f92088b57e74d8a021468cbdc0d0, type: 2}
+  _super: {fileID: 11400000, guid: e04daf69e25d84f499b9e89308d35d0e, type: 2}
+  _heroes:
+  - {fileID: 11400000, guid: 36b125710bba12d4fbab6e04bcbbb352, type: 2}
+  - {fileID: 11400000, guid: 306690b0152a55e46a14d662de77b83f, type: 2}
+  - {fileID: 11400000, guid: 1389446ef70528246ae5b4fa4183c192, type: 2}
+  _positivePassiveIds:
+  - PASSIVE_BUG_FRENZY
+  - PASSIVE_BUG_BROOD_SURGE
+  _negativePassiveId: PASSIVE_BUG_GLASS_CHITIN

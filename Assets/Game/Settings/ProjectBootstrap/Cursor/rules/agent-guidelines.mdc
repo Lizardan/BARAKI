@@ -1,0 +1,93 @@
+---
+alwaysApply: true
+---
+
+# Agent Guidelines
+
+**Tradeoff:** Bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think before coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+
+- State assumptions explicitly. If uncertain — ask.
+- If multiple interpretations exist — present them; do not pick silently.
+- If a simpler approach exists — say so. Push back when warranted.
+- If something is unclear — stop. Name what's confusing. Ask.
+
+## 2. Simplicity first
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50 — rewrite it.
+
+Ask yourself: *Would a senior engineer say this is overcomplicated?* If yes, simplify.
+
+## 3. Surgical changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+
+- Question-only or review-only → answer; do not edit code unless asked.
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code — mention it; don't delete it.
+
+When your changes create orphans:
+
+- Remove imports, variables, and functions that **your** changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: every changed line should trace directly to the user's request.
+
+## 4. Goal-driven execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → write tests for invalid inputs, then make them pass.
+- "Fix the bug" → reproduce it (test or steps), then make it pass.
+- "Refactor X" → ensure tests / compile pass before and after.
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Test-first workflow (TDD)
+
+**When starting an implementation task — tests first, then code, then verify.**
+
+1. **Write tests first** — до production-кода: Edit Mode tests в `Game.Tests` (или Play Mode, если задача runtime-only). Тесты фиксируют acceptance criteria задачи (TODO / GDD).
+2. **Implement** — минимальный код, чтобы тесты проходили.
+3. **Run tests** — прогон после каждой значимой итерации:
+   - Unity Editor + MCP: activate **testing** → `run_tests` / `get_test_job` (см. `unity-mcp.mdc`).
+   - Editor offline: Unity Test Runner вручную, если доступно.
+4. **Done = green** — задачу **не** помечай завершённой и не переходи к следующей, пока **все** релевантные тесты не **Passed** (и нет новых compile errors в `read_console`).
+
+**Исключения (суженно):** чистый GDD/markdown без кода; one-line fix без поведения; exploratory spike — явно назови «без TDD» и не считай MVP-задачу done.
+
+**Unity:** новые тесты — тот же asmdef boundary (`Game.Tests` → refs runtime asmdefs). После добавления тестов дождись compile/domain reload перед `run_tests`.
+
+## 6. Unity Editor tasks
+
+When Unity Editor is open and Coplay MCP is connected (`unity-mcp.mdc`):
+
+- **MCP-first** for every task in the MCP-first policy table (scenes, assets, prefabs, UI, SO, materials, physics, graphics, packages, builds, tests, …).
+- Activate the matching tool **group** before specialized work (`ui`, `vfx`, `asset_gen`, `animation`, `testing`, `profiling`, `scripting_ext`, …).
+- Check `mcpforunity://editor/state` before mutating; wait for `isCompiling: false`.
+- Fall back to file tools only for the explicit exceptions in `unity-mcp.mdc` § File tools only.
+- After MCP changes: `read_console` or re-query editor state before declaring done.

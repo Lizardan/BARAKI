@@ -1,0 +1,55 @@
+---
+alwaysApply: true
+---
+
+# Unity Core — C# & MonoBehaviour
+
+## Naming
+
+- **Classes, methods, properties, public members:** PascalCase (`PlayerController`, `MoveSpeed`)
+- **Private fields:** `_camelCase` with `[SerializeField]` when needed in Inspector
+- **Static fields:** `s_camelCase`; **constants:** PascalCase (`MaxHealth`)
+- **Booleans:** `_is` / `_has` / `_can` prefix
+- **Events:** `On` prefix (`OnPlayerDeath`)
+- **Async methods:** `Async` suffix
+- **Interfaces:** `I` + PascalCase
+- No Hungarian notation (`m_`, `f`); no public fields without `[SerializeField]`
+
+## Async (by assembly)
+
+| Assembly | Use |
+|----------|-----|
+| `Game.Core` | **`Awaitable`** — bootstrap scene load, frame waits |
+| `Game.Gameplay`, `Game.UI` | **`UniTask`** + `GetCancellationTokenOnDestroy()` |
+| All | Avoid `Task` and `async void` except Unity message stubs |
+
+See `unity-async.mdc` for details.
+
+## Cameras & effects
+
+- **Cameras:** Cinemachine 3 only — `unity-cinemachine.mdc`
+- **Effects:** VFX Graph + `VisualEffect` only — `unity-vfx.mdc` (no new `ParticleSystem` in `Assets/Game/`)
+
+## MonoBehaviour layout
+
+Order: serialized fields → private fields → properties → lifecycle → custom methods.
+
+Lifecycle: `Awake` → `OnEnable` → `Start` → `FixedUpdate` → `Update` → `LateUpdate` → `OnDisable` → `OnDestroy`.
+
+## Serialization
+
+- `[SerializeField] private` for Inspector fields
+- Config: **ScriptableObject** with read-only properties when shared data grows
+- Namespaces match folder/asmdef (`Game.Core`, `Game.Gameplay`, …)
+
+## Modern C#
+
+- Pattern matching; null-conditional events (`OnDeath?.Invoke()`)
+- XML docs on public APIs
+
+## Performance (baseline)
+
+- Cache components in `Awake`/`Start` — no `GetComponent` / `Find*` in `Update`
+- Physics in `FixedUpdate`; input in `Update`
+- Reuse collections; `ObjectPool<T>` for frequent spawn/destroy
+- No `Resources.Load` for new content

@@ -1,0 +1,49 @@
+---
+description: "VFX Graph only — VisualEffect, no ParticleSystem"
+globs:
+  - "**/*.vfx"
+  - "**/*VFX*.cs"
+  - "**/*Effect*.cs"
+  - "**/Prefabs/Effects/**"
+alwaysApply: false
+---
+
+# VFX Graph (strict)
+
+## Policy
+
+- **All new effects** use **VFX Graph** (`.vfx`) + **`VisualEffect`** component.
+- **Forbidden** in `Assets/Game/`: new `ParticleSystem`, `LineRenderer`, `TrailRenderer` for gameplay/VFX (legacy modules only via engine; not project content).
+- Runtime spawn: [`VisualEffectSpawner`](Assets/Game/Scripts/Runtime/Gameplay/Vfx/VisualEffectSpawner.cs) or pooled `VisualEffect` prefabs.
+
+## Paths
+
+| Asset | Folder |
+|-------|--------|
+| Graphs | `Assets/Game/Art/VFX/` |
+| Prefabs | `Assets/Game/Prefabs/Effects/` |
+
+MCP `vfx_create_asset` and agents: use **`Assets/Game/Art/VFX/`**, not default `Assets/VFX/`.
+
+## URP
+
+- Package: `com.unity.visualeffectgraph@17.5.0` with URP 17.5
+- Graphics Settings → URP asset assigned (`Assets/Game/Settings/Rendering/RPAsset.asset`)
+- Test effects in **Play Mode** after graph or parameter changes
+
+## MCP
+
+- Activate group: **`vfx`** → `manage_vfx`, `manage_shader`, `manage_texture`
+- VFX Graph: **`vfx_*` actions only** (`vfx_create_asset`, `vfx_assign_asset`, `vfx_set_exposed`, `vfx_play`, …)
+- Shaders / procedural textures: `manage_shader`, `manage_texture` (same **vfx** group)
+- **Do not use `particle_*`, `line_*`, `trail_*`** in this project
+- Ignore outdated MCP header comment about HDRP-only; this template is URP + VFX Graph
+
+## Code
+
+- Assembly: `Game.Gameplay` → `Unity.VisualEffectGraph.Runtime`
+- `using UnityEngine.VFX;`
+
+## @Docs
+
+VFX Graph 17.5 manual — see `unity-docs.mdc`.

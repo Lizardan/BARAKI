@@ -1,0 +1,43 @@
+---
+description: "UniRx — reactive state, UITK bindings, disposal"
+globs: ["**/Gameplay/**/*.cs", "**/UI/Runtime/**/*.cs"]
+alwaysApply: false
+---
+
+# Reactive (UniRx)
+
+Package: vendored `Assets/Plugins/UniRx/` (trimmed, no uGUI). UI bindings: `Game.UI/Runtime/Extensions/UniRx/`.
+
+## Disposal
+
+- UI: **`UIBindingScope.Add(IDisposable)`** — required for all UITK bindings
+- Gameplay MonoBehaviour: `.AddTo(this)` or `CompositeDisposable` in `OnDestroy`
+- ViewModels: dispose `ReactiveProperty` / `ReactiveCommand` when screen is destroyed if not reused
+
+## UI bindings (UI Toolkit only)
+
+```csharp
+using UniRx;
+using UnityEngine.UIElements;
+
+titleLabel.SubscribeToText(viewModel.Title);
+startButton.BindTo(viewModel.StartCommand);
+panel.OnPointerEnterAsObservable().Subscribe(...).AddTo(scope); // scope via UIBindingScope.Add
+```
+
+**Forbidden:** `UnityEngine.UI.*`, vendored uGUI UniRx extensions (removed from plugin).
+
+## Observable vs EventChannel
+
+| Use | When |
+|-----|------|
+| `ReactiveProperty` / `Observable` | ViewModels, streams, timers, UI binding |
+| ScriptableObject EventChannel | Cross-scene broadcast, designer-authored events (when added) |
+
+## MainThreadDispatcher
+
+Created automatically at runtime on first UniRx scheduler use. No scene prefab required for bootstrap.
+
+## Future migration
+
+UniRx is legacy (2019). For new projects considering **R3** — migration is a separate effort; template standard is UniRx + UITK bridge.
