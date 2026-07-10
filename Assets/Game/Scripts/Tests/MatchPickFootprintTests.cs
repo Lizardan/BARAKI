@@ -1,6 +1,7 @@
 using Game.Core;
 using Game.Gameplay.Match.Selection;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Game.Tests
 {
@@ -19,7 +20,7 @@ namespace Game.Tests
         public void GetBuildingDiameter_AppliesMargin()
         {
             var size = MatchPickFootprint.GetBuildingPickSize(GameIds.Buildings.TowerNw);
-            var expected = UnityEngine.Mathf.Max(size.x, size.z) * 1.05f;
+            var expected = Mathf.Max(size.x, size.z) * 1.05f;
 
             Assert.AreEqual(expected, MatchPickFootprint.GetBuildingDiameter(GameIds.Buildings.TowerNw, 1.05f), 0.001f);
         }

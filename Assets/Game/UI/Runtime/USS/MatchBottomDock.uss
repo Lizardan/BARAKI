@@ -70,7 +70,9 @@
     background-color: rgba(0, 0, 0, 0);
 }
 
-.match-dock-panel__inner--active {
+.match-dock-panel__inner--active,
+.match-bottom-dock__context .match-dock-panel__inner--active,
+.match-bottom-dock__panel--right .match-dock-panel__inner--active {
     background-color: rgb(10, 8, 18);
 }
 
