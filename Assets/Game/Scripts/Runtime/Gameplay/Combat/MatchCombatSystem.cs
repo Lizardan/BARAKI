@@ -10,6 +10,7 @@ namespace Game.Gameplay.Combat
     public sealed class MatchCombatSystem
     {
         readonly List<MatchUnitState> _units = new();
+        readonly Dictionary<int, MatchUnitState> _unitById = new();
         readonly List<MatchPlayerState> _players = new();
         readonly List<CombatProjectileState> _projectiles = new();
         readonly List<CombatMeleeStrikeState> _meleeStrikes = new();
@@ -20,6 +21,13 @@ namespace Game.Gameplay.Combat
         int _nextUnitId = 1;
         int _nextProjectileId = 1;
         System.Random _random;
+
+        readonly List<MatchUnitState> _tickBuffer = new();
+        readonly List<MatchUnitState> _nearbyBuffer = new();
+        readonly List<MatchUnitState> _alliesBuffer = new();
+        readonly List<MatchUnitState> _nestedBuffer = new();
+        const float SpatialCellSize = 12f;
+        readonly Dictionary<(int, int), List<MatchUnitState>> _spatialGrid = new();
 
         public event Action<UnitKillEvent> UnitKilled;
 
@@ -47,6 +55,8 @@ namespace Game.Gameplay.Combat
             }
 
             _units.Clear();
+            _unitById.Clear();
+            ClearSpatialGrid();
             _players.Clear();
             _projectiles.Clear();
             _meleeStrikes.Clear();
@@ -66,7 +76,10 @@ namespace Game.Gameplay.Combat
             {
                 if (_units[i].OwnerSlot == ownerSlot)
                 {
-                    _units.RemoveAt(i);
+                    _unitById.Remove(_units[i].UnitId);
+                    var last = _units.Count - 1;
+                    if (i != last) _units[i] = _units[last];
+                    _units.RemoveAt(last);
                 }
             }
 
@@ -74,7 +87,9 @@ namespace Game.Gameplay.Combat
             {
                 if (_projectiles[i].AttackerOwnerSlot == ownerSlot)
                 {
-                    _projectiles.RemoveAt(i);
+                    var last = _projectiles.Count - 1;
+                    if (i != last) _projectiles[i] = _projectiles[last];
+                    _projectiles.RemoveAt(last);
                 }
             }
 
@@ -83,7 +98,9 @@ namespace Game.Gameplay.Combat
                 var attacker = GetUnitById(_meleeStrikes[i].AttackerUnitId);
                 if (attacker != null && attacker.OwnerSlot == ownerSlot)
                 {
-                    _meleeStrikes.RemoveAt(i);
+                    var last = _meleeStrikes.Count - 1;
+                    if (i != last) _meleeStrikes[i] = _meleeStrikes[last];
+                    _meleeStrikes.RemoveAt(last);
                 }
             }
         }
@@ -152,6 +169,7 @@ namespace Game.Gameplay.Combat
                     spawnDistance);
                 unit.MarchProgressDistance = progressDistance;
                 _units.Add(unit);
+                _unitById[unit.UnitId] = unit;
             }
         }
 
@@ -186,6 +204,7 @@ namespace Game.Gameplay.Combat
                 marchSpawnDistance: distanceAlongLane);
             unit.MarchProgressDistance = progressDistance;
             _units.Add(unit);
+            _unitById[unit.UnitId] = unit;
             return unit;
         }
 
@@ -201,9 +220,12 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var snapshot = new List<MatchUnitState>(_units);
-            snapshot.Sort((a, b) => a.UnitId.CompareTo(b.UnitId));
-            foreach (var unit in snapshot)
+            RebuildSpatialGrid();
+
+            _tickBuffer.Clear();
+            _tickBuffer.AddRange(_units);
+            _tickBuffer.Sort((a, b) => a.UnitId.CompareTo(b.UnitId));
+            foreach (var unit in _tickBuffer)
             {
                 if (unit.IsAlive)
                 {
@@ -442,7 +464,10 @@ namespace Game.Gameplay.Combat
             MatchUnitState best = null;
             var bestScore = float.MaxValue;
 
-            foreach (var other in _units)
+            _nearbyBuffer.Clear();
+            QueryNearbyUnits(myPosition, aggroRadius, _nearbyBuffer);
+
+            foreach (var other in _nearbyBuffer)
             {
                 if (!CombatLaneRules.CanEngage(unit, other, _graph))
                 {
@@ -624,33 +649,27 @@ namespace Game.Gameplay.Combat
 
         MatchUnitState GetUnitById(int? unitId)
         {
-            if (unitId == null)
+            if (unitId == null || !_unitById.TryGetValue(unitId.Value, out var unit))
             {
                 return null;
             }
 
-            foreach (var unit in _units)
-            {
-                if (unit.UnitId == unitId.Value)
-                {
-                    return unit;
-                }
-            }
-
-            return null;
+            return unit;
         }
 
         List<MatchUnitState> CollectMarchAlliesForAvoidance(MatchUnitState unit, LaneRoute route)
         {
-            var allies = new List<MatchUnitState>();
+            _nearbyBuffer.Clear();
             var queryRadius = UnitLocomotionRules.AvoidanceRadius * 3f;
-            var radiusSq = queryRadius * queryRadius;
+            QueryNearbyUnits(unit.WorldPosition, queryRadius, _nearbyBuffer);
+            var allies = _alliesBuffer;
+            allies.Clear();
             var myPosition = unit.WorldPosition;
             var myDistance = unit.MarchProgressDistance;
             var forward = route.EvaluateDirectionAtDistance(myDistance);
             var aheadGapMax = CombatFormationRules.MinLaneFollowGap * 1.5f;
 
-            foreach (var other in _units)
+            foreach (var other in _nearbyBuffer)
             {
                 if (other.UnitId == unit.UnitId
                     || !other.IsAlive
@@ -672,7 +691,7 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                if (HorizontalDistanceSq(myPosition, other.WorldPosition) > radiusSq)
+                if (HorizontalDistanceSq(myPosition, other.WorldPosition) > queryRadius * queryRadius)
                 {
                     continue;
                 }
@@ -693,12 +712,15 @@ namespace Game.Gameplay.Combat
 
         List<MatchUnitState> CollectAlliesForAvoidance(MatchUnitState unit)
         {
-            var allies = new List<MatchUnitState>();
+            _nearbyBuffer.Clear();
             var queryRadius = UnitLocomotionRules.AvoidanceRadius * 3f;
+            QueryNearbyUnits(unit.WorldPosition, queryRadius, _nearbyBuffer);
+            var allies = _alliesBuffer;
+            allies.Clear();
             var radiusSq = queryRadius * queryRadius;
             var myPosition = unit.WorldPosition;
 
-            foreach (var other in _units)
+            foreach (var other in _nearbyBuffer)
             {
                 if (other.UnitId == unit.UnitId || !other.IsAlive || other.OwnerSlot != unit.OwnerSlot)
                 {
@@ -723,7 +745,10 @@ namespace Game.Gameplay.Combat
             var right = Vector3.Cross(Vector3.up, forward).normalized;
             var aheadGap = CombatFormationRules.MinLaneFollowGap * 0.5f;
 
-            foreach (var other in _units)
+            _nearbyBuffer.Clear();
+            QueryNearbyUnits(unit.WorldPosition, CombatFormationRules.MinUnitSeparation * 3f, _nearbyBuffer);
+
+            foreach (var other in _nearbyBuffer)
             {
                 if (other.UnitId == unit.UnitId
                     || !other.IsAlive
@@ -763,15 +788,17 @@ namespace Game.Gameplay.Combat
 
         bool IsEngagedByAlly(MatchUnitState enemy, int ownerSlot)
         {
-            var enemyPosition = enemy.WorldPosition;
-            foreach (var ally in _units)
+            _nestedBuffer.Clear();
+            QueryNearbyUnits(enemy.WorldPosition, 16f, _nestedBuffer);
+
+            foreach (var ally in _nestedBuffer)
             {
                 if (!ally.IsAlive || ally.OwnerSlot != ownerSlot || ally.UnitId == enemy.UnitId)
                 {
                     continue;
                 }
 
-                if (HorizontalDistance(ally.WorldPosition, enemyPosition) <= ally.Stats.AttackRange * 1.25f)
+                if (HorizontalDistance(ally.WorldPosition, enemy.WorldPosition) <= ally.Stats.AttackRange * 1.25f)
                 {
                     return true;
                 }
@@ -846,16 +873,19 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var snapshot = new List<CombatProjectileState>(_projectiles);
-            foreach (var projectile in snapshot)
+            for (var i = _projectiles.Count - 1; i >= 0; i--)
             {
+                var projectile = _projectiles[i];
                 projectile.Elapsed += deltaTime;
                 if (projectile.Elapsed < projectile.FlightDuration)
                 {
                     continue;
                 }
 
-                _projectiles.Remove(projectile);
+                var last = _projectiles.Count - 1;
+                if (i != last) _projectiles[i] = _projectiles[last];
+                _projectiles.RemoveAt(last);
+
                 if (projectile.TargetBuildingInstanceId.HasValue)
                 {
                     _buildings?.TryApplyDamage(
@@ -881,16 +911,19 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var snapshot = new List<CombatMeleeStrikeState>(_meleeStrikes);
-            foreach (var strike in snapshot)
+            for (var i = _meleeStrikes.Count - 1; i >= 0; i--)
             {
+                var strike = _meleeStrikes[i];
                 strike.TimeRemaining -= deltaTime;
                 if (strike.TimeRemaining > 0f)
                 {
                     continue;
                 }
 
-                _meleeStrikes.Remove(strike);
+                var last = _meleeStrikes.Count - 1;
+                if (i != last) _meleeStrikes[i] = _meleeStrikes[last];
+                _meleeStrikes.RemoveAt(last);
+
                 var attacker = GetUnitById(strike.AttackerUnitId);
                 var target = GetUnitById(strike.TargetUnitId);
                 if (target != null && target.IsAlive)
@@ -923,7 +956,7 @@ namespace Game.Gameplay.Combat
 
             var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty);
             GrantGold(killerOwnerSlot, bounty);
-            _units.Remove(target);
+            RemoveUnit(target);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
                 target.OwnerSlot,
@@ -959,6 +992,67 @@ namespace Game.Gameplay.Combat
                 {
                     player.Gold += amount;
                     return;
+                }
+            }
+        }
+
+        void RemoveUnit(MatchUnitState unit)
+        {
+            var index = _units.IndexOf(unit);
+            if (index < 0) return;
+            var last = _units.Count - 1;
+            if (index != last) _units[index] = _units[last];
+            _units.RemoveAt(last);
+            _unitById.Remove(unit.UnitId);
+        }
+
+        void RebuildSpatialGrid()
+        {
+            foreach (var kvp in _spatialGrid)
+                kvp.Value.Clear();
+            _spatialGrid.Clear();
+
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive) continue;
+                var key = GetSpatialKey(unit.WorldPosition);
+                if (!_spatialGrid.TryGetValue(key, out var cell))
+                {
+                    cell = new List<MatchUnitState>();
+                    _spatialGrid[key] = cell;
+                }
+                cell.Add(unit);
+            }
+        }
+
+        void ClearSpatialGrid()
+        {
+            foreach (var kvp in _spatialGrid)
+                kvp.Value.Clear();
+            _spatialGrid.Clear();
+        }
+
+        static (int, int) GetSpatialKey(Vector3 position)
+        {
+            return ((int)Math.Floor(position.x / SpatialCellSize),
+                    (int)Math.Floor(position.z / SpatialCellSize));
+        }
+
+        void QueryNearbyUnits(Vector3 position, float radius, List<MatchUnitState> results)
+        {
+            var minCx = (int)Math.Floor((position.x - radius) / SpatialCellSize);
+            var maxCx = (int)Math.Floor((position.x + radius) / SpatialCellSize);
+            var minCz = (int)Math.Floor((position.z - radius) / SpatialCellSize);
+            var maxCz = (int)Math.Floor((position.z + radius) / SpatialCellSize);
+
+            for (var cx = minCx; cx <= maxCx; cx++)
+            {
+                for (var cz = minCz; cz <= maxCz; cz++)
+                {
+                    if (!_spatialGrid.TryGetValue((cx, cz), out var cell))
+                        continue;
+                    foreach (var unit in cell)
+                        results.Add(unit);
                 }
             }
         }

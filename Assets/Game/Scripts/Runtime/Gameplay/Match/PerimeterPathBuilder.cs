@@ -69,19 +69,25 @@ namespace Game.Gameplay.Match
             while (edge != opponentEdge)
             {
                 var corner = GetCornerAfterEdge(edge, clockwise, halfSize);
-                PerimeterCornerArc.GetClockwiseEndpoints(corner, out var entry, out _, PerimeterCornerArc.CornerArcRadius);
+                PerimeterCornerArc.GetClockwiseEndpoints(
+                    corner, out var cwEntry, out var cwExit, PerimeterCornerArc.CornerArcRadius);
+
+                // Clockwise travel: arc goes cwEntry (current edge) → cwExit (next edge).
+                // Counter-clockwise travel: arc is reversed, goes cwExit (current edge) → cwEntry (next edge).
+                var arcStart = clockwise ? cwEntry : cwExit;
+                var arcEnd = clockwise ? cwExit : cwEntry;
+
                 N4PerimeterLaneGeometry.AppendStripEdgeTravel(
                     points,
                     edge,
                     travel,
-                    N4PerimeterLaneGeometry.GetTravelCoord(entry, edge),
+                    N4PerimeterLaneGeometry.GetTravelCoord(arcStart, edge),
                     clockwise,
                     halfSize);
                 PerimeterCornerArc.AppendPathWaypoints(points, corner, clockwise);
 
                 edge = NextEdge(edge, clockwise);
-                PerimeterCornerArc.GetClockwiseEndpoints(corner, out _, out var exit, PerimeterCornerArc.CornerArcRadius);
-                travel = N4PerimeterLaneGeometry.GetTravelCoord(exit, edge);
+                travel = N4PerimeterLaneGeometry.GetTravelCoord(arcEnd, edge);
             }
 
             var opponentJoin = N4PerimeterLaneGeometry.GetStripJoinPoint(end, opponent.BasePosition, halfSize);

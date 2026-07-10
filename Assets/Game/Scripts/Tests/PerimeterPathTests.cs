@@ -64,9 +64,66 @@ namespace Game.Tests
         }
 
         [Test]
+        public void SquarePath_N4_RightLane_NoBacktrackAtCorners()
+        {
+            var layout = MatchArenaGenerator.Generate(4, arenaRadius: HalfSize);
+            var graph = LaneGraphBuilder.Build(layout);
+            graph.TryGetLane(1, GameIds.Lanes.Right, out var lane);
+
+            Assert.IsFalse(HasDirectionReversal(lane.Path),
+                "Right (counter-clockwise) lane path contains a direction reversal — corner backtrack bug.");
+        }
+
+        [Test]
+        public void SquarePath_N4_LeftLane_NoBacktrackAtCorners()
+        {
+            var layout = MatchArenaGenerator.Generate(4, arenaRadius: HalfSize);
+            var graph = LaneGraphBuilder.Build(layout);
+            graph.TryGetLane(1, GameIds.Lanes.Left, out var lane);
+
+            Assert.IsFalse(HasDirectionReversal(lane.Path),
+                "Left (clockwise) lane path contains a direction reversal — corner backtrack bug.");
+        }
+
+        [Test]
         public void MatchMarchRules_UnitsOnSplineContinueAfterElimination()
         {
             Assert.IsTrue(MatchMarchRules.UnitsOnSplineContinueAfterOwnerEliminated);
+        }
+
+        /// <summary>
+        /// Checks that no pair of consecutive segments reverses direction (dot &lt; -0.5),
+        /// which would indicate a backtrack like the corner arc endpoint bug.
+        /// </summary>
+        static bool HasDirectionReversal(LanePath path)
+        {
+            const float minSegmentLength = 0.5f;
+            for (var i = 0; i < path.WaypointCount - 2; i++)
+            {
+                var a = path.GetWaypoint(i);
+                var b = path.GetWaypoint(i + 1);
+                var c = path.GetWaypoint(i + 2);
+                a.y = 0f;
+                b.y = 0f;
+                c.y = 0f;
+
+                var dir1 = b - a;
+                var dir2 = c - b;
+                if (dir1.sqrMagnitude < minSegmentLength * minSegmentLength
+                    || dir2.sqrMagnitude < minSegmentLength * minSegmentLength)
+                {
+                    continue;
+                }
+
+                dir1.Normalize();
+                dir2.Normalize();
+                if (Vector3.Dot(dir1, dir2) < -0.5f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         static bool HasWaypointNearCorner(LanePath path, Vector3 corner)

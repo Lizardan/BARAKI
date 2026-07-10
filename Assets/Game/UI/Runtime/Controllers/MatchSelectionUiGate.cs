@@ -47,7 +47,7 @@ namespace Game.UI.Controllers
                 return false;
             }
 
-            var screenPosition = (Vector2)Input.mousePosition;
+            var screenPosition = (Vector2)UnityEngine.Input.mousePosition;
             var panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
             var picked = panel.Pick(panelPosition);
             if (picked == null)
