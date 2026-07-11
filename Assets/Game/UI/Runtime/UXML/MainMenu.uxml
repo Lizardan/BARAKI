@@ -2,48 +2,53 @@
     <Style src="../USS/FantasyTheme.uss" />
     <Style src="../USS/MainMenu.uss" />
     <ui:VisualElement name="MenuScreen" class="fantasy-screen menu">
+        <!-- Background layers -->
         <ui:VisualElement name="MenuBackdrop" class="fantasy-bg" />
         <ui:VisualElement class="fantasy-bg-shade" />
-        <ui:VisualElement class="fantasy-accent-line" />
+        <ui:VisualElement class="menu__vignette" />
+        <ui:VisualElement class="menu__gold-edge menu__gold-edge--top" />
+        <ui:VisualElement class="menu__gold-edge menu__gold-edge--bottom" />
 
-        <ui:VisualElement class="menu__layout">
+        <!-- Centered content column -->
+        <ui:VisualElement class="menu__center-column">
+
+            <!-- Title block -->
             <ui:VisualElement name="MenuBrand" class="menu__brand">
+                <ui:VisualElement class="menu__ornament-line" />
                 <ui:VisualElement class="menu__brand-head">
                     <ui:VisualElement class="fantasy-logo" />
                     <ui:Label name="TitleLabel" text="BARAKI" class="fantasy-title" />
                 </ui:VisualElement>
                 <ui:Label text="Три пути. Одна победа." class="fantasy-tagline" />
-                <ui:Label text="Стратегия в реальном времени · 2–4 игрока" class="fantasy-meta" />
+                <ui:Label text="Стратегия в реальном времени · 2–8 игрока" class="fantasy-meta" />
+                <ui:VisualElement class="menu__ornament-line" />
             </ui:VisualElement>
 
-            <ui:VisualElement class="menu__actions">
-                <ui:VisualElement name="MenuPanel" class="fantasy-panel">
-                    <ui:VisualElement class="fantasy-panel__inner">
-                        <ui:VisualElement class="fantasy-panel__header">
-                            <ui:Label text="КОМАНДЫ" class="fantasy-panel__header-text" />
-                        </ui:VisualElement>
-                        <ui:VisualElement class="fantasy-panel__body">
-                            <ui:Button name="PlayButton" text="В БОЙ" class="fantasy-btn fantasy-btn--primary" />
-                            <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="fantasy-btn fantasy-btn--secondary" />
-                            <ui:Button name="QuitButton" text="ВЫХОД" class="fantasy-btn fantasy-btn--secondary fantasy-btn--muted" />
-                            <ui:VisualElement class="fantasy-shortcuts">
-                                <ui:Label text="Enter" class="fantasy-key" />
-                                <ui:Label text="в бой" class="fantasy-shortcut-text" />
-                                <ui:Label text="·" class="fantasy-shortcut-dot" />
-                                <ui:Label text="Esc" class="fantasy-key" />
-                                <ui:Label text="выход / закрыть" class="fantasy-shortcut-text" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-                    </ui:VisualElement>
+            <!-- Action buttons — standalone, WC3-style -->
+            <ui:VisualElement name="MenuPanel" class="menu__actions">
+                <ui:VisualElement class="menu__actions-inner">
+                    <ui:Button name="PlayButton" text="В БОЙ" class="fantasy-btn fantasy-btn--primary" />
+                    <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="fantasy-btn fantasy-btn--secondary" />
+                    <ui:Button name="QuitButton" text="ВЫХОД" class="fantasy-btn fantasy-btn--secondary fantasy-btn--muted" />
+                </ui:VisualElement>
+                <ui:VisualElement class="menu__shortcuts">
+                    <ui:Label text="Enter" class="fantasy-key" />
+                    <ui:Label text="в бой" class="fantasy-shortcut-text" />
+                    <ui:Label text="·" class="fantasy-shortcut-dot" />
+                    <ui:Label text="Esc" class="fantasy-key" />
+                    <ui:Label text="выход / закрыть" class="fantasy-shortcut-text" />
                 </ui:VisualElement>
             </ui:VisualElement>
+
         </ui:VisualElement>
 
+        <!-- Footer -->
         <ui:VisualElement class="fantasy-footer">
             <ui:Label text="BARAKI" class="fantasy-footer-text" />
             <ui:Label text="MVP · 2026" class="fantasy-footer-text" />
         </ui:VisualElement>
 
+        <!-- Settings overlay -->
         <ui:VisualElement name="SettingsOverlay" class="fantasy-overlay menu__overlay--hidden">
             <ui:VisualElement name="MenuOverlayDim" class="fantasy-overlay-dim" />
             <ui:VisualElement name="MenuDialog" class="fantasy-dialog">
