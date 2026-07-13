@@ -1,0 +1,42 @@
+name: Deploy Matchmaker (Cloudflare Workers)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "infra/workers/matchmaker/**"
+      - ".github/workflows/deploy-matchmaker.yml"
+
+concurrency:
+  group: deploy-matchmaker
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy Worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/workers/matchmaker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: infra/workers/matchmaker/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: infra/workers/matchmaker
+          command: deploy

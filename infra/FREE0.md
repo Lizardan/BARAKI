@@ -1,8 +1,12 @@
 # BARAKI FREE-0 Runbook
 
-Playtest stack: **PC headless game server + Cloudflare Tunnel + (optional) Pages/Workers + Discord Activity**.
+Playtest stack: **PC headless game server + Cloudflare Tunnel + Pages/Workers + Discord Activity**.
 
-WebGL hosting: **Cloudflare Pages** (not GitHub Pages) — same account as Workers + Tunnel.
+WebGL hosting: **Cloudflare Pages** (not GitHub Pages).
+
+**CI/CD:** see [`CI.md`](CI.md) — WebGL + matchmaker деплоятся с GitHub Actions; вечерний tunnel — скрипт на PC.
+
+**Руками по шагам:** раздел «Один раз» + «Каждый вечер» в [`CI.md`](CI.md). Discord portal: [`DISCORD_SETUP.md`](DISCORD_SETUP.md).
 
 ---
 

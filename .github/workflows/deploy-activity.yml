@@ -1,0 +1,90 @@
+name: Deploy Activity (WebGL → Cloudflare Pages)
+
+# Builds Unity WebGL and deploys web/activity-shell to Cloudflare Pages.
+# Secrets: UNITY_LICENSE (or EMAIL+PASSWORD+SERIAL), CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Vars: PAGES_PROJECT (default baraki-activity), DISCORD_CLIENT_ID (public app id)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "Assets/**"
+      - "Packages/**"
+      - "ProjectSettings/**"
+      - "web/activity-shell/**"
+      - ".github/workflows/deploy-activity.yml"
+      - "infra/scripts/assemble-activity-shell.sh"
+
+concurrency:
+  group: deploy-activity
+  cancel-in-progress: true
+
+jobs:
+  build-webgl:
+    name: Build WebGL
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+            Library-
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          targetPlatform: WebGL
+          unityVersion: 6000.5.1f1
+          buildsPath: Builds
+          buildName: BARAKI
+
+      - name: Upload WebGL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webgl-build
+          path: Builds/WebGL
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-pages:
+    name: Deploy Cloudflare Pages
+    needs: build-webgl
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download WebGL artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webgl-build
+          path: _webgl
+
+      - name: Assemble activity shell
+        env:
+          DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
+        run: |
+          chmod +x infra/scripts/assemble-activity-shell.sh
+          ./infra/scripts/assemble-activity-shell.sh _webgl web/activity-shell
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web/activity-shell --project-name=${{ vars.PAGES_PROJECT != '' && vars.PAGES_PROJECT || 'baraki-activity' }}

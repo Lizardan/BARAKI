@@ -130,6 +130,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | 2026-07-09 | BuildingRegistry, EliminationService, gold HUD, siege→buildings |
 | 2026-07-13 | Match Entry Create/Join + ModeSelect; Lobby Ready; LocalDev session API; MatchSnapshot |
 | 2026-07-13 | FREE-0 Phase B/A scaffolding: NGO WSS bootstrap, headless entry, Workers matchmaker, activity-shell, Cloudflare Pages deploy scripts |
+| 2026-07-13 | CI: GitHub Actions WebGL→Pages + Workers; playtest-evening.ps1; infra/CI.md |
 
 ---
 
