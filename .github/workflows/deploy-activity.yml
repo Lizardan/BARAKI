@@ -122,6 +122,22 @@ jobs:
           chmod +x infra/scripts/assemble-activity-shell.sh
           ./infra/scripts/assemble-activity-shell.sh _webgl web/activity-shell
 
+      # region agent log
+      - name: Diagnose Cloudflare Pages deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN}" || { echo "CLOUDFLARE_API_TOKEN is empty"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo "CLOUDFLARE_ACCOUNT_ID is empty"; exit 1; }
+          largest_file="$(find web/activity-shell -type f -printf '%s %p\n' | sort -nr | head -1)"
+          printf '{"sessionId":"a9f01b","runId":"pre-fix","hypothesisId":"H1-H4","location":"deploy-activity.yml:Diagnose Cloudflare Pages deployment","message":"Cloudflare deploy preflight","data":{"node":"%s","largestFile":"%s","tokenPresent":true,"accountIdPresent":true},"timestamp":%s}\n' \
+            "$(node --version)" "${largest_file//\"/\\\"}" "$(date +%s000)" | tee -a debug-a9f01b.log
+          npx wrangler@latest --version
+          npx wrangler@latest pages project list
+      # endregion
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

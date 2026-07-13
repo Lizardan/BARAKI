@@ -39,17 +39,15 @@ jobs:
           DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
         run: |
           if [[ -n "${DISCORD_CLIENT_ID}" ]]; then
-            chmod +x infra/scripts/assemble-activity-shell.sh
-            # Re-run assemble against existing Build to patch config only
-            DISCORD_CLIENT_ID="$DISCORD_CLIENT_ID" python3 - <<'PY'
-import os, re
-path = "web/activity-shell/config.js"
-cid = os.environ["DISCORD_CLIENT_ID"]
-text = open(path, encoding="utf-8").read()
-text2, n = re.subn(r'DISCORD_CLIENT_ID:\s*"[^"]*"', f'DISCORD_CLIENT_ID: "{cid}"', text, count=1)
-open(path, "w", encoding="utf-8").write(text2 if n else text)
-print("patched" if n else "no change")
-PY
+            DISCORD_CLIENT_ID="$DISCORD_CLIENT_ID" python3 -c '
+          import os, re
+          path = "web/activity-shell/config.js"
+          cid = os.environ["DISCORD_CLIENT_ID"]
+          text = open(path, encoding="utf-8").read()
+          text2, n = re.subn(r"DISCORD_CLIENT_ID:\s*\"[^\"]*\"", f"DISCORD_CLIENT_ID: \"{cid}\"", text, count=1)
+          open(path, "w", encoding="utf-8").write(text2 if n else text)
+          print("patched" if n else "no change")
+          '
           fi
 
       - name: Deploy to Cloudflare Pages
