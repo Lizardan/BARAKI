@@ -11,7 +11,15 @@ namespace Game.Gameplay.Networking
         {
             EnsureBridgeObject();
 
-            if (DiscordActivityBridge.TryGetSession(out var session) && session.HasTransport)
+            if (DiscordActivityBridge.TryGetSession(out var session)
+                && string.Equals(session.InstanceId, "local-dev", StringComparison.Ordinal))
+            {
+                MatchSessionService.UseLocalDev();
+                Debug.Log("MatchSessionBootstrap: LocalDev backend (browser smoke mode).");
+                return;
+            }
+
+            if (session.HasTransport)
             {
                 MatchSessionService.UseDiscord();
                 Debug.Log("MatchSessionBootstrap: Discord backend (shell session present).");

@@ -157,12 +157,14 @@ async function main() {
   try {
     const discord = await initDiscord();
     let match = null;
-    try {
-      match = await ensureMatch(discord);
-      setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
-    } catch (err) {
-      setStatus(`Matchmaker unavailable: ${err.message}`);
-      console.warn(err);
+    if (isInsideDiscord()) {
+      try {
+        match = await ensureMatch(discord);
+        setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
+      } catch (err) {
+        setStatus(`Matchmaker unavailable: ${err.message}`);
+        console.warn(err);
+      }
     }
 
     const sessionPayload = {
