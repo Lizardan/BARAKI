@@ -127,7 +127,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set +e
-          projects_json="$(npx wrangler@latest pages project list --json 2>&1)"
+          projects_json="$(npx wrangler@latest pages project list --json)"
           list_status=$?
           # region agent log
           printf '{"sessionId":"a9f01b","runId":"pre-fix-2","hypothesisId":"H1-H4","location":"deploy-activity.yml:Ensure Cloudflare Pages project exists","message":"Pages project probe","data":{"project":"%s","listStatus":%s},"timestamp":%s}\n' \
