@@ -2,7 +2,7 @@ name: Deploy Activity (WebGL to Cloudflare Pages)
 
 # Secrets: UNITY_EMAIL, UNITY_PASSWORD, UNITY_LICENSE (or UNITY_SERIAL),
 #          CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# Vars (optional): PAGES_PROJECT (default baraki-activity), DISCORD_CLIENT_ID
+# Vars (optional): PAGES_PROJECT (default baraki), DISCORD_CLIENT_ID
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki-activity' }}
+  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki' }}
 
 jobs:
   build-webgl:
@@ -35,7 +35,15 @@ jobs:
           lfs: true
           fetch-depth: 0
 
+      - name: Restore WebGL build
+        id: webgl-cache
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: WebGL-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+
       - name: Free disk space
+        if: steps.webgl-cache.outputs.cache-hit != 'true'
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: false
@@ -47,6 +55,7 @@ jobs:
           swap-storage: true
 
       - name: Extra swap (8G)
+        if: steps.webgl-cache.outputs.cache-hit != 'true'
         run: |
           sudo swapoff -a || true
           sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
@@ -56,6 +65,7 @@ jobs:
           free -h
 
       - name: Cache Library
+        if: steps.webgl-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: Library
@@ -65,6 +75,7 @@ jobs:
             Library-
 
       - name: Build WebGL
+        if: steps.webgl-cache.outputs.cache-hit != 'true'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -137,6 +148,18 @@ jobs:
           npx wrangler@latest --version
           npx wrangler@latest pages project list
       # endregion
+
+      - name: Ensure Cloudflare Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          projects_json="$(npx wrangler@latest pages project list --json)"
+          if ! jq -e --arg name "${PAGES_PROJECT}" \
+            '[.. | objects | .name? // empty] | index($name) != null' <<<"${projects_json}" >/dev/null; then
+            npx wrangler@latest pages project create "${PAGES_PROJECT}" \
+              --production-branch="${GITHUB_REF_NAME}"
+          fi
 
       - name: Deploy to Cloudflare Pages
         env:
