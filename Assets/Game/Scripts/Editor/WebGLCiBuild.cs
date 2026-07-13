@@ -33,10 +33,14 @@ namespace Game.Editor
                 return;
             }
 
+            // Last path segment becomes WebGL file prefix on some Unity/game-ci layouts.
+            // Keep it BARAKI so artifacts match activity-shell config.js / boot.js.
+            PlayerSettings.productName = "BARAKI";
+
             var options = new BuildPlayerOptions
             {
                 scenes = scenes,
-                locationPathName = "build/WebGL",
+                locationPathName = "build/BARAKI",
                 target = BuildTarget.WebGL,
                 targetGroup = BuildTargetGroup.WebGL,
                 options = BuildOptions.None,

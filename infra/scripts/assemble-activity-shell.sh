@@ -40,10 +40,23 @@ echo "Copying WebGL from ${SRC} -> ${BUILD_DIR}"
 find "${BUILD_DIR}" -mindepth 1 ! -name '.gitkeep' -delete
 cp -a "${SRC}/." "${BUILD_DIR}/"
 
+# CI/Unity may name artifacts after the output folder (e.g. WebGL.*).
+# Keep config.js / boot.js on stable BARAKI.* names — rename files, never rewrite BARAKI_CONFIG.
 PRODUCT_BASE="$(basename "${LOADER}" .loader.js)"
 if [[ "${PRODUCT_BASE}" != "BARAKI" ]]; then
-  echo "Remapping product '${PRODUCT_BASE}' -> BARAKI in config.js"
-  sed -i "s|BARAKI|${PRODUCT_BASE}|g" "${SHELL_DIR}/config.js"
+  echo "Renaming '${PRODUCT_BASE}.*' -> 'BARAKI.*'"
+  shopt -s nullglob
+  for f in "${BUILD_DIR}/${PRODUCT_BASE}."*; do
+    suffix="${f##*/${PRODUCT_BASE}.}"
+    mv "${f}" "${BUILD_DIR}/BARAKI.${suffix}"
+  done
+  shopt -u nullglob
+fi
+
+if [[ ! -f "${BUILD_DIR}/BARAKI.loader.js" ]]; then
+  echo "ERROR: expected ${BUILD_DIR}/BARAKI.loader.js after assemble"
+  ls -la "${BUILD_DIR}" | head -40 || true
+  exit 1
 fi
 
 if [[ -n "${DISCORD_CLIENT_ID:-}" ]]; then
@@ -67,3 +80,4 @@ PY
 fi
 
 echo "Activity shell ready at ${SHELL_DIR}"
+ls -la "${BUILD_DIR}" | head -40
