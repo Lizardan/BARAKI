@@ -18,18 +18,14 @@
 3. API Token: *Edit Cloudflare Workers* + *Account Cloudflare Pages Edit*  
    → сохрани как GitHub secret `CLOUDFLARE_API_TOKEN`
 4. Account ID (справа в overview) → secret `CLOUDFLARE_ACCOUNT_ID`
-5. KV для matchmaker:
+5. KV для matchmaker: **не нужен** (FREE-0 хранит tunnel/match in-memory).
+6. Секрет регистрации tunnel:
    ```powershell
    cd infra/workers/matchmaker
    npx wrangler login
-   npx wrangler kv namespace create BARAKI_KV
-   ```
-   Вставь `id` в [`wrangler.toml`](workers/matchmaker/wrangler.toml)
-6. Секрет регистрации tunnel:
-   ```powershell
    npx wrangler secret put REGISTER_SECRET
    ```
-   Тот же пароль → GitHub secret `MATCHMAKER_REGISTER_SECRET`
+   Тот же пароль → GitHub secret `MATCHMAKER_REGISTER_SECRET` (опционально, для локальных скриптов)
 
 ### 2. Unity license для CI (game-ci)
 

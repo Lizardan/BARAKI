@@ -1,10 +1,14 @@
 /**
  * BARAKI FREE-0 matchmaker (single active match).
+ * In-memory store — fine for one evening; re-register tunnel after Worker cold start.
  * Host registers wss_url; Discord clients ensure/join by instance_id.
  */
 
-const MATCH_KEY = "active_match";
-const TUNNEL_KEY = "tunnel_wss";
+/** @type {{ tunnel: string|null, match: object|null }} */
+const store = {
+  tunnel: null,
+  match: null,
+};
 
 export default {
   async fetch(request, env) {
@@ -26,11 +30,11 @@ export default {
 
       if (request.method === "GET" && path.startsWith("/api/v1/match/")) {
         const instanceId = decodeURIComponent(path.slice("/api/v1/match/".length));
-        return cors(await getMatch(instanceId, env));
+        return cors(await getMatch(instanceId));
       }
 
       if (request.method === "GET" && path === "/api/v1/health") {
-        return cors(json({ ok: true }));
+        return cors(json({ ok: true, has_tunnel: Boolean(store.tunnel) }));
       }
 
       return cors(json({ error: "not_found" }, 404));
@@ -53,7 +57,7 @@ async function registerTunnel(request, env) {
     return json({ error: "wss_url must start with ws:// or wss://" }, 400);
   }
 
-  await env.BARAKI_KV.put(TUNNEL_KEY, wssUrl);
+  store.tunnel = wssUrl;
   return json({ ok: true, wss_url: wssUrl });
 }
 
@@ -67,12 +71,12 @@ async function ensureMatch(request, env) {
     return json({ error: "instance_id required" }, 400);
   }
 
-  const wssUrl = await env.BARAKI_KV.get(TUNNEL_KEY);
+  const wssUrl = store.tunnel;
   if (!wssUrl) {
     return json({ error: "tunnel_not_registered", hint: "POST /api/v1/admin/register-tunnel first" }, 503);
   }
 
-  let match = await readMatch(env);
+  let match = store.match;
   if (!match || match.instance_id !== instanceId) {
     match = {
       match_id: crypto.randomUUID(),
@@ -88,7 +92,7 @@ async function ensureMatch(request, env) {
   }
 
   const slot = assignSlot(match, discordUserId);
-  await writeMatch(env, match);
+  store.match = match;
 
   return json({
     match_id: match.match_id,
@@ -100,8 +104,8 @@ async function ensureMatch(request, env) {
   });
 }
 
-async function getMatch(instanceId, env) {
-  const match = await readMatch(env);
+async function getMatch(instanceId) {
+  const match = store.match;
   if (!match || match.instance_id !== instanceId) {
     return json({ error: "not_found" }, 404);
   }
@@ -139,15 +143,6 @@ function clampPlayerCount(value) {
   }
 
   return 2;
-}
-
-async function readMatch(env) {
-  const raw = await env.BARAKI_KV.get(MATCH_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-
-async function writeMatch(env, match) {
-  await env.BARAKI_KV.put(MATCH_KEY, JSON.stringify(match));
 }
 
 function json(data, status = 200) {

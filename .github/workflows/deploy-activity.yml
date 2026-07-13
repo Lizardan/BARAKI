@@ -1,8 +1,8 @@
-name: Deploy Activity (WebGL → Cloudflare Pages)
+name: Deploy Activity (WebGL to Cloudflare Pages)
 
-# Builds Unity WebGL and deploys web/activity-shell to Cloudflare Pages.
-# Secrets: UNITY_LICENSE (or EMAIL+PASSWORD+SERIAL), CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# Vars: PAGES_PROJECT (default baraki-activity), DISCORD_CLIENT_ID (public app id)
+# Secrets: UNITY_LICENSE (or UNITY_EMAIL + UNITY_PASSWORD [+ UNITY_SERIAL]),
+#          CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Vars (optional): PAGES_PROJECT (default baraki-activity), DISCORD_CLIENT_ID
 
 on:
   workflow_dispatch:
@@ -20,6 +20,9 @@ concurrency:
   group: deploy-activity
   cancel-in-progress: true
 
+env:
+  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki-activity' }}
+
 jobs:
   build-webgl:
     name: Build WebGL
@@ -30,6 +33,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+          fetch-depth: 0
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false
+          swap-storage: true
 
       - name: Cache Library
         uses: actions/cache@v4
@@ -50,14 +65,14 @@ jobs:
         with:
           targetPlatform: WebGL
           unityVersion: 6000.5.1f1
-          buildsPath: Builds
+          buildsPath: build
           buildName: BARAKI
 
       - name: Upload WebGL artifact
         uses: actions/upload-artifact@v4
         with:
           name: webgl-build
-          path: Builds/WebGL
+          path: build/WebGL
           if-no-files-found: error
           retention-days: 7
 
@@ -87,4 +102,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/activity-shell --project-name=${{ vars.PAGES_PROJECT != '' && vars.PAGES_PROJECT || 'baraki-activity' }}
+          command: pages deploy web/activity-shell --project-name=${{ env.PAGES_PROJECT }}
