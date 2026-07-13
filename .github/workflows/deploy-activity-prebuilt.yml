@@ -1,0 +1,64 @@
+name: Deploy Activity Shell (prebuilt WebGL)
+
+# Fallback when GitHub-hosted Unity WebGL OOM/crashes.
+# 1) Locally: BARAKI → Build WebGL into Builds/WebGL (or use Editor menu)
+# 2) Zip Build folder, upload as workflow artifact OR place under web/activity-shell/Build and push
+# 3) Run this workflow (dispatch) — deploys Pages only
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "web/activity-shell/**"
+      - ".github/workflows/deploy-activity-prebuilt.yml"
+
+concurrency:
+  group: deploy-activity-prebuilt
+  cancel-in-progress: true
+
+env:
+  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki-activity' }}
+
+jobs:
+  deploy-pages:
+    name: Deploy Cloudflare Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require WebGL build files
+        run: |
+          if ! ls web/activity-shell/Build/*.loader.js >/dev/null 2>&1; then
+            echo "Put Unity WebGL output into web/activity-shell/Build/ (*.loader.js etc.)"
+            echo "Or use the full Deploy Activity workflow once CI WebGL works."
+            ls -la web/activity-shell/Build || true
+            exit 1
+          fi
+          ls -la web/activity-shell/Build | head -30
+
+      - name: Inject Discord client id
+        env:
+          DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
+        run: |
+          if [[ -n "${DISCORD_CLIENT_ID}" ]]; then
+            chmod +x infra/scripts/assemble-activity-shell.sh
+            # Re-run assemble against existing Build to patch config only
+            DISCORD_CLIENT_ID="$DISCORD_CLIENT_ID" python3 - <<'PY'
+import os, re
+path = "web/activity-shell/config.js"
+cid = os.environ["DISCORD_CLIENT_ID"]
+text = open(path, encoding="utf-8").read()
+text2, n = re.subn(r'DISCORD_CLIENT_ID:\s*"[^"]*"', f'DISCORD_CLIENT_ID: "{cid}"', text, count=1)
+open(path, "w", encoding="utf-8").write(text2 if n else text)
+print("patched" if n else "no change")
+PY
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web/activity-shell --project-name=${{ env.PAGES_PROJECT }}

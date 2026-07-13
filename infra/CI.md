@@ -1,5 +1,17 @@
 # CI/CD — что автоматизировано и что руками
 
+## WebGL CI: exit 134 / ADTM
+
+Лицензия уже ок. Exit **134** на GitHub-hosted runner = Unity abort (часто OOM на Unity 6 + URP/VFX/ECS).
+
+1. Запушь обновлённый `deploy-activity.yml` + `WebGLCiBuild.cs` и перезапусти **Deploy Activity**.
+2. Если снова 134 — обходной путь:
+   - Собери WebGL локально → положи в `web/activity-shell/Build/`
+   - Запусти workflow **Deploy Activity Shell (prebuilt WebGL)**
+3. Долгосрочно: self-hosted runner на PC.
+
+---
+
 Связанные workflows:
 - [`.github/workflows/deploy-activity.yml`](../.github/workflows/deploy-activity.yml) — Unity WebGL → Cloudflare Pages
 - [`.github/workflows/deploy-matchmaker.yml`](../.github/workflows/deploy-matchmaker.yml) — Workers matchmaker
