@@ -6,6 +6,7 @@ using Game.Gameplay.Cameras;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match.Selection;
+using Game.Gameplay.Networking;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -20,12 +21,16 @@ namespace Game.Gameplay.Match
         [SerializeField] private RaceCatalog _raceCatalog;
 
         private bool _isMatchStarted;
+        private MatchTickMode _tickMode = MatchTickMode.Offline;
+        private MatchSnapshot _lastNetworkSnapshot;
 
         private GameplayCameraPanController _panController;
         private MatchSelectionBridge _selectionBridge;
 
         public MatchController Controller { get; private set; }
         public bool IsMatchStarted => _isMatchStarted;
+        public MatchTickMode TickMode => _tickMode;
+        public MatchSnapshot LastNetworkSnapshot => _lastNetworkSnapshot;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
 
@@ -71,8 +76,34 @@ namespace Game.Gameplay.Match
                 return;
             }
 
+            if (!MatchTickAuthority.ShouldTickSimulation(_tickMode))
+            {
+                return;
+            }
+
+            // Server mode: MatchNetworkAuthority owns the tick.
+            if (_tickMode == MatchTickMode.Server)
+            {
+                return;
+            }
+
             Controller?.Tick(Time.deltaTime);
             TryBeginEarlyPhaseWhenReady();
+        }
+
+        public void SetNetworkTickMode(MatchTickMode mode)
+        {
+            _tickMode = mode;
+        }
+
+        public void NotifyServerTick()
+        {
+            TryBeginEarlyPhaseWhenReady();
+        }
+
+        public void ApplyNetworkSnapshot(MatchSnapshot snapshot)
+        {
+            _lastNetworkSnapshot = snapshot;
         }
 
         private void TryBeginEarlyPhaseWhenReady()

@@ -579,6 +579,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchContextStripController
   _uiDocument: {fileID: 411625583}
+  _visualCatalog: {fileID: 11400000, guid: 873a123bc2806a548907ca9c980638c0, type: 2}
 --- !u!114 &411625587
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -868,6 +869,7 @@ GameObject:
   - component: {fileID: 1399539383}
   - component: {fileID: 1399539382}
   - component: {fileID: 1399539384}
+  - component: {fileID: 1399539385}
   m_Layer: 0
   m_Name: MatchRuntime
   m_TagString: Untagged
@@ -962,6 +964,19 @@ MonoBehaviour:
   _runtime: {fileID: 1399539380}
   _combatPresenter: {fileID: 1399539381}
   _ringMaterial: {fileID: 0}
+--- !u!114 &1399539385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3720a92b4278c034289153303f83913d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.Selection.MatchSelectionValidityPresenter
+  _runtime: {fileID: 0}
 --- !u!1 &1477253634
 GameObject:
   m_ObjectHideFlags: 0

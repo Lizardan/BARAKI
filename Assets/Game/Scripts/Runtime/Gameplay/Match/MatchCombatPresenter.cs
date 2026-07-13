@@ -21,6 +21,8 @@ namespace Game.Gameplay.Match
 
         [SerializeField] private MatchRuntime _runtime;
         [SerializeField] private UnitVisualCatalog _visualCatalog;
+
+        public UnitVisualCatalog VisualCatalog => _visualCatalog;
         [SerializeField] private float _fallbackUnitScale = 2.7f;
         [SerializeField] private float _fallbackUnitHeight = 3.6f;
         [SerializeField] private float _statusBarClearance = 0.5f;

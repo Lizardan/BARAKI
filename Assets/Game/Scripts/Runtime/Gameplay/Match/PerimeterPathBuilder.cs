@@ -17,6 +17,17 @@ namespace Game.Gameplay.Match
             int playerCount,
             bool clockwise)
         {
+            if (playerCount == 2)
+            {
+                return DuelPathBuilder.BuildFlankPath(
+                    start,
+                    end,
+                    owner,
+                    opponent,
+                    halfSize,
+                    clockwise);
+            }
+
             if (playerCount == 4)
             {
                 return BuildSquarePath(

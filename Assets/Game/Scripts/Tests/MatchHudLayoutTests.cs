@@ -70,8 +70,15 @@ namespace Game.Tests
             Assert.IsTrue(dock.ClassListContains("match-bottom-dock"));
             Assert.IsTrue(root.Q("MinimapPanel").ClassListContains("match-dock-panel"));
             Assert.IsTrue(root.Q("ContextStrip").ClassListContains("match-dock-panel"));
-            Assert.IsTrue(root.Q("InspectorPanel").ClassListContains("match-dock-panel"));
-            Assert.IsFalse(root.Q("MinimapPanel").ClassListContains("fantasy-panel"));
+            Assert.IsTrue(root.Q("MinimapPanel").ClassListContains("match-dock-panel"));
+            Assert.IsTrue(root.Q("MinimapPanel").ClassListContains("match-hud-chrome"));
+            Assert.IsTrue(root.Q("ContextStrip").ClassListContains("match-hud-chrome"));
+            Assert.IsTrue(root.Q("InspectorPanel").ClassListContains("match-hud-chrome"));
+            Assert.IsNotNull(root.Q("CommandGrid"), "Right dock should include CommandGrid.");
+            Assert.IsNotNull(root.Q("CommandSlot0"), "Command grid should include slot 0.");
+            Assert.IsTrue(root.Q("CommandSlot0").ClassListContains("ui-btn--square"));
+            Assert.IsNotNull(root.Q("SelectionContext"), "Center dock should include SelectionContext.");
+            Assert.IsNotNull(root.Q("EntityPortrait"), "Center dock should include entity portrait.");
         }
 
         static float GetResolvedHeight(VisualElement element)

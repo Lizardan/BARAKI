@@ -128,7 +128,7 @@ namespace Game.Gameplay.Match
             }
         }
 
-        private BarracksWaveState GetBarracks(int ownerSlot, string barracksId)
+        public BarracksWaveState GetBarracks(int ownerSlot, string barracksId)
         {
             for (var i = 0; i < _barracks.Count; i++)
             {

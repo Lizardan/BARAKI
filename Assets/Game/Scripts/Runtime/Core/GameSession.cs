@@ -25,6 +25,20 @@ namespace Game.Core
             Started?.Invoke();
         }
 
+        /// <summary>
+        /// Replaces lobby handoff data while a session is already playing
+        /// (e.g. offline race pick assigns a random local slot).
+        /// </summary>
+        public static void UpdateActiveSetup(MatchSetup setup)
+        {
+            if (!IsPlaying || setup == null)
+            {
+                return;
+            }
+
+            ActiveSetup = setup;
+        }
+
         public static void Reset()
         {
             IsPlaying = false;

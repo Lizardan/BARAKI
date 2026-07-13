@@ -57,28 +57,90 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanMeleePrefab_HasTeamAccentAndMaterials()
+        public void AllTwelvePortraits_AreAssigned()
+        {
+            UnitPortraitBaker.BakeIntoCatalog(_catalog);
+            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Bug })
+            {
+                foreach (UnitRole role in System.Enum.GetValues(typeof(UnitRole)))
+                {
+                    Assert.IsTrue(
+                        _catalog.TryGetPortrait(raceId, role, out var portrait),
+                        $"Missing portrait for {raceId} {role}");
+                    Assert.IsNotNull(portrait, $"Null portrait for {raceId} {role}");
+                }
+            }
+        }
+
+        [Test]
+        public void HumanMeleePrefab_HasMultipleTeamAccentsAndMaterials()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
-            var accents = prefab.GetComponentsInChildren<Transform>(true);
-            Transform accent = null;
-            foreach (var t in accents)
+            Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 2,
+                "Human_Melee should include multiple TeamAccent meshes (shield/tabard/plume).");
+
+            var hasShieldAccent = false;
+            foreach (var t in prefab.GetComponentsInChildren<Transform>(true))
             {
-                if (t.name == UnitVisualAccent.TeamAccentTransformName)
+                if (t.name == "TeamAccent_ShieldFace")
                 {
-                    accent = t;
+                    hasShieldAccent = true;
                     break;
                 }
             }
 
-            Assert.IsNotNull(accent, "Human_Melee should include TeamAccent for slot tinting.");
-            Assert.IsNotNull(accent.parent, "TeamAccent should be parented to the body, not float at root.");
+            Assert.IsTrue(hasShieldAccent, "Human_Melee should include TeamAccent_ShieldFace.");
 
             var renderers = prefab.GetComponentsInChildren<Renderer>();
-            Assert.Greater(renderers.Length, 2);
+            Assert.Greater(renderers.Length, 8);
             foreach (var renderer in renderers)
             {
                 Assert.IsNotNull(renderer.sharedMaterial, $"{renderer.name} should reference a saved URP material.");
+            }
+        }
+
+        [Test]
+        public void BugMeleePrefab_HasTeamAccent()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Bug, UnitRole.Melee, out var prefab));
+            Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 1,
+                "Bug_Melee should include at least one TeamAccent carapace mesh.");
+        }
+
+        [Test]
+        public void ApplyTeamColor_TintsAllAccents()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
+            var instance = Object.Instantiate(prefab);
+            try
+            {
+                var color = new Color(0.1f, 0.4f, 0.9f, 1f);
+                UnitVisualAccent.ApplyTeamColor(instance.transform, color);
+                var accents = 0;
+                foreach (var t in instance.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!t.name.StartsWith(UnitVisualAccent.TeamAccentTransformName))
+                    {
+                        continue;
+                    }
+
+                    var renderer = t.GetComponent<Renderer>();
+                    Assert.IsNotNull(renderer);
+                    var block = new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(block);
+                    var tinted = block.GetColor("_BaseColor");
+                    Assert.AreEqual(color.r, tinted.r, 0.001f);
+                    Assert.AreEqual(color.g, tinted.g, 0.001f);
+                    Assert.AreEqual(color.b, tinted.b, 0.001f);
+                    Assert.AreEqual(color.a, tinted.a, 0.001f);
+                    accents++;
+                }
+
+                Assert.GreaterOrEqual(accents, 2);
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
             }
         }
     }

@@ -1,43 +1,42 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/FantasyTheme.uss" />
+    <Style src="../USS/BarakiTheme.uss" />
     <Style src="../USS/Lobby.uss" />
-    <ui:VisualElement name="LobbyScreen" class="fantasy-screen lobby">
-        <ui:VisualElement class="fantasy-bg" />
-        <ui:VisualElement class="fantasy-bg-shade" />
-        <ui:VisualElement class="fantasy-accent-line" />
+    <ui:VisualElement name="LobbyScreen" class="ui-screen lobby">
+        <ui:VisualElement class="ui-bg" />
+        <ui:VisualElement class="ui-bg-shade" />
+        <ui:VisualElement class="ui-vignette" />
 
         <ui:VisualElement class="lobby__stage">
             <ui:VisualElement class="lobby__header">
-                <ui:Label text="ЛОББИ" class="fantasy-title fantasy-title--sm" />
-                <ui:Label text="Раса · слоты · Ready" class="fantasy-tagline" />
+                <ui:Label name="LobbyTitleLabel" text="ЛОББИ" class="ui-title ui-title--sm" />
+                <ui:Label name="LobbySubtitleLabel" text="Ожидание игроков" class="ui-tagline" />
+                <ui:Label name="RoomCodeLabel" text="КОД: ----" class="ui-meta lobby__code" />
             </ui:VisualElement>
 
             <ui:VisualElement class="lobby__panel-wrap">
-                <ui:VisualElement class="fantasy-panel">
-                    <ui:VisualElement class="fantasy-panel__inner">
-                        <ui:VisualElement class="fantasy-panel__header">
-                            <ui:Label text="ПОДГОТОВКА" class="fantasy-panel__header-text" />
+                <ui:VisualElement class="ui-panel">
+                    <ui:VisualElement class="ui-panel__inner">
+                        <ui:VisualElement class="ui-panel__header">
+                            <ui:Label text="СЛОТЫ" class="ui-panel__header-text" />
                         </ui:VisualElement>
-                        <ui:VisualElement class="fantasy-panel__body">
-                            <ui:Label text="MVP: выбор расы и N=2/4 — скоро" class="fantasy-panel__note" />
-                            <ui:Button name="StartButton" text="В МАТЧ" class="fantasy-btn fantasy-btn--primary" />
-                            <ui:Button name="BackButton" text="НАЗАД" class="fantasy-btn fantasy-btn--secondary fantasy-btn--muted" />
-                            <ui:VisualElement class="fantasy-shortcuts">
-                                <ui:Label text="Enter" class="fantasy-key" />
-                                <ui:Label text="в матч" class="fantasy-shortcut-text" />
-                                <ui:Label text="·" class="fantasy-shortcut-dot" />
-                                <ui:Label text="Esc" class="fantasy-key" />
-                                <ui:Label text="назад" class="fantasy-shortcut-text" />
-                            </ui:VisualElement>
+                        <ui:VisualElement name="SlotList" class="lobby__slots" />
+                        <ui:Button name="ReadyButton" text="ГОТОВ" class="ui-btn ui-btn--primary" />
+                        <ui:Button name="FillLocalButton" text="ЗАПОЛНИТЬ СЛОТЫ (ЛОКАЛЬНО)" class="ui-btn" />
+                        <ui:Button name="StartButton" text="СТАРТ" class="ui-btn ui-btn--primary" />
+                        <ui:Button name="BackButton" text="НАЗАД" class="ui-btn ui-btn--muted" />
+                        <ui:VisualElement class="ui-hints">
+                            <ui:Label text="Старт — когда все готовы" class="ui-hints__text" />
+                            <ui:Label text="Esc — назад" class="ui-hints__text" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement class="fantasy-footer">
-            <ui:Label text="BARAKI" class="fantasy-footer-text" />
-            <ui:Label text="ЛОББИ" class="fantasy-footer-text" />
+        <ui:VisualElement class="ui-footer">
+            <ui:Label text="BARAKI" class="ui-footer__text" />
+            <ui:Label text="·" class="ui-footer__dot" />
+            <ui:Label text="ЛОББИ" class="ui-footer__text" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

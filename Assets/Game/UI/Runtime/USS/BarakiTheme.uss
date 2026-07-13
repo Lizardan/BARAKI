@@ -1,0 +1,431 @@
+/* BARAKI — единая тема Dark Brown GUI kit */
+
+/* ── Tokens ── */
+/* cream #F2E6C8 | accent #C9A35A | muted #A89878 | ink #1A1410 */
+
+.ui-screen {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(26, 20, 16);
+}
+
+.ui-bg {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/background/big/big_dark_background1.png?fileID=21300000&guid=8e95a863ba2905243b290c5ff2a1cafc&type=3#big_dark_background1");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-bg-shade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(12, 8, 6, 0.55);
+}
+
+.ui-vignette {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-left-width: 90px;
+    border-right-width: 90px;
+    border-top-width: 64px;
+    border-bottom-width: 88px;
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+.ui-title {
+    font-size: 72px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(242, 230, 200);
+    letter-spacing: 12px;
+    text-shadow: 0 4px 16px rgba(0, 0, 0, 0.9);
+}
+
+.ui-title--sm {
+    font-size: 48px;
+    letter-spacing: 8px;
+}
+
+.ui-tagline {
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(201, 163, 90);
+    letter-spacing: 3px;
+}
+
+.ui-meta {
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    color: rgba(168, 152, 120, 0.9);
+    letter-spacing: 1px;
+}
+
+.ui-label {
+    font-size: 14px;
+    color: rgb(242, 230, 200);
+}
+
+.ui-rule {
+    height: 3px;
+    width: 280px;
+    background-color: rgba(201, 163, 90, 0.75);
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+/* ── Thin chrome (Match HUD header / dock / overlays) ── */
+
+.ui-chrome {
+    background-color: rgba(18, 14, 12, 0.92);
+    background-image: none;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-color: rgba(201, 163, 90, 0.45);
+    border-radius: 0;
+}
+
+/* ── Panels ── */
+
+.ui-panel {
+    padding: 22px 20px 18px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/frame/mid/mid_frame.png?fileID=21300000&guid=84988dd5213b4f74883c8e666a70cc2a&type=3#mid_frame");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-panel--lg {
+    padding: 28px 24px 22px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/frame/big/big_frame.png?fileID=21300000&guid=fd49cf9d1578d484d9c85875826ba4cc&type=3#big_frame");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-panel--sm {
+    padding: 6px 6px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/frame/small/small_frame.png?fileID=21300000&guid=688a2a25ef766644697ec94e1640a752&type=3#small_frame");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-panel__inner {
+    flex-grow: 1;
+    background-color: rgba(18, 14, 12, 0.88);
+    border-width: 0;
+    padding: 14px 16px;
+}
+
+.ui-panel__header {
+    height: 34px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(201, 163, 90, 0.4);
+}
+
+.ui-panel__header-text {
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    color: rgb(201, 163, 90);
+    -unity-text-align: middle-center;
+}
+
+.ui-panel__note {
+    font-size: 12px;
+    color: rgba(168, 152, 120, 0.9);
+    margin-bottom: 12px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.ui-dialog {
+    width: 440px;
+    max-width: 90%;
+    padding: 24px 22px 18px;
+    background-color: rgb(26, 20, 16);
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/frame/mid/mid_frameA.png?fileID=21300000&guid=77a8fd08d4767044991261e926cac755&type=3#mid_frameA");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-dialog__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(201, 163, 90, 0.45);
+}
+
+.ui-dialog__title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(242, 230, 200);
+    letter-spacing: 3px;
+}
+
+.ui-dialog__close {
+    width: 40px;
+    height: 40px;
+    background-image: none;
+    background-color: rgb(72, 44, 26);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(168, 138, 88);
+    outline-width: 0;
+    color: rgb(242, 230, 200);
+    font-size: 16px;
+    -unity-text-align: middle-center;
+}
+
+.ui-dialog__close:hover {
+    background-color: rgb(96, 58, 32);
+    border-color: rgb(201, 163, 90);
+}
+
+.ui-dialog__body {
+    flex-direction: column;
+    padding-left: 6px;
+    padding-right: 6px;
+    background-color: rgb(26, 20, 16);
+}
+
+.ui-dialog__row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.ui-dialog__row--stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.ui-dialog__row-head {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.ui-dialog__value {
+    font-size: 14px;
+    color: rgb(201, 163, 90);
+}
+
+/* ── Buttons ── */
+
+.ui-btn {
+    height: 52px;
+    margin-bottom: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+    color: rgb(242, 230, 200);
+    background-color: rgb(72, 44, 26);
+    background-image: none;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(168, 138, 88);
+    border-radius: 0;
+    outline-width: 0;
+    transition-duration: 0.1s;
+    transition-property: background-color, border-color, scale, color;
+}
+
+.ui-btn:hover {
+    background-color: rgb(96, 58, 32);
+    border-color: rgb(201, 163, 90);
+    scale: 1.015;
+}
+
+.ui-btn:active {
+    scale: 0.99;
+    background-color: rgb(58, 36, 20);
+}
+
+.ui-btn:disabled {
+    opacity: 0.4;
+}
+
+.ui-btn--primary {
+    height: 52px;
+    font-size: 16px;
+    letter-spacing: 3px;
+    margin-bottom: 14px;
+    color: rgb(242, 230, 200);
+    background-color: rgb(110, 68, 32);
+    background-image: none;
+    border-color: rgb(201, 163, 90);
+}
+
+.ui-btn--primary:hover {
+    background-color: rgb(130, 82, 38);
+    border-color: rgb(230, 190, 120);
+    color: rgb(255, 244, 210);
+}
+
+.ui-btn--muted {
+    color: rgba(210, 196, 160, 0.9);
+    background-color: rgb(48, 34, 24);
+    background-image: none;
+    border-color: rgb(120, 98, 68);
+}
+
+.ui-btn--square {
+    width: 31%;
+    height: 72px;
+    margin: 1%;
+    padding: 4px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    white-space: normal;
+    color: rgb(242, 230, 200);
+    background-color: rgb(72, 44, 26);
+    background-image: none;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(168, 138, 88);
+    outline-width: 0;
+}
+
+.ui-btn--square:hover {
+    background-color: rgb(96, 58, 32);
+    border-color: rgb(201, 163, 90);
+}
+
+.ui-btn--square:disabled {
+    opacity: 0.35;
+}
+
+/* ── Controls / chrome ── */
+
+.ui-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.ui-overlay--hidden {
+    display: none;
+}
+
+.ui-overlay__dim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.78);
+}
+
+.ui-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 36px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.ui-footer__text {
+    font-size: 11px;
+    color: rgba(168, 152, 120, 0.7);
+    letter-spacing: 2px;
+}
+
+.ui-footer__dot {
+    margin-left: 10px;
+    margin-right: 10px;
+    color: rgba(168, 152, 120, 0.4);
+}
+
+.ui-hints {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.ui-hints__text {
+    font-size: 11px;
+    color: rgba(168, 152, 120, 0.75);
+}
+
+.ui-toggle {
+    margin: 0;
+}
+
+.ui-slider {
+    margin: 0;
+    height: 22px;
+}
+
+.ui-bar {
+    height: 18px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/background/other/health_bar_background1.png?fileID=21300000&guid=f8f975326b1f7184caa1edd29931cbca&type=3#health_bar_background1");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.ui-portrait-frame {
+    width: 120px;
+    height: 120px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/frame/mini/mini_circle_frame.png?fileID=21300000&guid=686393f6365304a4d908596fdb8c1f74&type=3#mini_circle_frame");
+    -unity-background-scale-mode: stretch-to-fill;
+    padding: 10px;
+}
+
+.ui-icon {
+    width: 28px;
+    height: 28px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.ui-icon--coins {
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/icon/other/coin/coin-silver.png?fileID=21300000&guid=eb634baf714d18041914974ad52d1f29&type=3#coin-silver");
+}
+
+.ui-icon--settings {
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/icon/full_simple/settings_one-.png?fileID=21300000&guid=de8132666e21b9c4d89831a5d30b4550&type=3#settings_one-");
+}
+
+.ui-icon--exit {
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/icon/full_simple/exit-.png?fileID=21300000&guid=acbba4f81e74aeb42a0cff89b55c60d3&type=3#exit-");
+}
+
+.ui-icon--sword {
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/icon/full_simple/sword-.png?fileID=21300000&guid=1f795c83ee1684c4eb53f09770a58985&type=3#sword-");
+}
+
+.ui-ornament {
+    width: 36px;
+    height: 36px;
+    background-image: url("project://database/Assets/Game/Art/UI/DarkBrown/ornament/corner_ornament.png?fileID=21300000&guid=76a319db787859b4ca27ba834290dab0&type=3#corner_ornament");
+    -unity-background-scale-mode: scale-to-fit;
+}

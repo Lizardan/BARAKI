@@ -320,10 +320,12 @@ Verify: Discord [Activity Instance API](https://docs.discord.com/developers/acti
 
 ## Lobby и N игроков
 
-- **N** = число участников activity instance (2–8), как в `Match Flow.md`  
-- Лобби **внутри** WebGL (race pick, Ready)  
-- Discord SDK — источник списка игроков и «кто в канале»  
-- Отдельный desktop launcher **не** нужен для MVP  
+- **N** задаёт **host при Create** (Mode Select), не «все кто в голосовом канале»
+- Лобби внутри WebGL: N строк, Ready, Host Start
+- Race pick — на `Game.unity` после Start
+- Discord SDK — `instanceId` + participants для join/identity
+- Отдельный desktop launcher **не** нужен для MVP
+- Клиентский API: `IMatchSessionBackend` (LocalDev сейчас, Discord matchmaker stub готов)  
 
 ## Dev workflow
 

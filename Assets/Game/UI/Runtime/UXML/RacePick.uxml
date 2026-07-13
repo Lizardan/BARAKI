@@ -1,22 +1,22 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/FantasyTheme.uss" />
+    <Style src="../USS/BarakiTheme.uss" />
     <Style src="../USS/RacePick.uss" />
     <ui:VisualElement name="RacePickScreen" class="race-pick" picking-mode="Ignore">
         <ui:VisualElement class="race-pick__center" picking-mode="Ignore">
-            <ui:VisualElement class="fantasy-panel race-pick__panel">
-                <ui:VisualElement class="fantasy-panel__inner">
-                    <ui:VisualElement class="fantasy-panel__header">
-                        <ui:Label text="ВЫБОР РАСЫ" class="fantasy-panel__header-text race-pick__title" />
+            <ui:VisualElement class="ui-chrome race-pick__panel">
+                <ui:VisualElement class="race-pick__inner">
+                    <ui:VisualElement class="ui-panel__header">
+                        <ui:Label text="ВЫБОР РАСЫ" class="ui-panel__header-text race-pick__title" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="fantasy-panel__body race-pick__body">
+                    <ui:VisualElement class="race-pick__body">
                         <ui:Label name="SubtitleLabel" text="Слот 1 · игроков 4" class="race-pick__subtitle" />
-                        <ui:Label name="SlotsLabel" text="" class="fantasy-panel__note race-pick__slots" />
+                        <ui:Label name="SlotsLabel" text="" class="ui-panel__note race-pick__slots" />
                         <ui:VisualElement class="race-pick__choices">
-                            <ui:Button name="HumanButton" text="ЛЮДИ" class="fantasy-btn fantasy-btn--secondary race-pick__race-btn" />
-                            <ui:Button name="BugButton" text="ЖУКИ" class="fantasy-btn fantasy-btn--secondary race-pick__race-btn" />
+                            <ui:Button name="HumanButton" text="ЛЮДИ" class="ui-btn race-pick__race-btn" />
+                            <ui:Button name="BugButton" text="ЖУКИ" class="ui-btn race-pick__race-btn" />
                         </ui:VisualElement>
                         <ui:Label name="SelectedLabel" text="Раса не выбрана" class="race-pick__selected" />
-                        <ui:Button name="ConfirmButton" text="ГОТОВ" class="fantasy-btn fantasy-btn--primary race-pick__confirm" />
+                        <ui:Button name="ConfirmButton" text="ГОТОВ" class="ui-btn ui-btn--primary race-pick__confirm" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>

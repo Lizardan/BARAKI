@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
+using Game.Gameplay.Networking;
 using Game.UI.Animations;
 using Game.UI.Bindings;
 using Game.UI.ViewModels;
@@ -17,9 +18,10 @@ namespace Game.UI.Controllers
     [RequireComponent(typeof(UIDocument))]
     public sealed class MainMenuController : MonoBehaviour
     {
-        private const float FadeDuration = 0.4f;
-        private const float IntroDuration = 0.42f;
-        private const float SettingsAnimDuration = 0.28f;
+        private const float FadeDuration = 0.35f;
+        private const float IntroDuration = 0.4f;
+        private const float SettingsAnimDuration = 0.24f;
+        private const string OverlayHiddenClass = "ui-overlay--hidden";
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -27,7 +29,6 @@ namespace Game.UI.Controllers
         private MainMenuViewModel _viewModel;
         private UIBindingScope _bindingScope;
         private VisualElement _menuScreen;
-        private VisualElement _menuBackdrop;
         private VisualElement _menuBrand;
         private VisualElement _menuPanel;
         private VisualElement _settingsOverlay;
@@ -40,9 +41,21 @@ namespace Game.UI.Controllers
         private Toggle _soundToggle;
         private Slider _volumeSlider;
         private Label _volumeValueLabel;
+        private VisualElement _matchEntryOverlay;
+        private VisualElement _modeSelectOverlay;
+        private VisualElement _joinCodeRow;
+        private VisualElement _modeGrid;
+        private Button _createMatchButton;
+        private Button _joinMatchButton;
+        private Button _joinConfirmButton;
+        private Button _matchEntryCloseButton;
+        private Button _modeSelectCloseButton;
+        private TextField _joinCodeField;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
+        private bool _isMatchEntryOpen;
+        private bool _isModeSelectOpen;
 
         private void Awake()
         {
@@ -54,12 +67,21 @@ namespace Game.UI.Controllers
             _viewModel = new MainMenuViewModel();
             _root = _uiDocument.rootVisualElement;
             _menuScreen = _root.Q<VisualElement>("MenuScreen");
-            _menuBackdrop = _root.Q<VisualElement>("MenuBackdrop");
             _menuBrand = _root.Q<VisualElement>("MenuBrand");
             _menuPanel = _root.Q<VisualElement>("MenuPanel");
             _settingsOverlay = _root.Q<VisualElement>("SettingsOverlay");
             _menuOverlayDim = _root.Q<VisualElement>("MenuOverlayDim");
             _menuDialog = _root.Q<VisualElement>("MenuDialog");
+            _matchEntryOverlay = _root.Q<VisualElement>("MatchEntryOverlay");
+            _modeSelectOverlay = _root.Q<VisualElement>("ModeSelectOverlay");
+            _joinCodeRow = _root.Q<VisualElement>("JoinCodeRow");
+            _modeGrid = _root.Q<VisualElement>("ModeGrid");
+            _createMatchButton = _root.Q<Button>("CreateMatchButton");
+            _joinMatchButton = _root.Q<Button>("JoinMatchButton");
+            _joinConfirmButton = _root.Q<Button>("JoinConfirmButton");
+            _matchEntryCloseButton = _root.Q<Button>("MatchEntryCloseButton");
+            _modeSelectCloseButton = _root.Q<Button>("ModeSelectCloseButton");
+            _joinCodeField = _root.Q<TextField>("JoinCodeField");
 
             var titleLabel = _root.Q<Label>("TitleLabel");
             _playButton = _root.Q<Button>("PlayButton");
@@ -72,16 +94,30 @@ namespace Game.UI.Controllers
 
             GameAudio.Apply();
             BindSettingsUi();
+            BindMatchEntryUi();
+            BuildModeGrid();
+            EnsureSettingsClosed();
+            EnsureMatchEntryClosed();
+            EnsureModeSelectClosed();
+            EnsureVisibleRestState();
 
             _bindingScope = new UIBindingScope(_root);
-            _bindingScope.Add(_viewModel.Title.SubscribeToText(titleLabel));
-            _bindingScope.Add(_viewModel.PlayCommand.BindTo(_playButton));
-            _bindingScope.Add(_viewModel.QuitCommand.BindTo(_quitButton));
-            _bindingScope.Add(_viewModel.PlayCommand.Subscribe(_ => OnPlayRequested()));
-            _bindingScope.Add(_viewModel.QuitCommand.Subscribe(_ => OnQuitRequested()));
+            if (titleLabel != null)
+            {
+                _bindingScope.Add(_viewModel.Title.SubscribeToText(titleLabel));
+            }
 
-            _settingsButton.clicked += OnSettingsOpen;
-            _settingsCloseButton.clicked += OnSettingsClose;
+            if (_playButton != null)
+            {
+                _bindingScope.Add(_viewModel.PlayCommand.BindTo(_playButton));
+                _bindingScope.Add(_viewModel.PlayCommand.Subscribe(_ => OnPlayRequested()));
+            }
+
+            if (_quitButton != null)
+            {
+                _bindingScope.Add(_viewModel.QuitCommand.BindTo(_quitButton));
+                _bindingScope.Add(_viewModel.QuitCommand.Subscribe(_ => OnQuitRequested()));
+            }
         }
 
         private void BindSettingsUi()
@@ -119,6 +155,18 @@ namespace Game.UI.Controllers
 
         private void OnEnable()
         {
+            GameSession.Reset();
+
+            if (_settingsButton != null)
+            {
+                _settingsButton.clicked += OnSettingsOpen;
+            }
+
+            if (_settingsCloseButton != null)
+            {
+                _settingsCloseButton.clicked += OnSettingsClose;
+            }
+
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
             var cancellationToken = this.GetCancellationTokenOnDestroy();
             PlayIntroAsync(cancellationToken).Forget();
@@ -150,108 +198,93 @@ namespace Game.UI.Controllers
 
             try
             {
-                var tasks = new List<UniTask>
+                var tasks = new List<UniTask>();
+                if (_menuBrand != null)
                 {
-                    UiToolkitElementAnimator.TranslateAsync(
+                    tasks.Add(UiToolkitElementAnimator.FadeAsync(
                         _menuBrand,
-                        new Vector2(-48f, 0f),
-                        Vector2.zero,
+                        0f,
+                        1f,
                         IntroDuration,
-                        cancellationToken: cancellationToken),
-                    UiToolkitElementAnimator.TranslateAsync(
+                        cancellationToken: cancellationToken));
+                }
+
+                if (_menuPanel != null)
+                {
+                    tasks.Add(UiToolkitElementAnimator.FadeScaleAsync(
                         _menuPanel,
-                        new Vector2(48f, 0f),
-                        Vector2.zero,
+                        0f,
+                        1f,
+                        new Vector2(0.94f, 0.94f),
+                        Vector2.one,
                         IntroDuration,
-                        0.08f,
-                        cancellationToken),
-                };
-
-                await UniTask.WhenAll(tasks);
-
-                var buttons = new List<VisualElement>();
-                if (_playButton != null)
-                {
-                    buttons.Add(_playButton);
+                        bounce: false,
+                        cancellationToken: cancellationToken));
                 }
 
-                if (_settingsButton != null)
+                if (tasks.Count > 0)
                 {
-                    buttons.Add(_settingsButton);
+                    await UniTask.WhenAll(tasks);
                 }
-
-                if (_quitButton != null)
-                {
-                    buttons.Add(_quitButton);
-                }
-
-                await UiToolkitElementAnimator.StaggerFadeScaleAsync(
-                    buttons,
-                    0f,
-                    1f,
-                    new Vector2(0.96f, 0.96f),
-                    Vector2.one,
-                    0.28f,
-                    0.05f,
-                    bounce: false,
-                    cancellationToken: cancellationToken);
 
                 _playButton?.Focus();
             }
             finally
             {
-                EnsureIntroRestState();
+                EnsureVisibleRestState();
             }
         }
 
         private async UniTask RestoreIntroIfStalledAsync(System.Threading.CancellationToken cancellationToken)
         {
             await UniTask.Delay(
-                System.TimeSpan.FromSeconds(IntroDuration + 0.75f),
+                System.TimeSpan.FromSeconds(IntroDuration + 0.6f),
                 ignoreTimeScale: true,
                 cancellationToken: cancellationToken);
-            EnsureIntroRestState();
+            EnsureVisibleRestState();
         }
 
-        private void EnsureIntroRestState()
+        private void EnsureSettingsClosed()
         {
-            if (_menuBackdrop != null)
+            _isSettingsOpen = false;
+            _isSettingsAnimating = false;
+            if (_settingsOverlay != null)
             {
-                _menuBackdrop.style.opacity = 1f;
+                _settingsOverlay.AddToClassList(OverlayHiddenClass);
+            }
+
+            if (_menuOverlayDim != null)
+            {
+                _menuOverlayDim.style.opacity = 0f;
+            }
+
+            if (_menuDialog != null)
+            {
+                _menuDialog.style.opacity = 0f;
+            }
+        }
+
+        private void EnsureVisibleRestState()
+        {
+            if (_menuScreen != null)
+            {
+                _menuScreen.style.opacity = 1f;
             }
 
             if (_menuBrand != null)
             {
                 _menuBrand.style.opacity = 1f;
                 _menuBrand.style.translate = new Translate(0f, 0f);
+                _menuBrand.style.scale = new Scale(Vector3.one);
             }
 
             if (_menuPanel != null)
             {
                 _menuPanel.style.opacity = 1f;
                 _menuPanel.style.translate = new Translate(0f, 0f);
+                _menuPanel.style.scale = new Scale(Vector3.one);
             }
 
-            SetButtonsIntroState(1f, Vector2.one);
-        }
-
-        private void PrepareIntroState()
-        {
-            if (_menuBrand != null)
-            {
-                _menuBrand.style.translate = new Translate(-48f, 0f);
-            }
-
-            if (_menuPanel != null)
-            {
-                _menuPanel.style.translate = new Translate(48f, 0f);
-            }
-
-            SetButtonsIntroState(0f, new Vector2(0.96f, 0.96f));
-        }
-
-        private void SetButtonsIntroState(float opacity, Vector2 scale)
-        {
             foreach (var button in new[] { _playButton, _settingsButton, _quitButton })
             {
                 if (button == null)
@@ -259,8 +292,27 @@ namespace Game.UI.Controllers
                     continue;
                 }
 
-                button.style.opacity = opacity;
-                button.style.scale = new Scale(new Vector3(scale.x, scale.y, 1f));
+                button.style.opacity = 1f;
+                button.style.scale = new Scale(Vector3.one);
+            }
+
+            if (!_isSettingsOpen)
+            {
+                EnsureSettingsClosed();
+            }
+        }
+
+        private void PrepareIntroState()
+        {
+            if (_menuBrand != null)
+            {
+                _menuBrand.style.opacity = 0f;
+            }
+
+            if (_menuPanel != null)
+            {
+                _menuPanel.style.opacity = 0f;
+                _menuPanel.style.scale = new Scale(new Vector3(0.94f, 0.94f, 1f));
             }
         }
 
@@ -278,6 +330,14 @@ namespace Game.UI.Controllers
                 {
                     OnSettingsClose();
                 }
+                else if (_isModeSelectOpen)
+                {
+                    CloseModeSelect();
+                }
+                else if (_isMatchEntryOpen)
+                {
+                    CloseMatchEntry();
+                }
                 else
                 {
                     OnQuitRequested();
@@ -286,7 +346,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            if (_isSettingsOpen)
+            if (_isSettingsOpen || _isMatchEntryOpen || _isModeSelectOpen)
             {
                 return;
             }
@@ -326,7 +386,7 @@ namespace Game.UI.Controllers
         {
             _isSettingsAnimating = true;
             _isSettingsOpen = true;
-            _settingsOverlay.RemoveFromClassList("menu__overlay--hidden");
+            _settingsOverlay.RemoveFromClassList(OverlayHiddenClass);
             SetMainMenuInteractable(false);
 
             if (_menuOverlayDim != null)
@@ -337,16 +397,21 @@ namespace Game.UI.Controllers
             if (_menuDialog != null)
             {
                 _menuDialog.style.opacity = 0f;
-                _menuDialog.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
+                _menuDialog.style.scale = new Scale(new Vector3(0.94f, 0.94f, 1f));
             }
 
             await UniTask.WhenAll(
-                UiToolkitElementAnimator.FadeAsync(_menuOverlayDim, 0f, 1f, SettingsAnimDuration, cancellationToken: cancellationToken),
+                UiToolkitElementAnimator.FadeAsync(
+                    _menuOverlayDim,
+                    0f,
+                    1f,
+                    SettingsAnimDuration,
+                    cancellationToken: cancellationToken),
                 UiToolkitElementAnimator.FadeScaleAsync(
                     _menuDialog,
                     0f,
                     1f,
-                    new Vector2(0.95f, 0.95f),
+                    new Vector2(0.94f, 0.94f),
                     Vector2.one,
                     SettingsAnimDuration,
                     bounce: true,
@@ -361,18 +426,23 @@ namespace Game.UI.Controllers
             _isSettingsAnimating = true;
 
             await UniTask.WhenAll(
-                UiToolkitElementAnimator.FadeAsync(_menuOverlayDim, 1f, 0f, SettingsAnimDuration, cancellationToken: cancellationToken),
+                UiToolkitElementAnimator.FadeAsync(
+                    _menuOverlayDim,
+                    1f,
+                    0f,
+                    SettingsAnimDuration,
+                    cancellationToken: cancellationToken),
                 UiToolkitElementAnimator.FadeScaleAsync(
                     _menuDialog,
                     1f,
                     0f,
                     Vector2.one,
-                    new Vector2(0.95f, 0.95f),
+                    new Vector2(0.94f, 0.94f),
                     SettingsAnimDuration,
                     cancellationToken: cancellationToken));
 
             _isSettingsOpen = false;
-            _settingsOverlay.AddToClassList("menu__overlay--hidden");
+            _settingsOverlay.AddToClassList(OverlayHiddenClass);
             SetMainMenuInteractable(true);
             _isSettingsAnimating = false;
             _playButton?.Focus();
@@ -380,12 +450,203 @@ namespace Game.UI.Controllers
 
         private void OnPlayRequested()
         {
-            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating)
+            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating || _isMatchEntryOpen)
             {
                 return;
             }
 
-            LoadSceneWithFadeAsync(GameSceneNames.Lobby, this.GetCancellationTokenOnDestroy()).Forget();
+            OpenMatchEntry();
+        }
+
+        private void BindMatchEntryUi()
+        {
+            if (_createMatchButton != null)
+            {
+                _createMatchButton.clicked += OnCreateMatchClicked;
+            }
+
+            if (_joinMatchButton != null)
+            {
+                _joinMatchButton.clicked += OnJoinMatchClicked;
+            }
+
+            if (_joinConfirmButton != null)
+            {
+                _joinConfirmButton.clicked += () => JoinMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
+            }
+
+            if (_matchEntryCloseButton != null)
+            {
+                _matchEntryCloseButton.clicked += CloseMatchEntry;
+            }
+
+            if (_modeSelectCloseButton != null)
+            {
+                _modeSelectCloseButton.clicked += CloseModeSelect;
+            }
+        }
+
+        private void BuildModeGrid()
+        {
+            if (_modeGrid == null)
+            {
+                return;
+            }
+
+            _modeGrid.Clear();
+            for (var n = MatchModeRules.MinPlayers; n <= MatchModeRules.MaxPlayers; n++)
+            {
+                var playerCount = n;
+                var button = ModeMapThumbnailBuilder.BuildModeButton(playerCount);
+                if (MatchModeRules.IsModeSelectable(playerCount))
+                {
+                    button.clicked += () =>
+                        CreateMatchAsync(playerCount, this.GetCancellationTokenOnDestroy()).Forget();
+                }
+
+                _modeGrid.Add(button);
+            }
+        }
+
+        private void OpenMatchEntry()
+        {
+            if (_matchEntryOverlay == null)
+            {
+                return;
+            }
+
+            _isMatchEntryOpen = true;
+            _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+            _matchEntryOverlay.RemoveFromClassList(OverlayHiddenClass);
+            SetMainMenuInteractable(false);
+            _createMatchButton?.Focus();
+        }
+
+        private void CloseMatchEntry()
+        {
+            EnsureMatchEntryClosed();
+            SetMainMenuInteractable(true);
+            _playButton?.Focus();
+        }
+
+        private void EnsureMatchEntryClosed()
+        {
+            _isMatchEntryOpen = false;
+            _matchEntryOverlay?.AddToClassList(OverlayHiddenClass);
+            _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+        }
+
+        private void OnCreateMatchClicked()
+        {
+            EnsureMatchEntryClosed();
+            OpenModeSelect();
+        }
+
+        private void OnJoinMatchClicked()
+        {
+            if (_joinCodeRow == null)
+            {
+                return;
+            }
+
+            _joinCodeRow.RemoveFromClassList(OverlayHiddenClass);
+            _joinCodeField?.Focus();
+        }
+
+        private void OpenModeSelect()
+        {
+            if (_modeSelectOverlay == null)
+            {
+                return;
+            }
+
+            _isModeSelectOpen = true;
+            _modeSelectOverlay.RemoveFromClassList(OverlayHiddenClass);
+            SetMainMenuInteractable(false);
+        }
+
+        private void CloseModeSelect()
+        {
+            EnsureModeSelectClosed();
+            OpenMatchEntry();
+        }
+
+        private void EnsureModeSelectClosed()
+        {
+            _isModeSelectOpen = false;
+            _modeSelectOverlay?.AddToClassList(OverlayHiddenClass);
+        }
+
+        private async UniTask CreateMatchAsync(int playerCount, System.Threading.CancellationToken cancellationToken)
+        {
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            _isTransitioning = true;
+            try
+            {
+                var instanceId = DiscordActivityBridge.TryGetSession(out var discordSession)
+                    ? discordSession.InstanceId
+                    : null;
+                var displayName = DiscordActivityBridge.TryGetSession(out var named)
+                    ? (string.IsNullOrEmpty(named.DisplayName) ? "Host" : named.DisplayName)
+                    : "Host";
+                var handle = await MatchSessionService.Backend.CreateAsync(
+                    new CreateMatchRequest(playerCount, displayName, instanceId));
+                MatchNetworkSession.ApplyHandle(handle);
+                await MatchNetworkSession.TryStartTransportAsync();
+                EnsureModeSelectClosed();
+                EnsureMatchEntryClosed();
+                await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Create match failed: {ex.Message}");
+                _isTransitioning = false;
+                OpenModeSelect();
+            }
+        }
+
+        private async UniTask JoinMatchAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            var code = _joinCodeField?.value?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(code)
+                && DiscordActivityBridge.TryGetSession(out var discordJoin)
+                && !string.IsNullOrEmpty(discordJoin.InstanceId))
+            {
+                code = discordJoin.InstanceId;
+            }
+
+            if (string.IsNullOrEmpty(code))
+            {
+                return;
+            }
+
+            _isTransitioning = true;
+            try
+            {
+                var displayName = DiscordActivityBridge.TryGetSession(out var named)
+                    ? (string.IsNullOrEmpty(named.DisplayName) ? "Guest" : named.DisplayName)
+                    : "Guest";
+                var handle = await MatchSessionService.Backend.JoinAsync(
+                    new JoinMatchRequest(code, displayName));
+                MatchNetworkSession.ApplyHandle(handle);
+                await MatchNetworkSession.TryStartTransportAsync();
+                EnsureMatchEntryClosed();
+                await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Join match failed: {ex.Message}");
+                _isTransitioning = false;
+            }
         }
 
         private static void OnQuitRequested()
@@ -402,21 +663,11 @@ namespace Game.UI.Controllers
             _isTransitioning = true;
             SetMainMenuInteractable(false);
 
-            if (_menuPanel != null)
-            {
-                await UiToolkitElementAnimator.ScaleAsync(
-                    _menuPanel,
-                    Vector2.one,
-                    new Vector2(0.96f, 0.96f),
-                    FadeDuration * 0.5f,
-                    cancellationToken: cancellationToken);
-            }
-
             if (_menuScreen != null)
             {
                 await UiToolkitElementAnimator.FadeAsync(
                     _menuScreen,
-                    _menuScreen.resolvedStyle.opacity,
+                    1f,
                     0f,
                     FadeDuration,
                     cancellationToken: cancellationToken);

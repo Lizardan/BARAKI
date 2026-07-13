@@ -9,6 +9,22 @@ namespace Game.Tests
         const float HalfSize = MatchArenaGenerator.DefaultArenaRadius;
 
         [Test]
+        public void BuildSharedFlankRing_N2_ReturnsClosedStadium()
+        {
+            var path = PerimeterRingPathBuilder.BuildSharedFlankRing(HalfSize, playerCount: 2);
+            Assert.Greater(path.WaypointCount, 20);
+            Assert.Less(Vector3.Distance(path.Start, path.End), 0.25f);
+
+            var maxZ = 0f;
+            for (var i = 0; i < path.WaypointCount; i++)
+            {
+                maxZ = Mathf.Max(maxZ, Mathf.Abs(path.GetWaypoint(i).z));
+            }
+
+            Assert.AreEqual(N2RoadReferenceSpec.FlankStraightAbsZ, maxZ, 0.5f);
+        }
+
+        [Test]
         public void BuildSharedFlankRing_N4_ReturnsClosedSquarePath()
         {
             var path = PerimeterRingPathBuilder.BuildSharedFlankRing(HalfSize, playerCount: 4);

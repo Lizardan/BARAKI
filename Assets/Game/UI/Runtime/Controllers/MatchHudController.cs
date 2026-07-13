@@ -66,7 +66,7 @@ namespace Game.UI.Controllers
             }
 
             _camera = Camera.main;
-            _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
+            RefreshLocalPlayerSlot();
         }
 
         private void OnDisable()
@@ -76,6 +76,7 @@ namespace Game.UI.Controllers
 
         private void LateUpdate()
         {
+            RefreshLocalPlayerSlot();
             var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
             if (controller != _subscribedController)
             {
@@ -88,9 +89,17 @@ namespace Game.UI.Controllers
                 }
             }
 
-            if (controller == null || !controller.IsRunning)
+            var phase = controller != null ? controller.Phase : MatchPhase.Lobby;
+            var isRunning = controller != null && controller.IsRunning;
+            if (MatchHudVisibility.ShouldClearRunningHud(controller != null, isRunning, phase))
             {
                 ClearHud();
+                return;
+            }
+
+            if (!isRunning)
+            {
+                ClearBarracksLabels();
                 return;
             }
 
@@ -144,6 +153,11 @@ namespace Game.UI.Controllers
                 _bountyPopupLabel.text = string.Empty;
                 _bountyPopupLabel.AddToClassList(BountyPopupHiddenClass);
             }
+        }
+
+        private void RefreshLocalPlayerSlot()
+        {
+            _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
         }
 
         private int GetLocalGold(MatchController controller)

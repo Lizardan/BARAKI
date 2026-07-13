@@ -42,7 +42,7 @@ namespace Game.Gameplay.Match
                 layout.PlayerCount,
                 layout.PlayerCount * BaseLayoutDefinition.BuildingsPerBase,
                 laneLineCount,
-                layout.PlayerCount == 4 ? 4 : MatchArenaGreyboxSpec.LegacyCenterRingSegments);
+                layout.PlayerCount is 2 or 4 ? 4 : MatchArenaGreyboxSpec.LegacyCenterRingSegments);
         }
 
         /// <summary>Map roads and per-base road geometry (no buildings or lane markers).</summary>
@@ -145,6 +145,10 @@ namespace Game.Gameplay.Match
             {
                 N4SourcePartsBuilder.Populate(root, layout, roadMaterial);
             }
+            else if (layout.PlayerCount == 2)
+            {
+                N2SourcePartsBuilder.Populate(root, layout, roadMaterial);
+            }
             else
             {
                 var roadsRoot = CreateChild(root, "Roads");
@@ -160,7 +164,7 @@ namespace Game.Gameplay.Match
                 slotRoot.position = slot.BasePosition;
                 slotRoot.rotation = slot.BaseRotation;
 
-                if (layout.PlayerCount != 4)
+                if (layout.PlayerCount is not 2 and not 4)
                 {
                     PopulateBaseRoads(slotRoot, slot, roadMaterial);
                 }
@@ -546,9 +550,11 @@ namespace Game.Gameplay.Match
 
         static void CreateSharedFlankRingLine(Transform lanesRoot, float ringRadius, int playerCount)
         {
-            var path = playerCount == 4
-                ? N4RoadCenterlineBuilder.BuildSharedFlankRing(ringRadius)
-                : PerimeterRingPathBuilder.BuildSharedFlankRing(ringRadius, playerCount);
+            var path = playerCount == 2
+                ? DuelPathBuilder.BuildSharedFlankRing(ringRadius)
+                : playerCount == 4
+                    ? N4RoadCenterlineBuilder.BuildSharedFlankRing(ringRadius)
+                    : PerimeterRingPathBuilder.BuildSharedFlankRing(ringRadius, playerCount);
             CreateLaneLineFromPath(lanesRoot, "SharedFlankRing", path, LaneLineWidthFlank, GetSharedFlankRingColor(), loop: true);
         }
 

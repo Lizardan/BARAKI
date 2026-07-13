@@ -1,5 +1,3 @@
-using Game.Core;
-using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using UnityEngine;
@@ -14,6 +12,7 @@ namespace Game.UI.Controllers
 
         VisualElement _bottomDock;
         VisualElement _topBar;
+        MatchSelectionInput _boundInput;
 
         void Awake()
         {
@@ -29,6 +28,25 @@ namespace Game.UI.Controllers
 
         void OnEnable()
         {
+            TryBindUiBlocker();
+        }
+
+        void OnDisable()
+        {
+            if (_boundInput != null)
+            {
+                _boundInput.SetUiBlocker(null);
+                _boundInput = null;
+            }
+        }
+
+        void LateUpdate()
+        {
+            TryBindUiBlocker();
+        }
+
+        void TryBindUiBlocker()
+        {
             var bridge = FindAnyObjectByType<MatchSelectionBridge>();
             if (bridge == null)
             {
@@ -36,7 +54,18 @@ namespace Game.UI.Controllers
             }
 
             var input = bridge.GetComponent<MatchSelectionInput>();
-            input?.SetUiBlocker(IsPointerOverBlockedUi);
+            if (input == null || input == _boundInput)
+            {
+                return;
+            }
+
+            if (_boundInput != null)
+            {
+                _boundInput.SetUiBlocker(null);
+            }
+
+            input.SetUiBlocker(IsPointerOverBlockedUi);
+            _boundInput = input;
         }
 
         bool IsPointerOverBlockedUi()
@@ -47,7 +76,11 @@ namespace Game.UI.Controllers
                 return false;
             }
 
-            var screenPosition = (Vector2)UnityEngine.Input.mousePosition;
+            if (!MatchSelectionUiPointer.TryGetScreenPosition(out var screenPosition))
+            {
+                return false;
+            }
+
             var panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
             var picked = panel.Pick(panelPosition);
             if (picked == null)
@@ -55,28 +88,8 @@ namespace Game.UI.Controllers
                 return false;
             }
 
-            return IsDescendantOf(_bottomDock, picked) || IsDescendantOf(_topBar, picked);
-        }
-
-        static bool IsDescendantOf(VisualElement ancestor, VisualElement element)
-        {
-            if (ancestor == null)
-            {
-                return false;
-            }
-
-            var current = element;
-            while (current != null)
-            {
-                if (current == ancestor)
-                {
-                    return true;
-                }
-
-                current = current.parent;
-            }
-
-            return false;
+            return MatchSelectionUiPointer.IsDescendantOf(_bottomDock, picked)
+                   || MatchSelectionUiPointer.IsDescendantOf(_topBar, picked);
         }
     }
 }

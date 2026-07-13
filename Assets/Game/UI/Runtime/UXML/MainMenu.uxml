@@ -1,78 +1,90 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/FantasyTheme.uss" />
+    <Style src="../USS/BarakiTheme.uss" />
     <Style src="../USS/MainMenu.uss" />
-    <ui:VisualElement name="MenuScreen" class="fantasy-screen menu">
-        <!-- Background layers -->
-        <ui:VisualElement name="MenuBackdrop" class="fantasy-bg" />
-        <ui:VisualElement class="fantasy-bg-shade" />
-        <ui:VisualElement class="menu__vignette" />
-        <ui:VisualElement class="menu__gold-edge menu__gold-edge--top" />
-        <ui:VisualElement class="menu__gold-edge menu__gold-edge--bottom" />
+    <ui:VisualElement name="MenuScreen" class="ui-screen mm" picking-mode="Position">
+        <ui:VisualElement name="MenuBackdrop" class="ui-bg" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-bg-shade" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-vignette" picking-mode="Ignore" />
 
-        <!-- Centered content column -->
-        <ui:VisualElement class="menu__center-column">
-
-            <!-- Title block -->
-            <ui:VisualElement name="MenuBrand" class="menu__brand">
-                <ui:VisualElement class="menu__ornament-line" />
-                <ui:VisualElement class="menu__brand-head">
-                    <ui:VisualElement class="fantasy-logo" />
-                    <ui:Label name="TitleLabel" text="BARAKI" class="fantasy-title" />
-                </ui:VisualElement>
-                <ui:Label text="Три пути. Одна победа." class="fantasy-tagline" />
-                <ui:Label text="Стратегия в реальном времени · 2–8 игрока" class="fantasy-meta" />
-                <ui:VisualElement class="menu__ornament-line" />
+        <ui:VisualElement class="mm__stage" picking-mode="Ignore">
+            <ui:VisualElement name="MenuBrand" class="mm__brand" picking-mode="Ignore">
+                <ui:VisualElement class="ui-rule" />
+                <ui:Label name="TitleLabel" text="BARAKI" class="ui-title" />
+                <ui:Label text="ТРИ ПУТИ · ОДНА ПОБЕДА" class="ui-tagline" />
+                <ui:VisualElement class="ui-rule" />
+                <ui:Label text="Арена · 2–8 игроков · FFA" class="ui-meta" />
             </ui:VisualElement>
 
-            <!-- Action buttons — standalone, WC3-style -->
-            <ui:VisualElement name="MenuPanel" class="menu__actions">
-                <ui:VisualElement class="menu__actions-inner">
-                    <ui:Button name="PlayButton" text="В БОЙ" class="fantasy-btn fantasy-btn--primary" />
-                    <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="fantasy-btn fantasy-btn--secondary" />
-                    <ui:Button name="QuitButton" text="ВЫХОД" class="fantasy-btn fantasy-btn--secondary fantasy-btn--muted" />
+            <ui:VisualElement name="MenuPanel" class="mm__panel ui-panel ui-panel--lg">
+                <ui:VisualElement class="ui-panel__inner mm__panel-inner">
+                    <ui:Button name="PlayButton" text="В БОЙ" class="ui-btn ui-btn--primary" />
+                    <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="ui-btn" />
+                    <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted" />
                 </ui:VisualElement>
-                <ui:VisualElement class="menu__shortcuts">
-                    <ui:Label text="Enter" class="fantasy-key" />
-                    <ui:Label text="в бой" class="fantasy-shortcut-text" />
-                    <ui:Label text="·" class="fantasy-shortcut-dot" />
-                    <ui:Label text="Esc" class="fantasy-key" />
-                    <ui:Label text="выход / закрыть" class="fantasy-shortcut-text" />
+                <ui:VisualElement class="ui-hints">
+                    <ui:Label text="Enter — в бой" class="ui-hints__text" />
+                    <ui:Label text="Esc — выход / закрыть" class="ui-hints__text" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
         </ui:VisualElement>
 
-        <!-- Footer -->
-        <ui:VisualElement class="fantasy-footer">
-            <ui:Label text="BARAKI" class="fantasy-footer-text" />
-            <ui:Label text="MVP · 2026" class="fantasy-footer-text" />
+        <ui:VisualElement class="ui-footer" picking-mode="Ignore">
+            <ui:Label text="BARAKI" class="ui-footer__text" />
+            <ui:Label text="·" class="ui-footer__dot" />
+            <ui:Label text="MVP 2026" class="ui-footer__text" />
         </ui:VisualElement>
 
-        <!-- Settings overlay -->
-        <ui:VisualElement name="SettingsOverlay" class="fantasy-overlay menu__overlay--hidden">
-            <ui:VisualElement name="MenuOverlayDim" class="fantasy-overlay-dim" />
-            <ui:VisualElement name="MenuDialog" class="fantasy-dialog">
-                <ui:VisualElement class="fantasy-dialog__inner">
-                    <ui:VisualElement class="fantasy-dialog__header">
-                        <ui:Label text="НАСТРОЙКИ" class="fantasy-dialog__title" />
-                        <ui:Button name="SettingsCloseButton" class="fantasy-dialog__close" />
+        <ui:VisualElement name="SettingsOverlay" class="ui-overlay ui-overlay--hidden">
+            <ui:VisualElement name="MenuOverlayDim" class="ui-overlay__dim" />
+            <ui:VisualElement name="MenuDialog" class="ui-dialog">
+                <ui:VisualElement class="ui-dialog__header">
+                    <ui:Label text="НАСТРОЙКИ" class="ui-dialog__title" />
+                    <ui:Button name="SettingsCloseButton" text="✕" class="ui-dialog__close" />
+                </ui:VisualElement>
+                <ui:VisualElement class="ui-dialog__body">
+                    <ui:VisualElement class="ui-dialog__row">
+                        <ui:Label text="Звук" class="ui-label" />
+                        <ui:Toggle name="SoundToggle" class="ui-toggle" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="fantasy-dialog__block">
-                        <ui:VisualElement class="fantasy-dialog__row">
-                            <ui:Label text="Звук" class="fantasy-dialog__label" />
-                            <ui:Toggle name="SoundToggle" class="fantasy-toggle" />
+                    <ui:VisualElement class="ui-dialog__row ui-dialog__row--stack">
+                        <ui:VisualElement class="ui-dialog__row-head">
+                            <ui:Label text="Громкость" class="ui-label" />
+                            <ui:Label name="VolumeValueLabel" text="75%" class="ui-dialog__value" />
                         </ui:VisualElement>
-                    </ui:VisualElement>
-                    <ui:VisualElement class="fantasy-dialog__block">
-                        <ui:VisualElement class="fantasy-dialog__row fantasy-dialog__row--slider">
-                            <ui:VisualElement class="fantasy-dialog__row-head">
-                                <ui:Label text="Громкость" class="fantasy-dialog__label" />
-                                <ui:Label name="VolumeValueLabel" text="75%" class="fantasy-dialog__value" />
-                            </ui:VisualElement>
-                            <ui:Slider name="VolumeSlider" low-value="0" high-value="1" value="0.75" class="fantasy-slider" />
-                        </ui:VisualElement>
+                        <ui:Slider name="VolumeSlider" low-value="0" high-value="1" value="0.75" class="ui-slider" />
                     </ui:VisualElement>
                 </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="MatchEntryOverlay" class="ui-overlay ui-overlay--hidden">
+            <ui:VisualElement name="MatchEntryDim" class="ui-overlay__dim" />
+            <ui:VisualElement class="ui-dialog mm-entry">
+                <ui:VisualElement class="ui-dialog__header">
+                    <ui:Label text="МАТЧ" class="ui-dialog__title" />
+                    <ui:Button name="MatchEntryCloseButton" text="✕" class="ui-dialog__close" />
+                </ui:VisualElement>
+                <ui:VisualElement class="ui-dialog__body mm-entry__body">
+                    <ui:Button name="CreateMatchButton" text="СОЗДАТЬ МАТЧ" class="ui-btn ui-btn--primary" />
+                    <ui:Button name="JoinMatchButton" text="ПРИСОЕДИНИТЬСЯ" class="ui-btn" />
+                    <ui:VisualElement name="JoinCodeRow" class="mm-join ui-overlay--hidden">
+                        <ui:Label text="Код комнаты" class="ui-label" />
+                        <ui:TextField name="JoinCodeField" class="mm-join__field" max-length="8" />
+                        <ui:Button name="JoinConfirmButton" text="ВОЙТИ" class="ui-btn ui-btn--primary" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="ModeSelectOverlay" class="ui-overlay ui-overlay--hidden">
+            <ui:VisualElement name="ModeSelectDim" class="ui-overlay__dim" />
+            <ui:VisualElement class="ui-dialog mm-modes">
+                <ui:VisualElement class="ui-dialog__header">
+                    <ui:Label text="РЕЖИМ" class="ui-dialog__title" />
+                    <ui:Button name="ModeSelectCloseButton" text="✕" class="ui-dialog__close" />
+                </ui:VisualElement>
+                <ui:Label text="Выбери число игроков" class="ui-meta mm-modes__hint" />
+                <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

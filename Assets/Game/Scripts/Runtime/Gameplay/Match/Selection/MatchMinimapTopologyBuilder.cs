@@ -18,11 +18,45 @@ namespace Game.Gameplay.Match.Selection
             }
 
             return layout.PlayerCount == 4
-                ? BuildN4(layout, graph)
-                : BuildGeneric(layout, graph);
+                ? BuildSquareCardinal(layout, graph)
+                : layout.PlayerCount == 2
+                    ? BuildDuelOval(layout, graph)
+                    : BuildGeneric(layout, graph);
         }
 
-        static MatchMinimapTopology BuildN4(MatchArenaLayout layout, LaneGraph graph)
+        static MatchMinimapTopology BuildDuelOval(MatchArenaLayout layout, LaneGraph graph)
+        {
+            var filledRects = new List<MatchMinimapRect>();
+            var roadSegments = new List<MatchMinimapSegment>();
+            var halfSize = layout.ArenaRadius;
+            var centerHalf = N2RoadReferenceSpec.CenterArenaHalfSize;
+
+            filledRects.Add(new MatchMinimapRect(Vector2.zero, new Vector2(centerHalf, centerHalf), 0f));
+
+            foreach (var slot in layout.Slots)
+            {
+                var localOffset = new Vector3(
+                    0f,
+                    0f,
+                    -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
+                var worldCenter = slot.BasePosition + slot.BaseRotation * localOffset;
+                filledRects.Add(new MatchMinimapRect(
+                    ToXZ(worldCenter),
+                    new Vector2(
+                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
+                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
+                    slot.BaseRotation.eulerAngles.y,
+                    slot.SlotIndex));
+            }
+
+            AddSegment(roadSegments, new Vector3(-halfSize, 0f, 0f), new Vector3(halfSize, 0f, 0f));
+            AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: true, halfSize));
+            AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: false, halfSize));
+
+            return new MatchMinimapTopology(filledRects, roadSegments);
+        }
+
+        static MatchMinimapTopology BuildSquareCardinal(MatchArenaLayout layout, LaneGraph graph)
         {
             var filledRects = new List<MatchMinimapRect>();
             var roadSegments = new List<MatchMinimapSegment>();
@@ -54,6 +88,9 @@ namespace Game.Gameplay.Match.Selection
 
             return new MatchMinimapTopology(filledRects, roadSegments);
         }
+
+        static MatchMinimapTopology BuildN4(MatchArenaLayout layout, LaneGraph graph) =>
+            BuildSquareCardinal(layout, graph);
 
         static MatchMinimapTopology BuildGeneric(MatchArenaLayout layout, LaneGraph graph)
         {

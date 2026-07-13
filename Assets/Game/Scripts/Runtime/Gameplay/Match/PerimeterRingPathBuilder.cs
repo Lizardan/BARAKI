@@ -10,6 +10,11 @@ namespace Game.Gameplay.Match
 
         public static LanePath BuildSharedFlankRing(float ringRadius, int playerCount)
         {
+            if (playerCount == 2)
+            {
+                return DuelPathBuilder.BuildSharedFlankRing(ringRadius);
+            }
+
             return playerCount == 4
                 ? N4RoadCenterlineBuilder.BuildSharedFlankRing(ringRadius)
                 : BuildCircularClockwiseRing(ringRadius, CircularRingSegments);

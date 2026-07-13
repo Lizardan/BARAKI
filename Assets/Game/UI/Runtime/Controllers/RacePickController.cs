@@ -78,13 +78,15 @@ namespace Game.UI.Controllers
         private void BeginRacePick()
         {
             var setup = GameSession.ActiveSetup ?? MatchSetup.Default;
-            var assignment = MatchSlotAssignment.CreateOffline(setup.PlayerCount);
-            _session = new RacePickSession(setup.PlayerCount, assignment.LocalPlayerSlot);
+            var localSlot = LocalMatchRegistry.LocalPlayerSlot ?? setup.LocalPlayerSlot;
+            localSlot = Mathf.Clamp(localSlot, 0, setup.PlayerCount - 1);
+            GameSession.UpdateActiveSetup(new MatchSetup(setup.PlayerCount, localSlot, setup.RaceIds));
+            _session = new RacePickSession(setup.PlayerCount, localSlot);
             _selectedRaceId = null;
 
             _subtitleLabel.text =
-                $"Слот {assignment.LocalPlayerSlot + 1} · игроков {setup.PlayerCount}";
-            _slotsLabel.text = BuildSlotsHint(setup.PlayerCount, assignment.LocalPlayerSlot);
+                $"Слот {localSlot + 1} · игроков {setup.PlayerCount}";
+            _slotsLabel.text = BuildSlotsHint(setup.PlayerCount, localSlot);
             _selectedLabel.text = "Раса не выбрана";
             UpdateRaceButtons();
             UpdateConfirmButton();
@@ -109,6 +111,11 @@ namespace Game.UI.Controllers
 
             _session.SetLocalPick(_selectedRaceId);
             _session.ConfirmOfflinePick();
+            var setup = GameSession.ActiveSetup ?? MatchSetup.Default;
+            GameSession.UpdateActiveSetup(new MatchSetup(
+                setup.PlayerCount,
+                _session.LocalPlayerSlot,
+                _session.ToRaceIdsArray()));
             SetPanInputLocked(false);
             _matchRuntime.StartMatch(_session.ToRaceIdsArray(), _session.LocalPlayerSlot);
             Hide();

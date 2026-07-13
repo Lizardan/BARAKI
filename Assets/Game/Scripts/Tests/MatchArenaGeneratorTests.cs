@@ -18,6 +18,27 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Generate_N2_OppositeBasesShareCenterArenaTargets()
+        {
+            var layout = MatchArenaGenerator.Generate(2, arenaRadius: 100f);
+            var distance = Vector3.Distance(layout.Slots[0].BasePosition, layout.Slots[1].BasePosition);
+            Assert.Greater(distance, 150f);
+            Assert.AreEqual(1, layout.Slots[0].CenterPrimaryTargetSlot);
+            Assert.AreEqual(0, layout.Slots[1].CenterPrimaryTargetSlot);
+
+            var centerLanes = 0;
+            foreach (var lane in layout.Lanes)
+            {
+                if (lane.IsCenterLane)
+                {
+                    centerLanes++;
+                }
+            }
+
+            Assert.AreEqual(2, centerLanes);
+        }
+
+        [Test]
         public void Generate_N4_NeighborsAndCenterTarget()
         {
             var layout = MatchArenaGenerator.Generate(4);

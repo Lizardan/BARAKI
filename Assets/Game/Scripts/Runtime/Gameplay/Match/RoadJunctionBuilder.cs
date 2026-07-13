@@ -120,6 +120,18 @@ namespace Game.Gameplay.Match
             CreateSpokeFillets(parent, new Vector3(-halfSize, 0f, 0f), Vector3.left, Vector3.forward, Vector3.back, radius, roadHeight, material);
         }
 
+        /// <summary>East/West spoke × perimeter fillets for duel (N=2) map.</summary>
+        public static void CreateDuelSpokeFillets(
+            Transform parent,
+            float halfSize,
+            float roadHeight,
+            Material material)
+        {
+            var radius = CenterLineTurnRadius;
+            CreateSpokeFillets(parent, new Vector3(halfSize, 0f, 0f), Vector3.right, Vector3.forward, Vector3.back, radius, roadHeight, material);
+            CreateSpokeFillets(parent, new Vector3(-halfSize, 0f, 0f), Vector3.left, Vector3.forward, Vector3.back, radius, roadHeight, material);
+        }
+
         static void CreateSpokeFillets(
             Transform parent,
             Vector3 junction,

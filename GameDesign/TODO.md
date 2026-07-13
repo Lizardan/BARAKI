@@ -32,10 +32,10 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| MVP-D01 | Cloudflare Pages — WebGL + Activity shell | pending | Loads in Discord iframe |
-| MVP-D02 | Embedded App SDK — instanceId, participants | pending | Join same activity instance |
-| MVP-D03 | Workers matchmaker — ensure/join by instanceId | pending | Returns wss URL |
-| MVP-D04 | **FREE-0:** PC headless + Cloudflare Tunnel | pending | 2 WebGL clients connect WSS |
+| MVP-D01 | Cloudflare Pages — WebGL + Activity shell | in progress | shell + deploy script; WebGL build copy required |
+| MVP-D02 | Embedded App SDK — instanceId, participants | in progress | activity-shell boot.js + DiscordActivityBridge |
+| MVP-D03 | Workers matchmaker — ensure/join by instanceId | in progress | infra/workers/matchmaker (register-tunnel) |
+| MVP-D04 | **FREE-0:** PC headless + Cloudflare Tunnel | in progress | DedicatedServerEntry + FREE0.md runbook |
 | MVP-D05 | Linux ARM64 server build + Docker image | pending | Same image runs local + Oracle |
 | MVP-D06 | **FREE-1:** Oracle Always Free deploy | deferred | 24/7 without PC |
 
@@ -43,9 +43,9 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| MVP-N01 | Netcode NGO + WebSocket transport | in progress | NGO package + MatchNetworkAuthority scaffold |
-| MVP-N02 | `Lobby.unity` — slots, race pick, N=2 or 4 | in progress | Race pick на Game; lobby → arena |
-| MVP-N03 | Server-authoritative gold + spawn | pending | No client gold cheat |
+| MVP-N01 | Netcode NGO + WebSocket transport | in progress | Bootstrap + UseWebSockets; tunnel smoke TBD |
+| MVP-N02 | `Lobby.unity` — slots, race pick, N=2 or 4 | in progress | NetworkLobbyState + LocalDev offline |
+| MVP-N03 | Server-authoritative gold + spawn | in progress | Snapshot publish/apply ghosts |
 
 ### Map & lanes
 
@@ -71,7 +71,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | MVP-020 | `MatchController` + phases | done | MatchController, MatchRuntime, MatchRules; tests |
 | MVP-021 | `BarracksWaveScheduler` per-barracks + level 1–4 | done | BarracksWaveRules, scheduler, MatchController hook |
 | MVP-022a | Kill bounty (unit kills) | done | MatchCombatSystem.GrantGold + tests |
-| MVP-022b | Passive gold (main upgrade) | pending | Economy.md INCOME_MAIN_PASSIVE |
+| MVP-022b | Passive gold (main upgrade) | done | MatchEconomyRules + MatchController tick; tests |
 | MVP-023 | Elimination + disconnect grace | in progress | EliminationService + last standing; disconnect pending |
 | MVP-024 | Hero summon + tower targeting | pending | |
 
@@ -80,9 +80,8 @@ provides: [backlog, priorities, acceptance_criteria]
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | MVP-030 | Match HUD | in progress | фаза, время, gold, таймеры над казармами, results overlay |
-| MVP-031 | Lane pressure (3 bars) | pending | |
-| MVP-032 | Results screen | in progress | MatchHud results overlay on MatchEnded |
-| MVP-033 | Selection UI | done | pick unit/building, live minimap, inspector shell buttons |
+| MVP-032 | Results screen | done | Results overlay persists on Phase.End |
+| MVP-033 | Selection UI | done | minimap · portrait/stats/research · 3×4 command grid |
 
 ### QA
 
@@ -129,6 +128,8 @@ provides: [backlog, priorities, acceptance_criteria]
 | 2026-07-05 | MVP-010/011 RaceCatalog, units, heroes, squads, stat tracks |
 | 2026-07-07 | Race pick UI на Game: матч стартует после выбора расы |
 | 2026-07-09 | BuildingRegistry, EliminationService, gold HUD, siege→buildings |
+| 2026-07-13 | Match Entry Create/Join + ModeSelect; Lobby Ready; LocalDev session API; MatchSnapshot |
+| 2026-07-13 | FREE-0 Phase B/A scaffolding: NGO WSS bootstrap, headless entry, Workers matchmaker, activity-shell, Cloudflare Pages deploy scripts |
 
 ---
 

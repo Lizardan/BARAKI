@@ -12,6 +12,10 @@ namespace Game.Gameplay.Match
         public int SlotIndex { get; }
         public string RaceId { get; }
         public int Gold { get; set; }
+        public int MainLevel { get; set; } = MatchEconomyRules.DefaultMainLevel;
+        public int PassiveGoldLevel { get; set; }
+        public float PassiveGoldTickRemainingSeconds { get; set; } =
+            MatchEconomyRules.PassiveGoldTickIntervalSeconds;
         public bool IsEliminated { get; set; }
     }
 }

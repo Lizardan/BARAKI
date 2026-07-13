@@ -11,10 +11,58 @@
 
 .lobby__header {
     align-items: center;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
+}
+
+.lobby__code {
+    margin-top: 10px;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: rgb(201, 163, 90);
+    -unity-font-style: bold;
 }
 
 .lobby__panel-wrap {
     width: 100%;
-    max-width: 440px;
+    max-width: 520px;
+}
+
+.lobby__slots {
+    flex-direction: column;
+    margin-bottom: 14px;
+    min-height: 80px;
+}
+
+.lobby__slot {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background-color: rgba(12, 8, 6, 0.55);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.35);
+    border-radius: 4px;
+}
+
+.lobby__slot-name {
+    font-size: 15px;
+    color: rgb(242, 230, 200);
+    flex-grow: 1;
+}
+
+.lobby__slot-status {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(168, 152, 120);
+    margin-left: 12px;
+}
+
+.lobby__slot-status--ready {
+    color: rgb(120, 180, 110);
+}
+
+.lobby__slot-status--empty {
+    color: rgba(168, 152, 120, 0.55);
 }

@@ -5,10 +5,14 @@
 }
 
 .match-hud-chrome {
-    background-color: rgba(10, 8, 18, 0.72);
-    border-width: 1px;
-    border-color: rgba(212, 168, 72, 0.45);
-    border-radius: 6px;
+    background-color: rgba(18, 14, 12, 0.92);
+    background-image: none;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-color: rgba(201, 163, 90, 0.45);
+    border-radius: 0;
 }
 
 .match-hud__top-bar {
@@ -16,19 +20,19 @@
     left: 16px;
     right: 16px;
     top: 12px;
-    height: 44px;
+    height: 52px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 18px;
+    padding-right: 18px;
 }
 
 .match-hud__phase {
     min-width: 88px;
     font-size: 15px;
     -unity-font-style: bold;
-    color: rgb(228, 184, 96);
+    color: rgb(201, 163, 90);
     letter-spacing: 1px;
 }
 
@@ -37,13 +41,24 @@
     margin-left: 20px;
     font-size: 22px;
     -unity-font-style: bold;
-    color: rgb(252, 244, 228);
+    color: rgb(242, 230, 200);
     -unity-text-align: middle-left;
 }
 
-.match-hud__gold {
-    min-width: 88px;
+.match-hud__gold-row {
+    flex-direction: row;
+    align-items: center;
     margin-left: 20px;
+}
+
+.match-hud__gold-icon {
+    width: 22px;
+    height: 22px;
+    margin-right: 6px;
+}
+
+.match-hud__gold {
+    min-width: 72px;
     font-size: 18px;
     -unity-font-style: bold;
     color: rgb(255, 214, 96);
@@ -66,7 +81,7 @@
     margin-left: 20px;
     font-size: 14px;
     -unity-font-style: bold;
-    color: rgb(180, 220, 255);
+    color: rgb(210, 196, 160);
     letter-spacing: 0.5px;
 }
 
@@ -107,17 +122,26 @@
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(8, 6, 14, 0.82);
+    background-color: rgba(8, 6, 4, 0.82);
 }
 
 .match-hud__results--hidden {
     display: none;
 }
 
+.match-hud__results-panel {
+    width: 480px;
+    max-width: 88%;
+    align-items: center;
+    justify-content: center;
+    padding-top: 36px;
+    padding-bottom: 36px;
+}
+
 .match-hud__results-title {
-    font-size: 32px;
+    font-size: 30px;
     -unity-font-style: bold;
     color: rgb(255, 214, 96);
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     -unity-text-align: middle-center;
 }

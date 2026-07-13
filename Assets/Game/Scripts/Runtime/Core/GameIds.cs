@@ -1,7 +1,7 @@
 namespace Game.Core
 {
     /// <summary>
-    /// Stable string identifiers — mirror <c>Assets/Game/GameDesign/</c>.
+    /// Stable string identifiers — mirror <c>GameDesign/</c>.
     /// Do not rename without updating GDD and ScriptableObject assets.
     /// </summary>
     public static class GameIds

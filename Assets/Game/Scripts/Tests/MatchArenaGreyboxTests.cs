@@ -22,6 +22,31 @@ namespace Game.Tests
         }
 
         [Test]
+        public void PopulateN2_SourceParts_HasOrganicOvalRoadParts()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN2Test");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+                Assert.AreEqual(N2SourcePartsBuilder.PartCount, sourceParts.childCount);
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, "FlankArcNorth"));
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, "FlankArcSouth"));
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, "RoadStrip"));
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, "CenterArena"));
+                Assert.AreEqual(2, CountNamedChildren(sourceParts, "BaseArena"));
+                Assert.IsNull(root.transform.Find("Roads"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void PopulateN4_SourceParts_HasExpectedChildCount()
         {
             var layout = MatchArenaGenerator.Generate(4);

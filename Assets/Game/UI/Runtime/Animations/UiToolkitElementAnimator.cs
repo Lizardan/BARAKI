@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace Game.UI.Animations
 {
     /// <summary>
-    /// Lightweight UI Toolkit tweens inspired by Airy UI entrance animations.
+    /// Lightweight UI Toolkit tweens for menu and overlay transitions.
     /// </summary>
     public static class UiToolkitElementAnimator
     {

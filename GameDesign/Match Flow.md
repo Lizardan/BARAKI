@@ -46,26 +46,26 @@ mvp: true
 ## Lobby flow (MVP)
 
 ```
-Main Menu → Host / Join
-  → Host: создать лобби (этот клиент = **server + игрок**)
-  → Join: подключиться к host по адресу/коду
-  → Лобби с фиксированным N (2 или 4 для MVP; 3–8 Phase 2)
-  → Race pick + Ready
-  → Wait: все слоты 1..N заняты реальными игроками
-  → Countdown → Load **Game.unity** → Generate arena → Race pick (MVP interim)
+Main Menu → Play → Create / Join
+  → Create: Mode Select (N=2..8 tiles; MVP selectable: 2 and 4)
+  → Join: room code (LocalDev) / Discord instanceId (Activity)
+  → Lobby: N slot rows, Ready per player, Host Start when all occupied+ready
+  → Load Game.unity → Race pick (each human) → match
 ```
 
-> **MVP interim (offline):** выбор расы на сцене `Game.unity` после загрузки арены и preview greybox. Целевой online flow — race pick + Ready в `Lobby.unity` (MVP-N02).
-
-> **N immutable:** после создания лобби число игроков **не меняется**. Другой N — **новое лобби**.
+> **Race pick** — на сцене `Game.unity` после Start из лобби (не в Lobby).
+> **N immutable:** после Create число игроков не меняется.
+> **Discord:** UI тот же; `IMatchSessionBackend` → matchmaker `ensure/join` по `instanceId` (dedicated + WSS). LocalDev — in-process registry + код комнаты.
 
 ```entity
 id: LOBBY_RULES
 min_players: 2
 max_players: 8
-player_count: fixed_at_create    # задаётся при создании; не редактируется
-empty_slots: closed              # нельзя стартовать с пустым слотом
+player_count: fixed_at_create
+mvp_selectable_modes: [2, 4]
+empty_slots: closed
 bot_fill: never
+local_standins: LocalDev_only
 disconnect_policy: eliminate_after_grace
 disconnect_grace_seconds: 90
 mvp: true

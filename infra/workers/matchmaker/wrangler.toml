@@ -1,0 +1,11 @@
+name = "baraki-matchmaker"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+[[kv_namespaces]]
+binding = "BARAKI_KV"
+id = "00000000000000000000000000000000"
+preview_id = "00000000000000000000000000000000"
+
+# After first deploy: wrangler kv namespace create BARAKI_KV
+# then replace id / preview_id above.

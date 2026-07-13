@@ -139,7 +139,7 @@ Unit tests без сети: вызов генератора с N=2,4,8 → asser
 
 ## Data pipeline
 
-1. GDD `Assets/Game/GameDesign/`
+1. GDD `GameDesign/`
 2. SO `Assets/Game/ScriptableObjects/` (runtime data; не `Assets/Game/Data/`)
 3. `GameIds.cs` — стабильные id
 

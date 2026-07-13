@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Shared name and runtime tint for the team-color accent mesh on greybox unit prefabs.</summary>
+    /// <summary>Runtime tint for all team-color accent meshes on unit prefabs.</summary>
     public static class UnitVisualAccent
     {
         public const string TeamAccentTransformName = "TeamAccent";
@@ -10,47 +10,61 @@ namespace Game.Gameplay.Match
 
         public static void ApplyTeamColor(Transform visualRoot, Color slotColor)
         {
-            var accent = visualRoot.Find(TeamAccentTransformName);
-            if (accent == null)
-            {
-                accent = FindDeepChild(visualRoot, TeamAccentTransformName);
-            }
-
-            if (accent == null)
+            if (visualRoot == null)
             {
                 return;
             }
 
-            var renderer = accent.GetComponent<Renderer>();
-            if (renderer == null)
-            {
-                return;
-            }
-
-            var block = new MaterialPropertyBlock();
-            renderer.GetPropertyBlock(block);
-            block.SetColor(BaseColorId, slotColor);
-            renderer.SetPropertyBlock(block);
+            ApplyRecursive(visualRoot, slotColor);
         }
 
-        static Transform FindDeepChild(Transform parent, string name)
+        public static int CountAccents(Transform visualRoot)
         {
-            for (var i = 0; i < parent.childCount; i++)
+            if (visualRoot == null)
             {
-                var child = parent.GetChild(i);
-                if (child.name == name)
-                {
-                    return child;
-                }
+                return 0;
+            }
 
-                var nested = FindDeepChild(child, name);
-                if (nested != null)
+            var count = 0;
+            CountRecursive(visualRoot, ref count);
+            return count;
+        }
+
+        static void ApplyRecursive(Transform node, Color slotColor)
+        {
+            if (IsAccentName(node.name))
+            {
+                var renderer = node.GetComponent<Renderer>();
+                if (renderer != null)
                 {
-                    return nested;
+                    var block = new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(block);
+                    block.SetColor(BaseColorId, slotColor);
+                    renderer.SetPropertyBlock(block);
                 }
             }
 
-            return null;
+            for (var i = 0; i < node.childCount; i++)
+            {
+                ApplyRecursive(node.GetChild(i), slotColor);
+            }
         }
+
+        static void CountRecursive(Transform node, ref int count)
+        {
+            if (IsAccentName(node.name) && node.GetComponent<Renderer>() != null)
+            {
+                count++;
+            }
+
+            for (var i = 0; i < node.childCount; i++)
+            {
+                CountRecursive(node.GetChild(i), ref count);
+            }
+        }
+
+        static bool IsAccentName(string name) =>
+            name == TeamAccentTransformName
+            || name.StartsWith(TeamAccentTransformName + "_", System.StringComparison.Ordinal);
     }
 }

@@ -113,7 +113,7 @@ Level ↑ также **ускоряет** spawn. Уничтоженный barrac
 
 ## Camera
 
-Изометрия; lane pressure UI — **всегда 3 полоски** (в дуэли подписи: Left / Center / Right corridor).
+Изометрия.
 
 ## Locked decisions
 
