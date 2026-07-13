@@ -11,6 +11,11 @@ namespace Game.Gameplay.Match
         const float BarDepth = 0.02f;
         const float BarSpacing = 0.05f * SizeMultiplier;
 
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+        static Material s_unlitMaterial;
+        static MaterialPropertyBlock s_colorBlock;
+
         Transform _healthFill;
         Transform _manaFill;
         float _lastHealthFill = -1f;
@@ -62,7 +67,7 @@ namespace Game.Gameplay.Match
             var fillRenderer = fillObject.GetComponent<Renderer>();
             if (fillRenderer != null)
             {
-                fillRenderer.sharedMaterial = CreateUnlitMaterial(fillColor);
+                SetRendererColor(fillRenderer, fillColor);
             }
 
             fillTransform = fillObject.transform;
@@ -105,7 +110,7 @@ namespace Game.Gameplay.Match
             var color = isHealth
                 ? Color.Lerp(new Color(0.9f, 0.2f, 0.15f), new Color(0.25f, 0.9f, 0.3f), normalized)
                 : Color.Lerp(new Color(0.15f, 0.15f, 0.45f), new Color(0.25f, 0.45f, 0.95f), normalized);
-            renderer.sharedMaterial = CreateUnlitMaterial(color);
+            SetRendererColor(renderer, color);
         }
 
         void LateUpdate()
@@ -139,21 +144,48 @@ namespace Game.Gameplay.Match
             var renderer = target.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.sharedMaterial = CreateUnlitMaterial(color);
+                SetRendererColor(renderer, color);
             }
         }
 
-        static Material CreateUnlitMaterial(Color color)
+        static void SetRendererColor(Renderer renderer, Color color)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null)
+            var material = GetUnlitMaterial();
+            if (material == null)
             {
-                shader = Shader.Find("Unlit/Color");
+                renderer.enabled = false;
+                return;
             }
 
-            var material = new Material(shader != null ? shader : Shader.Find("Standard"));
-            material.color = color;
-            return material;
+            renderer.sharedMaterial = material;
+            s_colorBlock ??= new MaterialPropertyBlock();
+            s_colorBlock.Clear();
+            s_colorBlock.SetColor(BaseColorId, color);
+            s_colorBlock.SetColor(ColorId, color);
+            renderer.SetPropertyBlock(s_colorBlock);
+        }
+
+        static Material GetUnlitMaterial()
+        {
+            if (s_unlitMaterial != null)
+            {
+                return s_unlitMaterial;
+            }
+
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            // #region agent log
+            Debug.Log($"[BARAKI Debug][H-SHADER] UnitWorldStatusBars shader resolved={shader != null}");
+            // #endregion
+            if (shader == null)
+            {
+                return null;
+            }
+
+            s_unlitMaterial = new Material(shader)
+            {
+                name = "UnitWorldStatusBars",
+            };
+            return s_unlitMaterial;
         }
     }
 }
