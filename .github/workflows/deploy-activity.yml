@@ -126,11 +126,33 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          projects_json="$(npx wrangler@latest pages project list --json)"
-          if ! jq -e --arg name "${PAGES_PROJECT}" \
+          set +e
+          projects_json="$(npx wrangler@latest pages project list --json 2>&1)"
+          list_status=$?
+          # region agent log
+          printf '{"sessionId":"a9f01b","runId":"pre-fix-2","hypothesisId":"H1-H4","location":"deploy-activity.yml:Ensure Cloudflare Pages project exists","message":"Pages project probe","data":{"project":"%s","listStatus":%s},"timestamp":%s}\n' \
+            "${PAGES_PROJECT}" "${list_status}" "$(date +%s000)" | tee -a debug-a9f01b.log
+          probe_summary="$(printf '%s' "${projects_json}" | tail -20 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+          echo "::notice title=Pages project probe (${PAGES_PROJECT})::status=${list_status} ${probe_summary}"
+          # endregion
+          if [[ ${list_status} -ne 0 ]]; then
+            exit "${list_status}"
+          fi
+
+          if jq -e --arg name "${PAGES_PROJECT}" \
             '[.. | objects | .name? // empty] | index($name) != null' <<<"${projects_json}" >/dev/null; then
-            npx wrangler@latest pages project create "${PAGES_PROJECT}" \
-              --production-branch="${GITHUB_REF_NAME}"
+            echo "Pages project '${PAGES_PROJECT}' exists."
+            exit 0
+          fi
+
+          create_output="$(npx wrangler@latest pages project create "${PAGES_PROJECT}" \
+            --production-branch="${GITHUB_REF_NAME}" 2>&1)"
+          create_status=$?
+          printf '%s\n' "${create_output}"
+          if [[ ${create_status} -ne 0 ]]; then
+            create_summary="$(printf '%s' "${create_output}" | tail -20 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            echo "::error title=Pages project create failed (${PAGES_PROJECT})::${create_summary}"
+            exit "${create_status}"
           fi
 
       - name: Deploy to Cloudflare Pages
