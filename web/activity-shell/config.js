@@ -8,7 +8,7 @@ window.BARAKI_CONFIG = {
   DEFAULT_PLAYER_COUNT: 2,
   UNITY_BUILD_URL: "./Build",
   UNITY_LOADER: "./Build/BARAKI.loader.js",
-  UNITY_DATA: "./Build/BARAKI.data",
-  UNITY_FRAMEWORK: "./Build/BARAKI.framework.js",
-  UNITY_CODE: "./Build/BARAKI.wasm",
+  UNITY_DATA: "./Build/BARAKI.data.gz",
+  UNITY_FRAMEWORK: "./Build/BARAKI.framework.js.gz",
+  UNITY_CODE: "./Build/BARAKI.wasm.gz",
 };
