@@ -8,10 +8,6 @@ SHELL_DIR="${2:?shell dir required}"
 BUILD_DIR="${SHELL_DIR}/Build"
 mkdir -p "${BUILD_DIR}"
 
-echo "Incoming WebGL tree (${WEBGL_DIR}):"
-find "${WEBGL_DIR}" -maxdepth 4 \( -name '*.loader.js' -o -name 'index.html' -o -name '*.wasm*' -o -name '*.data*' \) 2>/dev/null | head -50 || true
-ls -la "${WEBGL_DIR}" || true
-
 SRC=""
 LOADER=""
 
@@ -71,4 +67,3 @@ PY
 fi
 
 echo "Activity shell ready at ${SHELL_DIR}"
-ls -la "${BUILD_DIR}" | head -40

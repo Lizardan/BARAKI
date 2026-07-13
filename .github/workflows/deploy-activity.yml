@@ -92,12 +92,6 @@ jobs:
           manualExit: true
           customParameters: -ForceDisableUnityAudio -nographics
 
-      - name: List WebGL outputs
-        if: always()
-        run: |
-          find build -type f \( -name '*.loader.js' -o -name 'index.html' -o -name '*.wasm*' \) 2>/dev/null | head -50 || true
-          ls -laR build 2>/dev/null | head -120 || true
-
       - name: Upload WebGL artifact
         uses: actions/upload-artifact@v4
         with:
@@ -120,34 +114,12 @@ jobs:
           name: webgl-build
           path: _webgl
 
-      - name: Debug artifact layout
-        run: |
-          echo "PWD=$(pwd)"
-          find _webgl -maxdepth 5 -type f | head -80 || true
-          du -sh _webgl || true
-
       - name: Assemble activity shell
         env:
           DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
         run: |
           chmod +x infra/scripts/assemble-activity-shell.sh
           ./infra/scripts/assemble-activity-shell.sh _webgl web/activity-shell
-
-      # region agent log
-      - name: Diagnose Cloudflare Pages deployment
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN}" || { echo "CLOUDFLARE_API_TOKEN is empty"; exit 1; }
-          test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo "CLOUDFLARE_ACCOUNT_ID is empty"; exit 1; }
-          largest_file="$(find web/activity-shell -type f -printf '%s %p\n' | sort -nr | head -1)"
-          printf '{"sessionId":"a9f01b","runId":"pre-fix","hypothesisId":"H1-H4","location":"deploy-activity.yml:Diagnose Cloudflare Pages deployment","message":"Cloudflare deploy preflight","data":{"node":"%s","largestFile":"%s","tokenPresent":true,"accountIdPresent":true},"timestamp":%s}\n' \
-            "$(node --version)" "${largest_file//\"/\\\"}" "$(date +%s000)" | tee -a debug-a9f01b.log
-          npx wrangler@latest --version
-          npx wrangler@latest pages project list
-      # endregion
 
       - name: Ensure Cloudflare Pages project exists
         env:
@@ -166,12 +138,4 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set +e
-          output="$(npx wrangler@latest pages deploy web/activity-shell --project-name="${PAGES_PROJECT}" 2>&1)"
-          status=$?
-          printf '%s\n' "${output}"
-          if [[ ${status} -ne 0 ]]; then
-            summary="$(printf '%s' "${output}" | tail -20 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
-            echo "::error title=Wrangler Pages deploy failed::${summary}"
-            exit "${status}"
-          fi
+          npx wrangler@latest pages deploy web/activity-shell --project-name="${PAGES_PROJECT}"
