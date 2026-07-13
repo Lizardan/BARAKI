@@ -71,6 +71,9 @@ async function initDiscord() {
 
 async function ensureMatch(session) {
   const base = (config.MATCHMAKER_BASE || "/api").replace(/\/+$/, "");
+  // #region agent log
+  fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H3',location:'boot.js:ensureMatch',message:'Matchmaker request target',data:{insideDiscord:isInsideDiscord(),base,endpoint:`${base}/v1/match/ensure`},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   const res = await fetch(`${base}/v1/match/ensure`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -105,11 +108,19 @@ async function loadUnity(sessionPayload) {
   setStatus("Loading WebGL…");
   const canvas = document.querySelector("#unity-canvas");
   const loaderUrl = config.UNITY_LOADER || "./Build/BARAKI.loader.js";
+  // #region agent log
+  fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H2',location:'boot.js:loadUnity',message:'Unity asset URLs selected',data:{loaderUrl,dataUrl:config.UNITY_DATA,frameworkUrl:config.UNITY_FRAMEWORK,codeUrl:config.UNITY_CODE},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   await new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = loaderUrl;
-    script.onload = resolve;
+    script.onload = () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H4',location:'boot.js:loader.onload',message:'Unity loader script loaded',data:{loaderUrl,createUnityInstanceType:typeof createUnityInstance},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      resolve();
+    };
     script.onerror = () => reject(new Error(`Failed to load ${loaderUrl}. Build WebGL into web/activity-shell/Build/`));
     document.body.appendChild(script);
   });
