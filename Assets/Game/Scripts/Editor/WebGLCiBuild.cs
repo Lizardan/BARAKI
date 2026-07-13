@@ -20,6 +20,7 @@ namespace Game.Editor
             PlayerSettings.stripEngineCode = true;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.initialMemorySize = 256;
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
 
             var scenes = EditorBuildSettings.scenes
