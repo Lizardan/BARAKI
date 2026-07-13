@@ -20,8 +20,8 @@ namespace Game.Editor
             PlayerSettings.stripEngineCode = true;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
-            PlayerSettings.WebGL.initialMemorySize = 256;
-            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+            PlayerSettings.WebGL.debugSymbolMode = WebGLDebugSymbolMode.Embedded;
+            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.FullWithStacktrace;
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene.enabled)
