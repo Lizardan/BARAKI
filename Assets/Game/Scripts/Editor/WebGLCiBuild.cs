@@ -16,8 +16,8 @@ namespace Game.Editor
 
             PlayerSettings.SetManagedStrippingLevel(
                 NamedBuildTarget.WebGL,
-                ManagedStrippingLevel.High);
-            PlayerSettings.stripEngineCode = true;
+                ManagedStrippingLevel.Minimal);
+            PlayerSettings.stripEngineCode = false;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.debugSymbolMode = WebGLDebugSymbolMode.Embedded;
