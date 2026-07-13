@@ -77,7 +77,8 @@ jobs:
           buildsPath: build
           buildName: BARAKI
           allowDirtyBuild: true
-          customBuildMethod: Game.Editor.WebGLCiBuild.Build
+          buildMethod: Game.Editor.WebGLCiBuild.Build
+          manualExit: true
           customParameters: -ForceDisableUnityAudio -nographics
 
       - name: Upload WebGL artifact
