@@ -140,7 +140,7 @@ jobs:
           fi
 
           if jq -e --arg name "${PAGES_PROJECT}" \
-            '[.. | objects | .name? // empty] | index($name) != null' <<<"${projects_json}" >/dev/null; then
+            '[.. | objects | (.name? // ."Project Name"? // empty)] | index($name) != null' <<<"${projects_json}" >/dev/null; then
             echo "Pages project '${PAGES_PROJECT}' exists."
             exit 0
           fi
