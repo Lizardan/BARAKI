@@ -19,6 +19,7 @@ namespace Game.Editor
                 ManagedStrippingLevel.High);
             PlayerSettings.stripEngineCode = true;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
 
             var scenes = EditorBuildSettings.scenes
