@@ -20,6 +20,15 @@ function isInsideDiscord() {
 }
 
 async function initDiscord() {
+  if (!isInsideDiscord()) {
+    setStatus("Browser smoke mode");
+    return {
+      instanceId: "local-dev",
+      userId: "local-user",
+      displayName: "Local",
+    };
+  }
+
   const clientId = config.DISCORD_CLIENT_ID;
   if (!clientId || clientId.startsWith("YOUR_")) {
     setStatus("Set DISCORD_CLIENT_ID in config.js");
