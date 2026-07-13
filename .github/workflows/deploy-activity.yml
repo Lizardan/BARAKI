@@ -81,11 +81,17 @@ jobs:
           manualExit: true
           customParameters: -ForceDisableUnityAudio -nographics
 
+      - name: List WebGL outputs
+        if: always()
+        run: |
+          find build -type f \( -name '*.loader.js' -o -name 'index.html' -o -name '*.wasm*' \) 2>/dev/null | head -50 || true
+          ls -laR build 2>/dev/null | head -120 || true
+
       - name: Upload WebGL artifact
         uses: actions/upload-artifact@v4
         with:
           name: webgl-build
-          path: build/WebGL
+          path: build
           if-no-files-found: error
           retention-days: 7
 
@@ -102,6 +108,12 @@ jobs:
         with:
           name: webgl-build
           path: _webgl
+
+      - name: Debug artifact layout
+        run: |
+          echo "PWD=$(pwd)"
+          find _webgl -maxdepth 5 -type f | head -80 || true
+          du -sh _webgl || true
 
       - name: Assemble activity shell
         env:
