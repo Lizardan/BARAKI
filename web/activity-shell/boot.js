@@ -34,9 +34,32 @@ function withTimeout(promise, ms, label) {
   });
 }
 
+function hostnameFromWssUrl(wssUrl) {
+  try {
+    if (!wssUrl) {
+      return "";
+    }
+    return new URL(wssUrl).hostname;
+  } catch {
+    return "";
+  }
+}
+
 async function loadDiscordSdk() {
   // Local vendor only — Discord Activity CSP blocks unpkg/CDN imports.
   return import("./vendor/discord-embedded-app-sdk.js");
+}
+
+async function applyWssProxyMapping(patchUrlMappings, wssHost) {
+  const target = (wssHost || config.WSS_PROXY_TARGET || "").trim();
+  if (!target || typeof patchUrlMappings !== "function") {
+    return;
+  }
+
+  // Portal mapping: /wss → stable named-tunnel host (once).
+  // This rewrites Unity WebSocket connects to that host through Discord CSP.
+  patchUrlMappings([{ prefix: "/wss", target }]);
+  setStatus(`WSS proxy → ${target}`);
 }
 
 async function initDiscord() {
@@ -61,8 +84,9 @@ async function initDiscord() {
 
   setStatus("Loading Discord SDK…");
   let DiscordSDK;
+  let patchUrlMappings;
   try {
-    ({ DiscordSDK } = await loadDiscordSdk());
+    ({ DiscordSDK, patchUrlMappings } = await loadDiscordSdk());
   } catch (err) {
     console.warn("Discord SDK import failed", err);
     setStatus(`Discord SDK failed: ${err.message}`);
@@ -73,8 +97,8 @@ async function initDiscord() {
     };
   }
 
-  // Portal URL mapping `/api` → workers already proxies relative fetches.
-  // Do not rewrite `/api` onto discordsays host via patchUrlMappings.
+  // Apply stable WSS mapping early when known (named tunnel).
+  await applyWssProxyMapping(patchUrlMappings, config.WSS_PROXY_TARGET);
 
   const sdk = new DiscordSDK(clientId);
   try {
@@ -89,6 +113,7 @@ async function initDiscord() {
       userId: "discord-user",
       displayName: "Player",
       sdk,
+      patchUrlMappings,
     };
   }
 
@@ -128,6 +153,7 @@ async function initDiscord() {
     userId,
     displayName,
     sdk,
+    patchUrlMappings,
   };
 }
 
@@ -205,6 +231,10 @@ async function main() {
         setStatus("Calling matchmaker…");
         match = await withTimeout(ensureMatch(discord), 8000, "ensureMatch");
         setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
+        const fromMatch = hostnameFromWssUrl(match.wss_url);
+        if (fromMatch) {
+          await applyWssProxyMapping(discord.patchUrlMappings, fromMatch);
+        }
       } catch (err) {
         // OK without dedicated/tunnel for menu smoke.
         setStatus(`Matchmaker unavailable: ${err.message}`);

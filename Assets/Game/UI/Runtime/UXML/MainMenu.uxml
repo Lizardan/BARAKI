@@ -65,6 +65,7 @@
                     <ui:Button name="MatchEntryCloseButton" text="✕" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body mm-entry__body">
+                    <ui:Label name="MatchEntryErrorLabel" text="" class="ui-meta mm-modes__error" />
                     <ui:Button name="CreateMatchButton" text="СОЗДАТЬ МАТЧ" class="ui-btn ui-btn--primary" />
                     <ui:Button name="JoinMatchButton" text="ПРИСОЕДИНИТЬСЯ" class="ui-btn" />
                     <ui:VisualElement name="JoinCodeRow" class="mm-join ui-overlay--hidden">
@@ -84,6 +85,7 @@
                     <ui:Button name="ModeSelectCloseButton" text="✕" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:Label text="Выбери число игроков" class="ui-meta mm-modes__hint" />
+                <ui:Label name="ModeSelectErrorLabel" text="" class="ui-meta mm-modes__error" />
                 <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
             </ui:VisualElement>
         </ui:VisualElement>

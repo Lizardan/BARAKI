@@ -2,7 +2,7 @@ name: Deploy Activity (WebGL to Cloudflare Pages)
 
 # Secrets: UNITY_EMAIL, UNITY_PASSWORD, UNITY_LICENSE (or UNITY_SERIAL),
 #          CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# Vars (optional): PAGES_PROJECT (default baraki), DISCORD_CLIENT_ID
+# Vars (optional): PAGES_PROJECT (default baraki), DISCORD_CLIENT_ID, WSS_PROXY_TARGET
 
 on:
   workflow_dispatch:
@@ -117,6 +117,7 @@ jobs:
       - name: Assemble activity shell
         env:
           DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
+          WSS_PROXY_TARGET: ${{ vars.WSS_PROXY_TARGET }}
         run: |
           chmod +x infra/scripts/assemble-activity-shell.sh
           ./infra/scripts/assemble-activity-shell.sh _webgl web/activity-shell

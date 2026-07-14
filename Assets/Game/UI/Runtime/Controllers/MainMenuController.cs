@@ -51,6 +51,8 @@ namespace Game.UI.Controllers
         private Button _matchEntryCloseButton;
         private Button _modeSelectCloseButton;
         private TextField _joinCodeField;
+        private Label _modeSelectErrorLabel;
+        private Label _matchEntryErrorLabel;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
@@ -82,6 +84,8 @@ namespace Game.UI.Controllers
             _matchEntryCloseButton = _root.Q<Button>("MatchEntryCloseButton");
             _modeSelectCloseButton = _root.Q<Button>("ModeSelectCloseButton");
             _joinCodeField = _root.Q<TextField>("JoinCodeField");
+            _modeSelectErrorLabel = _root.Q<Label>("ModeSelectErrorLabel");
+            _matchEntryErrorLabel = _root.Q<Label>("MatchEntryErrorLabel");
 
             var titleLabel = _root.Q<Label>("TitleLabel");
             _playButton = _root.Q<Button>("PlayButton");
@@ -517,6 +521,7 @@ namespace Game.UI.Controllers
 
             _isMatchEntryOpen = true;
             _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+            ClearMatchEntryError();
             _matchEntryOverlay.RemoveFromClassList(OverlayHiddenClass);
             SetMainMenuInteractable(false);
             _createMatchButton?.Focus();
@@ -534,6 +539,7 @@ namespace Game.UI.Controllers
             _isMatchEntryOpen = false;
             _matchEntryOverlay?.AddToClassList(OverlayHiddenClass);
             _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+            ClearMatchEntryError();
         }
 
         private void OnCreateMatchClicked()
@@ -561,6 +567,7 @@ namespace Game.UI.Controllers
             }
 
             _isModeSelectOpen = true;
+            ClearModeSelectError();
             _modeSelectOverlay.RemoveFromClassList(OverlayHiddenClass);
             SetMainMenuInteractable(false);
         }
@@ -575,6 +582,59 @@ namespace Game.UI.Controllers
         {
             _isModeSelectOpen = false;
             _modeSelectOverlay?.AddToClassList(OverlayHiddenClass);
+            ClearModeSelectError();
+        }
+
+        private void ClearModeSelectError()
+        {
+            if (_modeSelectErrorLabel != null)
+            {
+                _modeSelectErrorLabel.text = string.Empty;
+            }
+        }
+
+        private void ClearMatchEntryError()
+        {
+            if (_matchEntryErrorLabel != null)
+            {
+                _matchEntryErrorLabel.text = string.Empty;
+            }
+        }
+
+        private void ShowModeSelectError(string message)
+        {
+            if (_modeSelectErrorLabel != null)
+            {
+                _modeSelectErrorLabel.text = message ?? string.Empty;
+            }
+        }
+
+        private void ShowMatchEntryError(string message)
+        {
+            if (_matchEntryErrorLabel != null)
+            {
+                _matchEntryErrorLabel.text = message ?? string.Empty;
+            }
+        }
+
+        private static string FormatMatchSetupError(System.Exception ex)
+        {
+            var raw = ex?.Message ?? string.Empty;
+            if (raw.IndexOf("tunnel_not_registered", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || raw.IndexOf("503", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "Нет игрового сервера. Запусти Start-Playtest.bat на ПК хоста.";
+            }
+
+            if (raw.IndexOf("ensure failed", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || raw.IndexOf("Matchmaker", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "Matchmaker недоступен. Проверь Worker и URL Mapping /api.";
+            }
+
+            return string.IsNullOrWhiteSpace(raw)
+                ? "Не удалось создать матч."
+                : $"Не удалось создать матч: {raw}";
         }
 
         private async UniTask CreateMatchAsync(int playerCount, System.Threading.CancellationToken cancellationToken)
@@ -585,6 +645,7 @@ namespace Game.UI.Controllers
             }
 
             _isTransitioning = true;
+            ClearModeSelectError();
             try
             {
                 var instanceId = DiscordActivityBridge.TryGetSession(out var discordSession)
@@ -606,6 +667,7 @@ namespace Game.UI.Controllers
                 Debug.LogWarning($"Create match failed: {ex.Message}");
                 _isTransitioning = false;
                 OpenModeSelect();
+                ShowModeSelectError(FormatMatchSetupError(ex));
             }
         }
 
@@ -646,6 +708,7 @@ namespace Game.UI.Controllers
             {
                 Debug.LogWarning($"Join match failed: {ex.Message}");
                 _isTransitioning = false;
+                ShowMatchEntryError(FormatMatchSetupError(ex));
             }
         }
 

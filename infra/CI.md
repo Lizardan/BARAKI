@@ -59,6 +59,7 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 | `UNITY_LICENSE` (или EMAIL/PASSWORD/SERIAL) | secret | WebGL build |
 | `MATCHMAKER_REGISTER_SECRET` | secret | Worker secret sync |
 | `DISCORD_CLIENT_ID` | variable | inject в config.js |
+| `WSS_PROXY_TARGET` | variable | optional: stable tunnel host for Discord WSS proxy |
 | `PAGES_PROJECT` | variable | optional, default `baraki-activity` |
 
 ### 5. Discord URL Mappings (после первого успешного deploy)
@@ -84,22 +85,21 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 
 ---
 
-## Каждый игровой вечер (руками, ~2 минуты)
+## Каждый игровой вечер (руками, ~1 клик)
 
-1. Собери dedicated server локально (один раз после изменений):  
+1. Собери dedicated server локально (редко, после изменений геймплея):
    Unity → **BARAKI → Build → Windows Dedicated Server (Headless)**
-2. Запусти helper (server опционально через `-ServerExe`):
-   ```powershell
-   $env:MATCHMAKER_URL = "https://baraki-matchmaker.YOUR.workers.dev"
-   $env:REGISTER_SECRET = "твой-секрет"
-   .\infra\scripts\playtest-evening.ps1 -Port 7777 `
-     -ServerExe "F:\Unity Projects\BARAKI\Builds\WindowsServer\BARAKI.exe"
-   ```
-3. Окно не закрывай (держит tunnel).
-4. Discord desktop → голосовой канал → Launch **BARAKI** → друзья Join.
+2. Один раз настройте named tunnel + `infra/playtest.env`:
+   `.\infra\scripts\setup-named-tunnel.ps1`
+   Discord Portal `/wss` → тот же hostname **один раз**.
+3. Каждый вечер: двойной клик
+   [`infra/scripts/Start-Playtest.bat`](scripts/Start-Playtest.bat)
+   (читает `infra/playtest.env`, поднимает server + named tunnel + register).
+4. Окно не закрывай.
+5. Discord desktop → голосовой канал → Launch **BARAKI** → друзья Join.
 
-Quick tunnel URL **меняется** каждый запуск — скрипт сам делает `register-tunnel`.  
-Named tunnel (стабильный hostname) — опционально позже, меньше возни с Discord `/wss` mapping.
+Named tunnel hostname **не меняется** — Discord `/wss` больше не править каждый вечер.
+`infra/playtest.env` в `.gitignore` (секреты локально).
 
 ---
 

@@ -79,5 +79,25 @@ print("config.js updated")
 PY
 fi
 
+if [[ -n "${WSS_PROXY_TARGET:-}" ]]; then
+  echo "Injecting WSS_PROXY_TARGET into config.js"
+  WSS_PROXY_TARGET="${WSS_PROXY_TARGET}" SHELL_DIR="${SHELL_DIR}" python3 - <<'PY'
+import os, re
+path = os.path.join(os.environ["SHELL_DIR"], "config.js")
+host = os.environ["WSS_PROXY_TARGET"]
+text = open(path, encoding="utf-8").read()
+text2, n = re.subn(
+    r'WSS_PROXY_TARGET:\s*"[^"]*"',
+    f'WSS_PROXY_TARGET: "{host}"',
+    text,
+    count=1,
+)
+if n == 0:
+    raise SystemExit("WSS_PROXY_TARGET field not found in config.js")
+open(path, "w", encoding="utf-8").write(text2)
+print("WSS_PROXY_TARGET updated")
+PY
+fi
+
 echo "Activity shell ready at ${SHELL_DIR}"
 ls -la "${BUILD_DIR}" | head -40

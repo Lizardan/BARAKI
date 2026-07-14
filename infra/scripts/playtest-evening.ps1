@@ -1,95 +1,134 @@
-# FREE-0 playtest evening helper (Windows host PC).
-# Starts Cloudflare quick tunnel to local game server and registers wss_url with Workers.
+# FREE-0 one-click playtest evening (Windows host PC).
+# Reads infra/playtest.env (gitignored). Prefer named Cloudflare tunnel so Discord /wss stays fixed.
 #
-# Prerequisites:
-#   - cloudflared on PATH
-#   - dedicated server already listening on -Port (default 7777)
-#   - MATCHMAKER_URL + REGISTER_SECRET env vars
+# Setup once:
+#   1. Copy infra/playtest.env.example → infra/playtest.env and fill secrets/hosts
+#   2. .\infra\scripts\setup-named-tunnel.ps1
+#   3. Discord Portal URL Mapping /wss → WSS_HOST (once)
+#   4. Unity → BARAKI → Build → Windows Dedicated Server (Headless)
 #
-# Example:
-#   $env:MATCHMAKER_URL = "https://baraki-matchmaker.YOUR.workers.dev"
-#   $env:REGISTER_SECRET = "..."
-#   .\infra\scripts\playtest-evening.ps1 -Port 7777
+# Every evening:
+#   Double-click infra\scripts\Start-Playtest.bat
 
 param(
-    [int]$Port = 7777,
-    [string]$MatchmakerUrl = $env:MATCHMAKER_URL,
-    [string]$RegisterSecret = $env:REGISTER_SECRET,
-    [string]$ServerExe = ""
+    [string]$EnvFile = ""
 )
 
 $ErrorActionPreference = "Stop"
-
-if ([string]::IsNullOrWhiteSpace($MatchmakerUrl)) {
-    throw "Set MATCHMAKER_URL (e.g. https://baraki-matchmaker.xxx.workers.dev)"
-}
-if ([string]::IsNullOrWhiteSpace($RegisterSecret)) {
-    throw "Set REGISTER_SECRET (same as wrangler secret / GitHub MATCHMAKER_REGISTER_SECRET)"
+$Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+if ([string]::IsNullOrWhiteSpace($EnvFile)) {
+    $EnvFile = Join-Path $Root "infra\playtest.env"
 }
 
-$MatchmakerUrl = $MatchmakerUrl.TrimEnd("/")
+function Read-PlaytestEnv([string]$path) {
+    if (-not (Test-Path $path)) {
+        throw "Missing $path — copy infra/playtest.env.example to infra/playtest.env and fill values."
+    }
+    $map = @{}
+    Get-Content $path | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -eq "" -or $line.StartsWith("#")) { return }
+        $idx = $line.IndexOf("=")
+        if ($idx -lt 1) { return }
+        $key = $line.Substring(0, $idx).Trim()
+        $val = $line.Substring($idx + 1).Trim()
+        $map[$key] = $val
+    }
+    return $map
+}
 
+function Require-Key($map, [string]$key) {
+    if (-not $map.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($map[$key])) {
+        throw "playtest.env missing required key: $key"
+    }
+    return $map[$key].Trim()
+}
+
+$cfg = Read-PlaytestEnv $EnvFile
+$MatchmakerUrl = (Require-Key $cfg "MATCHMAKER_URL").TrimEnd("/")
+$RegisterSecret = Require-Key $cfg "REGISTER_SECRET"
+$WssHost = Require-Key $cfg "WSS_HOST"
+$TunnelName = if ($cfg.ContainsKey("TUNNEL_NAME") -and $cfg["TUNNEL_NAME"]) { $cfg["TUNNEL_NAME"].Trim() } else { "baraki-game" }
+$ServerExe = if ($cfg.ContainsKey("SERVER_EXE")) { $cfg["SERVER_EXE"].Trim() } else { "" }
+$Port = if ($cfg.ContainsKey("PORT") -and $cfg["PORT"]) { [int]$cfg["PORT"] } else { 7777 }
+$Players = if ($cfg.ContainsKey("PLAYERS") -and $cfg["PLAYERS"]) { [int]$cfg["PLAYERS"] } else { 2 }
+
+if ($RegisterSecret -eq "replace-me") {
+    throw "Set a real REGISTER_SECRET in infra/playtest.env (same as wrangler secret)."
+}
+if ($WssHost -match "^(https?|wss?)://") {
+    throw "WSS_HOST must be hostname only (no scheme), e.g. game.example.com"
+}
+
+if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
+    throw "cloudflared not found on PATH. Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
+}
+
+$serverProc = $null
 if (-not [string]::IsNullOrWhiteSpace($ServerExe)) {
     if (-not (Test-Path $ServerExe)) {
-        throw "ServerExe not found: $ServerExe"
+        throw "SERVER_EXE not found: $ServerExe`nBuild via Unity: BARAKI → Build → Windows Dedicated Server (Headless)"
     }
     Write-Host "Starting dedicated server: $ServerExe"
     $env:BARAKI_SERVER = "1"
-    Start-Process -FilePath $ServerExe -ArgumentList @(
-        "-batchmode", "-nographics", "-barakiServer", "-port", "$Port", "-players", "2"
+    $serverProc = Start-Process -FilePath $ServerExe -PassThru -ArgumentList @(
+        "-batchmode", "-nographics", "-barakiServer", "-port", "$Port", "-players", "$Players"
     )
     Start-Sleep -Seconds 3
 }
 
-Write-Host "Starting cloudflared quick tunnel → http://127.0.0.1:$Port"
+Write-Host "Starting named tunnel '$TunnelName' → http://127.0.0.1:$Port (public wss://$WssHost)"
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = "cloudflared"
-$psi.Arguments = "tunnel --url http://127.0.0.1:$Port"
+$psi.Arguments = "tunnel run $TunnelName"
 $psi.RedirectStandardError = $true
 $psi.RedirectStandardOutput = $true
 $psi.UseShellExecute = $false
 $psi.CreateNoWindow = $true
-$proc = [System.Diagnostics.Process]::Start($psi)
+$tunnelProc = [System.Diagnostics.Process]::Start($psi)
 
-$tunnelHost = $null
-$deadline = [datetime]::UtcNow.AddMinutes(2)
-while ([datetime]::UtcNow -lt $deadline -and -not $tunnelHost) {
-    $line = $proc.StandardError.ReadLine()
-    if ($null -eq $line) {
-        Start-Sleep -Milliseconds 200
-        continue
-    }
-    Write-Host $line
-    if ($line -match "https://([a-z0-9-]+\.trycloudflare\.com)") {
-        $tunnelHost = $Matches[1]
-    }
-}
-
-if (-not $tunnelHost) {
-    try { $proc.Kill() } catch {}
-    throw "Could not parse trycloudflare.com URL from cloudflared output"
-}
-
-$wssUrl = "wss://$tunnelHost"
+# Give tunnel a moment, then register stable WSS with matchmaker.
+Start-Sleep -Seconds 2
+$wssUrl = "wss://$WssHost"
 Write-Host "Registering tunnel: $wssUrl"
 $body = @{ wss_url = $wssUrl } | ConvertTo-Json
-Invoke-RestMethod `
-    -Method Post `
-    -Uri "$MatchmakerUrl/api/v1/admin/register-tunnel" `
-    -Headers @{ Authorization = "Bearer $RegisterSecret" } `
-    -ContentType "application/json" `
-    -Body $body | Out-Host
+try {
+    Invoke-RestMethod `
+        -Method Post `
+        -Uri "$MatchmakerUrl/api/v1/admin/register-tunnel" `
+        -Headers @{ Authorization = "Bearer $RegisterSecret" } `
+        -ContentType "application/json" `
+        -Body $body | Out-Host
+} catch {
+    Write-Host "Register failed: $($_.Exception.Message)" -ForegroundColor Red
+    try { $tunnelProc.Kill() } catch {}
+    if ($serverProc -and -not $serverProc.HasExited) { try { $serverProc.Kill() } catch {} }
+    throw
+}
+
+try {
+    $health = Invoke-RestMethod -Uri "$MatchmakerUrl/api/v1/health" -TimeoutSec 15
+    Write-Host ("Health: " + ($health | ConvertTo-Json -Compress))
+} catch {
+    Write-Host "Health check failed (non-fatal): $($_.Exception.Message)" -ForegroundColor Yellow
+}
 
 Write-Host ""
-Write-Host "READY for Discord Activity friends."
+Write-Host "READY for Discord Activity."
 Write-Host "  wss: $wssUrl"
-Write-Host "  Keep this window open (cloudflared PID $($proc.Id))."
-Write-Host "  Ctrl+C to stop tunnel."
+Write-Host "  Keep this window open."
+Write-Host "  Ctrl+C to stop tunnel (+ server if started by this script)."
 Write-Host ""
 
-# Stream remaining logs until process exits
-while (-not $proc.HasExited) {
-    $out = $proc.StandardError.ReadLine()
-    if ($null -ne $out) { Write-Host $out }
-    else { Start-Sleep -Milliseconds 200 }
+try {
+    while (-not $tunnelProc.HasExited) {
+        $errLine = $tunnelProc.StandardError.ReadLine()
+        if ($null -ne $errLine) { Write-Host $errLine }
+        else { Start-Sleep -Milliseconds 200 }
+    }
+} finally {
+    if ($serverProc -and -not $serverProc.HasExited) {
+        Write-Host "Stopping dedicated server PID $($serverProc.Id)"
+        try { $serverProc.Kill() } catch {}
+    }
 }
