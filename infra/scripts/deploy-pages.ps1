@@ -4,5 +4,5 @@
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location (Join-Path $root "web\activity-shell")
-$project = if ($env:PAGES_PROJECT) { $env:PAGES_PROJECT } else { "baraki-activity" }
+$project = if ($env:PAGES_PROJECT) { $env:PAGES_PROJECT } else { "baraki" }
 npx --yes wrangler pages deploy . --project-name $project

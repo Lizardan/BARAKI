@@ -1,6 +1,6 @@
 // Fill before deploy. Do not commit real secrets.
 window.BARAKI_CONFIG = {
-  DISCORD_CLIENT_ID: "YOUR_DISCORD_APPLICATION_CLIENT_ID",
+  DISCORD_CLIENT_ID: "1526279588479631420",
   // Relative paths work inside Discord proxy after URL mappings:
   MATCHMAKER_BASE: "/api",
   // Stable named-tunnel hostname (no scheme). Discord Portal /wss → same host once.

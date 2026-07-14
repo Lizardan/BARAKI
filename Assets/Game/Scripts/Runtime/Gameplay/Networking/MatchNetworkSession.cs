@@ -48,9 +48,20 @@ namespace Game.Gameplay.Networking
             }
 
             var bootstrap = MatchNetworkBootstrap.Ensure();
+            if (bootstrap == null)
+            {
+                throw new InvalidOperationException("MatchNetworkBootstrap.Ensure returned null.");
+            }
+
             bootstrap.ConfigureEndpoint(endpoint.Host, endpoint.Port, listenAll: IsServerRole());
 
             var manager = bootstrap.NetworkManager;
+            if (manager == null || manager.NetworkConfig == null)
+            {
+                throw new InvalidOperationException(
+                    "NetworkManager failed to initialize (NetworkConfig missing). Rebuild WebGL client.");
+            }
+
             manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(
                 LocalSlot == 0 ? "Host" : "Guest");
 

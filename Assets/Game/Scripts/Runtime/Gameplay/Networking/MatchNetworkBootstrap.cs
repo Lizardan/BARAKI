@@ -1,3 +1,4 @@
+using System;
 using Game.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -75,8 +76,8 @@ namespace Game.Gameplay.Networking
         {
             if (!EnsureNetworkComponents())
             {
-                Debug.LogError("MatchNetworkBootstrap: cannot configure endpoint — NGO components missing.");
-                return;
+                throw new InvalidOperationException(
+                    "MatchNetworkBootstrap: cannot configure endpoint — NGO components missing.");
             }
 
             var address = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();

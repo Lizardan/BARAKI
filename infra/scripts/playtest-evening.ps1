@@ -1,11 +1,15 @@
 # FREE-0 one-click playtest evening (Windows host PC).
-# Reads infra/playtest.env (gitignored). Prefer named Cloudflare tunnel so Discord /wss stays fixed.
+# Reads infra/playtest.env (gitignored).
+#
+# Tunnel mode (auto):
+#   - WSS_HOST set  -> named tunnel: cloudflared tunnel run $TUNNEL_NAME
+#   - WSS_HOST empty -> quick tunnel: cloudflared tunnel --url http://127.0.0.1:$PORT
+#     (hostname changes each run - update Discord Portal /wss; script copies hostname to clipboard)
 #
 # Setup once:
-#   1. Copy infra/playtest.env.example → infra/playtest.env and fill secrets/hosts
-#   2. .\infra\scripts\setup-named-tunnel.ps1
-#   3. Discord Portal URL Mapping /wss → WSS_HOST (once)
-#   4. Unity → BARAKI → Build → Windows Dedicated Server (Headless)
+#   1. Copy infra/playtest.env.example -> infra/playtest.env and fill REGISTER_SECRET
+#   2. (Optional) named tunnel: .\infra\scripts\setup-named-tunnel.ps1 + set WSS_HOST
+#   3. Unity -> BARAKI -> Build -> Windows Dedicated Server (Headless)
 #
 # Every evening:
 #   Double-click infra\scripts\Start-Playtest.bat
@@ -20,9 +24,30 @@ if ([string]::IsNullOrWhiteSpace($EnvFile)) {
     $EnvFile = Join-Path $Root "infra\playtest.env"
 }
 
+$script:ServerProc = $null
+$script:TunnelProc = $null
+$script:CleaningUp = $false
+
+function Write-Step([string]$msg) {
+    Write-Host ""
+    Write-Host "==> $msg" -ForegroundColor Cyan
+}
+
+function Write-Ok([string]$msg) {
+    Write-Host "  [OK] $msg" -ForegroundColor Green
+}
+
+function Write-WarnLine([string]$msg) {
+    Write-Host "  [WARN] $msg" -ForegroundColor Yellow
+}
+
+function Write-Fail([string]$msg) {
+    Write-Host "  [FAIL] $msg" -ForegroundColor Red
+}
+
 function Read-PlaytestEnv([string]$path) {
     if (-not (Test-Path $path)) {
-        throw "Missing $path — copy infra/playtest.env.example to infra/playtest.env and fill values."
+        throw "Missing $path - copy infra/playtest.env.example to infra/playtest.env and fill values."
     }
     $map = @{}
     Get-Content $path | ForEach-Object {
@@ -44,91 +69,366 @@ function Require-Key($map, [string]$key) {
     return $map[$key].Trim()
 }
 
-$cfg = Read-PlaytestEnv $EnvFile
-$MatchmakerUrl = (Require-Key $cfg "MATCHMAKER_URL").TrimEnd("/")
-$RegisterSecret = Require-Key $cfg "REGISTER_SECRET"
-$WssHost = Require-Key $cfg "WSS_HOST"
-$TunnelName = if ($cfg.ContainsKey("TUNNEL_NAME") -and $cfg["TUNNEL_NAME"]) { $cfg["TUNNEL_NAME"].Trim() } else { "baraki-game" }
-$ServerExe = if ($cfg.ContainsKey("SERVER_EXE")) { $cfg["SERVER_EXE"].Trim() } else { "" }
-$Port = if ($cfg.ContainsKey("PORT") -and $cfg["PORT"]) { [int]$cfg["PORT"] } else { 7777 }
-$Players = if ($cfg.ContainsKey("PLAYERS") -and $cfg["PLAYERS"]) { [int]$cfg["PLAYERS"] } else { 2 }
-
-if ($RegisterSecret -eq "replace-me") {
-    throw "Set a real REGISTER_SECRET in infra/playtest.env (same as wrangler secret)."
-}
-if ($WssHost -match "^(https?|wss?)://") {
-    throw "WSS_HOST must be hostname only (no scheme), e.g. game.example.com"
-}
-
-if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
-    throw "cloudflared not found on PATH. Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
-}
-
-$serverProc = $null
-if (-not [string]::IsNullOrWhiteSpace($ServerExe)) {
-    if (-not (Test-Path $ServerExe)) {
-        throw "SERVER_EXE not found: $ServerExe`nBuild via Unity: BARAKI → Build → Windows Dedicated Server (Headless)"
+function Get-OptionalKey($map, [string]$key, [string]$default = "") {
+    if ($map.ContainsKey($key) -and -not [string]::IsNullOrWhiteSpace($map[$key])) {
+        return $map[$key].Trim()
     }
-    Write-Host "Starting dedicated server: $ServerExe"
-    $env:BARAKI_SERVER = "1"
-    $serverProc = Start-Process -FilePath $ServerExe -PassThru -ArgumentList @(
-        "-batchmode", "-nographics", "-barakiServer", "-listenPort", "$Port", "-players", "$Players"
+    return $default
+}
+
+function Resolve-CloudflaredExe($cfg) {
+    $fromEnv = Get-OptionalKey $cfg "CLOUDFLARED_EXE"
+    if ($fromEnv -and (Test-Path $fromEnv)) {
+        return (Resolve-Path $fromEnv).Path
+    }
+    $cmd = Get-Command cloudflared -ErrorAction SilentlyContinue
+    if ($cmd) {
+        return $cmd.Source
+    }
+    $candidates = @(
+        "C:\Tools\cloudflared\cloudflared.exe",
+        "$env:LOCALAPPDATA\cloudflared\cloudflared.exe",
+        "$env:ProgramFiles\cloudflared\cloudflared.exe"
     )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) { return $c }
+    }
+    throw "cloudflared not found. Install from Cloudflare downloads or set CLOUDFLARED_EXE in playtest.env"
+}
+
+function Test-PortListening([int]$port) {
+    try {
+        $tnc = Test-NetConnection -ComputerName "127.0.0.1" -Port $port -WarningAction SilentlyContinue
+        return [bool]$tnc.TcpTestSucceeded
+    } catch {
+        return $false
+    }
+}
+
+function Wait-PortListening([int]$port, [int]$timeoutSec = 20) {
+    $deadline = (Get-Date).AddSeconds($timeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-PortListening $port) { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
+}
+
+function Stop-PlaytestProcesses {
+    if ($script:CleaningUp) { return }
+    $script:CleaningUp = $true
+    Write-Step "Cleanup"
+    if ($script:TunnelProc -and -not $script:TunnelProc.HasExited) {
+        Write-Host "  Stopping tunnel PID $($script:TunnelProc.Id)"
+        try { $script:TunnelProc.Kill() } catch {}
+        try { $script:TunnelProc.WaitForExit(3000) | Out-Null } catch {}
+    }
+    if ($script:ServerProc -and -not $script:ServerProc.HasExited) {
+        Write-Host "  Stopping dedicated server PID $($script:ServerProc.Id)"
+        try { $script:ServerProc.Kill() } catch {}
+        try { $script:ServerProc.WaitForExit(3000) | Out-Null } catch {}
+    }
+    Get-ChildItem (Join-Path $env:TEMP "baraki-cloudflared-*") -ErrorAction SilentlyContinue |
+        ForEach-Object { try { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } catch {} }
+}
+
+function Test-VpnWarn {
+    $names = @("AmneziaVPN", "amnezia", "openvpn", "wireguard", "nordvpn", "expressvpn")
+    $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $n = $_.ProcessName
+        foreach ($hint in $names) {
+            if ($n -like "*$hint*") { return $true }
+        }
+        return $false
+    }
+    if ($procs) {
+        $list = ($procs | Select-Object -ExpandProperty ProcessName -Unique) -join ", "
+        Write-WarnLine "VPN-like process running ($list). If tunnel fails on port 7844, disconnect VPN and retry."
+    }
+}
+
+function Get-MergedTunnelLog([string]$outLog, [string]$errLog) {
+    $chunks = @()
+    if (Test-Path $outLog) {
+        $chunks += Get-Content $outLog -Raw -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $errLog) {
+        $chunks += Get-Content $errLog -Raw -ErrorAction SilentlyContinue
+    }
+    return ($chunks -join "`n")
+}
+
+function Find-TryCloudflareHost([string]$text) {
+    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+    # Avoid complex character classes for PS 5.1 encoding safety.
+    if ($text -match 'https://([a-zA-Z0-9\-]+)\.trycloudflare\.com') {
+        return $Matches[1] + ".trycloudflare.com"
+    }
+    return $null
+}
+
+function Start-DedicatedServer([string]$exe, [int]$port, [int]$players) {
+    Write-Step "Starting dedicated server"
+    if (Test-PortListening $port) {
+        throw "Port $port already in use. Stop the other BARAKI.exe (or whatever listens there), then retry."
+    }
+    if (-not (Test-Path $exe)) {
+        throw "SERVER_EXE not found: $exe. Build via Unity: BARAKI -> Build -> Windows Dedicated Server (Headless)"
+    }
+    Write-Host "  $exe"
+    Write-Host "  args: -listenPort $port -players $players"
+    $env:BARAKI_SERVER = "1"
+    $script:ServerProc = Start-Process -FilePath $exe -PassThru -ArgumentList @(
+        "-batchmode", "-nographics", "-barakiServer", "-listenPort", "$port", "-players", "$players"
+    )
+    Write-Host "  Waiting for TCP 127.0.0.1:$port ..."
+    if (-not (Wait-PortListening $port 20)) {
+        throw "Server did not listen on port $port within 20s. Check dedicated server console / rebuild."
+    }
+    Write-Ok "server listening on 127.0.0.1:$port (PID $($script:ServerProc.Id))"
+}
+
+function Start-NamedTunnel([string]$cloudflaredExe, [string]$tunnelName, [string]$wssHost, [int]$port) {
+    Write-Step "Starting named tunnel '$tunnelName'"
+    Write-Host "  -> http://127.0.0.1:$port  public wss://$wssHost"
+    $stamp = [guid]::NewGuid().ToString("N")
+    $outLog = Join-Path $env:TEMP "baraki-cloudflared-$stamp.out.log"
+    $errLog = Join-Path $env:TEMP "baraki-cloudflared-$stamp.err.log"
+
+    $env:TUNNEL_TRANSPORT_PROTOCOL = "http2"
+    $script:TunnelProc = Start-Process -FilePath $cloudflaredExe -PassThru `
+        -ArgumentList @("tunnel", "run", $tunnelName) `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $outLog `
+        -RedirectStandardError $errLog
+
     Start-Sleep -Seconds 3
+    if ($script:TunnelProc.HasExited) {
+        $tail = Get-MergedTunnelLog $outLog $errLog
+        throw "Named tunnel exited early.`n$tail"
+    }
+    Write-Ok "named tunnel process running (PID $($script:TunnelProc.Id))"
+    return $wssHost
 }
 
-Write-Host "Starting named tunnel '$TunnelName' → http://127.0.0.1:$Port (public wss://$WssHost)"
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = "cloudflared"
-$psi.Arguments = "tunnel run $TunnelName"
-$psi.RedirectStandardError = $true
-$psi.RedirectStandardOutput = $true
-$psi.UseShellExecute = $false
-$psi.CreateNoWindow = $true
-$tunnelProc = [System.Diagnostics.Process]::Start($psi)
+function Start-QuickTunnel([string]$cloudflaredExe, [int]$port) {
+    Write-Step "Starting quick tunnel (WSS_HOST empty)"
+    Write-Host "  cloudflared tunnel --url http://127.0.0.1:$port (http2)"
+    $stamp = [guid]::NewGuid().ToString("N")
+    $outLog = Join-Path $env:TEMP "baraki-cloudflared-$stamp.out.log"
+    $errLog = Join-Path $env:TEMP "baraki-cloudflared-$stamp.err.log"
 
-# Give tunnel a moment, then register stable WSS with matchmaker.
-Start-Sleep -Seconds 2
-$wssUrl = "wss://$WssHost"
-Write-Host "Registering tunnel: $wssUrl"
-$body = @{ wss_url = $wssUrl } | ConvertTo-Json
-try {
-    Invoke-RestMethod `
+    $env:TUNNEL_TRANSPORT_PROTOCOL = "http2"
+    $script:TunnelProc = Start-Process -FilePath $cloudflaredExe -PassThru `
+        -ArgumentList @("tunnel", "--url", "http://127.0.0.1:$port") `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $outLog `
+        -RedirectStandardError $errLog
+
+    Write-Host "  Waiting for trycloudflare hostname (up to 45s)..."
+    $deadline = (Get-Date).AddSeconds(45)
+    $hostName = $null
+    $registered = $false
+    while ((Get-Date) -lt $deadline) {
+        if ($script:TunnelProc.HasExited) {
+            Start-Sleep -Milliseconds 400
+            $tail = Get-MergedTunnelLog $outLog $errLog
+            throw "Quick tunnel exited early.`n$tail"
+        }
+
+        $text = Get-MergedTunnelLog $outLog $errLog
+        if ($text) {
+            $found = Find-TryCloudflareHost $text
+            if ($found) { $hostName = $found }
+            if ($text -match 'Registered tunnel connection') {
+                $registered = $true
+            }
+            if ($text -match 'hard_fail=true') {
+                throw "cloudflared connectivity pre-check failed (often VPN/firewall blocking 7844). Disconnect Amnezia/VPN and retry."
+            }
+        }
+
+        if ($hostName -and $registered) { break }
+        Start-Sleep -Milliseconds 400
+    }
+
+    if (-not $hostName) {
+        $tail = Get-MergedTunnelLog $outLog $errLog
+        throw "Timed out waiting for trycloudflare hostname.`n$tail"
+    }
+
+    if ($registered) {
+        Write-Ok "quick tunnel registered: $hostName"
+    } else {
+        Write-WarnLine "hostname $hostName seen; Registered not yet - continuing"
+        Write-Ok "quick tunnel host: $hostName"
+    }
+    return $hostName
+}
+
+function Register-Tunnel([string]$matchmakerUrl, [string]$secret, [string]$wssUrl) {
+    Write-Step "Registering tunnel with matchmaker"
+    Write-Host "  POST $matchmakerUrl/api/v1/admin/register-tunnel"
+    Write-Host "  $wssUrl"
+    $body = @{ wss_url = $wssUrl } | ConvertTo-Json
+    $result = Invoke-RestMethod `
         -Method Post `
-        -Uri "$MatchmakerUrl/api/v1/admin/register-tunnel" `
-        -Headers @{ Authorization = "Bearer $RegisterSecret" } `
+        -Uri "$matchmakerUrl/api/v1/admin/register-tunnel" `
+        -Headers @{ Authorization = "Bearer $secret" } `
         -ContentType "application/json" `
-        -Body $body | Out-Host
-} catch {
-    Write-Host "Register failed: $($_.Exception.Message)" -ForegroundColor Red
-    try { $tunnelProc.Kill() } catch {}
-    if ($serverProc -and -not $serverProc.HasExited) { try { $serverProc.Kill() } catch {} }
-    throw
+        -Body $body `
+        -TimeoutSec 20
+    Write-Ok ("register: " + ($result | ConvertTo-Json -Compress))
 }
 
-try {
-    $health = Invoke-RestMethod -Uri "$MatchmakerUrl/api/v1/health" -TimeoutSec 15
-    Write-Host ("Health: " + ($health | ConvertTo-Json -Compress))
-} catch {
-    Write-Host "Health check failed (non-fatal): $($_.Exception.Message)" -ForegroundColor Yellow
+function Get-MatchmakerHealth([string]$matchmakerUrl) {
+    return Invoke-RestMethod -Uri "$matchmakerUrl/api/v1/health" -TimeoutSec 15
 }
 
-Write-Host ""
-Write-Host "READY for Discord Activity."
-Write-Host "  wss: $wssUrl"
-Write-Host "  Keep this window open."
-Write-Host "  Ctrl+C to stop tunnel (+ server if started by this script)."
-Write-Host ""
+function Show-ReadyBlock([string]$wssHost, [string]$wssUrl, [bool]$isQuick) {
+    Write-Host ""
+    Write-Host "============================================================" -ForegroundColor Green
+    Write-Host " READY for Discord Activity" -ForegroundColor Green
+    Write-Host "============================================================" -ForegroundColor Green
+    Write-Host "  wss_url : $wssUrl"
+    Write-Host "  /wss    : $wssHost"
+    Write-Host ""
+    if ($isQuick) {
+        Write-Host "  QUICK TUNNEL: Discord /wss must match this hostname." -ForegroundColor Yellow
+        Write-Host "  1) Discord Developer Portal -> BARAKI -> URL Mappings" -ForegroundColor Yellow
+        Write-Host "  2) Prefix /wss -> Target: $wssHost" -ForegroundColor Yellow
+        Write-Host "  3) Save -> Launch Activity in a voice channel" -ForegroundColor Yellow
+        try {
+            Set-Clipboard -Value $wssHost
+            Write-Ok "hostname copied to clipboard"
+        } catch {
+            Write-WarnLine "could not copy to clipboard (set /wss manually)"
+        }
+    } else {
+        Write-Host "  Named tunnel: Discord /wss should already be $wssHost" -ForegroundColor Green
+        Write-Host "  Launch BARAKI Activity in a voice channel." -ForegroundColor Green
+    }
+    Write-Host ""
+    Write-Host "  Keep this window open. Ctrl+C stops server + tunnel." -ForegroundColor Cyan
+    Write-Host "============================================================" -ForegroundColor Green
+    Write-Host ""
+}
 
+function Invoke-StatusLoop(
+    [System.Diagnostics.Process]$serverProc,
+    [System.Diagnostics.Process]$tunnelProc,
+    [int]$port,
+    [string]$matchmakerUrl
+) {
+    Write-Step "Status monitor (Ctrl+C to stop)"
+    while ($true) {
+        $serverOk = $serverProc -and -not $serverProc.HasExited -and (Test-PortListening $port)
+        $tunnelOk = $tunnelProc -and -not $tunnelProc.HasExited
+        $healthOk = $false
+        $healthDetail = "n/a"
+        try {
+            $h = Get-MatchmakerHealth $matchmakerUrl
+            $healthOk = [bool]$h.has_tunnel
+            $healthDetail = "has_tunnel=$($h.has_tunnel)"
+        } catch {
+            $healthDetail = "error"
+        }
+
+        $s1 = if ($serverOk) { "[OK] server :$port" } else { "[FAIL] server" }
+        $s2 = if ($tunnelOk) { "[OK] tunnel" } else { "[FAIL] tunnel" }
+        $s3 = if ($healthOk) { "[OK] matchmaker $healthDetail" } else { "[WARN] matchmaker $healthDetail" }
+        $c1 = if ($serverOk) { "Green" } else { "Red" }
+        $c2 = if ($tunnelOk) { "Green" } else { "Red" }
+        $c3 = if ($healthOk) { "Green" } else { "Yellow" }
+        $ts = Get-Date -Format "HH:mm:ss"
+        Write-Host -NoNewline "[$ts] "
+        Write-Host -NoNewline "$s1" -ForegroundColor $c1
+        Write-Host -NoNewline " | "
+        Write-Host -NoNewline "$s2" -ForegroundColor $c2
+        Write-Host -NoNewline " | "
+        Write-Host "$s3" -ForegroundColor $c3
+
+        if (-not $serverOk -or -not $tunnelOk) {
+            Write-Fail "server or tunnel died - shutting down"
+            break
+        }
+        Start-Sleep -Seconds 5
+    }
+}
+
+# --- main ---
 try {
-    while (-not $tunnelProc.HasExited) {
-        $errLine = $tunnelProc.StandardError.ReadLine()
-        if ($null -ne $errLine) { Write-Host $errLine }
-        else { Start-Sleep -Milliseconds 200 }
+    Write-Host ""
+    Write-Host " BARAKI evening playtest" -ForegroundColor Cyan
+    Write-Host " Env: $EnvFile"
+    Write-Host ""
+
+    Write-Step "Prefight"
+    $cfg = Read-PlaytestEnv $EnvFile
+    $MatchmakerUrl = (Require-Key $cfg "MATCHMAKER_URL").TrimEnd("/")
+    $RegisterSecret = Require-Key $cfg "REGISTER_SECRET"
+    $WssHostCfg = Get-OptionalKey $cfg "WSS_HOST"
+    $TunnelName = Get-OptionalKey $cfg "TUNNEL_NAME" "baraki-game"
+    $ServerExe = Get-OptionalKey $cfg "SERVER_EXE"
+    $Port = if ($cfg.ContainsKey("PORT") -and $cfg["PORT"]) { [int]$cfg["PORT"] } else { 7777 }
+    $Players = if ($cfg.ContainsKey("PLAYERS") -and $cfg["PLAYERS"]) { [int]$cfg["PLAYERS"] } else { 2 }
+
+    if ($RegisterSecret -eq "replace-me") {
+        throw "Set a real REGISTER_SECRET in infra/playtest.env (same as wrangler secret)."
     }
-} finally {
-    if ($serverProc -and -not $serverProc.HasExited) {
-        Write-Host "Stopping dedicated server PID $($serverProc.Id)"
-        try { $serverProc.Kill() } catch {}
+    if ($WssHostCfg -match "^(https?|wss?)://") {
+        throw "WSS_HOST must be hostname only (no scheme), e.g. game.example.com"
     }
+    if ([string]::IsNullOrWhiteSpace($ServerExe)) {
+        throw "playtest.env missing SERVER_EXE"
+    }
+
+    $cloudflaredExe = Resolve-CloudflaredExe $cfg
+    Write-Ok "cloudflared: $cloudflaredExe"
+    Write-Ok "matchmaker: $MatchmakerUrl"
+    Write-Ok "server exe: $ServerExe"
+    Write-Ok "port=$Port players=$Players"
+    if ($WssHostCfg) {
+        Write-Ok "tunnel mode: named ($TunnelName -> $WssHostCfg)"
+    } else {
+        Write-Ok "tunnel mode: quick (WSS_HOST empty)"
+    }
+    Test-VpnWarn
+
+    Start-DedicatedServer $ServerExe $Port $Players
+
+    $isQuick = [string]::IsNullOrWhiteSpace($WssHostCfg)
+    if ($isQuick) {
+        $wssHost = Start-QuickTunnel $cloudflaredExe $Port
+    } else {
+        $wssHost = Start-NamedTunnel $cloudflaredExe $TunnelName $WssHostCfg $Port
+    }
+    $wssUrl = "wss://$wssHost"
+
+    Register-Tunnel $MatchmakerUrl $RegisterSecret $wssUrl
+
+    Write-Step "Health check"
+    $health = Get-MatchmakerHealth $MatchmakerUrl
+    Write-Host ("  " + ($health | ConvertTo-Json -Compress))
+    if (-not $health.has_tunnel) {
+        throw "Matchmaker health has_tunnel=false after register."
+    }
+    Write-Ok "has_tunnel=True"
+
+    Show-ReadyBlock $wssHost $wssUrl $isQuick
+
+    try {
+        Invoke-StatusLoop $script:ServerProc $script:TunnelProc $Port $MatchmakerUrl
+    } catch {
+        if ($_.Exception.Message -notmatch "canceled|cancelled|interrupted") {
+            Write-Fail $_.Exception.Message
+        }
+    }
+}
+catch {
+    Write-Fail $_.Exception.Message
+    exit 1
+}
+finally {
+    Stop-PlaytestProcesses
 }
