@@ -72,7 +72,7 @@ if (-not [string]::IsNullOrWhiteSpace($ServerExe)) {
     Write-Host "Starting dedicated server: $ServerExe"
     $env:BARAKI_SERVER = "1"
     $serverProc = Start-Process -FilePath $ServerExe -PassThru -ArgumentList @(
-        "-batchmode", "-nographics", "-barakiServer", "-port", "$Port", "-players", "$Players"
+        "-batchmode", "-nographics", "-barakiServer", "-listenPort", "$Port", "-players", "$Players"
     )
     Start-Sleep -Seconds 3
 }

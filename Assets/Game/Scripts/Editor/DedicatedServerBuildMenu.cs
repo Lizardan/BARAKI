@@ -11,8 +11,9 @@ namespace Game.Editor
         private const string OutputPath = "Builds/WindowsServer/BARAKI.exe";
 
         // Example:
-        // BARAKI.exe -batchmode -nographics -barakiServer -port 7777 -players 4
+        // BARAKI.exe -batchmode -nographics -barakiServer -listenPort 7777 -players 4
         // Environment alternatives: BARAKI_SERVER=1, PORT=7777, PLAYER_COUNT=4.
+        // Prefer -listenPort over -port (Unity Player may claim -port).
         [MenuItem("BARAKI/Build/Windows Dedicated Server (Headless)")]
         public static void BuildWindowsDedicatedServer()
         {

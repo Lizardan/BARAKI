@@ -23,7 +23,7 @@ WebGL hosting: **Cloudflare Pages** (not GitHub Pages).
 ```powershell
 cd "F:\Unity Projects\BARAKI\Builds\WindowsServer"
 $env:BARAKI_SERVER = "1"
-.\BARAKI.exe -batchmode -nographics -barakiServer -port 7777 -players 2
+.\BARAKI.exe -batchmode -nographics -barakiServer -listenPort 7777 -players 2
 ```
 
 Or from Editor player build with the same args. Server listens WebSockets on `0.0.0.0:7777`.
@@ -64,7 +64,7 @@ wss://random-words.trycloudflare.com
 
 **Same-machine B smoke (simplest):**
 
-1. Terminal 1: dedicated server `-port 7777`
+1. Terminal 1: dedicated server `-listenPort 7777`
 2. Terminal 2: Editor Play as client — Main Menu Join after `UseNetDev()` (endpoint `ws://127.0.0.1:7777`)
 3. Terminal 3: second Editor/ParrelSync or second player build — Join
 

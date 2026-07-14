@@ -37,9 +37,26 @@ namespace Game.Gameplay.Match
             ClearVisuals();
             Layout = MatchArenaGenerator.Generate(_playerCount, _arenaRadius, _mainToTowerDistance);
             Graph = LaneGraphBuilder.Build(Layout, _centerArenaRadius);
+
+            // Dedicated Server Optimizations strip shaders; Null gfx has no materials.
+            if (!ShouldBuildVisuals())
+            {
+                return;
+            }
+
             _visualRoot = new GameObject("GreyboxVisual").transform;
             _visualRoot.SetParent(transform, false);
             MatchArenaGreyboxBuilder.Populate(_visualRoot, Layout, Graph);
+        }
+
+        /// <summary>Layout/graph stay available on server; mesh materials do not.</summary>
+        public static bool ShouldBuildVisuals()
+        {
+#if UNITY_SERVER || BARAKI_DEDICATED_SERVER
+            return false;
+#else
+            return SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+#endif
         }
 
         public void ClearVisuals()

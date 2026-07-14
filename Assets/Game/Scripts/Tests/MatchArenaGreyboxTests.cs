@@ -13,6 +13,24 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Rebuild_BuildsLayoutAndGraph_WithoutThrowing()
+        {
+            var go = new GameObject("GreyboxRebuildTest");
+            try
+            {
+                var greybox = go.AddComponent<MatchArenaGreybox>();
+                greybox.Configure(2);
+                Assert.IsNotNull(greybox.Layout);
+                Assert.IsNotNull(greybox.Graph);
+                Assert.AreEqual(2, greybox.Layout.PlayerCount);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
         public void N4_HandTunedRoadConstants_MatchPrefab()
         {
             Assert.AreEqual(70f, MatchArenaGreyboxBuilder.PerimeterHalfStripLength);

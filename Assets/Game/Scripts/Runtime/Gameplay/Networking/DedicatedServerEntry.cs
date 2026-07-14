@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Game.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 namespace Game.Gameplay.Networking
 {
@@ -22,16 +23,38 @@ namespace Game.Gameplay.Networking
             entryObject.AddComponent<DedicatedServerEntry>();
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
         private void Start()
         {
             RunServerAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            StripHeadlessUi();
         }
 
         private async UniTask RunServerAsync(System.Threading.CancellationToken cancellationToken)
         {
             Application.runInBackground = true;
             var args = Environment.GetCommandLineArgs();
-            var port = ReadUShortArgument(args, "-port", "PORT", MatchNetworkEndpoint.DefaultPort);
+            // Prefer -listenPort: Unity Player may reserve -port for its own tooling.
+            var listenPortArg = ReadArgument(args, "-listenPort");
+            ushort port;
+            if (!ushort.TryParse(listenPortArg, out port) || port == 0)
+            {
+                port = ReadUShortArgument(args, "-port", "PORT", MatchNetworkEndpoint.DefaultPort);
+            }
+
             var players = ReadIntArgument(
                 args,
                 "-players",
@@ -56,6 +79,8 @@ namespace Game.Gameplay.Networking
                     .ToUniTask(cancellationToken: cancellationToken);
             }
 
+            StripHeadlessUi();
+
             var bootstrap = MatchNetworkBootstrap.Ensure();
             bootstrap.ConfigureEndpoint("127.0.0.1", port, listenAll: true);
             if (!bootstrap.StartAsServer())
@@ -65,6 +90,25 @@ namespace Game.Gameplay.Networking
             }
 
             Debug.Log($"BARAKI dedicated server listening on 0.0.0.0:{port} for {players} players.");
+
+            // One more frame: UIDocument may register RuntimePanels during the same load tick.
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, cancellationToken);
+            StripHeadlessUi();
+        }
+
+        private static void StripHeadlessUi()
+        {
+            var documents = FindObjectsByType<UIDocument>(FindObjectsInactive.Include);
+            foreach (var document in documents)
+            {
+                if (document == null)
+                {
+                    continue;
+                }
+
+                document.enabled = false;
+                Destroy(document);
+            }
         }
 
         private static bool IsServerMode(string[] args)

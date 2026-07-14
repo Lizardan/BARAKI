@@ -73,7 +73,12 @@ namespace Game.Gameplay.Networking
 
         public void ConfigureEndpoint(string host, ushort port, bool listenAll)
         {
-            EnsureNetworkComponents();
+            if (!EnsureNetworkComponents())
+            {
+                Debug.LogError("MatchNetworkBootstrap: cannot configure endpoint — NGO components missing.");
+                return;
+            }
+
             var address = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();
             var resolvedPort = port == 0 ? MatchNetworkEndpoint.DefaultPort : port;
             _transport.SetConnectionData(
@@ -84,7 +89,11 @@ namespace Game.Gameplay.Networking
 
         public bool StartAsServer()
         {
-            EnsureNetworkComponents();
+            if (!EnsureNetworkComponents())
+            {
+                return false;
+            }
+
             if (_networkManager.IsListening)
             {
                 return _networkManager.IsServer;
@@ -102,7 +111,11 @@ namespace Game.Gameplay.Networking
 
         public bool StartAsClient()
         {
-            EnsureNetworkComponents();
+            if (!EnsureNetworkComponents())
+            {
+                return false;
+            }
+
             return _networkManager.IsListening
                 ? _networkManager.IsClient
                 : _networkManager.StartClient();
@@ -110,7 +123,11 @@ namespace Game.Gameplay.Networking
 
         public bool StartAsHost()
         {
-            EnsureNetworkComponents();
+            if (!EnsureNetworkComponents())
+            {
+                return false;
+            }
+
             if (_networkManager.IsListening)
             {
                 return _networkManager.IsHost;
@@ -155,23 +172,42 @@ namespace Game.Gameplay.Networking
             SpawnNetworkPrefab(_authorityPrefab, "MatchNetworkAuthority", typeof(MatchNetworkAuthority));
         }
 
-        private void EnsureNetworkComponents()
+        private bool EnsureNetworkComponents()
         {
-            _networkManager = NetworkManager.Singleton;
-            if (_networkManager == null)
+            if (_networkManager != null && _transport != null && _networkManager.NetworkConfig != null)
             {
-                _networkManager = GetComponent<NetworkManager>();
+                RegisterRuntimePrefabs();
+                return true;
             }
 
+            // Own NGO on this bootstrap object — never reuse a foreign Singleton that may be half-dead.
+            _networkManager = GetComponent<NetworkManager>();
             if (_networkManager == null)
             {
                 _networkManager = gameObject.AddComponent<NetworkManager>();
             }
 
-            _transport = _networkManager.GetComponent<UnityTransport>();
+            if (_networkManager == null)
+            {
+                Debug.LogError("MatchNetworkBootstrap: failed to create NetworkManager.");
+                return false;
+            }
+
+            if (_networkManager.NetworkConfig == null)
+            {
+                _networkManager.NetworkConfig = new NetworkConfig();
+            }
+
+            _transport = GetComponent<UnityTransport>();
             if (_transport == null)
             {
-                _transport = _networkManager.gameObject.AddComponent<UnityTransport>();
+                _transport = gameObject.AddComponent<UnityTransport>();
+            }
+
+            if (_transport == null)
+            {
+                Debug.LogError("MatchNetworkBootstrap: failed to create UnityTransport.");
+                return false;
             }
 
             _transport.UseWebSockets = true;
@@ -185,11 +221,12 @@ namespace Game.Gameplay.Networking
             }
 
             RegisterRuntimePrefabs();
+            return true;
         }
 
         private void RegisterRuntimePrefabs()
         {
-            if (_prefabsRegistered)
+            if (_prefabsRegistered || _networkManager == null)
             {
                 return;
             }

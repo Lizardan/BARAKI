@@ -590,7 +590,12 @@ namespace Game.Gameplay.Match
                 line.SetPosition(i, point);
             }
 
-            line.material = CreateLineMaterial(color);
+            var lineMaterial = CreateLineMaterial(color);
+            if (lineMaterial != null)
+            {
+                line.material = lineMaterial;
+            }
+
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
         }
@@ -646,12 +651,23 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            renderer.sharedMaterial = CreateSolidMaterial(color);
+            var material = CreateSolidMaterial(color);
+            if (material != null)
+            {
+                renderer.sharedMaterial = material;
+            }
         }
 
         static Material CreateSolidMaterial(Color color)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            var shader = Shader.Find("Universal Render Pipeline/Lit")
+                         ?? Shader.Find("Universal Render Pipeline/Unlit")
+                         ?? Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                return null;
+            }
+
             var material = new Material(shader);
             material.SetColor("_BaseColor", color);
             material.SetFloat("_Smoothness", 0.2f);
@@ -664,6 +680,16 @@ namespace Game.Gameplay.Match
             if (shader == null)
             {
                 shader = Shader.Find("Standard");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Sprites/Default");
+            }
+
+            if (shader == null)
+            {
+                return null;
             }
 
             var material = new Material(shader);
@@ -696,6 +722,11 @@ namespace Game.Gameplay.Match
             if (shader == null)
             {
                 shader = Shader.Find("Sprites/Default");
+            }
+
+            if (shader == null)
+            {
+                return null;
             }
 
             var material = new Material(shader);
