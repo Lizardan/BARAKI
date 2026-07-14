@@ -1,20 +1,25 @@
 name: Deploy Activity Shell (prebuilt WebGL)
 
-# Fallback when GitHub-hosted Unity WebGL OOM/crashes.
-# 1) Locally: BARAKI → Build WebGL into Builds/WebGL (or use Editor menu)
-# 2) Zip Build folder, upload as workflow artifact OR place under web/activity-shell/Build and push
-# 3) Run this workflow (dispatch) — deploys Pages only
+# Fallback when local wrangler Pages upload fails (VPN/ECONNRESET) or CI Unity OOM.
+# 1) Locally build WebGL into web/activity-shell/Build/ (BARAKI.* files)
+# 2) Force-add Build binaries (they are gitignored by default):
+#      git add -f web/activity-shell/Build/BARAKI.*
+# 3) Push + run this workflow (Actions → Deploy Activity Shell (prebuilt WebGL) → Run)
 
 on:
   workflow_dispatch:
-  # Do not run on push — Build/ is empty in git; use full Deploy Activity or manual dispatch after local WebGL copy.
+  push:
+    branches: [main, master]
+    paths:
+      - "web/activity-shell/**"
+      - ".github/workflows/deploy-activity-prebuilt.yml"
 
 concurrency:
   group: deploy-activity-prebuilt
   cancel-in-progress: true
 
 env:
-  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki-activity' }}
+  PAGES_PROJECT: ${{ vars.PAGES_PROJECT || 'baraki' }}
 
 jobs:
   deploy-pages:
@@ -26,13 +31,13 @@ jobs:
 
       - name: Require WebGL build files
         run: |
-          if ! ls web/activity-shell/Build/*.loader.js >/dev/null 2>&1; then
-            echo "Put Unity WebGL output into web/activity-shell/Build/ (*.loader.js etc.)"
-            echo "Or use the full Deploy Activity workflow once CI WebGL works."
+          set -euo pipefail
+          if ! ls web/activity-shell/Build/BARAKI.loader.js >/dev/null 2>&1; then
+            echo "Missing web/activity-shell/Build/BARAKI.* — force-add local WebGL build and push."
             ls -la web/activity-shell/Build || true
             exit 1
           fi
-          ls -la web/activity-shell/Build | head -30
+          ls -lah web/activity-shell/Build
 
       - name: Inject Discord client id
         env:
@@ -48,11 +53,36 @@ jobs:
           open(path, "w", encoding="utf-8").write(text2 if n else text)
           print("patched" if n else "no change")
           '
+          else
+            echo "DISCORD_CLIENT_ID var empty — using config.js as committed"
           fi
+
+      - name: Stage clean Pages payload
+        run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/baraki-pages"
+          mkdir -p "$STAGE/Build" "$STAGE/vendor"
+          cp web/activity-shell/index.html web/activity-shell/boot.js web/activity-shell/config.js "$STAGE/"
+          cp web/activity-shell/Build/BARAKI.loader.js \
+             web/activity-shell/Build/BARAKI.data.unityweb \
+             web/activity-shell/Build/BARAKI.framework.js.unityweb \
+             web/activity-shell/Build/BARAKI.wasm.unityweb \
+             "$STAGE/Build/"
+          cp -r web/activity-shell/vendor/. "$STAGE/vendor/"
+          # Fail if any staged file exceeds Pages 25 MiB limit
+          find "$STAGE" -type f -printf '%s %p\n' | while read -r size path; do
+            if (( size > 26214400 )); then
+              echo "File too large for Pages (>25 MiB): $path ($size bytes)"
+              exit 1
+            fi
+          done
+          du -sh "$STAGE"
+          find "$STAGE" -type f -printf '%7k KB  %P\n' | sort
+          echo "STAGE_DIR=$STAGE" >> "$GITHUB_ENV"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/activity-shell --project-name=${{ env.PAGES_PROJECT }}
+          command: pages deploy ${{ env.STAGE_DIR }} --project-name=${{ env.PAGES_PROJECT }} --commit-dirty=true
