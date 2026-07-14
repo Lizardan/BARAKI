@@ -173,9 +173,6 @@ namespace Game.Gameplay.Match
             }
 
             var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            // #region agent log
-            Debug.Log($"[BARAKI Debug][H-SHADER] UnitWorldStatusBars shader resolved={shader != null}");
-            // #endregion
             if (shader == null)
             {
                 return null;

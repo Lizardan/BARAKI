@@ -1,5 +1,3 @@
-import { DiscordSDK, patchUrlMappings } from "https://unpkg.com/@discord/embedded-app-sdk@2.4.0/output/index.mjs";
-
 const statusEl = document.getElementById("status");
 const config = window.BARAKI_CONFIG || {};
 
@@ -17,6 +15,28 @@ function isInsideDiscord() {
   } catch {
     return false;
   }
+}
+
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+async function loadDiscordSdk() {
+  // Local vendor only — Discord Activity CSP blocks unpkg/CDN imports.
+  return import("./vendor/discord-embedded-app-sdk.js");
 }
 
 async function initDiscord() {
@@ -39,35 +59,68 @@ async function initDiscord() {
     };
   }
 
-  if (isInsideDiscord()) {
-    // Map external hosts through Discord proxy (adjust to your Pages/Workers/Tunnel).
-    patchUrlMappings([
-      { prefix: "/api", target: new URL(config.MATCHMAKER_BASE || "/api", window.location.origin).host || undefined },
-    ].filter((m) => m.target));
+  setStatus("Loading Discord SDK…");
+  let DiscordSDK;
+  try {
+    ({ DiscordSDK } = await loadDiscordSdk());
+  } catch (err) {
+    console.warn("Discord SDK import failed", err);
+    setStatus(`Discord SDK failed: ${err.message}`);
+    return {
+      instanceId: "sdk-import-failed",
+      userId: "discord-user",
+      displayName: "Player",
+    };
   }
 
+  // Portal URL mapping `/api` → workers already proxies relative fetches.
+  // Do not rewrite `/api` onto discordsays host via patchUrlMappings.
+
   const sdk = new DiscordSDK(clientId);
-  await sdk.ready();
-  setStatus("Discord SDK ready");
+  try {
+    setStatus("Waiting for Discord ready…");
+    await withTimeout(sdk.ready(), 8000, "sdk.ready");
+    setStatus("Discord SDK ready");
+  } catch (err) {
+    console.warn("sdk.ready failed/timed out", err);
+    setStatus(`Discord ready skipped: ${err.message}`);
+    return {
+      instanceId: sdk.instanceId || "ready-timeout",
+      userId: "discord-user",
+      displayName: "Player",
+      sdk,
+    };
+  }
 
-  const { code } = await sdk.commands.authorize({
-    client_id: clientId,
-    response_type: "code",
-    state: "",
-    prompt: "none",
-    scope: ["identify", "guilds"],
-  });
-
-  // Token exchange should go through your Worker in production.
-  // FREE-0 test: use instance + user from SDK without full OAuth exchange when possible.
   let userId = "discord-user";
   let displayName = "Player";
   try {
-    const auth = await sdk.commands.authenticate({ access_token: code });
-    userId = auth?.user?.id || userId;
-    displayName = auth?.user?.username || displayName;
+    setStatus("Authorizing…");
+    const { code } = await withTimeout(
+      sdk.commands.authorize({
+        client_id: clientId,
+        response_type: "code",
+        state: "",
+        prompt: "none",
+        scope: ["identify", "guilds"],
+      }),
+      12000,
+      "authorize");
+
+    // Full OAuth token exchange needs a Worker; FREE-0 continues without it.
+    try {
+      const auth = await withTimeout(
+        sdk.commands.authenticate({ access_token: code }),
+        5000,
+        "authenticate");
+      userId = auth?.user?.id || userId;
+      displayName = auth?.user?.username || displayName;
+    } catch (err) {
+      console.warn("authenticate skipped/failed", err);
+    }
   } catch (err) {
-    console.warn("authenticate skipped/failed", err);
+    console.warn("authorize skipped/failed", err);
+    setStatus(`Authorize skipped: ${err.message}`);
   }
 
   return {
@@ -80,9 +133,6 @@ async function initDiscord() {
 
 async function ensureMatch(session) {
   const base = (config.MATCHMAKER_BASE || "/api").replace(/\/+$/, "");
-  // #region agent log
-  fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H3',location:'boot.js:ensureMatch',message:'Matchmaker request target',data:{insideDiscord:isInsideDiscord(),base,endpoint:`${base}/v1/match/ensure`},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const res = await fetch(`${base}/v1/match/ensure`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -117,19 +167,11 @@ async function loadUnity(sessionPayload) {
   setStatus("Loading WebGL…");
   const canvas = document.querySelector("#unity-canvas");
   const loaderUrl = config.UNITY_LOADER || "./Build/BARAKI.loader.js";
-  // #region agent log
-  fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H2',location:'boot.js:loadUnity',message:'Unity asset URLs selected',data:{loaderUrl,dataUrl:config.UNITY_DATA,frameworkUrl:config.UNITY_FRAMEWORK,codeUrl:config.UNITY_CODE},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   await new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = loaderUrl;
-    script.onload = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7522/ingest/7205826c-cc54-48ea-9a49-985c9114a42d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a9f01b'},body:JSON.stringify({sessionId:'a9f01b',runId:'browser-pre-fix',hypothesisId:'H1-H4',location:'boot.js:loader.onload',message:'Unity loader script loaded',data:{loaderUrl,createUnityInstanceType:typeof createUnityInstance},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      resolve();
-    };
+    script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load ${loaderUrl}. Build WebGL into web/activity-shell/Build/`));
     document.body.appendChild(script);
   });
@@ -155,13 +197,16 @@ async function loadUnity(sessionPayload) {
 
 async function main() {
   try {
+    setStatus("Starting…");
     const discord = await initDiscord();
     let match = null;
     if (isInsideDiscord()) {
       try {
-        match = await ensureMatch(discord);
+        setStatus("Calling matchmaker…");
+        match = await withTimeout(ensureMatch(discord), 8000, "ensureMatch");
         setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
       } catch (err) {
+        // OK without dedicated/tunnel for menu smoke.
         setStatus(`Matchmaker unavailable: ${err.message}`);
         console.warn(err);
       }
@@ -178,7 +223,6 @@ async function main() {
       joinToken: match?.join_token || "",
     };
 
-    // Expose for Unity .jslib sync reads
     window.__BARAKI_DISCORD_SESSION__ = sessionPayload;
 
     await loadUnity(sessionPayload);
