@@ -1,14 +1,13 @@
 # FREE-0 one-click playtest evening (Windows host PC).
 # Reads infra/playtest.env (gitignored).
 #
-# Tunnel mode (auto):
-#   - WSS_HOST set  -> named tunnel: cloudflared tunnel run $TUNNEL_NAME
-#   - WSS_HOST empty -> quick tunnel: cloudflared tunnel --url http://127.0.0.1:$PORT
-#     (hostname changes each run - update Discord Portal /wss; script copies hostname to clipboard)
+# Tunnel mode:
+#   - WSS_HOST set (required) -> named tunnel: cloudflared tunnel run $TUNNEL_NAME
+#   - ALLOW_QUICK_TUNNEL=1 + empty WSS_HOST -> quick tunnel (dev only; Discord /wss every run)
 #
 # Setup once:
-#   1. Copy infra/playtest.env.example -> infra/playtest.env and fill REGISTER_SECRET
-#   2. (Optional) named tunnel: .\infra\scripts\setup-named-tunnel.ps1 + set WSS_HOST
+#   1. Copy infra/playtest.env.example -> infra/playtest.env; fill REGISTER_SECRET + WSS_HOST
+#   2. .\infra\scripts\setup-named-tunnel.ps1 (Discord Portal /wss = same host)
 #   3. Unity -> BARAKI -> Build -> Windows Dedicated Server (Headless)
 #
 # Every evening:
@@ -369,6 +368,7 @@ try {
     $RegisterSecret = Require-Key $cfg "REGISTER_SECRET"
     $WssHostCfg = Get-OptionalKey $cfg "WSS_HOST"
     $TunnelName = Get-OptionalKey $cfg "TUNNEL_NAME" "baraki-game"
+    $AllowQuick = Get-OptionalKey $cfg "ALLOW_QUICK_TUNNEL" "0"
     $ServerExe = Get-OptionalKey $cfg "SERVER_EXE"
     $Port = if ($cfg.ContainsKey("PORT") -and $cfg["PORT"]) { [int]$cfg["PORT"] } else { 7777 }
     $Players = if ($cfg.ContainsKey("PLAYERS") -and $cfg["PLAYERS"]) { [int]$cfg["PLAYERS"] } else { 2 }
@@ -383,21 +383,30 @@ try {
         throw "playtest.env missing SERVER_EXE"
     }
 
+    $isQuick = [string]::IsNullOrWhiteSpace($WssHostCfg)
+    if ($isQuick -and $AllowQuick -ne "1") {
+        throw @"
+WSS_HOST is required for Discord playtest (named tunnel).
+Run: .\infra\scripts\setup-named-tunnel.ps1
+Set WSS_HOST=<hostname> in infra/playtest.env (same host as Discord Portal /wss).
+Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every evening).
+"@
+    }
+
     $cloudflaredExe = Resolve-CloudflaredExe $cfg
     Write-Ok "cloudflared: $cloudflaredExe"
     Write-Ok "matchmaker: $MatchmakerUrl"
     Write-Ok "server exe: $ServerExe"
     Write-Ok "port=$Port players=$Players"
-    if ($WssHostCfg) {
-        Write-Ok "tunnel mode: named ($TunnelName -> $WssHostCfg)"
+    if ($isQuick) {
+        Write-WarnLine "tunnel mode: QUICK (ALLOW_QUICK_TUNNEL=1) — update Discord /wss every run"
     } else {
-        Write-Ok "tunnel mode: quick (WSS_HOST empty)"
+        Write-Ok "tunnel mode: named ($TunnelName -> $WssHostCfg)"
     }
     Test-VpnWarn
 
     Start-DedicatedServer $ServerExe $Port $Players
 
-    $isQuick = [string]::IsNullOrWhiteSpace($WssHostCfg)
     if ($isQuick) {
         $wssHost = Start-QuickTunnel $cloudflaredExe $Port
     } else {

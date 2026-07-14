@@ -27,5 +27,22 @@ namespace Game.Tests
         {
             Assert.AreEqual(expected, NetworkLobbySlotRules.IsHostSlot(slot));
         }
+
+        [Test]
+        public void CanDesignatedHostStart_OnlyHostWhenReady()
+        {
+            Assert.IsTrue(NetworkLobbySlotRules.CanDesignatedHostStart(0, matchStarted: false, lobbyReady: true));
+            Assert.IsFalse(NetworkLobbySlotRules.CanDesignatedHostStart(1, matchStarted: false, lobbyReady: true));
+            Assert.IsFalse(NetworkLobbySlotRules.CanDesignatedHostStart(0, matchStarted: true, lobbyReady: true));
+            Assert.IsFalse(NetworkLobbySlotRules.CanDesignatedHostStart(0, matchStarted: false, lobbyReady: false));
+        }
+
+        [Test]
+        public void FindNextFreeSlot_EmptyLobby_FirstClientGetsHostSlot()
+        {
+            var occupied = new[] { false, false };
+
+            Assert.AreEqual(NetworkLobbySlotRules.HostSlot, NetworkLobbySlotRules.FindNextFreeSlot(occupied, 2));
+        }
     }
 }

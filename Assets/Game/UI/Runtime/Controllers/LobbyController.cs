@@ -39,6 +39,7 @@ namespace Game.UI.Controllers
         private bool _isTransitioning;
         private bool _localReady;
         private int _lastLobbyRevision = -1;
+        private float _networkConnectWaitStarted = -1f;
         private readonly NetworkLobbySlotsView _networkLobbySlots = new();
 
         private void Awake()
@@ -120,7 +121,9 @@ namespace Game.UI.Controllers
                     return;
                 }
 
-                if (MatchNetworkSession.LobbyRevision != _lastLobbyRevision)
+                // Refresh while waiting for lobby spawn so connect timeout can surface.
+                if (!MatchNetworkSession.HasNetworkLobby
+                    || MatchNetworkSession.LobbyRevision != _lastLobbyRevision)
                 {
                     RefreshLobbyUi();
                 }
@@ -312,9 +315,18 @@ namespace Game.UI.Controllers
             _lastLobbyRevision = MatchNetworkSession.LobbyRevision;
             if (!MatchNetworkSession.HasNetworkLobby)
             {
+                if (_networkConnectWaitStarted < 0f)
+                {
+                    _networkConnectWaitStarted = Time.unscaledTime;
+                }
+
+                var timedOut = MatchTransportConnectRules.HasTimedOut(
+                    Time.unscaledTime - _networkConnectWaitStarted);
                 if (_subtitleLabel != null)
                 {
-                    _subtitleLabel.text = "Подключение к сетевой комнате…";
+                    _subtitleLabel.text = timedOut
+                        ? MatchTransportConnectRules.ConnectFailedMessage
+                        : "Подключение к сетевой комнате…";
                 }
 
                 _startButton?.SetEnabled(false);
@@ -323,6 +335,8 @@ namespace Game.UI.Controllers
                 _slotList?.Clear();
                 return;
             }
+
+            _networkConnectWaitStarted = -1f;
 
             if (_titleLabel != null)
             {

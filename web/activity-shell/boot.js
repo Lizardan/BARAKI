@@ -231,9 +231,12 @@ async function main() {
         setStatus("Calling matchmaker…");
         match = await withTimeout(ensureMatch(discord), 8000, "ensureMatch");
         setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
-        const fromMatch = hostnameFromWssUrl(match.wss_url);
+        // Always remap Unity WSS through Discord /wss proxy (Portal target must match).
+        const fromMatch = hostnameFromWssUrl(match.wss_url) || config.WSS_PROXY_TARGET;
         if (fromMatch) {
           await applyWssProxyMapping(discord.patchUrlMappings, fromMatch);
+        } else {
+          console.warn("No WSS host for patchUrlMappings — set WSS_PROXY_TARGET or ensure wss_url");
         }
       } catch (err) {
         // OK without dedicated/tunnel for menu smoke.

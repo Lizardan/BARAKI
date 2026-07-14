@@ -26,11 +26,11 @@
 ### 1. Cloudflare
 
 1. Аккаунт на [dash.cloudflare.com](https://dash.cloudflare.com)
-2. **Workers & Pages** → Create Pages project `baraki-activity` (можно пустой; первый CI deploy создаст)
+2. **Workers & Pages** → Create Pages project `baraki` (можно пустой; первый CI deploy создаст; override: var `PAGES_PROJECT`)
 3. API Token: *Edit Cloudflare Workers* + *Account Cloudflare Pages Edit*  
    → сохрани как GitHub secret `CLOUDFLARE_API_TOKEN`
 4. Account ID (справа в overview) → secret `CLOUDFLARE_ACCOUNT_ID`
-5. KV для matchmaker: **не нужен** (FREE-0 хранит tunnel/match in-memory).
+5. KV для matchmaker: binding `BARAKI_STORE` в `infra/workers/matchmaker/wrangler.toml` (tunnel + active match). Без KV tunnel «теряется» между isolate.
 6. Секрет регистрации tunnel:
    ```powershell
    cd infra/workers/matchmaker
@@ -59,16 +59,16 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 | `UNITY_LICENSE` (или EMAIL/PASSWORD/SERIAL) | secret | WebGL build |
 | `MATCHMAKER_REGISTER_SECRET` | secret | Worker secret sync |
 | `DISCORD_CLIENT_ID` | variable | inject в config.js |
-| `WSS_PROXY_TARGET` | variable | optional: stable tunnel host for Discord WSS proxy |
-| `PAGES_PROJECT` | variable | optional, default `baraki-activity` |
+| `WSS_PROXY_TARGET` | variable | named-tunnel hostname (same as Discord `/wss` and `playtest.env` `WSS_HOST`) |
+| `PAGES_PROJECT` | variable | optional, default `baraki` |
 
 ### 5. Discord URL Mappings (после первого успешного deploy)
 
 | Prefix | Target |
 |--------|--------|
-| `/` | `baraki-activity.pages.dev` (точный host из CF) |
+| `/` | `baraki.pages.dev` (точный host из CF) |
 | `/api` | `baraki-matchmaker.<subdomain>.workers.dev` |
-| `/wss` | tunnel host вечера (или обновляй named tunnel) |
+| `/wss` | **named** tunnel host once (`WSS_HOST` / `WSS_PROXY_TARGET`) |
 
 ---
 

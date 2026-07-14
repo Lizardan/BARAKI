@@ -3,6 +3,7 @@ using System.Text;
 using Cysharp.Threading.Tasks;
 using Game.Core;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace Game.Gameplay.Networking
 {
@@ -25,6 +26,9 @@ namespace Game.Gameplay.Networking
         public static bool HasNetworkLobby => NetworkLobbyState.Instance != null;
         public static bool CanLocalStart => NetworkLobbyState.Instance?.CanLocalStart ?? false;
 
+        public static string TransportConnectFailedMessage =>
+            MatchTransportConnectRules.ConnectFailedMessage;
+
         public static void ApplyHandle(MatchSessionHandle handle)
         {
             s_currentHandle = handle;
@@ -35,7 +39,8 @@ namespace Game.Gameplay.Networking
                             && endpoint.IsNetworked;
         }
 
-        public static async UniTask<bool> TryStartTransportAsync()
+        public static async UniTask<bool> TryStartTransportAsync(
+            float timeoutSeconds = MatchTransportConnectRules.DefaultTimeoutSeconds)
         {
             if (!IsNetworked)
             {
@@ -53,7 +58,11 @@ namespace Game.Gameplay.Networking
                 throw new InvalidOperationException("MatchNetworkBootstrap.Ensure returned null.");
             }
 
-            bootstrap.ConfigureEndpoint(endpoint.Host, endpoint.Port, listenAll: IsServerRole());
+            bootstrap.ConfigureEndpoint(
+                endpoint.Host,
+                endpoint.Port,
+                listenAll: IsServerRole(),
+                useSecureWebSocket: endpoint.IsSecure && !IsServerRole());
 
             var manager = bootstrap.NetworkManager;
             if (manager == null || manager.NetworkConfig == null)
@@ -69,15 +78,17 @@ namespace Game.Gameplay.Networking
             if (IsServerRole())
             {
                 started = bootstrap.StartAsServer();
-            }
-            else
-            {
-                // FREE-0: dedicated process owns listen; menu Create/Join are always clients.
-                started = bootstrap.StartAsClient();
+                await UniTask.Yield();
+                return started;
             }
 
-            await UniTask.Yield();
-            return started;
+            started = bootstrap.StartAsClient();
+            if (!started)
+            {
+                return false;
+            }
+
+            return await WaitForClientLobbyAsync(manager, timeoutSeconds);
         }
 
         public static LobbySlotInfo GetLobbySlot(int slot) =>
@@ -108,6 +119,57 @@ namespace Game.Gameplay.Networking
             IsNetworked = false;
             PlayerCount = 0;
             LocalSlot = -1;
+        }
+
+        private static async UniTask<bool> WaitForClientLobbyAsync(
+            NetworkManager manager,
+            float timeoutSeconds)
+        {
+            var disconnected = false;
+            void OnDisconnect(ulong clientId)
+            {
+                if (manager != null && clientId == manager.LocalClientId)
+                {
+                    disconnected = true;
+                }
+            }
+
+            manager.OnClientDisconnectCallback += OnDisconnect;
+            var startedAt = Time.realtimeSinceStartup;
+            try
+            {
+                while (!MatchTransportConnectRules.HasTimedOut(
+                           Time.realtimeSinceStartup - startedAt,
+                           timeoutSeconds))
+                {
+                    if (disconnected
+                        || manager == null
+                        || (!manager.IsListening && !manager.IsConnectedClient))
+                    {
+                        Shutdown();
+                        return false;
+                    }
+
+                    if (MatchTransportConnectRules.IsConnectComplete(
+                            manager.IsConnectedClient,
+                            NetworkLobbyState.Instance != null))
+                    {
+                        return true;
+                    }
+
+                    await UniTask.Yield();
+                }
+
+                Shutdown();
+                return false;
+            }
+            finally
+            {
+                if (manager != null)
+                {
+                    manager.OnClientDisconnectCallback -= OnDisconnect;
+                }
+            }
         }
 
         private static bool IsServerRole() =>

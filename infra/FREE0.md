@@ -129,7 +129,7 @@ Clients call:
 
 ```powershell
 cd web/activity-shell
-npx wrangler pages deploy . --project-name baraki-activity
+npx wrangler pages deploy . --project-name baraki
 ```
 
 ### A4. Friend evening sequence

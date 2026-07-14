@@ -192,22 +192,29 @@ namespace Game.Gameplay.Networking
                 playerCount = MatchSetup.DefaultPlayerCount;
             }
 
-            if (DiscordActivityBridge.TryGetSession(out var cached)
-                && !string.IsNullOrEmpty(cached.WssUrl)
-                && (string.IsNullOrEmpty(cached.InstanceId)
-                    || string.Equals(cached.InstanceId, instanceId, StringComparison.Ordinal)))
+            DiscordActivityBridge.TryGetSession(out var bridgeSession);
+            var discordUserId = !string.IsNullOrEmpty(bridgeSession.UserId)
+                ? bridgeSession.UserId
+                : displayName;
+
+            // Reuse shell ensure only when player_count matches Create/Join request.
+            if (!string.IsNullOrEmpty(bridgeSession.WssUrl)
+                && (string.IsNullOrEmpty(bridgeSession.InstanceId)
+                    || string.Equals(bridgeSession.InstanceId, instanceId, StringComparison.Ordinal))
+                && bridgeSession.PlayerCount > 0
+                && bridgeSession.PlayerCount == playerCount)
             {
                 return new MatchSessionHandle(
-                    string.IsNullOrEmpty(cached.RoomCode) ? instanceId : cached.RoomCode,
-                    cached.PlayerCount > 0 ? cached.PlayerCount : playerCount,
-                    cached.Slot >= 0 ? cached.Slot : 0,
-                    cached.WssUrl);
+                    string.IsNullOrEmpty(bridgeSession.RoomCode) ? instanceId : bridgeSession.RoomCode,
+                    bridgeSession.PlayerCount,
+                    bridgeSession.Slot >= 0 ? bridgeSession.Slot : 0,
+                    bridgeSession.WssUrl);
             }
 
             var body =
                 "{\"instance_id\":\"" + Escape(instanceId) + "\"," +
                 "\"player_count\":" + playerCount + "," +
-                "\"discord_user_id\":\"" + Escape(displayName) + "\"," +
+                "\"discord_user_id\":\"" + Escape(discordUserId) + "\"," +
                 "\"display_name\":\"" + Escape(displayName) + "\"}";
 
             var url = _matchmakerBaseUrl + "/v1/match/ensure";

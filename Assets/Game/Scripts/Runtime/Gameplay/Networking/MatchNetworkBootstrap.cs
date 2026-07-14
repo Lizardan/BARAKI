@@ -72,7 +72,11 @@ namespace Game.Gameplay.Networking
         public static MatchNetworkEndpoint ParseEndpoint(string value) =>
             MatchNetworkEndpoint.Parse(value);
 
-        public void ConfigureEndpoint(string host, ushort port, bool listenAll)
+        public void ConfigureEndpoint(
+            string host,
+            ushort port,
+            bool listenAll,
+            bool useSecureWebSocket = false)
         {
             if (!EnsureNetworkComponents())
             {
@@ -82,6 +86,8 @@ namespace Game.Gameplay.Networking
 
             var address = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();
             var resolvedPort = port == 0 ? MatchNetworkEndpoint.DefaultPort : port;
+            // Dedicated listens plain WS behind cloudflared TLS. WebGL clients use wss → encryption on.
+            _transport.UseEncryption = useSecureWebSocket;
             _transport.SetConnectionData(
                 address,
                 resolvedPort,

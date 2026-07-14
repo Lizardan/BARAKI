@@ -48,11 +48,15 @@ namespace Game.Gameplay.Networking
         public int Revision => _revision.Value;
         public string RoomCodeValue => _roomCode.Value.ToString();
         public bool MatchStartedValue => _matchStarted.Value;
+        /// <summary>
+        /// Designated host is lobby slot 0 (first Discord/WebGL client). Dedicated server
+        /// does not occupy a player slot, so Start is client-side via ServerRpc.
+        /// </summary>
         public bool CanLocalStart =>
-            IsServer
-            && NetworkLobbySlotRules.IsHostSlot(MatchNetworkSession.LocalSlot)
-            && LobbyReadyRules.CanHostStart(this)
-            && !_matchStarted.Value;
+            NetworkLobbySlotRules.CanDesignatedHostStart(
+                MatchNetworkSession.LocalSlot,
+                _matchStarted.Value,
+                LobbyReadyRules.CanHostStart(this));
 
         public override void OnNetworkSpawn()
         {
@@ -174,11 +178,7 @@ namespace Game.Gameplay.Networking
                 _slots.Add(default);
             }
 
-            OccupySlot(
-                NetworkLobbySlotRules.HostSlot,
-                NetworkManager.ServerClientId,
-                "Host");
-            MatchNetworkSession.LocalSlot = NetworkLobbySlotRules.HostSlot;
+            // Dedicated / listen server: no phantom Host in slot 0 — first real client is host.
             BumpRevision();
         }
 
@@ -209,7 +209,7 @@ namespace Game.Gameplay.Networking
         private void OnClientDisconnected(ulong clientId)
         {
             var slot = FindSlotByClientId(clientId);
-            if (slot <= NetworkLobbySlotRules.HostSlot)
+            if (slot < 0)
             {
                 return;
             }

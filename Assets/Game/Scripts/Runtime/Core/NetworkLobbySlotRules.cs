@@ -32,5 +32,11 @@ namespace Game.Core
         }
 
         public static bool IsHostSlot(int slot) => slot == HostSlot;
+
+        /// <summary>
+        /// Dedicated server leaves slots empty; first real client occupies HostSlot and may Start.
+        /// </summary>
+        public static bool CanDesignatedHostStart(int localSlot, bool matchStarted, bool lobbyReady) =>
+            IsHostSlot(localSlot) && lobbyReady && !matchStarted;
     }
 }

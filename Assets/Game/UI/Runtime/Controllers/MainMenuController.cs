@@ -626,6 +626,12 @@ namespace Game.UI.Controllers
                 return "Нет игрового сервера. Запусти Start-Playtest.bat на ПК хоста.";
             }
 
+            if (raw.IndexOf("WSS", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || raw.IndexOf("игровым сервером", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return MatchNetworkSession.TransportConnectFailedMessage;
+            }
+
             if (raw.IndexOf("ensure failed", System.StringComparison.OrdinalIgnoreCase) >= 0
                 || raw.IndexOf("Matchmaker", System.StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -657,7 +663,12 @@ namespace Game.UI.Controllers
                 var handle = await MatchSessionService.Backend.CreateAsync(
                     new CreateMatchRequest(playerCount, displayName, instanceId));
                 MatchNetworkSession.ApplyHandle(handle);
-                await MatchNetworkSession.TryStartTransportAsync();
+                if (!await MatchNetworkSession.TryStartTransportAsync())
+                {
+                    throw new System.InvalidOperationException(
+                        MatchNetworkSession.TransportConnectFailedMessage);
+                }
+
                 EnsureModeSelectClosed();
                 EnsureMatchEntryClosed();
                 await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
@@ -700,7 +711,12 @@ namespace Game.UI.Controllers
                 var handle = await MatchSessionService.Backend.JoinAsync(
                     new JoinMatchRequest(code, displayName));
                 MatchNetworkSession.ApplyHandle(handle);
-                await MatchNetworkSession.TryStartTransportAsync();
+                if (!await MatchNetworkSession.TryStartTransportAsync())
+                {
+                    throw new System.InvalidOperationException(
+                        MatchNetworkSession.TransportConnectFailedMessage);
+                }
+
                 EnsureMatchEntryClosed();
                 await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
             }
