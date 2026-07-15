@@ -7,6 +7,12 @@ compatibility_date = "2026-07-01"
 #
 # Tunnel + active match live in KV so Discord proxy and direct
 # workers.dev hits share the same state across isolates.
+#
+# PUBLIC_WSS_HOST: stable Discord Portal /wss target (this Worker).
+# Clients receive wss://PUBLIC_WSS_HOST; Worker proxies to registered tunnel.
+
+[vars]
+PUBLIC_WSS_HOST = "baraki-matchmaker.lizard268.workers.dev"
 
 [[kv_namespaces]]
 binding = "BARAKI_STORE"

@@ -15,24 +15,24 @@ Follow this once before a friend playtest. Full runbook: [FREE0.md](FREE0.md). E
 |--------|--------|
 | `/` | your `*.pages.dev` host |
 | `/api` | your matchmaker `*.workers.dev` host |
-| `/wss` | tunnel hostname (see below) |
+| `/wss` | **same** matchmaker `*.workers.dev` host (stable Worker proxy) |
 
-**`/wss` target (required for Discord evenings):**
+**`/wss` target (set once — do not paste trycloudflare):**
 
-- Run `.\infra\scripts\setup-named-tunnel.ps1` once → set the **same** hostname as `WSS_HOST` in `playtest.env` and as GitHub var `WSS_PROXY_TARGET` (injected into `config.js`).
-- Portal `/wss` stays fixed. Do **not** rely on quick tunnel for friend playtests.
-- Dev escape hatch only: `ALLOW_QUICK_TUNNEL=1` with empty `WSS_HOST` (paste new `*.trycloudflare.com` into Portal every evening).
+- Target = matchmaker hostname, e.g. `baraki-matchmaker.lizard268.workers.dev`
+- Same value as `WSS_PROXY_TARGET` in `web/activity-shell/config.js` / GitHub var
+- Evening quick tunnel registers with matchmaker; Worker proxies Discord WSS → tonight’s tunnel
+- Named tunnel (`setup-named-tunnel.ps1`) is optional and needs a Cloudflare domain — not required
 
 6. One-time PC setup:
-   - Copy `infra/playtest.env.example` → `infra/playtest.env` and fill `REGISTER_SECRET` + `WSS_HOST`
-   - Run `.\infra\scripts\setup-named-tunnel.ps1`
+   - Copy `infra/playtest.env.example` → `infra/playtest.env` and fill `REGISTER_SECRET`
    - Unity: **BARAKI → Build → Windows Dedicated Server (Headless)**
 7. Every play evening: double-click `infra/scripts/Start-Playtest.bat` → wait for **READY** → Discord voice → Launch BARAKI.
 8. Add the Activity to a **test server** (<25 members pre-verification) → friends Join.
 
 ### Smoke checklist (after code/deploy changes)
 
-1. `Start-Playtest.bat` → **READY** with named tunnel (no yellow «paste /wss»).
+1. `Start-Playtest.bat` → **READY** (no yellow «paste trycloudflare into Discord»).
 2. Discord Launch → Create Match → лобби показывает **КОД** и слоты (не вечное «Подключение…»).
 3. Второй игрок Join → оба слота заняты; у первого (слот 0) активна **СТАРТ** после Ready.
 4. Выключи tunnel / сервер → Create Match за ~15s показывает ошибку про WSS, без зависания.

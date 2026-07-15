@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Networking;
 using NUnit.Framework;
 
@@ -19,6 +20,21 @@ namespace Game.Tests
             Assert.AreEqual(1, parsed.Slot);
             Assert.AreEqual(2, parsed.PlayerCount);
             Assert.AreEqual("ABCD1234", parsed.RoomCode);
+        }
+
+        [Test]
+        public void Parse_ReadsStableWorkerProxyWssUrl()
+        {
+            const string json =
+                "{\"match_id\":\"m1\",\"wss_url\":\"wss://baraki-matchmaker.lizard268.workers.dev\",\"join_token\":\"m1:0\",\"slot\":0,\"player_count\":2,\"room_code\":\"INSTANCE1\"}";
+
+            var parsed = MatchmakerEnsureResponse.Parse(json);
+
+            Assert.AreEqual("wss://baraki-matchmaker.lizard268.workers.dev", parsed.WssUrl);
+            Assert.IsTrue(MatchNetworkEndpoint.TryParse(parsed.WssUrl, out var endpoint));
+            Assert.AreEqual("baraki-matchmaker.lizard268.workers.dev", endpoint.Host);
+            Assert.AreEqual(443, endpoint.Port);
+            Assert.IsTrue(endpoint.IsSecure);
         }
     }
 }

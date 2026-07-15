@@ -3,9 +3,10 @@ window.BARAKI_CONFIG = {
   DISCORD_CLIENT_ID: "1526279588479631420",
   // Relative paths work inside Discord proxy after URL mappings:
   MATCHMAKER_BASE: "/api",
-  // Named-tunnel hostname (no scheme). Must match Discord Portal /wss and playtest.env WSS_HOST.
+  // Stable Worker hostname (no scheme). Must match Discord Portal /wss.
+  // Worker proxies WS to the evening tunnel registered via matchmaker.
   // CI injects GitHub var WSS_PROXY_TARGET on deploy when set.
-  WSS_PROXY_TARGET: "",
+  WSS_PROXY_TARGET: "baraki-matchmaker.lizard268.workers.dev",
   // When developing outside Discord iframe, browser smoke mode stays local.
   DEFAULT_PLAYER_COUNT: 2,
   UNITY_BUILD_URL: "./Build",

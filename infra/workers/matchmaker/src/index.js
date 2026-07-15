@@ -1,17 +1,34 @@
 /**
  * BARAKI FREE-0 matchmaker (single active match).
  * Tunnel + match stored in KV (shared across isolates).
- * Host registers wss_url; Discord clients ensure/join by instance_id.
+ * Host registers wss_url (ephemeral quick tunnel OK);
+ * Discord clients get a stable PUBLIC_WSS_HOST and this Worker proxies /wss → tunnel.
  *
  * Discord URL Mapping `/api` strips that prefix, so Activity calls arrive as `/v1/...`.
  * Direct `*.workers.dev` calls use `/api/v1/...`. Accept both.
+ * Discord URL Mapping `/wss` → this Worker hostname (once); WS upgrades are proxied.
  */
+
+import { resolveClientWssUrl } from "./publicWss.js";
+import { proxyGameWebSocket } from "./wsProxy.js";
 
 const TUNNEL_KEY = "tunnel_wss";
 const MATCH_KEY = "active_match";
 
 export default {
   async fetch(request, env) {
+    // Stable Discord /wss target: any WebSocket upgrade proxies to registered tunnel.
+    if ((request.headers.get("Upgrade") || "").toLowerCase() === "websocket") {
+      const tunnel = await getTunnel(env);
+      if (!tunnel) {
+        return cors(json(
+          { error: "tunnel_not_registered", hint: "POST /api/v1/admin/register-tunnel first" },
+          503));
+      }
+
+      return proxyGameWebSocket(request, tunnel);
+    }
+
     const url = new URL(request.url);
     const path = normalizeApiPath(url.pathname);
 
@@ -35,7 +52,13 @@ export default {
 
       if (request.method === "GET" && path === "/api/v1/health") {
         const tunnel = await getTunnel(env);
-        return cors(json({ ok: true, has_tunnel: Boolean(tunnel) }));
+        const publicWss = resolveClientWssUrl(env.PUBLIC_WSS_HOST, tunnel);
+        return cors(json({
+          ok: true,
+          has_tunnel: Boolean(tunnel),
+          public_wss: publicWss || null,
+          proxy: Boolean(env.PUBLIC_WSS_HOST),
+        }));
       }
 
       return cors(json({ error: "not_found" }, 404));
@@ -98,7 +121,8 @@ async function registerTunnel(request, env) {
   }
 
   await setTunnel(env, wssUrl);
-  return json({ ok: true, wss_url: wssUrl });
+  const publicWss = resolveClientWssUrl(env.PUBLIC_WSS_HOST, wssUrl);
+  return json({ ok: true, wss_url: wssUrl, public_wss: publicWss || null });
 }
 
 async function ensureMatch(request, env) {
@@ -111,10 +135,12 @@ async function ensureMatch(request, env) {
     return json({ error: "instance_id required" }, 400);
   }
 
-  const wssUrl = await getTunnel(env);
-  if (!wssUrl) {
+  const tunnelWss = await getTunnel(env);
+  if (!tunnelWss) {
     return json({ error: "tunnel_not_registered", hint: "POST /api/v1/admin/register-tunnel first" }, 503);
   }
+
+  const wssUrl = resolveClientWssUrl(env.PUBLIC_WSS_HOST, tunnelWss);
 
   let match = await getStoredMatch(env);
   if (!match || match.instance_id !== instanceId) {
@@ -150,9 +176,12 @@ async function getMatch(env, instanceId) {
     return json({ error: "not_found" }, 404);
   }
 
+  const tunnelWss = await getTunnel(env);
+  const wssUrl = resolveClientWssUrl(env.PUBLIC_WSS_HOST, tunnelWss || match.wss_url);
+
   return json({
     match_id: match.match_id,
-    wss_url: match.wss_url,
+    wss_url: wssUrl,
     player_count: match.player_count,
     occupied_slots: Object.keys(match.slots).length,
   });

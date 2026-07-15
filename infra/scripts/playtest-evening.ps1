@@ -285,27 +285,35 @@ function Get-MatchmakerHealth([string]$matchmakerUrl) {
     return Invoke-RestMethod -Uri "$matchmakerUrl/api/v1/health" -TimeoutSec 15
 }
 
-function Show-ReadyBlock([string]$wssHost, [string]$wssUrl, [bool]$isQuick) {
+function Show-ReadyBlock([string]$wssHost, [string]$wssUrl, [bool]$isQuick, [string]$matchmakerUrl) {
+    $proxyHost = ""
+    try {
+        $proxyHost = ([Uri]$matchmakerUrl).Host
+    } catch {
+        $proxyHost = ""
+    }
+
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Green
     Write-Host " READY for Discord Activity" -ForegroundColor Green
     Write-Host "============================================================" -ForegroundColor Green
-    Write-Host "  wss_url : $wssUrl"
-    Write-Host "  /wss    : $wssHost"
+    Write-Host "  tunnel  : $wssUrl"
+    if ($proxyHost) {
+        Write-Host "  public  : wss://$proxyHost  (clients / Discord /wss)"
+    }
     Write-Host ""
     if ($isQuick) {
-        Write-Host "  QUICK TUNNEL: Discord /wss must match this hostname." -ForegroundColor Yellow
-        Write-Host "  1) Discord Developer Portal -> BARAKI -> URL Mappings" -ForegroundColor Yellow
-        Write-Host "  2) Prefix /wss -> Target: $wssHost" -ForegroundColor Yellow
-        Write-Host "  3) Save -> Launch Activity in a voice channel" -ForegroundColor Yellow
-        try {
-            Set-Clipboard -Value $wssHost
-            Write-Ok "hostname copied to clipboard"
-        } catch {
-            Write-WarnLine "could not copy to clipboard (set /wss manually)"
+        Write-Host "  QUICK TUNNEL backend OK — Discord Portal /wss stays on Worker." -ForegroundColor Green
+        if ($proxyHost) {
+            Write-Host "  Portal /wss target (set once): $proxyHost" -ForegroundColor Green
         }
+        Write-Host "  Do NOT paste trycloudflare into Discord — Worker proxies for you." -ForegroundColor Cyan
+        Write-Host "  Launch BARAKI Activity in a voice channel." -ForegroundColor Green
     } else {
-        Write-Host "  Named tunnel: Discord /wss should already be $wssHost" -ForegroundColor Green
+        Write-Host "  Named tunnel: backend host $wssHost" -ForegroundColor Green
+        if ($proxyHost) {
+            Write-Host "  Discord /wss should still be Worker: $proxyHost" -ForegroundColor Green
+        }
         Write-Host "  Launch BARAKI Activity in a voice channel." -ForegroundColor Green
     }
     Write-Host ""
@@ -396,7 +404,7 @@ try {
 WSS_HOST is required for Discord playtest (named tunnel).
 Run: .\infra\scripts\setup-named-tunnel.ps1
 Set WSS_HOST=<hostname> in infra/playtest.env (same host as Discord Portal /wss).
-Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every evening).
+Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (Worker proxies Discord /wss; no Portal edits).
 "@
     }
     if ($AllowQuick -eq "1") {
@@ -410,8 +418,8 @@ Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every eveni
     Write-Ok "matchmaker: $MatchmakerUrl"
     Write-Ok "server exe: $ServerExe"
     Write-Ok "port=$Port players=$Players"
-    if ($isQuick) {
-        Write-WarnLine "tunnel mode: QUICK (ALLOW_QUICK_TUNNEL=1) - update Discord /wss every run"
+    if ($AllowQuick -eq "1") {
+        Write-Ok "tunnel mode: QUICK (Worker proxies Discord /wss; no Portal edits)"
     } else {
         Write-Ok ("tunnel mode: named ({0} -> {1})" -f $TunnelName, $WssHostCfg)
     }
@@ -436,7 +444,7 @@ Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every eveni
     }
     Write-Ok "has_tunnel=True"
 
-    Show-ReadyBlock $wssHost $wssUrl $isQuick
+    Show-ReadyBlock $wssHost $wssUrl $isQuick $MatchmakerUrl
 
     try {
         Invoke-StatusLoop $script:ServerProc $script:TunnelProc $Port $MatchmakerUrl

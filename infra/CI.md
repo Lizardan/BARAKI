@@ -59,7 +59,7 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 | `UNITY_LICENSE` (или EMAIL/PASSWORD/SERIAL) | secret | WebGL build |
 | `MATCHMAKER_REGISTER_SECRET` | secret | Worker secret sync |
 | `DISCORD_CLIENT_ID` | variable | inject в config.js |
-| `WSS_PROXY_TARGET` | variable | named-tunnel hostname (same as Discord `/wss` and `playtest.env` `WSS_HOST`) |
+| `WSS_PROXY_TARGET` | variable | matchmaker hostname (same as Discord `/wss`, e.g. `baraki-matchmaker….workers.dev`) |
 | `PAGES_PROJECT` | variable | optional, default `baraki` |
 
 ### 5. Discord URL Mappings (после первого успешного deploy)
@@ -68,7 +68,7 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 |--------|--------|
 | `/` | `baraki.pages.dev` (точный host из CF) |
 | `/api` | `baraki-matchmaker.<subdomain>.workers.dev` |
-| `/wss` | **named** tunnel host once (`WSS_HOST` / `WSS_PROXY_TARGET`) |
+| `/wss` | **matchmaker** `*.workers.dev` once (Worker proxies to evening tunnel) |
 
 ---
 
@@ -89,16 +89,15 @@ Application ID → GitHub **variable** `DISCORD_CLIENT_ID` (не secret — он
 
 1. Собери dedicated server локально (редко, после изменений геймплея):
    Unity → **BARAKI → Build → Windows Dedicated Server (Headless)**
-2. Один раз настройте named tunnel + `infra/playtest.env`:
-   `.\infra\scripts\setup-named-tunnel.ps1`
-   Discord Portal `/wss` → тот же hostname **один раз**.
+2. Discord Portal `/wss` → matchmaker hostname **один раз** (не trycloudflare).
+   GitHub var `WSS_PROXY_TARGET` = тот же host.
 3. Каждый вечер: двойной клик
    [`infra/scripts/Start-Playtest.bat`](scripts/Start-Playtest.bat)
-   (читает `infra/playtest.env`, поднимает server + named tunnel + register).
+   (читает `infra/playtest.env`, поднимает server + quick tunnel + register).
 4. Окно не закрывай.
 5. Discord desktop → голосовой канал → Launch **BARAKI** → друзья Join.
 
-Named tunnel hostname **не меняется** — Discord `/wss` больше не править каждый вечер.
+Quick tunnel hostname **меняется**, но Discord `/wss` **не трогаешь** — Worker проксирует на зарегистрированный tunnel.
 `infra/playtest.env` в `.gitignore` (секреты локально).
 
 ---

@@ -56,7 +56,7 @@ async function applyWssProxyMapping(patchUrlMappings, wssHost) {
     return;
   }
 
-  // Portal mapping: /wss → stable named-tunnel host (once).
+  // Portal mapping: /wss → stable Worker host (once). Worker proxies to evening tunnel.
   // This rewrites Unity WebSocket connects to that host through Discord CSP.
   patchUrlMappings([{ prefix: "/wss", target }]);
   setStatus(`WSS proxy → ${target}`);
