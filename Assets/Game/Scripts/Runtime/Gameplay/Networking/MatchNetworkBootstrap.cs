@@ -86,8 +86,15 @@ namespace Game.Gameplay.Networking
 
             var address = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();
             var resolvedPort = port == 0 ? MatchNetworkEndpoint.DefaultPort : port;
-            // Dedicated listens plain WS behind cloudflared TLS. WebGL clients use wss → encryption on.
+            // Dedicated listens plain WS behind cloudflared/Worker TLS.
+            // WebGL clients need UseEncryption + SetClientSecrets(hostname) so UTP opens
+            // wss://hostname (not ws://ip). Otherwise Discord /wss never sees the socket.
             _transport.UseEncryption = useSecureWebSocket;
+            if (useSecureWebSocket)
+            {
+                _transport.SetClientSecrets(address);
+            }
+
             _transport.SetConnectionData(
                 address,
                 resolvedPort,
