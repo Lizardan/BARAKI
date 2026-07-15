@@ -326,7 +326,12 @@ namespace Game.UI.Controllers
                 {
                     _subtitleLabel.text = timedOut
                         ? MatchTransportConnectRules.ConnectFailedMessage
-                        : "Подключение к сетевой комнате…";
+                        : $"Подключение… {MatchNetworkSession.TransportEndpointHint}";
+                }
+
+                if (_roomCodeLabel != null && string.IsNullOrEmpty(MatchNetworkSession.RoomCode))
+                {
+                    _roomCodeLabel.text = "КОД: ----";
                 }
 
                 _startButton?.SetEnabled(false);

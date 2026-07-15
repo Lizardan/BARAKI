@@ -29,6 +29,27 @@ namespace Game.Gameplay.Networking
         public static string TransportConnectFailedMessage =>
             MatchTransportConnectRules.ConnectFailedMessage;
 
+        /// <summary>Short endpoint hint for lobby "connecting" UI (no secrets).</summary>
+        public static string TransportEndpointHint
+        {
+            get
+            {
+                if (!s_hasHandle || string.IsNullOrEmpty(s_currentHandle.TransportEndpoint))
+                {
+                    return "нет endpoint";
+                }
+
+                if (!MatchNetworkEndpoint.TryParse(s_currentHandle.TransportEndpoint, out var endpoint))
+                {
+                    return s_currentHandle.TransportEndpoint;
+                }
+
+                return endpoint.IsLocal
+                    ? $"local/{endpoint.LocalCode}"
+                    : $"{endpoint.Host}:{endpoint.Port}";
+            }
+        }
+
         public static void ApplyHandle(MatchSessionHandle handle)
         {
             s_currentHandle = handle;

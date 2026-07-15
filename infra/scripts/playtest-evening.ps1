@@ -97,19 +97,30 @@ function Resolve-CloudflaredExe($cfg) {
 }
 
 function Test-PortListening([int]$port) {
+    # Avoid Test-NetConnection: refused ports can hang ~20s and burn the whole wait budget.
+    $client = $null
     try {
-        $tnc = Test-NetConnection -ComputerName "127.0.0.1" -Port $port -WarningAction SilentlyContinue
-        return [bool]$tnc.TcpTestSucceeded
+        $client = New-Object System.Net.Sockets.TcpClient
+        $async = $client.BeginConnect("127.0.0.1", $port, $null, $null)
+        if (-not $async.AsyncWaitHandle.WaitOne(400)) {
+            return $false
+        }
+        $client.EndConnect($async)
+        return $client.Connected
     } catch {
         return $false
+    } finally {
+        if ($client) {
+            try { $client.Close() } catch {}
+        }
     }
 }
 
-function Wait-PortListening([int]$port, [int]$timeoutSec = 20) {
+function Wait-PortListening([int]$port, [int]$timeoutSec = 60) {
     $deadline = (Get-Date).AddSeconds($timeoutSec)
     while ((Get-Date) -lt $deadline) {
         if (Test-PortListening $port) { return $true }
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 400
     }
     return $false
 }
@@ -175,15 +186,28 @@ function Start-DedicatedServer([string]$exe, [int]$port, [int]$players) {
     if (-not (Test-Path $exe)) {
         throw "SERVER_EXE not found: $exe. Build via Unity: BARAKI -> Build -> Windows Dedicated Server (Headless)"
     }
+    $exeDir = Split-Path -Parent $exe
+    $serverLog = Join-Path $env:TEMP "baraki-dedicated-server.log"
     Write-Host "  $exe"
+    Write-Host "  cwd: $exeDir"
     Write-Host "  args: -listenPort $port -players $players"
+    Write-Host "  log: $serverLog"
     $env:BARAKI_SERVER = "1"
-    $script:ServerProc = Start-Process -FilePath $exe -PassThru -ArgumentList @(
-        "-batchmode", "-nographics", "-barakiServer", "-listenPort", "$port", "-players", "$players"
+    $script:ServerProc = Start-Process -FilePath $exe -PassThru -WorkingDirectory $exeDir -ArgumentList @(
+        "-batchmode", "-nographics", "-barakiServer",
+        "-listenPort", "$port", "-players", "$players",
+        "-logFile", $serverLog
     )
     Write-Host "  Waiting for TCP 127.0.0.1:$port ..."
-    if (-not (Wait-PortListening $port 20)) {
-        throw "Server did not listen on port $port within 20s. Check dedicated server console / rebuild."
+    $waitSec = 60
+    if (-not (Wait-PortListening $port $waitSec)) {
+        $exited = $script:ServerProc.HasExited
+        $exitInfo = if ($exited) { "exited code=$($script:ServerProc.ExitCode)" } else { "still running PID=$($script:ServerProc.Id)" }
+        $tail = ""
+        if (Test-Path $serverLog) {
+            $tail = (Get-Content $serverLog -Tail 40 -ErrorAction SilentlyContinue) -join "`n"
+        }
+        throw "Server did not listen on port $port within ${waitSec}s ($exitInfo). Log: $serverLog`n$tail"
     }
     Write-Ok "server listening on 127.0.0.1:$port (PID $($script:ServerProc.Id))"
 }
@@ -303,11 +327,11 @@ function Show-ReadyBlock([string]$wssHost, [string]$wssUrl, [bool]$isQuick, [str
     }
     Write-Host ""
     if ($isQuick) {
-        Write-Host "  QUICK TUNNEL backend OK — Discord Portal /wss stays on Worker." -ForegroundColor Green
+        Write-Host "  QUICK TUNNEL backend OK - Discord Portal /wss stays on Worker." -ForegroundColor Green
         if ($proxyHost) {
             Write-Host "  Portal /wss target (set once): $proxyHost" -ForegroundColor Green
         }
-        Write-Host "  Do NOT paste trycloudflare into Discord — Worker proxies for you." -ForegroundColor Cyan
+        Write-Host "  Do NOT paste trycloudflare into Discord - Worker proxies for you." -ForegroundColor Cyan
         Write-Host "  Launch BARAKI Activity in a voice channel." -ForegroundColor Green
     } else {
         Write-Host "  Named tunnel: backend host $wssHost" -ForegroundColor Green
@@ -392,7 +416,7 @@ try {
         throw "playtest.env missing SERVER_EXE"
     }
 
-    # Quick-tunnel hostnames are ephemeral — never treat *.trycloudflare.com as named tunnel.
+    # Quick-tunnel hostnames are ephemeral - never treat *.trycloudflare.com as named tunnel.
     if ($WssHostCfg -match '(?i)\.trycloudflare\.com$') {
         Write-WarnLine "WSS_HOST is a trycloudflare hostname; ignoring it and using quick tunnel"
         $WssHostCfg = ""

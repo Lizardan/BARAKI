@@ -37,4 +37,12 @@ Follow this once before a friend playtest. Full runbook: [FREE0.md](FREE0.md). E
 3. Второй игрок Join → оба слота заняты; у первого (слот 0) активна **СТАРТ** после Ready.
 4. Выключи tunnel / сервер → Create Match за ~15s показывает ошибку про WSS, без зависания.
 
+### Live diagnostics (stuck lobby)
+
+Keep `Start-Playtest.bat` open, reproduce the stuck lobby, then open in a browser:
+
+`https://baraki-matchmaker.lizard268.workers.dev/api/v1/diag`
+
+Look for `ws-proxy` / `upgrade` / `upstream_ok` events. No `ws-proxy` rows usually means Discord Portal `/wss` is not the matchmaker host.
+
 Do not commit OAuth secrets or `infra/playtest.env`; use `wrangler secret put REGISTER_SECRET`.

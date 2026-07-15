@@ -157,6 +157,19 @@ async function initDiscord() {
   };
 }
 
+async function postDiag(source, event, detail) {
+  try {
+    const base = (config.MATCHMAKER_BASE || "/api").replace(/\/+$/, "");
+    await fetch(`${base}/v1/diag`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, event, detail: detail || null }),
+    });
+  } catch (err) {
+    console.warn("diag post failed", err);
+  }
+}
+
 async function ensureMatch(session) {
   const base = (config.MATCHMAKER_BASE || "/api").replace(/\/+$/, "");
   const res = await fetch(`${base}/v1/match/ensure`, {
@@ -231,17 +244,24 @@ async function main() {
         setStatus("Calling matchmaker…");
         match = await withTimeout(ensureMatch(discord), 8000, "ensureMatch");
         setStatus(`Match slot ${match.slot} → ${match.wss_url}`);
+        await postDiag(
+          "shell",
+          "ensure_ok",
+          `slot=${match.slot} wss=${match.wss_url} host=${window.location.host}`);
         // Always remap Unity WSS through Discord /wss proxy (Portal target must match).
         const fromMatch = hostnameFromWssUrl(match.wss_url) || config.WSS_PROXY_TARGET;
         if (fromMatch) {
           await applyWssProxyMapping(discord.patchUrlMappings, fromMatch);
+          await postDiag("shell", "wss_mapped", fromMatch);
         } else {
-          console.warn("No WSS host for patchUrlMappings — set WSS_PROXY_TARGET or ensure wss_url");
+          console.warn("No WSS host for patchUrlMappings - set WSS_PROXY_TARGET or ensure wss_url");
+          await postDiag("shell", "wss_map_missing", "");
         }
       } catch (err) {
         // OK without dedicated/tunnel for menu smoke.
         setStatus(`Matchmaker unavailable: ${err.message}`);
         console.warn(err);
+        await postDiag("shell", "ensure_fail", String(err && err.message ? err.message : err));
       }
     }
 

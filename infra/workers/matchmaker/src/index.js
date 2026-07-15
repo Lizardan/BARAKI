@@ -11,6 +11,7 @@
 
 import { resolveClientWssUrl } from "./publicWss.js";
 import { proxyGameWebSocket } from "./wsProxy.js";
+import { appendDiag, clearDiag, readDiag } from "./diag.js";
 
 const TUNNEL_KEY = "tunnel_wss";
 const MATCH_KEY = "active_match";
@@ -20,13 +21,49 @@ export default {
     // Stable Discord /wss target: any WebSocket upgrade proxies to registered tunnel.
     if ((request.headers.get("Upgrade") || "").toLowerCase() === "websocket") {
       const tunnel = await getTunnel(env);
+      const clientHost = request.headers.get("CF-Connecting-IP") || "?";
       if (!tunnel) {
+        await appendDiag(env, {
+          source: "ws-proxy",
+          event: "reject_no_tunnel",
+          detail: `from=${clientHost}`,
+        });
         return cors(json(
           { error: "tunnel_not_registered", hint: "POST /api/v1/admin/register-tunnel first" },
           503));
       }
 
-      return proxyGameWebSocket(request, tunnel);
+      await appendDiag(env, {
+        source: "ws-proxy",
+        event: "upgrade",
+        detail: `from=${clientHost} -> ${tunnel}`,
+      });
+
+      try {
+        const response = await proxyGameWebSocket(request, tunnel);
+        if (response.status !== 101) {
+          const body = await response.clone().text();
+          await appendDiag(env, {
+            source: "ws-proxy",
+            event: "upstream_fail",
+            detail: `status=${response.status} ${body.slice(0, 200)}`,
+          });
+        } else {
+          await appendDiag(env, {
+            source: "ws-proxy",
+            event: "upstream_ok",
+            detail: tunnel,
+          });
+        }
+        return response;
+      } catch (err) {
+        await appendDiag(env, {
+          source: "ws-proxy",
+          event: "exception",
+          detail: String(err && err.message ? err.message : err),
+        });
+        return cors(json({ error: "ws_proxy_exception", detail: String(err) }, 500));
+      }
     }
 
     const url = new URL(request.url);
@@ -59,6 +96,27 @@ export default {
           public_wss: publicWss || null,
           proxy: Boolean(env.PUBLIC_WSS_HOST),
         }));
+      }
+
+      if (request.method === "GET" && path === "/api/v1/diag") {
+        const data = await readDiag(env);
+        const publicWss = resolveClientWssUrl(env.PUBLIC_WSS_HOST, data.tunnel);
+        return cors(json({
+          ...data,
+          public_wss: publicWss || null,
+          hint: "Keep Start-Playtest open, reproduce Discord lobby stuck, refresh this URL.",
+        }));
+      }
+
+      if (request.method === "POST" && path === "/api/v1/diag") {
+        const body = await request.json().catch(() => ({}));
+        await appendDiag(env, body);
+        return cors(json({ ok: true }));
+      }
+
+      if (request.method === "DELETE" && path === "/api/v1/diag") {
+        await clearDiag(env);
+        return cors(json({ ok: true }));
       }
 
       return cors(json({ error: "not_found" }, 404));
@@ -122,6 +180,11 @@ async function registerTunnel(request, env) {
 
   await setTunnel(env, wssUrl);
   const publicWss = resolveClientWssUrl(env.PUBLIC_WSS_HOST, wssUrl);
+  await appendDiag(env, {
+    source: "register-tunnel",
+    event: "ok",
+    detail: `tunnel=${wssUrl} public=${publicWss}`,
+  });
   return json({ ok: true, wss_url: wssUrl, public_wss: publicWss || null });
 }
 
@@ -159,6 +222,12 @@ async function ensureMatch(request, env) {
 
   const slot = assignSlot(match, discordUserId);
   await setStoredMatch(env, match);
+
+  await appendDiag(env, {
+    source: "ensure",
+    event: "ok",
+    detail: `instance=${instanceId} slot=${slot} wss=${wssUrl} user=${discordUserId}`,
+  });
 
   return json({
     match_id: match.match_id,
@@ -224,7 +293,7 @@ function json(data, status = 200) {
 function cors(response) {
   const headers = new Headers(response.headers);
   headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type,Authorization");
   return new Response(response.body, { status: response.status, headers });
 }
