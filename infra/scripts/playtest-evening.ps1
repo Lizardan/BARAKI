@@ -87,7 +87,8 @@ function Resolve-CloudflaredExe($cfg) {
     $candidates = @(
         "C:\Tools\cloudflared\cloudflared.exe",
         "$env:LOCALAPPDATA\cloudflared\cloudflared.exe",
-        "$env:ProgramFiles\cloudflared\cloudflared.exe"
+        "$env:ProgramFiles\cloudflared\cloudflared.exe",
+        "${env:ProgramFiles(x86)}\cloudflared\cloudflared.exe"
     )
     foreach ($c in $candidates) {
         if (Test-Path $c) { return $c }
@@ -383,14 +384,25 @@ try {
         throw "playtest.env missing SERVER_EXE"
     }
 
-    $isQuick = [string]::IsNullOrWhiteSpace($WssHostCfg)
-    if ($isQuick -and $AllowQuick -ne "1") {
+    # Quick-tunnel hostnames are ephemeral — never treat *.trycloudflare.com as named tunnel.
+    if ($WssHostCfg -match '(?i)\.trycloudflare\.com$') {
+        Write-WarnLine "WSS_HOST is a trycloudflare hostname; ignoring it and using quick tunnel"
+        $WssHostCfg = ""
+    }
+
+    $isQuick = [string]::IsNullOrWhiteSpace($WssHostCfg) -or ($AllowQuick -eq "1")
+    if ([string]::IsNullOrWhiteSpace($WssHostCfg) -and $AllowQuick -ne "1") {
         throw @"
 WSS_HOST is required for Discord playtest (named tunnel).
 Run: .\infra\scripts\setup-named-tunnel.ps1
 Set WSS_HOST=<hostname> in infra/playtest.env (same host as Discord Portal /wss).
 Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every evening).
 "@
+    }
+    if ($AllowQuick -eq "1") {
+        # Always rediscover hostname; stale WSS_HOST must not pin a dead quick tunnel.
+        $isQuick = $true
+        $WssHostCfg = ""
     }
 
     $cloudflaredExe = Resolve-CloudflaredExe $cfg
@@ -399,9 +411,9 @@ Dev-only escape hatch: ALLOW_QUICK_TUNNEL=1 (must paste Discord /wss every eveni
     Write-Ok "server exe: $ServerExe"
     Write-Ok "port=$Port players=$Players"
     if ($isQuick) {
-        Write-WarnLine "tunnel mode: QUICK (ALLOW_QUICK_TUNNEL=1) — update Discord /wss every run"
+        Write-WarnLine "tunnel mode: QUICK (ALLOW_QUICK_TUNNEL=1) - update Discord /wss every run"
     } else {
-        Write-Ok "tunnel mode: named ($TunnelName -> $WssHostCfg)"
+        Write-Ok ("tunnel mode: named ({0} -> {1})" -f $TunnelName, $WssHostCfg)
     }
     Test-VpnWarn
 

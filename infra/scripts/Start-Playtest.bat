@@ -5,7 +5,7 @@ title BARAKI Playtest
 echo.
 echo  BARAKI evening playtest
 echo  Starts: dedicated server + tunnel + matchmaker register + status checks
-echo  (quick tunnel if WSS_HOST empty; named tunnel if WSS_HOST set)
+echo  (named tunnel if WSS_HOST set; quick if ALLOW_QUICK_TUNNEL=1)
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0playtest-evening.ps1"
 set EXITCODE=%ERRORLEVEL%
