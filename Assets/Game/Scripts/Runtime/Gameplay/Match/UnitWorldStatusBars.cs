@@ -133,9 +133,18 @@ namespace Game.Gameplay.Match
         static void DestroyCollider(GameObject target)
         {
             var collider = target.GetComponent<Collider>();
-            if (collider != null)
+            if (collider == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
             {
                 Destroy(collider);
+            }
+            else
+            {
+                DestroyImmediate(collider);
             }
         }
 

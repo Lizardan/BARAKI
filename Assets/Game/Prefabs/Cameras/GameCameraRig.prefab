@@ -352,23 +352,23 @@ MonoBehaviour:
     LookAtTarget: {fileID: 5736666761783509379}
     CustomLookAtTarget: 0
   Lens:
-    FieldOfView: 40
-    OrthographicSize: 10
-    NearClipPlane: 0.1
-    FarClipPlane: 5000
+    FieldOfView: 70
+    OrthographicSize: 0
+    NearClipPlane: 0
+    FarClipPlane: 0.001
     Dutch: 0
     ModeOverride: 0
     PhysicalProperties:
-      GateFit: 2
-      SensorSize: {x: 21.946, y: 16.002}
+      GateFit: 0
+      SensorSize: {x: 0.1, y: 0.1}
       LensShift: {x: 0, y: 0}
-      FocusDistance: 10
-      Iso: 200
-      ShutterSpeed: 0.005
-      Aperture: 16
-      BladeCount: 5
-      Curvature: {x: 2, y: 11}
-      BarrelClipping: 0.25
+      FocusDistance: 0.01
+      Iso: 0
+      ShutterSpeed: 0
+      Aperture: 0.7
+      BladeCount: 3
+      Curvature: {x: 0.7, y: 0.7}
+      BarrelClipping: 0
       Anamorphism: 0
   BlendHint: 0
 --- !u!114 &3350824968405552444
@@ -389,4 +389,4 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 2, z: -8}
+  FollowOffset: {x: 0, y: 84.56183, z: -57.03768}

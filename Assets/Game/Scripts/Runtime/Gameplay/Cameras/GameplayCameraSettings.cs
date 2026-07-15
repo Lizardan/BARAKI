@@ -5,17 +5,26 @@ using UnityEngine.InputSystem;
 namespace Game.Gameplay.Cameras
 {
     /// <summary>
-    /// Shared isometric RTS camera tuning for Cinemachine follow and pan bounds.
+    /// Shared RTS camera tuning matched to Warcraft 3 defaults (AoA 304°, FOV 70°).
     /// </summary>
     public static class GameplayCameraSettings
     {
+        /// <summary>
+        /// Pitch from horizontal in degrees. WC3 Angle of Attack 304° → 360 − 304 = 56°.
+        /// </summary>
+        public const float DefaultPitchDegrees = 56f;
+
+        /// <summary>Vertical FOV matching WC3 <c>bj_CAMERA_DEFAULT_FOV</c> / MiscData FOV=70.</summary>
+        public const float DefaultFieldOfViewDegrees = 70f;
+
+        /// <summary>Unit direction for pitch-only follow (no yaw).</summary>
+        public static readonly Vector3 IsometricFollowDirection = CreateFollowDirection(DefaultPitchDegrees);
+
         /// <summary>World-space follow offset — pitch only (no yaw).</summary>
-        public static readonly Vector3 IsometricFollowOffset = new(0f, 72f, -72f);
+        public static readonly Vector3 IsometricFollowOffset =
+            IsometricFollowDirection * DefaultZoomDistance;
 
-        /// <summary>Unit direction for pitch-only follow (Y and -Z equal magnitude).</summary>
-        public static readonly Vector3 IsometricFollowDirection = new Vector3(0f, 1f, -1f).normalized;
-
-        public const float DefaultZoomDistance = 101.823376f;
+        public const float DefaultZoomDistance = 102f;
         public const float DefaultMinZoomDistance = 64f;
         public const float DefaultMaxZoomDistance = 144f;
         public const float DefaultZoomScrollSpeed = 1.5f;
@@ -168,6 +177,12 @@ namespace Game.Gameplay.Cameras
         public static Vector3 FollowOffsetFromZoomDistance(float distance)
         {
             return IsometricFollowDirection * distance;
+        }
+
+        private static Vector3 CreateFollowDirection(float pitchDegrees)
+        {
+            var pitchRad = pitchDegrees * Mathf.Deg2Rad;
+            return new Vector3(0f, Mathf.Sin(pitchRad), -Mathf.Cos(pitchRad));
         }
     }
 }

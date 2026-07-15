@@ -58,8 +58,20 @@ namespace Game.Tests
             var offset = GameplayCameraSettings.FollowOffsetFromZoomDistance(100f);
 
             Assert.AreEqual(0f, offset.x, 0.001f);
-            Assert.AreEqual(Mathf.Abs(offset.y), Mathf.Abs(offset.z), 0.001f);
             Assert.AreEqual(100f, offset.magnitude, 0.001f);
+            Assert.Less(offset.z, 0f);
+            Assert.Greater(offset.y, 0f);
+        }
+
+        [Test]
+        public void FollowOffsetFromZoomDistance_UsesWarcraft3Pitch()
+        {
+            var offset = GameplayCameraSettings.FollowOffsetFromZoomDistance(100f);
+            var pitchDegrees = Mathf.Atan2(offset.y, -offset.z) * Mathf.Rad2Deg;
+
+            Assert.AreEqual(GameplayCameraSettings.DefaultPitchDegrees, pitchDegrees, 0.01f);
+            Assert.AreEqual(56f, GameplayCameraSettings.DefaultPitchDegrees, 0.001f);
+            Assert.AreEqual(70f, GameplayCameraSettings.DefaultFieldOfViewDegrees, 0.001f);
         }
 
         [Test]

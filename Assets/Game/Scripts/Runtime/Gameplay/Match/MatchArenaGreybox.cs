@@ -53,7 +53,10 @@ namespace Game.Gameplay.Match
         /// <summary>Layout/graph stay available on server; mesh materials do not.</summary>
         public static bool ShouldBuildVisuals()
         {
-#if UNITY_SERVER || BARAKI_DEDICATED_SERVER
+#if UNITY_EDITOR
+            // Dedicated Server build target defines UNITY_SERVER in Editor — still draw greybox in Play Mode.
+            return SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+#elif UNITY_SERVER || BARAKI_DEDICATED_SERVER
             return false;
 #else
             return SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;

@@ -44,7 +44,7 @@ namespace Game.Gameplay.Networking
         {
             if (!IsNetworked)
             {
-                return false;
+                return true;
             }
 
             if (!MatchNetworkEndpoint.TryParse(s_currentHandle.TransportEndpoint, out var endpoint))

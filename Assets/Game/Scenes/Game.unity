@@ -924,6 +924,7 @@ MonoBehaviour:
   _fallbackUnitHeight: 3.6
   _statusBarClearance: 0.5
   _unitVisualScale: 2
+  _deathVisualSeconds: 3.2
 --- !u!114 &1399539382
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1265,7 +1266,7 @@ MonoBehaviour:
     LookAtTarget: {fileID: 937873735}
     CustomLookAtTarget: 0
   Lens:
-    FieldOfView: 40
+    FieldOfView: 70
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
@@ -1302,7 +1303,7 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 72, z: -72}
+  FollowOffset: {x: 0, y: 84.56183, z: -57.03768}
 --- !u!4 &2042117578
 Transform:
   m_ObjectHideFlags: 0

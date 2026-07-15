@@ -284,6 +284,7 @@ namespace Game.Editor
             }
 
             vcam.Priority = 10;
+            vcam.Lens.FieldOfView = GameplayCameraSettings.DefaultFieldOfViewDegrees;
 
             var follow = vcam.GetComponent<CinemachineFollow>();
             if (follow == null)

@@ -113,7 +113,17 @@ namespace Game.Gameplay.Networking
 
         private static bool IsServerMode(string[] args)
         {
-#if UNITY_SERVER
+#if UNITY_EDITOR
+            // Active Build Target "Dedicated Server" defines UNITY_SERVER in the Editor too.
+            // Play Mode must stay a normal client; only explicit headless flags enter server mode.
+            return Application.isBatchMode
+                || string.Equals(
+                    Environment.GetEnvironmentVariable("BARAKI_SERVER"),
+                    "1",
+                    StringComparison.Ordinal)
+                || HasArgument(args, "-batchmode")
+                || HasArgument(args, "-barakiServer");
+#elif UNITY_SERVER
             return true;
 #else
             if (Application.isBatchMode

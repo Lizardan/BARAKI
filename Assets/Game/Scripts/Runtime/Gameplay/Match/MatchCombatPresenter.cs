@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
@@ -7,16 +9,25 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Greybox unit markers driven by <see cref="MatchCombatSystem"/>.</summary>
+    /// <summary>Unit markers driven by <see cref="MatchCombatSystem"/>.</summary>
     public sealed class MatchCombatPresenter : MonoBehaviour
     {
         sealed class UnitVisual
         {
             public Transform Root;
             public Transform Model;
+            public Animator Animator;
             public UnitWorldStatusBars StatusBars;
             public Collider PickCollider;
             public float GroundRingDiameter;
+            public readonly HashSet<int> TriggeredMeleeStrikeKeys = new();
+            public readonly HashSet<int> TriggeredProjectileIds = new();
+        }
+
+        sealed class DyingVisual
+        {
+            public UnitVisual Visual;
+            public float TimeRemaining;
         }
 
         [SerializeField] private MatchRuntime _runtime;
@@ -27,13 +38,20 @@ namespace Game.Gameplay.Match
         [SerializeField] private float _fallbackUnitHeight = 3.6f;
         [SerializeField] private float _statusBarClearance = 0.5f;
         [SerializeField] private float _unitVisualScale = UnitGreyboxVisuals.Scale;
+        [SerializeField] private float _deathVisualSeconds = UnitCombatAnimatorDriver.DeathVisualSeconds;
 
         readonly Dictionary<int, UnitVisual> _visuals = new();
+        readonly List<DyingVisual> _dyingVisuals = new();
         readonly Dictionary<int, Transform> _projectileVisuals = new();
         Transform _root;
         Transform _projectileRoot;
 
         void Awake()
+        {
+            ResolveRuntime();
+        }
+
+        void ResolveRuntime()
         {
             if (_runtime == null)
             {
@@ -43,6 +61,7 @@ namespace Game.Gameplay.Match
 
         void Update()
         {
+            ResolveRuntime();
             if (_runtime == null || !_runtime.IsMatchStarted)
             {
                 return;
@@ -57,6 +76,28 @@ namespace Game.Gameplay.Match
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
             SyncProjectiles(controller.Combat);
+            TickDyingVisuals(Time.deltaTime);
+        }
+
+        /// <summary>Runs one presenter sync tick (Edit Mode tests / tooling).</summary>
+        public void SyncNow()
+        {
+            ResolveRuntime();
+            if (_runtime == null || !_runtime.IsMatchStarted)
+            {
+                return;
+            }
+
+            var controller = _runtime.Controller;
+            if (controller?.Graph == null)
+            {
+                return;
+            }
+
+            EnsureRoot();
+            SyncVisuals(controller, controller.Combat);
+            SyncProjectiles(controller.Combat);
+            TickDyingVisuals(0f);
         }
 
         void EnsureProjectileRoot()
@@ -116,8 +157,10 @@ namespace Game.Gameplay.Match
 
                 if (visual.Model != null)
                 {
-                    visual.Model.localPosition = GetMeleeLungeOffset(unit, combat, visual.Root);
+                    visual.Model.localPosition = Vector3.zero;
                 }
+
+                DriveAnimator(visual, unit, combat);
 
                 visual.StatusBars.SetHealth(unit.CurrentHp / unit.Stats.MaxHp);
                 if (unit.Stats.HasMana)
@@ -139,11 +182,90 @@ namespace Game.Gameplay.Match
             {
                 if (_visuals.TryGetValue(unitId, out var visual) && visual?.Root != null)
                 {
-                    UnregisterUnitPick(visual);
-                    Destroy(visual.Root.gameObject);
+                    BeginDeath(visual);
                 }
 
                 _visuals.Remove(unitId);
+            }
+        }
+
+        void DriveAnimator(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
+        {
+            if (visual.Animator == null)
+            {
+                return;
+            }
+
+            visual.Animator.SetFloat(
+                UnitCombatAnimatorDriver.SpeedParam,
+                UnitCombatAnimatorDriver.ResolveSpeed(unit.BehaviorState));
+
+            foreach (var strike in combat.MeleeStrikes)
+            {
+                if (strike.AttackerUnitId != unit.UnitId)
+                {
+                    continue;
+                }
+
+                var key = RuntimeHelpers.GetHashCode(strike);
+                if (visual.TriggeredMeleeStrikeKeys.Add(key))
+                {
+                    visual.Animator.SetTrigger(UnitCombatAnimatorDriver.AttackParam);
+                }
+            }
+
+            foreach (var projectile in combat.Projectiles)
+            {
+                if (projectile.AttackerUnitId != unit.UnitId)
+                {
+                    continue;
+                }
+
+                if (visual.TriggeredProjectileIds.Add(projectile.ProjectileId))
+                {
+                    visual.Animator.SetTrigger(UnitCombatAnimatorDriver.AttackParam);
+                }
+            }
+        }
+
+        void BeginDeath(UnitVisual visual)
+        {
+            UnregisterUnitPick(visual);
+            if (visual.StatusBars != null)
+            {
+                DestroyManaged(visual.StatusBars.gameObject);
+                visual.StatusBars = null;
+            }
+
+            if (visual.Animator != null)
+            {
+                visual.Animator.SetTrigger(UnitCombatAnimatorDriver.DeathParam);
+            }
+
+            _dyingVisuals.Add(new DyingVisual
+            {
+                Visual = visual,
+                TimeRemaining = Mathf.Max(0.1f, _deathVisualSeconds),
+            });
+        }
+
+        void TickDyingVisuals(float deltaTime)
+        {
+            for (var i = _dyingVisuals.Count - 1; i >= 0; i--)
+            {
+                var dying = _dyingVisuals[i];
+                dying.TimeRemaining -= deltaTime;
+                if (dying.TimeRemaining > 0f)
+                {
+                    continue;
+                }
+
+                if (dying.Visual?.Root != null)
+                {
+                    DestroyManaged(dying.Visual.Root.gameObject);
+                }
+
+                _dyingVisuals.RemoveAt(i);
             }
         }
 
@@ -154,13 +276,22 @@ namespace Game.Gameplay.Match
             var root = rootObject.transform;
             root.SetParent(_root, false);
             Transform model = null;
+            Animator animator = null;
             if (_visualCatalog != null
                 && _visualCatalog.TryGetPrefab(raceId, unit.Role, out var prefab)
                 && prefab != null)
             {
                 var instance = Instantiate(prefab, root);
                 instance.name = prefab.name;
-                instance.transform.localScale = Vector3.one * _unitVisualScale;
+                animator = instance.GetComponentInChildren<Animator>();
+                var scale = _unitVisualScale;
+                if (animator != null)
+                {
+                    scale *= UnitGreyboxVisuals.AnimatedHumanScaleFactor;
+                    animator.applyRootMotion = false;
+                }
+
+                instance.transform.localScale = Vector3.one * scale;
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));
                 model = instance.transform;
             }
@@ -181,6 +312,7 @@ namespace Game.Gameplay.Match
             {
                 Root = root,
                 Model = model,
+                Animator = animator,
                 StatusBars = statusBars,
                 GroundRingDiameter = MatchPickFootprint.GetModelFootprintDiameter(model),
             };
@@ -220,54 +352,11 @@ namespace Game.Gameplay.Match
             {
                 if (_projectileVisuals.TryGetValue(projectileId, out var visual) && visual != null)
                 {
-                    Destroy(visual.gameObject);
+                    DestroyManaged(visual.gameObject);
                 }
 
                 _projectileVisuals.Remove(projectileId);
             }
-        }
-
-        static Vector3 GetMeleeLungeOffset(MatchUnitState unit, MatchCombatSystem combat, Transform visualRoot)
-        {
-            foreach (var strike in combat.MeleeStrikes)
-            {
-                if (strike.AttackerUnitId != unit.UnitId)
-                {
-                    continue;
-                }
-
-                var target = FindUnit(combat, strike.TargetUnitId);
-                if (target == null)
-                {
-                    return Vector3.zero;
-                }
-
-                var toTarget = target.WorldPosition - unit.WorldPosition;
-                toTarget.y = 0f;
-                if (toTarget.sqrMagnitude < 0.0001f)
-                {
-                    return Vector3.zero;
-                }
-
-                var amount = Mathf.Sin(strike.Progress * Mathf.PI) * CombatAttackRules.MeleeLungeDistance;
-                var worldOffset = toTarget.normalized * amount;
-                return visualRoot.InverseTransformDirection(worldOffset);
-            }
-
-            return Vector3.zero;
-        }
-
-        static MatchUnitState FindUnit(MatchCombatSystem combat, int unitId)
-        {
-            foreach (var unit in combat.Units)
-            {
-                if (unit.UnitId == unitId)
-                {
-                    return unit;
-                }
-            }
-
-            return null;
         }
 
         static string ResolveRaceId(MatchUnitState unit, MatchController controller)
@@ -292,7 +381,7 @@ namespace Game.Gameplay.Match
             var collider = body.GetComponent<Collider>();
             if (collider != null)
             {
-                Destroy(collider);
+                DestroyManaged(collider);
             }
 
             var renderer = body.GetComponent<Renderer>();
@@ -393,16 +482,26 @@ namespace Game.Gameplay.Match
             {
                 if (pair.Value?.Root != null)
                 {
-                    Destroy(pair.Value.Root.gameObject);
+                    DestroyManaged(pair.Value.Root.gameObject);
                 }
             }
 
             _visuals.Clear();
+
+            foreach (var dying in _dyingVisuals)
+            {
+                if (dying.Visual?.Root != null)
+                {
+                    DestroyManaged(dying.Visual.Root.gameObject);
+                }
+            }
+
+            _dyingVisuals.Clear();
             ClearProjectileVisuals();
 
             if (_root != null)
             {
-                Destroy(_root.gameObject);
+                DestroyManaged(_root.gameObject);
                 _root = null;
             }
         }
@@ -413,7 +512,7 @@ namespace Game.Gameplay.Match
             {
                 if (pair.Value != null)
                 {
-                    Destroy(pair.Value.gameObject);
+                    DestroyManaged(pair.Value.gameObject);
                 }
             }
 
@@ -421,8 +520,25 @@ namespace Game.Gameplay.Match
 
             if (_projectileRoot != null)
             {
-                Destroy(_projectileRoot.gameObject);
+                DestroyManaged(_projectileRoot.gameObject);
                 _projectileRoot = null;
+            }
+        }
+
+        static void DestroyManaged(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
             }
         }
     }
