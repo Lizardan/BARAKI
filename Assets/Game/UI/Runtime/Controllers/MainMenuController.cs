@@ -53,11 +53,21 @@ namespace Game.UI.Controllers
         private TextField _joinCodeField;
         private Label _modeSelectErrorLabel;
         private Label _matchEntryErrorLabel;
+        private Label _profileNameLabel;
+        private Label _profileStatsLabel;
+        private Label _friendsListLabel;
+        private Label _updateStatusLabel;
+        private TextField _displayNameField;
+        private TextField _friendIdField;
+        private Button _saveProfileButton;
+        private Button _addFriendButton;
+        private Button _updateButton;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
         private bool _isMatchEntryOpen;
         private bool _isModeSelectOpen;
+        private bool _playBlockedByUpdate;
 
         private void Awake()
         {
@@ -86,6 +96,15 @@ namespace Game.UI.Controllers
             _joinCodeField = _root.Q<TextField>("JoinCodeField");
             _modeSelectErrorLabel = _root.Q<Label>("ModeSelectErrorLabel");
             _matchEntryErrorLabel = _root.Q<Label>("MatchEntryErrorLabel");
+            _profileNameLabel = _root.Q<Label>("ProfileNameLabel");
+            _profileStatsLabel = _root.Q<Label>("ProfileStatsLabel");
+            _friendsListLabel = _root.Q<Label>("FriendsListLabel");
+            _updateStatusLabel = _root.Q<Label>("UpdateStatusLabel");
+            _displayNameField = _root.Q<TextField>("DisplayNameField");
+            _friendIdField = _root.Q<TextField>("FriendIdField");
+            _saveProfileButton = _root.Q<Button>("SaveProfileButton");
+            _addFriendButton = _root.Q<Button>("AddFriendButton");
+            _updateButton = _root.Q<Button>("UpdateButton");
 
             var titleLabel = _root.Q<Label>("TitleLabel");
             _playButton = _root.Q<Button>("PlayButton");
@@ -99,11 +118,13 @@ namespace Game.UI.Controllers
             GameAudio.Apply();
             BindSettingsUi();
             BindMatchEntryUi();
+            BindHubUi();
             BuildModeGrid();
             EnsureSettingsClosed();
             EnsureMatchEntryClosed();
             EnsureModeSelectClosed();
             EnsureVisibleRestState();
+            RefreshHubAsync().Forget();
 
             _bindingScope = new UIBindingScope(_root);
             if (titleLabel != null)
@@ -459,7 +480,181 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            if (_playBlockedByUpdate)
+            {
+                if (_updateStatusLabel != null)
+                {
+                    _updateStatusLabel.text = "Сначала обновите игру до последней версии.";
+                }
+
+                return;
+            }
+
             OpenMatchEntry();
+        }
+
+        private void BindHubUi()
+        {
+            if (_saveProfileButton != null)
+            {
+                _saveProfileButton.clicked += () => SaveProfileAsync().Forget();
+            }
+
+            if (_addFriendButton != null)
+            {
+                _addFriendButton.clicked += () => AddFriendAsync().Forget();
+            }
+
+            if (_updateButton != null)
+            {
+                _updateButton.clicked += () => ApplyUpdateAsync().Forget();
+            }
+        }
+
+        private async UniTaskVoid RefreshHubAsync()
+        {
+            try
+            {
+                await GameUpdateService.RefreshAsync();
+                _playBlockedByUpdate = GameUpdateService.UpdateRequired;
+                if (_playButton != null)
+                {
+                    _playButton.SetEnabled(!_playBlockedByUpdate);
+                }
+
+                if (_updateButton != null)
+                {
+                    if (_playBlockedByUpdate)
+                    {
+                        _updateButton.RemoveFromClassList(OverlayHiddenClass);
+                    }
+                    else
+                    {
+                        _updateButton.AddToClassList(OverlayHiddenClass);
+                    }
+                }
+
+                if (_updateStatusLabel != null)
+                {
+                    _updateStatusLabel.text = _playBlockedByUpdate
+                        ? $"Доступна версия {GameUpdateService.RemoteManifest?.version}. Игра заблокирована."
+                        : $"Версия {Application.version}";
+                }
+
+                // Hub social needs UGS; LocalDev Editor path skips gracefully.
+                try
+                {
+                    await PlayerProfileService.LoadAsync();
+                    await FriendsHubService.InitializeAsync();
+                    await FriendsHubService.SetPresenceAsync("InLauncher");
+                }
+                catch (System.Exception socialEx)
+                {
+                    Debug.LogWarning($"Hub social init skipped: {socialEx.Message}");
+                }
+
+                RefreshProfileLabels();
+                RefreshFriendsLabel();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"RefreshHubAsync: {ex.Message}");
+            }
+        }
+
+        private void RefreshProfileLabels()
+        {
+            if (_profileNameLabel != null)
+            {
+                _profileNameLabel.text = PlayerProfileService.DisplayName;
+            }
+
+            if (_profileStatsLabel != null)
+            {
+                _profileStatsLabel.text =
+                    $"Ранг {PlayerProfileService.Rank} · Очки {PlayerProfileService.Points}";
+            }
+
+            if (_displayNameField != null)
+            {
+                _displayNameField.value = PlayerProfileService.DisplayName;
+            }
+        }
+
+        private void RefreshFriendsLabel()
+        {
+            if (_friendsListLabel == null)
+            {
+                return;
+            }
+
+            var friends = FriendsHubService.GetFriendsSnapshot();
+            if (friends.Count == 0)
+            {
+                _friendsListLabel.text = "Нет друзей. Добавьте по Player ID.";
+                return;
+            }
+
+            var lines = new List<string>(friends.Count);
+            foreach (var friend in friends)
+            {
+                lines.Add($"{friend.Name}: {friend.Status}");
+            }
+
+            _friendsListLabel.text = string.Join("\n", lines);
+        }
+
+        private async UniTaskVoid SaveProfileAsync()
+        {
+            try
+            {
+                var name = _displayNameField?.value ?? "Player";
+                await PlayerProfileService.SaveDisplayNameAsync(name);
+                RefreshProfileLabels();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"SaveProfileAsync: {ex.Message}");
+            }
+        }
+
+        private async UniTaskVoid AddFriendAsync()
+        {
+            try
+            {
+                var id = _friendIdField?.value?.Trim();
+                if (string.IsNullOrEmpty(id))
+                {
+                    return;
+                }
+
+                await FriendsHubService.SendFriendRequestByIdAsync(id);
+                RefreshFriendsLabel();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"AddFriendAsync: {ex.Message}");
+            }
+        }
+
+        private async UniTaskVoid ApplyUpdateAsync()
+        {
+            try
+            {
+                if (_updateStatusLabel != null)
+                {
+                    _updateStatusLabel.text = "Скачивание обновления…";
+                }
+
+                await GameUpdateService.DownloadAndApplyAsync();
+            }
+            catch (System.Exception ex)
+            {
+                if (_updateStatusLabel != null)
+                {
+                    _updateStatusLabel.text = "Ошибка обновления: " + ex.Message;
+                }
+            }
         }
 
         private void BindMatchEntryUi()
@@ -620,10 +815,10 @@ namespace Game.UI.Controllers
         private static string FormatMatchSetupError(System.Exception ex)
         {
             var raw = ex?.Message ?? string.Empty;
-            if (raw.IndexOf("tunnel_not_registered", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || raw.IndexOf("503", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            if (raw.IndexOf("lobby", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || raw.IndexOf("relay", System.StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                return "Нет игрового сервера. Запусти Start-Playtest.bat на ПК хоста.";
+                return "Не удалось создать/войти в лобби (Unity Lobby/Relay). Проверь UGS project и сеть.";
             }
 
             if (raw.IndexOf("WSS", System.StringComparison.OrdinalIgnoreCase) >= 0
@@ -654,19 +849,25 @@ namespace Game.UI.Controllers
             ClearModeSelectError();
             try
             {
-                var instanceId = DiscordActivityBridge.TryGetSession(out var discordSession)
-                    ? discordSession.InstanceId
-                    : null;
-                var displayName = DiscordActivityBridge.TryGetSession(out var named)
-                    ? (string.IsNullOrEmpty(named.DisplayName) ? "Host" : named.DisplayName)
-                    : "Host";
+                var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
+                    ? "Host"
+                    : PlayerProfileService.DisplayName;
                 var handle = await MatchSessionService.Backend.CreateAsync(
-                    new CreateMatchRequest(playerCount, displayName, instanceId));
+                    new CreateMatchRequest(playerCount, displayName));
                 MatchNetworkSession.ApplyHandle(handle);
                 if (!await MatchNetworkSession.TryStartTransportAsync())
                 {
                     throw new System.InvalidOperationException(
                         MatchNetworkSession.TransportConnectFailedMessage);
+                }
+
+                try
+                {
+                    await FriendsHubService.SetPresenceAsync("InGame", handle.RoomCode);
+                }
+                catch (System.Exception)
+                {
+                    // Presence optional for LocalDev.
                 }
 
                 EnsureModeSelectClosed();
@@ -690,13 +891,6 @@ namespace Game.UI.Controllers
             }
 
             var code = _joinCodeField?.value?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(code)
-                && DiscordActivityBridge.TryGetSession(out var discordJoin)
-                && !string.IsNullOrEmpty(discordJoin.InstanceId))
-            {
-                code = discordJoin.InstanceId;
-            }
-
             if (string.IsNullOrEmpty(code))
             {
                 return;
@@ -705,9 +899,9 @@ namespace Game.UI.Controllers
             _isTransitioning = true;
             try
             {
-                var displayName = DiscordActivityBridge.TryGetSession(out var named)
-                    ? (string.IsNullOrEmpty(named.DisplayName) ? "Guest" : named.DisplayName)
-                    : "Guest";
+                var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
+                    ? "Guest"
+                    : PlayerProfileService.DisplayName;
                 var handle = await MatchSessionService.Backend.JoinAsync(
                     new JoinMatchRequest(code, displayName));
                 MatchNetworkSession.ApplyHandle(handle);
@@ -715,6 +909,15 @@ namespace Game.UI.Controllers
                 {
                     throw new System.InvalidOperationException(
                         MatchNetworkSession.TransportConnectFailedMessage);
+                }
+
+                try
+                {
+                    await FriendsHubService.SetPresenceAsync("InGame", handle.RoomCode);
+                }
+                catch (System.Exception)
+                {
+                    // Presence optional for LocalDev.
                 }
 
                 EnsureMatchEntryClosed();

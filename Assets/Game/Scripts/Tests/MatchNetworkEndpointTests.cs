@@ -30,6 +30,20 @@ namespace Game.Tests
             Assert.AreEqual("ABCD", endpoint.LocalCode);
         }
 
+        [Test]
+        public void TryParse_RelayHostAndClient_ReturnsRelayCodes()
+        {
+            Assert.IsTrue(MatchNetworkEndpoint.TryParse("relay-host://ABC123", out var host));
+            Assert.IsTrue(host.IsRelayHost);
+            Assert.IsTrue(host.IsNetworked);
+            Assert.AreEqual("ABC123", host.LocalCode);
+
+            Assert.IsTrue(MatchNetworkEndpoint.TryParse("relay://ABC123", out var client));
+            Assert.IsTrue(client.IsRelay);
+            Assert.IsFalse(client.IsRelayHost);
+            Assert.AreEqual("ABC123", client.LocalCode);
+        }
+
         [TestCase("")]
         [TestCase("http://127.0.0.1:7777")]
         [TestCase("ws://")]

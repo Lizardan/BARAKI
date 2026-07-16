@@ -1,6 +1,6 @@
 ---
 doc_id: vision
-version: 0.3
+version: 0.4
 status: locked
 depends_on: []
 provides: [pillars, audience, scope, non_goals]
@@ -10,14 +10,14 @@ provides: [pillars, audience, scope, non_goals]
 
 ## Elevator pitch
 
-**BARAKI** — мультиплеерная FFA-стратегия в **Discord Activity** (desktop): экономика и оборона базы, армии сами идут в бой. **2–8** игроков в голосовом канале. **Только люди**, без ботов.
+**BARAKI** — мультиплеерная FFA-стратегия на **Windows**: экономика и оборона базы, армии сами идут в бой. **2–8** игроков. **Только люди**, без ботов. Запуск из главного меню (info hub): друзья, профиль, создание/вход в лобби.
 
 ## Референс vs наш продукт
 
 | | WC3 Survival Chaos | BARAKI |
 |---|------------------|--------|
 | Жанр | Tug of War FFA | То же |
-| Платформа | WC3 custom map | **Discord Activity** (desktop) + Unity 6.5 WebGL |
+| Платформа | WC3 custom map | **Windows** + Unity 6.5 Standalone |
 | Игроки | 4 FFA | **2–8 FFA**, только люди |
 | Расы | 22 (WC3 фэнтези) | **4 на Early Access**, уникальные |
 | Боты | VI для одиночки | **Нет** — только PvP |
@@ -45,21 +45,23 @@ provides: [pillars, audience, scope, non_goals]
 
 ### In scope (MVP)
 
-- **Discord Activity** (desktop Discord) — основной способ запуска
-- **2–8** игроков в одной activity instance (голосовой канал)
+- **Windows Standalone** — основной клиент
+- **2–8** игроков; хост = listen-server (Unity Lobby + Relay)
 - Процедурная топология: `TOPOLOGY_DUEL` + `TOPOLOGY_RING`
 - **2 расы:** Люди + Жуки; barracks **level 1–4**
 - Core loop: spawn, combat, gold, upgrades, hero, towers
 - Elimination: **все здания** базы уничтожены (не только main)
+- Join code create/join (Friends hub — следующим этапом)
 
-### Phase 2 — Early Access
+### Phase 2 — Hub + Early Access features
 
+- Main Menu info hub: профиль (Cloud Save), друзья (UGS Friends), инвайты
+- Force update через GitHub Releases
 - **4+ уникальные расы** (старт: 2 → рост по контенту)
 - Поддержка **N = 3, 5, 6, 7, 8** в casual лобби
-- Race bonuses, special units, ultimate
-- **Reconnect** после disconnect (см. `Match Flow.md`)
-- **Рейтинг** только для **N=2** и **N=4** (отдельные очереди)
-- **Eliminated spectator** — FoW off, free camera (см. `Match Flow.md`)
+- **Reconnect** + **full host migration** (pause → transfer → resume)
+- **Рейтинг** только для **N=2** и **N=4**
+- **Eliminated spectator** — FoW off, free camera
 
 ### Phase 3+ (post-EA)
 
@@ -68,7 +70,10 @@ provides: [pillars, audience, scope, non_goals]
 
 ### Out of scope (non-goals)
 
-- **Discord mobile** Activity
+- **Discord Activity** / Embedded App SDK
+- **Unity WebGL** ship client
+- Dedicated server per match (production)
+- Отдельный launcher
 - **Боты / VI / skirmish против ИИ**
 - Hotseat на одном ПК (optional очень поздно)
 - Прямое управление юнитами
@@ -79,7 +84,7 @@ provides: [pillars, audience, scope, non_goals]
 
 | Критерий | Метрика |
 |----------|---------|
-| Два клиента завершают дуэль без десинка | 0 critical net bugs |
+| Два Windows-клиента завершают дуэль через Lobby+Relay | 0 critical net bugs |
 | 4 человека — ring topology корректна | LaneGraph tests N=4 |
 | Core loop без туториала WC3 | Playtest понимает 3 lane |
 | Новая раса = data + art | Без правок combat core |
@@ -90,18 +95,20 @@ provides: [pillars, audience, scope, non_goals]
 - [x] **Early Access: 4+ расы** (старт с 2)
 - [x] **Только PvP**, ботов нет
 - [x] **2–8 игроков** casual; рейтинг только **2 и 4**
-- [x] **Reconnect** — не в MVP, запланирован на EA/Phase 2
+- [x] **Reconnect / host migration** — не в MVP, запланированы
 - [x] **Название: BARAKI**
 - [x] **Disconnect grace: 90 сек** на MVP (без reconnect)
 - [x] **Баланс рас:** симметричные базовые статы + асимметричные способности/герои/апгрейды
+- [x] **Platform:** Windows + UGS Lobby/Relay; Discord/WebGL abandoned
 
 ## Locked decisions
 
 | Решение | Значение |
 |---------|----------|
-| Primary platform | **Discord Activity**, **desktop only** |
-| Infra | **FREE-2** — PC+Tunnel → Oracle Always Free (**$0**) |
-| Discord mobile | **Out of scope** |
+| Primary platform | **Windows x64 Standalone** |
+| Net model | **Host-as-server** + Unity Lobby + Relay |
+| Discord / WebGL | **Out of scope** |
 | Player count | **2–8** (как в core GDD) |
 | Экономика рас | **Симметричная** (одинаковые bounty/costs); отличия через abilities и hero |
 | Уникальность рас | **2+ / 1−** passives, **tower** upgrades, **magic** (main) → **уникальные заклинания магов** |
+| Distribution | **GitHub Actions → GitHub Releases → in-game force update** |

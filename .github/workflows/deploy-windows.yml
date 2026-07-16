@@ -1,0 +1,107 @@
+name: Deploy Windows (tag → GitHub Release)
+
+# Secrets: UNITY_LICENSE (or UNITY_EMAIL/PASSWORD/SERIAL)
+# No Cloudflare R2 / no credit card — public GitHub Releases assets.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver without v prefix (manual dispatch creates release vX.Y.Z)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-windows
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Windows + GitHub Release
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ github.event.inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Win64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Win64-
+            Library-
+
+      - name: Build Windows x64
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          BARAKI_BUILD_VERSION: ${{ steps.ver.outputs.version }}
+        with:
+          targetPlatform: StandaloneWindows64
+          unityVersion: 6000.5.1f1
+          buildsPath: build
+          buildName: Windows
+          allowDirtyBuild: true
+          buildMethod: Game.Editor.WindowsCiBuild.Build
+
+      - name: Zip + version.json
+        id: zip
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.version }}"
+          $tag = "${{ steps.ver.outputs.tag }}"
+          $src = "build/Windows"
+          $zip = "baraki-windows-$tag.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip
+          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+          Set-Content -Path "sha256.txt" -Value $hash -NoNewline
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/$zip"
+          $manifest = @{
+            version = $ver
+            minVersion = $ver
+            url = $url
+            sha256 = $hash
+            releasedAt = (Get-Date).ToUniversalTime().ToString("o")
+          } | ConvertTo-Json -Compress
+          Set-Content -Path "version.json" -Value $manifest -NoNewline
+          echo "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: BARAKI ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.zip.outputs.zip }}
+            version.json
+            sha256.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

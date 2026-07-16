@@ -2,11 +2,13 @@ using System;
 using Game.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
+using Unity.Networking.Transport.Relay;
 using UnityEngine;
+using RelayServerData = Unity.Networking.Transport.Relay.RelayServerData;
 
 namespace Game.Gameplay.Networking
 {
-    /// <summary>Persistent owner of the NGO manager and WebSocket transport.</summary>
+    /// <summary>Persistent owner of the NGO manager and UTP transport (Relay UDP or legacy WS).</summary>
     [DisallowMultipleComponent]
     public sealed class MatchNetworkBootstrap : MonoBehaviour
     {
@@ -86,9 +88,7 @@ namespace Game.Gameplay.Networking
 
             var address = string.IsNullOrWhiteSpace(host) ? "127.0.0.1" : host.Trim();
             var resolvedPort = port == 0 ? MatchNetworkEndpoint.DefaultPort : port;
-            // Dedicated listens plain WS behind cloudflared/Worker TLS.
-            // WebGL clients need UseEncryption + SetClientSecrets(hostname) so UTP opens
-            // wss://hostname (not ws://ip). Otherwise Discord /wss never sees the socket.
+            _transport.UseWebSockets = true;
             _transport.UseEncryption = useSecureWebSocket;
             if (useSecureWebSocket)
             {
@@ -99,6 +99,20 @@ namespace Game.Gameplay.Networking
                 address,
                 resolvedPort,
                 listenAll ? "0.0.0.0" : null);
+        }
+
+        /// <summary>Bind UTP to a Unity Relay allocation (UDP/DTLS). Disables WebSockets.</summary>
+        public void ConfigureRelay(RelayServerData relayServerData)
+        {
+            if (!EnsureNetworkComponents())
+            {
+                throw new InvalidOperationException(
+                    "MatchNetworkBootstrap: cannot configure Relay — NGO components missing.");
+            }
+
+            _transport.UseWebSockets = false;
+            _transport.UseEncryption = false;
+            _transport.SetRelayServerData(relayServerData);
         }
 
         public bool StartAsServer()
@@ -224,6 +238,7 @@ namespace Game.Gameplay.Networking
                 return false;
             }
 
+            // Legacy WS endpoint path; Relay sets UseWebSockets=false in ConfigureRelay.
             _transport.UseWebSockets = true;
             _networkManager.NetworkConfig.NetworkTransport = _transport;
             _networkManager.NetworkConfig.PlayerPrefab = null;

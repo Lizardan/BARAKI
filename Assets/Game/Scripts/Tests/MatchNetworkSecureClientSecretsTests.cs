@@ -14,7 +14,7 @@ namespace Game.Tests
             try
             {
                 bootstrap.ConfigureEndpoint(
-                    "baraki-matchmaker.example.workers.dev",
+                    "relay.example.com",
                     443,
                     listenAll: false,
                     useSecureWebSocket: true);
@@ -22,7 +22,7 @@ namespace Game.Tests
                 var transport = bootstrap.GetComponent<UnityTransport>();
                 Assert.IsNotNull(transport);
                 Assert.IsTrue(transport.UseEncryption);
-                Assert.AreEqual("baraki-matchmaker.example.workers.dev", transport.ConnectionData.Address);
+                Assert.AreEqual("relay.example.com", transport.ConnectionData.Address);
                 Assert.AreEqual((ushort)443, transport.ConnectionData.Port);
             }
             finally

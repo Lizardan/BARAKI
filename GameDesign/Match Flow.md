@@ -48,14 +48,14 @@ mvp: true
 ```
 Main Menu → Play → Create / Join
   → Create: Mode Select (N=2..8 tiles; MVP selectable: 2 and 4)
-  → Join: room code (LocalDev) / Discord instanceId (Activity)
+  → Join: Unity Lobby join code (online) / room code (LocalDev Editor)
   → Lobby: N slot rows, Ready per player, Host Start when all occupied+ready
   → Load Game.unity → Race pick (each human) → match
 ```
 
 > **Race pick** — на сцене `Game.unity` после Start из лобби (не в Lobby).
 > **N immutable:** после Create число игроков не меняется.
-> **Discord:** UI тот же; `IMatchSessionBackend` → matchmaker `ensure/join` по `instanceId` (dedicated + WSS). LocalDev — in-process registry + код комнаты.
+> **Online:** `UnityLobbyRelaySessionBackend` → Lobby + Relay + NGO `StartAsHost`. LocalDev — in-process registry.
 
 ```entity
 id: LOBBY_RULES

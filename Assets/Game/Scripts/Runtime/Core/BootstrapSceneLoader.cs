@@ -3,9 +3,7 @@ using UnityEngine.SceneManagement;
 
 namespace Game.Core
 {
-    /// <summary>
-    /// Loads MainMenu after bootstrap systems are ready.
-    /// </summary>
+    /// <summary>Loads MainMenu after bootstrap systems are ready.</summary>
     public class BootstrapSceneLoader : MonoBehaviour
     {
         private void OnEnable()

@@ -3,6 +3,7 @@ using System.Text;
 using Cysharp.Threading.Tasks;
 using Game.Core;
 using Unity.Netcode;
+using Unity.Services.Relay.Models;
 using UnityEngine;
 
 namespace Game.Gameplay.Networking
@@ -44,9 +45,17 @@ namespace Game.Gameplay.Networking
                     return s_currentHandle.TransportEndpoint;
                 }
 
-                return endpoint.IsLocal
-                    ? $"local/{endpoint.LocalCode}"
-                    : $"{endpoint.Host}:{endpoint.Port}";
+                if (endpoint.IsLocal)
+                {
+                    return $"local/{endpoint.LocalCode}";
+                }
+
+                if (endpoint.IsRelay)
+                {
+                    return endpoint.IsRelayHost ? "relay-host" : "relay-client";
+                }
+
+                return $"{endpoint.Host}:{endpoint.Port}";
             }
         }
 
@@ -79,32 +88,36 @@ namespace Game.Gameplay.Networking
                 throw new InvalidOperationException("MatchNetworkBootstrap.Ensure returned null.");
             }
 
-            bootstrap.ConfigureEndpoint(
-                endpoint.Host,
-                endpoint.Port,
-                listenAll: IsServerRole(),
-                useSecureWebSocket: endpoint.IsSecure && !IsServerRole());
-
             var manager = bootstrap.NetworkManager;
             if (manager == null || manager.NetworkConfig == null)
             {
                 throw new InvalidOperationException(
-                    "NetworkManager failed to initialize (NetworkConfig missing). Rebuild WebGL client.");
+                    "NetworkManager failed to initialize (NetworkConfig missing).");
             }
 
             manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(
-                LocalSlot == 0 ? "Host" : "Guest");
+                s_currentHandle.IsListenHost || LocalSlot == 0 ? "Host" : "Guest");
 
-            bool started;
-            if (IsServerRole())
+            if (endpoint.IsRelay)
             {
-                started = bootstrap.StartAsServer();
+                return await StartRelayTransportAsync(bootstrap, endpoint, timeoutSeconds);
+            }
+
+            bootstrap.ConfigureEndpoint(
+                endpoint.Host,
+                endpoint.Port,
+                listenAll: s_currentHandle.IsListenHost,
+                useSecureWebSocket: endpoint.IsSecure && !s_currentHandle.IsListenHost);
+
+            if (s_currentHandle.IsListenHost)
+            {
+                var started = bootstrap.StartAsHost();
                 await UniTask.Yield();
                 return started;
             }
 
-            started = bootstrap.StartAsClient();
-            if (!started)
+            var clientStarted = bootstrap.StartAsClient();
+            if (!clientStarted)
             {
                 return false;
             }
@@ -135,11 +148,51 @@ namespace Game.Gameplay.Networking
         public static void Shutdown()
         {
             MatchNetworkBootstrap.Ensure().Shutdown();
+            MatchRelayTransportState.Clear();
             s_currentHandle = default;
             s_hasHandle = false;
             IsNetworked = false;
             PlayerCount = 0;
             LocalSlot = -1;
+        }
+
+        private static async UniTask<bool> StartRelayTransportAsync(
+            MatchNetworkBootstrap bootstrap,
+            MatchNetworkEndpoint endpoint,
+            float timeoutSeconds)
+        {
+            if (endpoint.IsRelayHost)
+            {
+                if (!MatchRelayTransportState.HasHostAllocation)
+                {
+                    throw new InvalidOperationException("Relay host allocation missing.");
+                }
+
+                var relayData = AllocationUtils.ToRelayServerData(
+                    MatchRelayTransportState.HostAllocation,
+                    "dtls");
+                bootstrap.ConfigureRelay(relayData);
+                var started = bootstrap.StartAsHost();
+                await UniTask.Yield();
+                return started;
+            }
+
+            if (!MatchRelayTransportState.HasClientAllocation)
+            {
+                throw new InvalidOperationException("Relay client allocation missing.");
+            }
+
+            var clientRelayData = AllocationUtils.ToRelayServerData(
+                MatchRelayTransportState.ClientAllocation,
+                "dtls");
+            bootstrap.ConfigureRelay(clientRelayData);
+            var clientStarted = bootstrap.StartAsClient();
+            if (!clientStarted)
+            {
+                return false;
+            }
+
+            return await WaitForClientLobbyAsync(bootstrap.NetworkManager, timeoutSeconds);
         }
 
         private static async UniTask<bool> WaitForClientLobbyAsync(
@@ -193,10 +246,5 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        private static bool IsServerRole() =>
-            string.Equals(
-                Environment.GetEnvironmentVariable("BARAKI_ROLE"),
-                "server",
-                StringComparison.OrdinalIgnoreCase);
     }
 }

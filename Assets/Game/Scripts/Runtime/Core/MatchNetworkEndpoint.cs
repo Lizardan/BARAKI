@@ -8,12 +8,16 @@ namespace Game.Core
         Local = 1,
         WebSocket = 2,
         SecureWebSocket = 3,
+        RelayHost = 4,
+        RelayClient = 5,
     }
 
     /// <summary>Parsed transport endpoint without any NGO dependency.</summary>
     public readonly struct MatchNetworkEndpoint
     {
         public const ushort DefaultPort = 7777;
+        public const string RelayHostPrefix = "relay-host://";
+        public const string RelayClientPrefix = "relay://";
 
         private MatchNetworkEndpoint(
             MatchNetworkEndpointKind kind,
@@ -32,9 +36,21 @@ namespace Game.Core
         public ushort Port { get; }
         public string LocalCode { get; }
         public bool IsLocal => Kind == MatchNetworkEndpointKind.Local;
+        public bool IsRelay =>
+            Kind is MatchNetworkEndpointKind.RelayHost or MatchNetworkEndpointKind.RelayClient;
+        public bool IsRelayHost => Kind == MatchNetworkEndpointKind.RelayHost;
         public bool IsNetworked =>
-            Kind is MatchNetworkEndpointKind.WebSocket or MatchNetworkEndpointKind.SecureWebSocket;
+            Kind is MatchNetworkEndpointKind.WebSocket
+                or MatchNetworkEndpointKind.SecureWebSocket
+                or MatchNetworkEndpointKind.RelayHost
+                or MatchNetworkEndpointKind.RelayClient;
         public bool IsSecure => Kind == MatchNetworkEndpointKind.SecureWebSocket;
+
+        public static string FormatRelayHost(string relayJoinCode) =>
+            RelayHostPrefix + (relayJoinCode ?? string.Empty).Trim();
+
+        public static string FormatRelayClient(string relayJoinCode) =>
+            RelayClientPrefix + (relayJoinCode ?? string.Empty).Trim();
 
         public static bool TryParse(string value, out MatchNetworkEndpoint endpoint)
         {
@@ -56,6 +72,38 @@ namespace Game.Core
 
                 endpoint = new MatchNetworkEndpoint(
                     MatchNetworkEndpointKind.Local,
+                    string.Empty,
+                    0,
+                    code);
+                return true;
+            }
+
+            if (trimmed.StartsWith(RelayHostPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var code = trimmed.Substring(RelayHostPrefix.Length).Trim().Trim('/');
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return false;
+                }
+
+                endpoint = new MatchNetworkEndpoint(
+                    MatchNetworkEndpointKind.RelayHost,
+                    string.Empty,
+                    0,
+                    code);
+                return true;
+            }
+
+            if (trimmed.StartsWith(RelayClientPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var code = trimmed.Substring(RelayClientPrefix.Length).Trim().Trim('/');
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return false;
+                }
+
+                endpoint = new MatchNetworkEndpoint(
+                    MatchNetworkEndpointKind.RelayClient,
                     string.Empty,
                     0,
                     code);

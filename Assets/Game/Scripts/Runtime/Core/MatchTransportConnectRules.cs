@@ -6,7 +6,7 @@ namespace Game.Core
         public const float DefaultTimeoutSeconds = 15f;
 
         public const string ConnectFailedMessage =
-            "Нет связи с игровым сервером (WSS). Проверь tunnel и Discord /wss.";
+            "Нет связи с хостом (Relay/LAN). Проверь код лобби и сеть.";
 
         public static bool IsConnectComplete(bool isConnectedClient, bool hasNetworkLobby) =>
             isConnectedClient && hasNetworkLobby;

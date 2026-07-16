@@ -49,7 +49,7 @@ namespace Game.Gameplay.Networking
         public string RoomCodeValue => _roomCode.Value.ToString();
         public bool MatchStartedValue => _matchStarted.Value;
         /// <summary>
-        /// Designated host is lobby slot 0 (first Discord/WebGL client). Dedicated server
+        /// Designated host is lobby slot 0 (listen-server host). NGO host
         /// does not occupy a player slot, so Start is client-side via ServerRpc.
         /// </summary>
         public bool CanLocalStart =>

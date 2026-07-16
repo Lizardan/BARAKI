@@ -3,58 +3,32 @@ using UnityEngine;
 
 namespace Game.Gameplay.Networking
 {
-    /// <summary>Picks LocalDev / NetDev / Discord session backend from env and WebGL shell.</summary>
+    /// <summary>
+    /// Editor → LocalDev (unless BARAKI_UGS=1). Standalone → Unity Lobby+Relay.
+    /// </summary>
     public static class MatchSessionBootstrap
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Initialize()
         {
-            EnsureBridgeObject();
-
-            var hasSession = DiscordActivityBridge.TryGetSession(out var session);
-            if (hasSession
-                && string.Equals(session.InstanceId, "local-dev", StringComparison.Ordinal))
+            if (IsTruthy(Environment.GetEnvironmentVariable("BARAKI_LOCALDEV")))
             {
                 MatchSessionService.UseLocalDev();
-                Debug.Log("MatchSessionBootstrap: LocalDev backend (browser smoke mode).");
+                Debug.Log("MatchSessionBootstrap: LocalDev backend (BARAKI_LOCALDEV).");
                 return;
             }
 
-            if (hasSession && session.HasTransport)
+#if UNITY_EDITOR
+            if (!IsTruthy(Environment.GetEnvironmentVariable("BARAKI_UGS")))
             {
-                MatchSessionService.UseDiscord();
-                Debug.Log("MatchSessionBootstrap: Discord backend (shell session present).");
+                MatchSessionService.UseLocalDev();
+                Debug.Log("MatchSessionBootstrap: LocalDev backend (Editor default).");
                 return;
             }
+#endif
 
-            if (IsTruthy(Environment.GetEnvironmentVariable("BARAKI_DISCORD"))
-                || Application.platform == RuntimePlatform.WebGLPlayer)
-            {
-                MatchSessionService.UseDiscord();
-                Debug.Log("MatchSessionBootstrap: Discord backend.");
-                return;
-            }
-
-            if (IsTruthy(Environment.GetEnvironmentVariable("BARAKI_NETDEV")))
-            {
-                MatchSessionService.UseNetDev();
-                Debug.Log("MatchSessionBootstrap: NetDev backend.");
-                return;
-            }
-
-            MatchSessionService.UseLocalDev();
-        }
-
-        static void EnsureBridgeObject()
-        {
-            if (UnityEngine.Object.FindAnyObjectByType<DiscordActivityBridge>() != null)
-            {
-                return;
-            }
-
-            var go = new GameObject(nameof(DiscordActivityBridge));
-            UnityEngine.Object.DontDestroyOnLoad(go);
-            go.AddComponent<DiscordActivityBridge>();
+            MatchSessionService.UseUnityLobbyRelay();
+            Debug.Log("MatchSessionBootstrap: Unity Lobby + Relay backend.");
         }
 
         static bool IsTruthy(string value) =>

@@ -23,9 +23,9 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ConnectFailedMessage_MentionsWss()
+        public void ConnectFailedMessage_MentionsRelay()
         {
-            StringAssert.Contains("WSS", MatchTransportConnectRules.ConnectFailedMessage);
+            StringAssert.Contains("Relay", MatchTransportConnectRules.ConnectFailedMessage);
         }
     }
 }

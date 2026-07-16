@@ -23,6 +23,19 @@ namespace Game.Gameplay.Networking
         {
             _tickMode = IsServer ? MatchTickMode.Server : MatchTickMode.Client;
             EnsureRuntime();
+            EnsureHostMigrationCoordinator();
+        }
+
+        static void EnsureHostMigrationCoordinator()
+        {
+            if (HostMigrationCoordinator.Instance != null)
+            {
+                return;
+            }
+
+            var go = new GameObject(nameof(HostMigrationCoordinator));
+            DontDestroyOnLoad(go);
+            go.AddComponent<HostMigrationCoordinator>();
         }
 
         public override void OnNetworkDespawn()

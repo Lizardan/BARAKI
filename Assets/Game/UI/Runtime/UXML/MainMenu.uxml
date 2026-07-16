@@ -12,7 +12,22 @@
                 <ui:Label name="TitleLabel" text="BARAKI" class="ui-title" />
                 <ui:Label text="ТРИ ПУТИ · ОДНА ПОБЕДА" class="ui-tagline" />
                 <ui:VisualElement class="ui-rule" />
-                <ui:Label text="Арена · 2–8 игроков · FFA" class="ui-meta" />
+                <ui:Label text="Windows · 2–8 игроков · FFA" class="ui-meta" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="HubPanel" class="mm__panel ui-panel ui-panel--lg" style="margin-bottom: 12px;">
+                <ui:VisualElement class="ui-panel__inner mm__panel-inner">
+                    <ui:Label name="ProfileNameLabel" text="Игрок" class="ui-label" />
+                    <ui:Label name="ProfileStatsLabel" text="Ранг — · Очки —" class="ui-meta" />
+                    <ui:TextField name="DisplayNameField" class="mm-join__field" max-length="24" />
+                    <ui:Button name="SaveProfileButton" text="СОХРАНИТЬ НИК" class="ui-btn" />
+                    <ui:Label text="Друзья" class="ui-label" style="margin-top: 8px;" />
+                    <ui:Label name="FriendsListLabel" text="Нет друзей онлайн" class="ui-meta" />
+                    <ui:TextField name="FriendIdField" class="mm-join__field" max-length="64" />
+                    <ui:Button name="AddFriendButton" text="ДОБАВИТЬ ДРУГА (ID)" class="ui-btn" />
+                    <ui:Label name="UpdateStatusLabel" text="" class="ui-meta mm-modes__error" />
+                    <ui:Button name="UpdateButton" text="ОБНОВИТЬ ИГРУ" class="ui-btn ui-btn--primary ui-overlay--hidden" />
+                </ui:VisualElement>
             </ui:VisualElement>
 
             <ui:VisualElement name="MenuPanel" class="mm__panel ui-panel ui-panel--lg">

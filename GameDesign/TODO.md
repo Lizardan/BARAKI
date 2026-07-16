@@ -1,14 +1,14 @@
 ---
 doc_id: todo
-version: 0.3
+version: 0.4
 status: locked
-depends_on: [vision, technical, map_topology]
+depends_on: [vision, technical, map_topology, platform]
 provides: [backlog, priorities, acceptance_criteria]
 ---
 
 # TODO
 
-> **Для агента:** PvP-only, без ботов. MVP netcode обязателен. **TDD:** тесты → код → `run_tests` → done только при green (см. `.cursor/rules/agent-guidelines.mdc` §5).
+> **Для агента:** PvP-only, без ботов. Windows + Lobby/Relay. **TDD:** тесты → код → `run_tests` → done только при green.
 
 ---
 
@@ -17,99 +17,81 @@ provides: [backlog, priorities, acceptance_criteria]
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | GDD-001 | Структура GameDesign | done | |
-| GDD-002 | Топология 2–8 (`Map Topology.md`) | done | |
-| GDD-003 | PvP-only, уникальные расы | done | Vision locked items |
-| GDD-004 | 4 расы на Early Access | done | Races.md |
-| GDD-005 | Lock open questions + unify ids | done | All docs `locked`; Races.md draft (lore TBD) |
-| GDD-006 | 2 расы, barracks L1–4, squad table | done | Human + Bug; cumulative spawn |
-| GDD-008 | Magic + stat + passive economy; spell numbers | done | Races/Upgrades/Economy/Balance |
+| GDD-002 | Топология 2–8 | done | |
+| GDD-003 | PvP-only, уникальные расы | done | |
+| GDD-010 | Пивот: Windows hub + Lobby/Relay + R2 | done | Platform.md; Vision/Technical/TODO updated |
+| GDD-011 | Discord/WebGL/CF → removed | done | GitHub-only distribution + legal |
 
 ---
 
-## Phase 1 — MVP (Discord Activity, 2–8 online)
-
-### Discord & infra (FREE-2)
+## Phase 1 — MVP online (Windows host-as-server)
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| MVP-D01 | Cloudflare Pages — WebGL + Activity shell | in progress | shell + deploy script; WebGL build copy required |
-| MVP-D02 | Embedded App SDK — instanceId, participants | in progress | activity-shell boot.js + DiscordActivityBridge |
-| MVP-D03 | Workers matchmaker — ensure/join by instanceId | in progress | infra/workers/matchmaker (register-tunnel) |
-| MVP-D04 | **FREE-0:** PC headless + Cloudflare Tunnel | in progress | DedicatedServerEntry + FREE0.md runbook |
-| MVP-D05 | Linux ARM64 server build + Docker image | pending | Same image runs local + Oracle |
-| MVP-D06 | **FREE-1:** Oracle Always Free deploy | deferred | 24/7 without PC |
+| MVP-N10 | UGS Auth + Lobby + Relay packages | done | multiplayer/auth/friends/cloudsave in manifest |
+| MVP-N11 | `UnityLobbyRelaySessionBackend` + StartAsHost | done | relay-host/relay endpoints; AllocationUtils |
+| MVP-N12 | Remove Discord/WebGL ship path from bootstrap/UI | done | LocalDev/NetDev/UGS; Discord bridge removed |
+| MVP-N02 | Lobby slots / ready / start | in progress | NetworkLobbyState |
+| MVP-N03 | Server-authoritative gold + spawn | in progress | Snapshots |
 
-### Networking & lobby
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-N01 | Netcode NGO + WebSocket transport | in progress | Bootstrap + UseWebSockets; tunnel smoke TBD |
-| MVP-N02 | `Lobby.unity` — slots, race pick, N=2 or 4 | in progress | NetworkLobbyState + LocalDev offline |
-| MVP-N03 | Server-authoritative gold + spawn | in progress | Snapshot publish/apply ghosts |
-
-### Map & lanes
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-001 | `MatchArenaGenerator` TOPOLOGY_DUEL | done | Tests N=2, 3 corridors |
-| MVP-002 | `MatchArenaGenerator` TOPOLOGY_RING | done | Tests N=4,6,8 neighbors |
-| MVP-003 | `LaneGraph` runtime + splines | done | LanePath + builder; 8 LaneGraphTests |
-| MVP-004 | Greybox arena in `Game.unity` | done | MatchArenaGreybox N=4, lanes + bases |
-
-### Data (2 races)
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-010 | `RACE_HUMAN` + `RACE_BUG` — 6 units + hero SO each | done | RaceCatalog + RaceContentBuilder |
-| MVP-011 | Barracks level 1–4 + stat upgrades SO | done | SquadComposition + StatUpgradeTrack |
-| MVP-012 | `GameIds.cs` | done | |
-
-### Match runtime
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-020 | `MatchController` + phases | done | MatchController, MatchRuntime, MatchRules; tests |
-| MVP-021 | `BarracksWaveScheduler` per-barracks + level 1–4 | done | BarracksWaveRules, scheduler, MatchController hook |
-| MVP-022a | Kill bounty (unit kills) | done | MatchCombatSystem.GrantGold + tests |
-| MVP-022b | Passive gold (main upgrade) | done | MatchEconomyRules + MatchController tick; tests |
-| MVP-023 | Elimination + disconnect grace | in progress | EliminationService + last standing; disconnect pending |
-| MVP-024 | Hero summon + tower targeting | pending | |
-
-### UI
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-030 | Match HUD | in progress | фаза, время, gold, таймеры над казармами, results overlay |
-| MVP-032 | Results screen | done | Results overlay persists on Phase.End |
-| MVP-033 | Selection UI | done | minimap · portrait/stats/research · 3×4 command grid |
-
-### QA
-
-| ID | Task | Status | Acceptance |
-|----|------|--------|------------|
-| MVP-050 | LaneGraph tests N∈{2,4,8} | done | LaneGraphTests |
-| MVP-051 | 2-human duel playtest | pending | Log |
-| MVP-052 | 4-human FFA playtest | pending | Log |
-
-### Removed (was bots)
+### Map / data / match (carry-over)
 
 | ID | Task | Status |
 |----|------|--------|
-| ~~MVP-030 BotBrain~~ | cancelled | humans only |
+| MVP-001..004 | Arena / LaneGraph / greybox | done |
+| MVP-010..012 | 2 races SO | done |
+| MVP-020..022 | MatchController / waves / gold | done |
+| MVP-023 | Elimination + disconnect grace | in progress |
+| MVP-024 | Hero summon + tower targeting | pending |
+| MVP-030..033 | Match HUD / results / selection | in progress / done |
+
+### Cancelled (Discord / FREE-*)
+
+| ID | Task | Status |
+|----|------|--------|
+| ~~MVP-D01..D06~~ | Discord Pages / tunnel / Oracle | cancelled |
+| ~~MVP-N01 WebSocket Discord~~ | WSS Discord path | cancelled |
 
 ---
 
-## Phase 2 — Early Access
+## Phase 2 — Hub + social
+
+| ID | Task | Status | Acceptance |
+|----|------|--------|------------|
+| HUB-001 | Main Menu info hub layout | done | Hub panel in MainMenu.uxml |
+| HUB-002 | Cloud Save profile (nick; rank/points stub) | done | PlayerProfileService |
+| HUB-003 | UGS Friends + presence | done | FriendsHubService |
+| HUB-004 | Invite friend → game lobby | done | Presence lobbyCode + join code |
+
+---
+
+## Phase 3 — CI + force update
+
+| ID | Task | Status | Acceptance |
+|----|------|--------|------------|
+| DIST-001 | GHA tag `v*` → Windows zip → GitHub Release | done | deploy-windows.yml |
+| DIST-002 | In-game version check + block Play | done | GameUpdateService + hub gate |
+| DIST-003 | Download + ApplyUpdate.bat restart | done | BuildSupport/ApplyUpdate.bat |
+
+---
+
+## Phase 4 — Resilience (post-MVP)
+
+| ID | Task | Status | Acceptance |
+|----|------|--------|------------|
+| RES-001 | Mid-match host migration (pause → full state → resume) | in progress | Rules + HostMigrationCoordinator; full Relay rebind TBD |
+| RES-002 | Player reconnect into active match | in progress | PlayerReconnectRules + session token; wire into lobby TBD |
+
+---
+
+## Phase EA — Early Access content
 
 | ID | Task | Status |
 |----|------|--------|
-| EA-001 | Расы #3+ (контент + SO) | deferred |
+| EA-001 | Расы #3+ | deferred |
 | EA-002 | Lobby N=3,5,6,7,8 casual | deferred |
-| EA-003 | **Reconnect** | deferred |
-| EA-004 | **Ranked Duel (N=2)** | deferred |
-| EA-005 | **Ranked FFA4 (N=4)** | deferred |
-| EA-006 | Race bonuses, special, ultimate | deferred |
-| EA-007 | ~~Dedicated server~~ | cancelled | FREE-2 Oracle (MVP-D06) |
+| EA-004 | Ranked Duel (N=2) | deferred |
+| EA-005 | Ranked FFA4 (N=4) | deferred |
 
 ---
 
@@ -117,36 +99,16 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
-| 2026-07-05 | Initial GDD |
-| 2026-07-05 | Название BARAKI; disconnect grace 90s locked |
-| 2026-07-05 | GDD-005: locked decisions, UNIT_PROTO_* unified |
-| 2026-07-05 | Per-barracks wave_interval; desync; tier accelerates spawn |
-| 2026-07-05 | 2 расы (Люди/Жуки); barracks 4 levels; cumulative squad |
-| 2026-07-05 | Barracks ruins: frozen squad level, L1 spawn speed, no upgrade |
-| 2026-07-05 | MVP-003 LaneGraph + LanePath; 21 tests green |
-| 2026-07-05 | Scene flow: Bootstrap→MainMenu→Lobby→Game; WC-style menu UI |
-| 2026-07-05 | MVP-010/011 RaceCatalog, units, heroes, squads, stat tracks |
-| 2026-07-07 | Race pick UI на Game: матч стартует после выбора расы |
-| 2026-07-09 | BuildingRegistry, EliminationService, gold HUD, siege→buildings |
-| 2026-07-13 | Match Entry Create/Join + ModeSelect; Lobby Ready; LocalDev session API; MatchSnapshot |
-| 2026-07-13 | FREE-0 Phase B/A scaffolding: NGO WSS bootstrap, headless entry, Workers matchmaker, activity-shell, Cloudflare Pages deploy scripts |
-| 2026-07-13 | CI: GitHub Actions WebGL→Pages + Workers; playtest-evening.ps1; infra/CI.md |
+| 2026-07-16 | Full GitHub migration: Releases + Pages; removed Cloudflare/Discord/WebGL infra and legacy code |
 
 ---
 
 ## User decisions
 
-- [x] Уникальные расы, не WC3
-- [x] Без ботов
-- [x] 2–8 игроков (casual)
-- [x] **Early Access: 4 расы**
-- [x] **Reconnect** — после MVP (заложить в netcode дизайн)
-- [x] **Рейтинг** — только N=2 и N=4, после MVP
-- [x] **Название игры: BARAKI**
-- [x] **Disconnect grace 90s** на MVP (без reconnect)
-- [x] **2 стартовые расы:** Люди + Жуки
-- [x] **Barracks level 1–4**, кумулятивный squad, per-lane upgrade
-- [x] **Нет восстановления barracks** — ruins, авто-spawn frozen level + L1 timer
-- [x] **Tower → ruins** (подножье); без функций
-- [x] **MVP расы идентичны**; flying = ranged-only targets; super = siege ranged
-- [x] **Infra FREE-2:** FREE-0 (PC+Tunnel) → FREE-1 (Oracle); **$0**
+- [x] Windows Standalone, без Discord/WebGL
+- [x] Один проект, Main Menu = hub (без отдельного лаунчера)
+- [x] Host-as-server + Unity Lobby + Relay
+- [x] Friends + Cloud Save (UGS)
+- [x] GHA → GitHub Releases → force update
+- [x] Full host migration + reconnect — после MVP
+- [x] Уникальные расы, без ботов, 2–8 игроков
