@@ -55,11 +55,22 @@ namespace Game.UI.Controllers
         private Label _matchEntryErrorLabel;
         private Label _profileNameLabel;
         private Label _profileStatsLabel;
+        private Label _profileRecordLabel;
+        private Label _profileAvatarLabel;
+        private VisualElement _profileAvatar;
         private Label _friendsListLabel;
+        private Label _friendsCountLabel;
         private Label _updateStatusLabel;
+        private Label _versionLabel;
+        private Label _profileEditErrorLabel;
+        private VisualElement _hubPanel;
+        private VisualElement _profileEditOverlay;
+        private VisualElement _avatarGrid;
         private TextField _displayNameField;
         private TextField _friendIdField;
         private Button _saveProfileButton;
+        private Button _editProfileButton;
+        private Button _profileEditCloseButton;
         private Button _addFriendButton;
         private Button _updateButton;
         private bool _isTransitioning;
@@ -67,7 +78,9 @@ namespace Game.UI.Controllers
         private bool _isSettingsAnimating;
         private bool _isMatchEntryOpen;
         private bool _isModeSelectOpen;
+        private bool _isProfileEditOpen;
         private bool _playBlockedByUpdate;
+        private int _pendingAvatarId;
 
         private void Awake()
         {
@@ -98,13 +111,45 @@ namespace Game.UI.Controllers
             _matchEntryErrorLabel = _root.Q<Label>("MatchEntryErrorLabel");
             _profileNameLabel = _root.Q<Label>("ProfileNameLabel");
             _profileStatsLabel = _root.Q<Label>("ProfileStatsLabel");
+            _profileRecordLabel = _root.Q<Label>("ProfileRecordLabel");
+            _profileAvatarLabel = _root.Q<Label>("ProfileAvatarLabel");
+            _profileAvatar = _root.Q<VisualElement>("ProfileAvatar");
+            var profileBadge = _root.Q<VisualElement>("ProfileBadge");
+            if (profileBadge != null)
+            {
+                // Keep avatar insets equal: 12px padding + 96px avatar.
+                profileBadge.style.height = 120;
+                profileBadge.style.minHeight = 120;
+                profileBadge.style.maxHeight = 120;
+            }
+
             _friendsListLabel = _root.Q<Label>("FriendsListLabel");
+            _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
             _updateStatusLabel = _root.Q<Label>("UpdateStatusLabel");
+            _versionLabel = _root.Q<Label>("VersionLabel");
+            _profileEditErrorLabel = _root.Q<Label>("ProfileEditErrorLabel");
+            _hubPanel = _root.Q<VisualElement>("HubPanel");
+            _profileEditOverlay = _root.Q<VisualElement>("ProfileEditOverlay");
+            _avatarGrid = _root.Q<VisualElement>("AvatarGrid");
             _displayNameField = _root.Q<TextField>("DisplayNameField");
             _friendIdField = _root.Q<TextField>("FriendIdField");
             _saveProfileButton = _root.Q<Button>("SaveProfileButton");
+            _editProfileButton = _root.Q<Button>("EditProfileButton");
+            _profileEditCloseButton = _root.Q<Button>("ProfileEditCloseButton");
             _addFriendButton = _root.Q<Button>("AddFriendButton");
             _updateButton = _root.Q<Button>("UpdateButton");
+
+            if (_versionLabel != null)
+            {
+                _versionLabel.text = $"v{Application.version}";
+                _versionLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            }
+
+            StyleHubTextField(_displayNameField);
+            StyleHubTextField(_friendIdField);
+            StyleHubTextField(_joinCodeField);
+            BuildAvatarGrid();
+            RefreshProfileLabels();
 
             var titleLabel = _root.Q<Label>("TitleLabel");
             _playButton = _root.Q<Button>("PlayButton");
@@ -123,6 +168,7 @@ namespace Game.UI.Controllers
             EnsureSettingsClosed();
             EnsureMatchEntryClosed();
             EnsureModeSelectClosed();
+            EnsureProfileEditClosed();
             EnsureVisibleRestState();
             RefreshHubAsync().Forget();
 
@@ -247,6 +293,16 @@ namespace Game.UI.Controllers
                         cancellationToken: cancellationToken));
                 }
 
+                if (_hubPanel != null)
+                {
+                    tasks.Add(UiToolkitElementAnimator.FadeAsync(
+                        _hubPanel,
+                        0f,
+                        1f,
+                        IntroDuration,
+                        cancellationToken: cancellationToken));
+                }
+
                 if (tasks.Count > 0)
                 {
                     await UniTask.WhenAll(tasks);
@@ -310,6 +366,13 @@ namespace Game.UI.Controllers
                 _menuPanel.style.scale = new Scale(Vector3.one);
             }
 
+            if (_hubPanel != null)
+            {
+                _hubPanel.style.opacity = 1f;
+                _hubPanel.style.translate = new Translate(0f, 0f);
+                _hubPanel.style.scale = new Scale(Vector3.one);
+            }
+
             foreach (var button in new[] { _playButton, _settingsButton, _quitButton })
             {
                 if (button == null)
@@ -339,6 +402,11 @@ namespace Game.UI.Controllers
                 _menuPanel.style.opacity = 0f;
                 _menuPanel.style.scale = new Scale(new Vector3(0.94f, 0.94f, 1f));
             }
+
+            if (_hubPanel != null)
+            {
+                _hubPanel.style.opacity = 0f;
+            }
         }
 
         private void OnKeyDown(KeyDownEvent evt)
@@ -351,7 +419,11 @@ namespace Game.UI.Controllers
             if (evt.keyCode == KeyCode.Escape)
             {
                 evt.StopPropagation();
-                if (_isSettingsOpen)
+                if (_isProfileEditOpen)
+                {
+                    CloseProfileEdit();
+                }
+                else if (_isSettingsOpen)
                 {
                     OnSettingsClose();
                 }
@@ -371,7 +443,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            if (_isSettingsOpen || _isMatchEntryOpen || _isModeSelectOpen)
+            if (_isSettingsOpen || _isMatchEntryOpen || _isModeSelectOpen || _isProfileEditOpen)
             {
                 return;
             }
@@ -389,7 +461,7 @@ namespace Game.UI.Controllers
 
         private void OnSettingsOpen()
         {
-            if (_isTransitioning || _isSettingsOpen || _settingsOverlay == null)
+            if (_isTransitioning || _isSettingsOpen || _isProfileEditOpen || _settingsOverlay == null)
             {
                 return;
             }
@@ -475,7 +547,7 @@ namespace Game.UI.Controllers
 
         private void OnPlayRequested()
         {
-            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating || _isMatchEntryOpen)
+            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating || _isMatchEntryOpen || _isProfileEditOpen)
             {
                 return;
             }
@@ -495,6 +567,16 @@ namespace Game.UI.Controllers
 
         private void BindHubUi()
         {
+            if (_editProfileButton != null)
+            {
+                _editProfileButton.clicked += OpenProfileEdit;
+            }
+
+            if (_profileEditCloseButton != null)
+            {
+                _profileEditCloseButton.clicked += CloseProfileEdit;
+            }
+
             if (_saveProfileButton != null)
             {
                 _saveProfileButton.clicked += () => SaveProfileAsync().Forget();
@@ -509,6 +591,129 @@ namespace Game.UI.Controllers
             {
                 _updateButton.clicked += () => ApplyUpdateAsync().Forget();
             }
+        }
+
+        private void BuildAvatarGrid()
+        {
+            if (_avatarGrid == null)
+            {
+                return;
+            }
+
+            _avatarGrid.Clear();
+            _avatarGrid.style.flexDirection = FlexDirection.Row;
+            _avatarGrid.style.flexWrap = Wrap.Wrap;
+            _avatarGrid.style.justifyContent = Justify.Center;
+
+            for (var i = 0; i < PlayerProfileService.AvatarCount; i++)
+            {
+                var avatarId = i;
+                var button = new Button
+                {
+                    name = $"AvatarOption_{avatarId}",
+                    text = PlayerProfileService.GetAvatarGlyph(avatarId),
+                };
+                button.AddToClassList("mm-avatar-option");
+                button.style.flexShrink = 0;
+                button.style.backgroundColor = PlayerProfileService.GetAvatarColor(avatarId);
+                button.clicked += () => SelectPendingAvatar(avatarId);
+                _avatarGrid.Add(button);
+            }
+        }
+
+        private void SelectPendingAvatar(int avatarId)
+        {
+            _pendingAvatarId = PlayerProfileService.ClampAvatarId(avatarId);
+            RefreshAvatarSelectionUi();
+        }
+
+        private void RefreshAvatarSelectionUi()
+        {
+            if (_avatarGrid == null)
+            {
+                return;
+            }
+
+            foreach (var child in _avatarGrid.Children())
+            {
+                if (child is not Button button)
+                {
+                    continue;
+                }
+
+                var selected = button.name == $"AvatarOption_{_pendingAvatarId}";
+                button.EnableInClassList("mm-avatar-option--selected", selected);
+            }
+        }
+
+        private void OpenProfileEdit()
+        {
+            if (_profileEditOverlay == null || _isProfileEditOpen || _isTransitioning)
+            {
+                return;
+            }
+
+            _isProfileEditOpen = true;
+            _pendingAvatarId = PlayerProfileService.AvatarId;
+            if (_displayNameField != null)
+            {
+                _displayNameField.value = PlayerProfileService.DisplayName;
+            }
+
+            if (_profileEditErrorLabel != null)
+            {
+                _profileEditErrorLabel.text = string.Empty;
+            }
+
+            RefreshAvatarSelectionUi();
+            _profileEditOverlay.RemoveFromClassList(OverlayHiddenClass);
+            SetMainMenuInteractable(false);
+            _displayNameField?.Focus();
+        }
+
+        private void CloseProfileEdit()
+        {
+            EnsureProfileEditClosed();
+            SetMainMenuInteractable(true);
+            _playButton?.Focus();
+        }
+
+        private void EnsureProfileEditClosed()
+        {
+            _isProfileEditOpen = false;
+            _profileEditOverlay?.AddToClassList(OverlayHiddenClass);
+            if (_profileEditErrorLabel != null)
+            {
+                _profileEditErrorLabel.text = string.Empty;
+            }
+        }
+
+        private static void StyleHubTextField(TextField field)
+        {
+            if (field == null)
+            {
+                return;
+            }
+
+            var ink = new Color(18f / 255f, 14f / 255f, 12f / 255f, 1f);
+            var cream = new Color(242f / 255f, 230f / 255f, 200f / 255f, 1f);
+            field.style.backgroundColor = ink;
+            field.style.color = cream;
+
+            var input = field.Q(className: "unity-base-text-field__input")
+                        ?? field.Q(className: "unity-text-field__input")
+                        ?? field.Q(className: "unity-base-field__input");
+            if (input == null)
+            {
+                return;
+            }
+
+            input.style.backgroundColor = ink;
+            input.style.color = cream;
+            input.style.borderTopWidth = 0;
+            input.style.borderBottomWidth = 0;
+            input.style.borderLeftWidth = 0;
+            input.style.borderRightWidth = 0;
         }
 
         private async UniTaskVoid RefreshHubAsync()
@@ -534,11 +739,16 @@ namespace Game.UI.Controllers
                     }
                 }
 
+                if (_versionLabel != null)
+                {
+                    _versionLabel.text = $"v{Application.version}";
+                }
+
                 if (_updateStatusLabel != null)
                 {
                     _updateStatusLabel.text = _playBlockedByUpdate
                         ? $"Доступна версия {GameUpdateService.RemoteManifest?.version}. Игра заблокирована."
-                        : $"Версия {Application.version}";
+                        : string.Empty;
                 }
 
                 // Hub social needs UGS; LocalDev Editor path skips gracefully.
@@ -564,9 +774,14 @@ namespace Game.UI.Controllers
 
         private void RefreshProfileLabels()
         {
+            var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
+                ? "Игрок"
+                : PlayerProfileService.DisplayName;
+            var avatarId = PlayerProfileService.AvatarId;
+
             if (_profileNameLabel != null)
             {
-                _profileNameLabel.text = PlayerProfileService.DisplayName;
+                _profileNameLabel.text = displayName;
             }
 
             if (_profileStatsLabel != null)
@@ -575,20 +790,44 @@ namespace Game.UI.Controllers
                     $"Ранг {PlayerProfileService.Rank} · Очки {PlayerProfileService.Points}";
             }
 
-            if (_displayNameField != null)
+            if (_profileRecordLabel != null)
             {
-                _displayNameField.value = PlayerProfileService.DisplayName;
+                _profileRecordLabel.text =
+                    $"Матчи {PlayerProfileService.Matches} · Победы {PlayerProfileService.Wins} · Поражения {PlayerProfileService.Losses}";
             }
+
+            if (_profileAvatar != null)
+            {
+                _profileAvatar.style.backgroundColor = PlayerProfileService.GetAvatarColor(avatarId);
+            }
+
+            if (_profileAvatarLabel != null)
+            {
+                _profileAvatarLabel.text = PlayerProfileService.GetAvatarGlyph(avatarId);
+            }
+
+            if (_displayNameField != null && !_isProfileEditOpen)
+            {
+                _displayNameField.value = displayName;
+            }
+
+            _pendingAvatarId = avatarId;
+            RefreshAvatarSelectionUi();
         }
 
         private void RefreshFriendsLabel()
         {
+            var friends = FriendsHubService.GetFriendsSnapshot();
+            if (_friendsCountLabel != null)
+            {
+                _friendsCountLabel.text = friends.Count.ToString();
+            }
+
             if (_friendsListLabel == null)
             {
                 return;
             }
 
-            var friends = FriendsHubService.GetFriendsSnapshot();
             if (friends.Count == 0)
             {
                 _friendsListLabel.text = "Нет друзей. Добавьте по Player ID.";
@@ -609,12 +848,17 @@ namespace Game.UI.Controllers
             try
             {
                 var name = _displayNameField?.value ?? "Player";
-                await PlayerProfileService.SaveDisplayNameAsync(name);
+                await PlayerProfileService.SaveProfileAsync(name, _pendingAvatarId);
                 RefreshProfileLabels();
+                CloseProfileEdit();
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"SaveProfileAsync: {ex.Message}");
+                if (_profileEditErrorLabel != null)
+                {
+                    _profileEditErrorLabel.text = "Не удалось сохранить профиль.";
+                }
             }
         }
 
@@ -693,6 +937,13 @@ namespace Game.UI.Controllers
             }
 
             _modeGrid.Clear();
+            _modeGrid.style.flexDirection = FlexDirection.Column;
+            _modeGrid.style.justifyContent = Justify.Center;
+            _modeGrid.style.alignItems = Align.Center;
+
+            // Two centered rows (4 + 3) so tiles stay evenly aligned.
+            var rowTop = CreateModeRow();
+            var rowBottom = CreateModeRow();
             for (var n = MatchModeRules.MinPlayers; n <= MatchModeRules.MaxPlayers; n++)
             {
                 var playerCount = n;
@@ -703,8 +954,29 @@ namespace Game.UI.Controllers
                         CreateMatchAsync(playerCount, this.GetCancellationTokenOnDestroy()).Forget();
                 }
 
-                _modeGrid.Add(button);
+                if (playerCount <= 5)
+                {
+                    rowTop.Add(button);
+                }
+                else
+                {
+                    rowBottom.Add(button);
+                }
             }
+
+            _modeGrid.Add(rowTop);
+            _modeGrid.Add(rowBottom);
+        }
+
+        private static VisualElement CreateModeRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("mm-modes__row");
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.justifyContent = Justify.Center;
+            row.style.alignItems = Align.Center;
+            row.style.flexShrink = 0;
+            return row;
         }
 
         private void OpenMatchEntry()
@@ -968,6 +1240,8 @@ namespace Game.UI.Controllers
             _playButton?.SetEnabled(interactable);
             _settingsButton?.SetEnabled(interactable);
             _quitButton?.SetEnabled(interactable);
+            _editProfileButton?.SetEnabled(interactable);
+            _addFriendButton?.SetEnabled(interactable);
         }
     }
 }

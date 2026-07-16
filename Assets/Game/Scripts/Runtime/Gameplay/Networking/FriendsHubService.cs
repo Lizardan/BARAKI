@@ -38,26 +38,19 @@ namespace Game.Gameplay.Networking
 
         public static async UniTask InitializeAsync()
         {
-            if (s_initialized)
-            {
-                return;
-            }
-
+            // Always re-init Friends: s_initialized can survive Play Mode while the SDK does not.
             await UnityServicesBootstrap.EnsureInitializedAsync();
             await FriendsService.Instance.InitializeAsync();
+            s_initialized = true;
             await SetPresenceAsync("InLauncher");
             RefreshCache();
-            s_initialized = true;
         }
 
         public static async UniTask SetPresenceAsync(string status, string lobbyCode = null)
         {
-            if (!s_initialized)
-            {
-                await UnityServicesBootstrap.EnsureInitializedAsync();
-                await FriendsService.Instance.InitializeAsync();
-                s_initialized = true;
-            }
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+            await FriendsService.Instance.InitializeAsync();
+            s_initialized = true;
 
             var activity = new BarakiPresenceActivity
             {

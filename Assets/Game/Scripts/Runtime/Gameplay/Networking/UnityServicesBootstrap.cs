@@ -1,4 +1,3 @@
-using System;
 using Cysharp.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -10,7 +9,6 @@ namespace Game.Gameplay.Networking
     public static class UnityServicesBootstrap
     {
         static UniTask s_initTask;
-        static bool s_started;
 
         public static bool IsReady =>
             UnityServices.State == ServicesInitializationState.Initialized
@@ -26,12 +24,15 @@ namespace Game.Gameplay.Networking
                 return UniTask.CompletedTask;
             }
 
-            if (!s_started)
+            // Join in-flight init; otherwise start fresh. Needed when Enter Play Mode
+            // Options disable domain reload: statics survive while UGS tears down.
+            if (s_initTask.Status == UniTaskStatus.Pending)
             {
-                s_started = true;
-                s_initTask = InitializeAsync();
+                return s_initTask;
             }
 
+            // Preserve: multiple callers may await the same init without token errors.
+            s_initTask = InitializeAsync().Preserve();
             return s_initTask;
         }
 

@@ -46,9 +46,10 @@ namespace Game.UI.Controllers
         {
             var button = new Button { name = $"Mode_N{playerCount}" };
             button.AddToClassList("mm-mode");
+            button.style.flexShrink = 0;
             button.Add(BuildPreview(playerCount));
 
-            var label = new Label(playerCount.ToString());
+            var label = new Label(MatchModeRules.GetModeTitle(playerCount));
             label.AddToClassList("mm-mode__label");
             button.Add(label);
 
