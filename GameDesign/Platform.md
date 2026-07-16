@@ -76,20 +76,22 @@ post_mvp: true
 
 ```entity
 id: DIST_PIPELINE
-build: GitHub_Actions_on_tag_vStar
+build: GitHub_Actions_on_push_main
 artifact: windows_x64_zip
 store: GitHub_Releases
 manifest: version.json_asset_on_release
+versioning: auto_semver_patch_on_push
 client: force_update_via_ApplyUpdate_bat
-note: No Cloudflare R2 — avoids credit-card requirement
 mvp: true
 ```
 
-Канал (публичный репо, без карты):
+Канал (публичный репо):
 
-1. `git tag vX.Y.Z && git push --tags`
-2. Actions собирает Windows → Release assets: `baraki-windows-vX.Y.Z.zip`, `version.json`, `sha256.txt`
+1. `git push` в `main` (изменения в Assets/Packages/ProjectSettings/…)
+2. Actions сам делает `patch` bump (`v0.1.0` → `v0.1.1`), собирает Windows, создаёт Release
 3. Клиент: `GET /repos/Lizardan/BARAKI/releases/latest` → `version.json` → force update
+4. Ручной major/minor: Actions → **Deploy Windows** → bump = minor/major
+5. Пропуск релиза: commit message содержит `[skip release]`
 
 ## Non-goals
 
