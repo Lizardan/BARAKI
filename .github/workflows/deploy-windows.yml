@@ -34,6 +34,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write # delete Actions artifacts after release
 
 jobs:
   build:
@@ -147,7 +148,8 @@ jobs:
             version.json
             sha256.txt
           if-no-files-found: error
-          retention-days: 7
+          # Safety net if release job fails; successful runs delete these immediately.
+          retention-days: 1
 
   release:
     name: Create GitHub Release
@@ -206,3 +208,36 @@ jobs:
               delay=120
             fi
           done
+
+      # Actions artifacts count toward Actions storage (esp. private). Release zips do not.
+      - name: Prune Actions artifacts + old releases
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_RELEASES: "2"
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+
+          echo "Deleting Actions artifacts named windows-release-*..."
+          # Paginate; delete every CI bundle so large Unity zips don't linger in Actions storage.
+          gh api --paginate "repos/${REPO}/actions/artifacts" \
+            --jq '.artifacts[] | select(.name | startswith("windows-release-")) | [.id, .name] | @tsv' \
+            | while IFS=$'\t' read -r id name; do
+                [ -n "${id:-}" ] || continue
+                echo "  delete artifact ${name} (id=${id})"
+                gh api -X DELETE "repos/${REPO}/actions/artifacts/${id}" || true
+              done
+
+          echo "Keeping last ${KEEP_RELEASES} GitHub Releases; deleting older..."
+          mapfile -t tags < <(gh release list --repo "$REPO" --limit 50 --json tagName -q '.[].tagName')
+          if [ "${#tags[@]}" -gt "$KEEP_RELEASES" ]; then
+            for ((i=KEEP_RELEASES; i<${#tags[@]}; i++)); do
+              old="${tags[$i]}"
+              echo "  delete release ${old}"
+              gh release delete "$old" --repo "$REPO" --yes --cleanup-tags || true
+            done
+          else
+            echo "  nothing to prune (${#tags[@]} release(s))."
+          fi
