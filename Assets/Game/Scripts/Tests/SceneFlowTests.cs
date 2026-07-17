@@ -108,6 +108,25 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BootstrapScene_HasSingleNetworkLobbyPrefabSource()
+        {
+            EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
+            var lobbySources = Object.FindObjectsByType<Unity.Netcode.NetworkObject>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            var lobbyPrefabSources = 0;
+            foreach (var networkObject in lobbySources)
+            {
+                if (networkObject.name == "NetworkLobbyState_PrefabSource")
+                {
+                    lobbyPrefabSources++;
+                }
+            }
+
+            Assert.AreEqual(1, lobbyPrefabSources, "Bootstrap should contain exactly one NetworkLobbyState_PrefabSource.");
+        }
+
+        [Test]
         public void GameSceneNames_MatchBuildPaths()
         {
             Assert.AreEqual(GameSceneNames.Bootstrap, "Bootstrap");

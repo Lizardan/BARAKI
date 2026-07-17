@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Game.Core;
 using Unity.Services.Friends;
 using Unity.Services.Friends.Models;
+using Unity.Services.Friends.Notifications;
 using UnityEngine;
 
 namespace Game.Gameplay.Networking
@@ -10,82 +12,347 @@ namespace Game.Gameplay.Networking
     [Serializable]
     public sealed class BarakiPresenceActivity
     {
-        public string status = "InLauncher";
+        public string status = FriendsHubRules.StatusInLauncher;
+        public string lobbyCode = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class BarakiFriendsLobbyInviteMessage
+    {
+        public string senderName = string.Empty;
         public string lobbyCode = string.Empty;
     }
 
     public readonly struct FriendPresenceInfo
     {
-        public FriendPresenceInfo(string playerId, string name, string status, bool isOnline)
+        public FriendPresenceInfo(
+            string playerId,
+            string name,
+            string status,
+            bool isOnline,
+            string lobbyCode)
         {
             PlayerId = playerId ?? string.Empty;
             Name = name ?? string.Empty;
             Status = status ?? "Offline";
             IsOnline = isOnline;
+            LobbyCode = lobbyCode ?? string.Empty;
         }
 
         public string PlayerId { get; }
         public string Name { get; }
         public string Status { get; }
         public bool IsOnline { get; }
+        public string LobbyCode { get; }
     }
 
-    /// <summary>UGS Friends list + presence for Main Menu hub.</summary>
+    public readonly struct FriendRequestInfo
+    {
+        public FriendRequestInfo(string playerId, string name)
+        {
+            PlayerId = playerId ?? string.Empty;
+            Name = name ?? string.Empty;
+        }
+
+        public string PlayerId { get; }
+        public string Name { get; }
+    }
+
+    public readonly struct FriendsLobbyInvite
+    {
+        public FriendsLobbyInvite(string senderPlayerId, string senderName, string lobbyCode)
+        {
+            SenderPlayerId = senderPlayerId ?? string.Empty;
+            SenderName = senderName ?? string.Empty;
+            LobbyCode = FriendsHubRules.NormalizeLobbyCode(lobbyCode);
+        }
+
+        public string SenderPlayerId { get; }
+        public string SenderName { get; }
+        public string LobbyCode { get; }
+    }
+
+    /// <summary>UGS Friends list, requests, presence, and lobby invites for hub UI.</summary>
     public static class FriendsHubService
     {
         static bool s_initialized;
-        static readonly List<FriendPresenceInfo> s_cache = new();
+        static bool s_eventsHooked;
+        static readonly List<FriendPresenceInfo> s_friends = new();
+        static readonly List<FriendRequestInfo> s_incoming = new();
+        static readonly List<FriendRequestInfo> s_outgoing = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetForPlaySession()
+        {
+            s_initialized = false;
+            s_eventsHooked = false;
+        }
+
+        public static event Action HubChanged;
+        public static event Action<FriendsLobbyInvite> LobbyInviteReceived;
+
+        public static string LocalPlayerId =>
+            UnityServicesBootstrap.IsReady ? UnityServicesBootstrap.PlayerId : string.Empty;
+
+        public static string LocalPlayerName =>
+            UnityServicesBootstrap.PlayerName;
 
         public static async UniTask InitializeAsync()
         {
-            // Always re-init Friends: s_initialized can survive Play Mode while the SDK does not.
             await UnityServicesBootstrap.EnsureInitializedAsync();
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                return;
+            }
+
             await FriendsService.Instance.InitializeAsync();
             s_initialized = true;
-            await SetPresenceAsync("InLauncher");
-            RefreshCache();
+            EnsureEventHooks();
+            await EnsureLocalPlayerNameSyncedAsync();
+            RefreshAllCaches();
+            // Presence is best-effort — do not block hub UI on another ~10s network round-trip.
+            SetPresenceAsync(FriendsHubRules.StatusInLauncher).Forget();
+        }
+
+        static async UniTask EnsureLocalPlayerNameSyncedAsync()
+        {
+            var playerName = UnityServicesBootstrap.PlayerName;
+            if (!FriendsHubRules.IsValidUgsPlayerName(playerName))
+            {
+                playerName = await UnityServicesBootstrap.EnsurePlayerNameAsync();
+            }
+
+            if (!PlayerProfileService.IsLoaded)
+            {
+                return;
+            }
+
+            if (!FriendsHubRules.ShouldSyncDisplayNameToUgs(playerName, PlayerProfileService.DisplayName))
+            {
+                return;
+            }
+
+            await UnityServicesBootstrap.TrySyncPlayerNameFromDisplayNameAsync(PlayerProfileService.DisplayName);
         }
 
         public static async UniTask SetPresenceAsync(string status, string lobbyCode = null)
         {
             await UnityServicesBootstrap.EnsureInitializedAsync();
-            await FriendsService.Instance.InitializeAsync();
-            s_initialized = true;
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                return;
+            }
+
+            if (!s_initialized)
+            {
+                await FriendsService.Instance.InitializeAsync();
+                s_initialized = true;
+                EnsureEventHooks();
+            }
 
             var activity = new BarakiPresenceActivity
             {
-                status = status ?? "InLauncher",
+                status = status ?? FriendsHubRules.StatusInLauncher,
                 lobbyCode = lobbyCode ?? string.Empty,
             };
             await FriendsService.Instance.SetPresenceAsync(Availability.Online, activity);
         }
 
-        public static async UniTask SendFriendRequestByIdAsync(string playerId)
+        public static async UniTask SendFriendRequestByNameAsync(string playerName)
         {
-            await InitializeAsync();
-            await FriendsService.Instance.AddFriendAsync(playerId);
-            RefreshCache();
-        }
-
-        public static IReadOnlyList<FriendPresenceInfo> GetFriendsSnapshot()
-        {
-            if (s_initialized)
+            var normalized = FriendsHubRules.NormalizeUgsPlayerName(playerName);
+            if (!FriendsHubRules.IsValidUgsPlayerName(normalized))
             {
-                RefreshCache();
+                throw new ArgumentException("Укажите имя в формате Ник#1234.", nameof(playerName));
             }
 
-            return s_cache;
+            var localName = await UnityServicesBootstrap.EnsurePlayerNameAsync();
+            if (string.Equals(normalized, localName, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Нельзя добавить самого себя.");
+            }
+
+            await InitializeAsync();
+            await FriendsService.Instance.AddFriendByNameAsync(normalized);
+            await FriendsService.Instance.ForceRelationshipsRefreshAsync();
+            RefreshAllCaches();
+        }
+
+        public static async UniTask SendFriendRequestByIdAsync(string playerId)
+        {
+            var normalized = FriendsHubRules.NormalizePlayerId(playerId);
+            if (!FriendsHubRules.IsValidPlayerId(normalized))
+            {
+                throw new ArgumentException("Player ID is too short.", nameof(playerId));
+            }
+
+            if (string.Equals(normalized, LocalPlayerId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Нельзя добавить самого себя.");
+            }
+
+            await InitializeAsync();
+            await FriendsService.Instance.AddFriendAsync(normalized);
+            await FriendsService.Instance.ForceRelationshipsRefreshAsync();
+            RefreshAllCaches();
+        }
+
+        public static async UniTask AcceptFriendRequestAsync(string playerId)
+        {
+            var normalized = FriendsHubRules.NormalizePlayerId(playerId);
+            await InitializeAsync();
+            await FriendsService.Instance.AddFriendAsync(normalized);
+            await FriendsService.Instance.ForceRelationshipsRefreshAsync();
+            RefreshAllCaches();
+        }
+
+        public static async UniTask DeclineFriendRequestAsync(string playerId)
+        {
+            var normalized = FriendsHubRules.NormalizePlayerId(playerId);
+            await InitializeAsync();
+            await FriendsService.Instance.DeleteIncomingFriendRequestAsync(normalized);
+            await FriendsService.Instance.ForceRelationshipsRefreshAsync();
+            RefreshAllCaches();
         }
 
         public static async UniTask InviteFriendToLobbyAsync(string friendPlayerId, string lobbyCode)
         {
-            await SetPresenceAsync("InGame", lobbyCode);
-            Debug.Log($"FriendsHubService: invite lobby={lobbyCode} friend={friendPlayerId}");
+            var normalizedFriendId = FriendsHubRules.NormalizePlayerId(friendPlayerId);
+            var normalizedLobbyCode = FriendsHubRules.NormalizeLobbyCode(lobbyCode);
+            if (!FriendsHubRules.IsValidPlayerId(normalizedFriendId))
+            {
+                throw new ArgumentException("Friend player ID is invalid.", nameof(friendPlayerId));
+            }
+
+            if (normalizedLobbyCode.Length < 4)
+            {
+                throw new ArgumentException("Lobby code is required.", nameof(lobbyCode));
+            }
+
+            await InitializeAsync();
+            await SetPresenceAsync(FriendsHubRules.StatusInGame, normalizedLobbyCode);
+
+            var senderName = UnityServicesBootstrap.PlayerName;
+            if (string.IsNullOrWhiteSpace(senderName))
+            {
+                senderName = PlayerProfileService.DisplayName;
+            }
+
+            if (string.IsNullOrWhiteSpace(senderName))
+            {
+                senderName = "Player";
+            }
+
+            var message = new BarakiFriendsLobbyInviteMessage
+            {
+                senderName = senderName,
+                lobbyCode = normalizedLobbyCode,
+            };
+            await FriendsService.Instance.MessageAsync(normalizedFriendId, message);
         }
 
-        static void RefreshCache()
+        public static IReadOnlyList<FriendPresenceInfo> GetFriendsSnapshot()
         {
-            s_cache.Clear();
+            if (IsOperational())
+            {
+                RefreshFriendsCache();
+            }
+
+            return s_friends;
+        }
+
+        public static IReadOnlyList<FriendRequestInfo> GetIncomingRequestsSnapshot()
+        {
+            if (IsOperational())
+            {
+                RefreshIncomingCache();
+            }
+
+            return s_incoming;
+        }
+
+        public static IReadOnlyList<FriendRequestInfo> GetOutgoingRequestsSnapshot()
+        {
+            if (IsOperational())
+            {
+                RefreshOutgoingCache();
+            }
+
+            return s_outgoing;
+        }
+
+        static bool IsOperational()
+        {
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                s_initialized = false;
+                s_eventsHooked = false;
+                return false;
+            }
+
+            return s_initialized;
+        }
+
+        static void EnsureEventHooks()
+        {
+            if (s_eventsHooked || !UnityServicesBootstrap.IsReady)
+            {
+                return;
+            }
+
+            FriendsService.Instance.MessageReceived += OnMessageReceived;
+            FriendsService.Instance.RelationshipAdded += OnRelationshipAdded;
+            FriendsService.Instance.RelationshipDeleted += OnRelationshipDeleted;
+            FriendsService.Instance.PresenceUpdated += OnPresenceUpdated;
+            s_eventsHooked = true;
+        }
+
+        static void OnRelationshipAdded(IRelationshipAddedEvent _) => RefreshAllCaches();
+        static void OnRelationshipDeleted(IRelationshipDeletedEvent _) => RefreshAllCaches();
+        static void OnPresenceUpdated(IPresenceUpdatedEvent _) => RefreshAllCaches();
+
+        static void OnMessageReceived(IMessageReceivedEvent receivedEvent)
+        {
+            if (receivedEvent == null)
+            {
+                return;
+            }
+
+            var message = receivedEvent.GetAs<BarakiFriendsLobbyInviteMessage>();
+            if (message == null || string.IsNullOrWhiteSpace(message.lobbyCode))
+            {
+                return;
+            }
+
+            var invite = new FriendsLobbyInvite(
+                receivedEvent.UserId,
+                message.senderName,
+                message.lobbyCode);
+            LobbyInviteReceived?.Invoke(invite);
+        }
+
+        static void RefreshAllCaches()
+        {
+            if (!IsOperational())
+            {
+                return;
+            }
+
+            RefreshFriendsCache();
+            RefreshIncomingCache();
+            RefreshOutgoingCache();
+            HubChanged?.Invoke();
+        }
+
+        static void RefreshFriendsCache()
+        {
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                s_initialized = false;
+                return;
+            }
+
+            s_friends.Clear();
             foreach (var relationship in FriendsService.Instance.Friends)
             {
                 var member = relationship.Member;
@@ -94,25 +361,84 @@ namespace Game.Gameplay.Networking
                     continue;
                 }
 
-                var availability = member.Presence?.Availability ?? Availability.Offline;
-                var status = "Offline";
-                var online = availability is Availability.Online or Availability.Away or Availability.Busy;
-                if (online)
+                s_friends.Add(BuildPresenceInfo(member));
+            }
+        }
+
+        static void RefreshIncomingCache()
+        {
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                s_initialized = false;
+                return;
+            }
+
+            s_incoming.Clear();
+            foreach (var relationship in FriendsService.Instance.IncomingFriendRequests)
+            {
+                var member = relationship.Member;
+                if (member == null)
                 {
-                    status = "Online";
-                    var activity = member.Presence?.GetActivity<BarakiPresenceActivity>();
-                    if (activity != null && !string.IsNullOrEmpty(activity.status))
+                    continue;
+                }
+
+                s_incoming.Add(new FriendRequestInfo(
+                    member.Id,
+                    member.Profile?.Name ?? member.Id));
+            }
+        }
+
+        static void RefreshOutgoingCache()
+        {
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                s_initialized = false;
+                return;
+            }
+
+            s_outgoing.Clear();
+            foreach (var relationship in FriendsService.Instance.OutgoingFriendRequests)
+            {
+                var member = relationship.Member;
+                if (member == null)
+                {
+                    continue;
+                }
+
+                s_outgoing.Add(new FriendRequestInfo(
+                    member.Id,
+                    member.Profile?.Name ?? member.Id));
+            }
+        }
+
+        static FriendPresenceInfo BuildPresenceInfo(Member member)
+        {
+            var availability = member.Presence?.Availability ?? Availability.Offline;
+            var online = availability is Availability.Online or Availability.Away or Availability.Busy;
+            var status = "Offline";
+            var lobbyCode = string.Empty;
+
+            if (online)
+            {
+                status = "Online";
+                var activity = member.Presence?.GetActivity<BarakiPresenceActivity>();
+                if (activity != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(activity.status))
                     {
                         status = activity.status;
                     }
-                }
 
-                s_cache.Add(new FriendPresenceInfo(
-                    member.Id,
-                    member.Profile?.Name ?? member.Id,
-                    status,
-                    online));
+                    lobbyCode = activity.lobbyCode ?? string.Empty;
+                }
             }
+
+            return new FriendPresenceInfo(
+                member.Id,
+                member.Profile?.Name ?? member.Id,
+                status,
+                online,
+                lobbyCode);
         }
     }
 }

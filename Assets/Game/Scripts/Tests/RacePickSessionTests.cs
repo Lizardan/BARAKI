@@ -48,5 +48,18 @@ namespace Game.Tests
             var raceId = RacePickRules.PickRandomRace(new Random(3));
             Assert.IsTrue(RacePickRules.IsPlayable(raceId));
         }
+
+        [Test]
+        public void NetworkRules_IsComplete_FalseUntilEverySlotPicked()
+        {
+            var picks = new string[2];
+            picks[0] = GameIds.Races.Human;
+
+            Assert.IsFalse(RacePickNetworkRules.IsComplete(picks));
+
+            picks[1] = GameIds.Races.Bug;
+
+            Assert.IsTrue(RacePickNetworkRules.IsComplete(picks));
+        }
     }
 }

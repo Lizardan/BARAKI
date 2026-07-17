@@ -41,4 +41,59 @@ namespace Game.Core
             _ => raceId,
         };
     }
+
+    /// <summary>Pure rules for replicated pre-match race selection.</summary>
+    public static class RacePickNetworkRules
+    {
+        public static bool TryApplyPick(string[] picks, int slot, string raceId)
+        {
+            if (picks == null)
+            {
+                throw new ArgumentNullException(nameof(picks));
+            }
+
+            if (slot < 0 || slot >= picks.Length)
+            {
+                return false;
+            }
+
+            if (!RacePickRules.IsPlayable(raceId))
+            {
+                return false;
+            }
+
+            picks[slot] = raceId;
+            return true;
+        }
+
+        public static bool IsComplete(string[] picks)
+        {
+            if (picks == null || picks.Length == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < picks.Length; i++)
+            {
+                if (string.IsNullOrEmpty(picks[i]) || !RacePickRules.IsPlayable(picks[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static string[] ToRaceIdsArray(string[] picks)
+        {
+            if (!IsComplete(picks))
+            {
+                throw new InvalidOperationException("Race picks are incomplete.");
+            }
+
+            var copy = new string[picks.Length];
+            Array.Copy(picks, copy, picks.Length);
+            return copy;
+        }
+    }
 }

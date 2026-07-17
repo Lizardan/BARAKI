@@ -1,6 +1,7 @@
 using Game.Core;
 using Game.Gameplay.Cameras;
 using Game.Gameplay.Match;
+using Game.Gameplay.Networking;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -26,6 +27,8 @@ namespace Game.UI.Controllers
         private Button _confirmButton;
         private RacePickSession _session;
         private string _selectedRaceId;
+        private bool _localPickSubmitted;
+        private bool _networkPickSubscribed;
 
         private void Awake()
         {
@@ -72,40 +75,58 @@ namespace Game.UI.Controllers
 
         private void OnDisable()
         {
+            UnsubscribeNetworkPick();
             SetPanInputLocked(false);
         }
 
         private void BeginRacePick()
         {
             var setup = GameSession.ActiveSetup ?? MatchSetup.Default;
-            var localSlot = LocalMatchRegistry.LocalPlayerSlot ?? setup.LocalPlayerSlot;
-            localSlot = Mathf.Clamp(localSlot, 0, setup.PlayerCount - 1);
+            var localSlot = ResolveLocalSlot(setup);
             GameSession.UpdateActiveSetup(new MatchSetup(setup.PlayerCount, localSlot, setup.RaceIds));
             _session = new RacePickSession(setup.PlayerCount, localSlot);
             _selectedRaceId = null;
+            _localPickSubmitted = false;
 
-            _subtitleLabel.text =
-                $"Слот {localSlot + 1} · игроков {setup.PlayerCount}";
-            _slotsLabel.text = BuildSlotsHint(setup.PlayerCount, localSlot);
-            _selectedLabel.text = "Раса не выбрана";
-            UpdateRaceButtons();
-            UpdateConfirmButton();
+            if (MatchNetworkSession.IsNetworked)
+            {
+                MatchNetworkSession.EnsureRacePickSession(setup.PlayerCount);
+                SubscribeNetworkPick();
+            }
+            else
+            {
+                UnsubscribeNetworkPick();
+            }
+
+            RefreshRacePickUi();
             SetPanInputLocked(true);
             Show();
         }
 
         private void SelectRace(string raceId)
         {
+            if (_localPickSubmitted || _matchRuntime == null || _matchRuntime.IsMatchStarted)
+            {
+                return;
+            }
+
             _selectedRaceId = raceId;
-            _selectedLabel.text = $"Выбрано: {RacePickRules.GetDisplayName(raceId)}";
-            UpdateRaceButtons();
-            UpdateConfirmButton();
+            RefreshRacePickUi();
         }
 
         private void OnConfirm()
         {
-            if (string.IsNullOrEmpty(_selectedRaceId) || _session == null || _matchRuntime == null)
+            if (string.IsNullOrEmpty(_selectedRaceId) || _session == null || _matchRuntime == null
+                || _localPickSubmitted)
             {
+                return;
+            }
+
+            if (MatchNetworkSession.IsNetworked)
+            {
+                MatchNetworkSession.RequestRacePick(_selectedRaceId);
+                _localPickSubmitted = true;
+                RefreshRacePickUi();
                 return;
             }
 
@@ -121,6 +142,58 @@ namespace Game.UI.Controllers
             Hide();
         }
 
+        private void OnNetworkPickChanged()
+        {
+            if (_matchRuntime != null
+                && (_matchRuntime.IsMatchStarted || MatchNetworkSession.NetworkMatchSimStarted))
+            {
+                SetPanInputLocked(false);
+                Hide();
+                return;
+            }
+
+            RefreshRacePickUi();
+        }
+
+        private void RefreshRacePickUi()
+        {
+            if (_session == null)
+            {
+                return;
+            }
+
+            _subtitleLabel.text =
+                $"Слот {_session.LocalPlayerSlot + 1} · игроков {_session.PlayerCount}";
+            _slotsLabel.text = BuildSlotsHint(_session.PlayerCount, _session.LocalPlayerSlot);
+            _selectedLabel.text = string.IsNullOrEmpty(_selectedRaceId)
+                ? "Раса не выбрана"
+                : $"Выбрано: {RacePickRules.GetDisplayName(_selectedRaceId)}";
+            UpdateRaceButtons();
+            UpdateConfirmButton();
+        }
+
+        private void SubscribeNetworkPick()
+        {
+            if (_networkPickSubscribed)
+            {
+                return;
+            }
+
+            MatchNetworkSession.NetworkRacePickChanged += OnNetworkPickChanged;
+            _networkPickSubscribed = true;
+        }
+
+        private void UnsubscribeNetworkPick()
+        {
+            if (!_networkPickSubscribed)
+            {
+                return;
+            }
+
+            MatchNetworkSession.NetworkRacePickChanged -= OnNetworkPickChanged;
+            _networkPickSubscribed = false;
+        }
+
         private void SetPanInputLocked(bool locked)
         {
             _panController?.SetPanInputLocked(locked);
@@ -128,20 +201,53 @@ namespace Game.UI.Controllers
 
         private void UpdateRaceButtons()
         {
+            var canSelect = !_localPickSubmitted
+                && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
+            _humanButton.SetEnabled(canSelect);
+            _bugButton.SetEnabled(canSelect);
             _humanButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Human);
             _bugButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Bug);
         }
 
         private void UpdateConfirmButton()
         {
-            var enabled = !string.IsNullOrEmpty(_selectedRaceId);
+            var enabled = !string.IsNullOrEmpty(_selectedRaceId)
+                && !_localPickSubmitted
+                && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
             _confirmButton.SetEnabled(enabled);
             _confirmButton.EnableInClassList(ConfirmDisabledClass, !enabled);
+            if (_localPickSubmitted && MatchNetworkSession.IsNetworked)
+            {
+                _confirmButton.text = "ЖДЁМ ОСТАЛЬНЫХ";
+            }
+            else
+            {
+                _confirmButton.text = "ГОТОВ";
+            }
         }
 
-        private static string BuildSlotsHint(int playerCount, int localSlot)
+        private string BuildSlotsHint(int playerCount, int localSlot)
         {
-            var lines = $"Ваш слот: {localSlot + 1} — случайно назначен, вы выбираете расу.\n";
+            if (MatchNetworkSession.IsNetworked)
+            {
+                var lines = $"Ваш слот: {localSlot + 1} — выберите расу и нажмите «Готов».\n";
+
+                for (var slot = 0; slot < playerCount; slot++)
+                {
+                    if (slot == localSlot)
+                    {
+                        continue;
+                    }
+
+                    lines += MatchNetworkSession.HasRacePick(slot)
+                        ? $"Слот {slot + 1}: выбрал расу.\n"
+                        : $"Слот {slot + 1}: выбирает…\n";
+                }
+
+                return lines.TrimEnd();
+            }
+
+            var offlineLines = $"Ваш слот: {localSlot + 1} — случайно назначен, вы выбираете расу.\n";
 
             for (var slot = 0; slot < playerCount; slot++)
             {
@@ -150,10 +256,21 @@ namespace Game.UI.Controllers
                     continue;
                 }
 
-                lines += $"Слот {slot + 1}: случайная раса после «Готов».\n";
+                offlineLines += $"Слот {slot + 1}: случайная раса после «Готов».\n";
             }
 
-            return lines.TrimEnd();
+            return offlineLines.TrimEnd();
+        }
+
+        private static int ResolveLocalSlot(MatchSetup setup)
+        {
+            if (MatchNetworkSession.IsNetworked)
+            {
+                var slot = MatchNetworkSession.LocalSlot;
+                return Mathf.Clamp(slot < 0 ? setup.LocalPlayerSlot : slot, 0, setup.PlayerCount - 1);
+            }
+
+            return Mathf.Clamp(LocalMatchRegistry.LocalPlayerSlot ?? setup.LocalPlayerSlot, 0, setup.PlayerCount - 1);
         }
 
         private void Show()

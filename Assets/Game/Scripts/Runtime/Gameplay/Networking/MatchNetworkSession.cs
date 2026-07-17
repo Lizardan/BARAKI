@@ -137,6 +137,24 @@ namespace Game.Gameplay.Networking
         public static void RequestStart() =>
             NetworkLobbyState.Instance?.RequestStart();
 
+        public static bool IsNetworkRacePickActive => IsNetworked && NetworkRacePickState.Instance != null;
+
+        public static event Action NetworkRacePickChanged;
+
+        internal static void NotifyRacePickChanged() => NetworkRacePickChanged?.Invoke();
+
+        public static void EnsureRacePickSession(int playerCount) =>
+            NetworkRacePickState.Instance?.EnsureSession(playerCount);
+
+        public static void RequestRacePick(string raceId) =>
+            NetworkRacePickState.Instance?.RequestPick(raceId);
+
+        public static bool HasRacePick(int slot) =>
+            NetworkRacePickState.Instance?.HasPick(slot) ?? false;
+
+        public static bool NetworkMatchSimStarted =>
+            NetworkRacePickState.Instance?.MatchSimStarted ?? false;
+
         public static MatchSetup ToMatchSetup()
         {
             var state = NetworkLobbyState.Instance;

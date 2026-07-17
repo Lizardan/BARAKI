@@ -23,12 +23,29 @@
                         <ui:Button name="ReadyButton" text="ГОТОВ" class="ui-btn ui-btn--primary" />
                         <ui:Button name="FillLocalButton" text="ЗАПОЛНИТЬ СЛОТЫ (ЛОКАЛЬНО)" class="ui-btn" />
                         <ui:Button name="StartButton" text="СТАРТ" class="ui-btn ui-btn--primary" />
+                        <ui:Button name="InviteFriendsButton" text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="ui-btn" />
                         <ui:Button name="BackButton" text="НАЗАД" class="ui-btn ui-btn--muted" />
                         <ui:VisualElement class="ui-hints">
                             <ui:Label text="Старт — когда все готовы" class="ui-hints__text" />
                             <ui:Label text="Esc — назад" class="ui-hints__text" />
                         </ui:VisualElement>
                     </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="FriendsInviteOverlay" class="ui-overlay ui-overlay--hidden">
+            <ui:VisualElement class="ui-overlay__dim" />
+            <ui:VisualElement class="ui-dialog mm-friends-invite">
+                <ui:VisualElement class="ui-dialog__header mm-modes__header">
+                    <ui:Label text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="ui-dialog__title" />
+                    <ui:Button name="FriendsInviteCloseButton" text="✕" class="ui-dialog__close" />
+                </ui:VisualElement>
+                <ui:VisualElement class="ui-dialog__body mm-friends-invite__body">
+                    <ui:ScrollView name="LobbyFriendsScroll" class="mm__friends-scroll" mode="Vertical">
+                        <ui:VisualElement name="LobbyFriendsListContainer" class="mm__friends-list-container" />
+                    </ui:ScrollView>
+                    <ui:Label name="LobbyFriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

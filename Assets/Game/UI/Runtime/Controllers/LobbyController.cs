@@ -3,6 +3,7 @@ using Game.Core;
 using Game.Gameplay.Networking;
 using Game.UI.Bindings;
 using Game.UI.ViewModels;
+using Game.UI.Views;
 using UniRx;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,6 +22,7 @@ namespace Game.UI.Controllers
         }
 
         private const float FadeDuration = 0.35f;
+        private const string OverlayHiddenClass = "ui-overlay--hidden";
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -33,7 +35,13 @@ namespace Game.UI.Controllers
         private Button _readyButton;
         private Button _fillLocalButton;
         private Button _startButton;
+        private Button _inviteFriendsButton;
         private Button _backButton;
+        private VisualElement _friendsInviteOverlay;
+        private Button _friendsInviteCloseButton;
+        private VisualElement _lobbyFriendsListContainer;
+        private Label _lobbyFriendsErrorLabel;
+        private FriendsHubPanel _friendsHubPanel;
         private LobbyViewModel _viewModel;
         private UIBindingScope _bindingScope;
         private bool _isTransitioning;
@@ -59,7 +67,24 @@ namespace Game.UI.Controllers
             _readyButton = _root.Q<Button>("ReadyButton");
             _fillLocalButton = _root.Q<Button>("FillLocalButton");
             _startButton = _root.Q<Button>("StartButton");
+            _inviteFriendsButton = _root.Q<Button>("InviteFriendsButton");
             _backButton = _root.Q<Button>("BackButton");
+            _friendsInviteOverlay = _root.Q<VisualElement>("FriendsInviteOverlay");
+            _friendsInviteCloseButton = _root.Q<Button>("FriendsInviteCloseButton");
+            _lobbyFriendsListContainer = _root.Q<VisualElement>("LobbyFriendsListContainer");
+            _lobbyFriendsErrorLabel = _root.Q<Label>("LobbyFriendsErrorLabel");
+
+            _friendsHubPanel = new FriendsHubPanel(
+                FriendsHubPanelMode.InviteOnly,
+                _lobbyFriendsListContainer,
+                null,
+                null,
+                null,
+                null,
+                null,
+                _lobbyFriendsErrorLabel,
+                null);
+            _friendsHubPanel.Bind();
 
             _bindingScope = new UIBindingScope(_root);
             if (_startButton != null)
@@ -83,12 +108,23 @@ namespace Game.UI.Controllers
             {
                 _fillLocalButton.clicked += OnFillLocalClicked;
             }
+
+            if (_inviteFriendsButton != null)
+            {
+                _inviteFriendsButton.clicked += OnInviteFriendsClicked;
+            }
+
+            if (_friendsInviteCloseButton != null)
+            {
+                _friendsInviteCloseButton.clicked += CloseFriendsInviteOverlay;
+            }
         }
 
         private void OnEnable()
         {
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
             RefreshLobbyUi();
+            InitializeFriendsHubAsync().Forget();
         }
 
         private void OnDisable()
@@ -108,7 +144,18 @@ namespace Game.UI.Controllers
                 _fillLocalButton.clicked -= OnFillLocalClicked;
             }
 
+            if (_inviteFriendsButton != null)
+            {
+                _inviteFriendsButton.clicked -= OnInviteFriendsClicked;
+            }
+
+            if (_friendsInviteCloseButton != null)
+            {
+                _friendsInviteCloseButton.clicked -= CloseFriendsInviteOverlay;
+            }
+
             _bindingScope?.Dispose();
+            _friendsHubPanel?.Dispose();
         }
 
         private void Update()
@@ -163,8 +210,51 @@ namespace Game.UI.Controllers
             else if (evt.keyCode == KeyCode.Escape)
             {
                 evt.StopPropagation();
-                OnBack();
+                if (_friendsInviteOverlay != null
+                    && !_friendsInviteOverlay.ClassListContains(OverlayHiddenClass))
+                {
+                    CloseFriendsInviteOverlay();
+                }
+                else
+                {
+                    OnBack();
+                }
             }
+        }
+
+        private async UniTaskVoid InitializeFriendsHubAsync()
+        {
+            try
+            {
+                await FriendsHubService.InitializeAsync();
+                var lobbyCode = MatchNetworkSession.RoomCode;
+                if (!string.IsNullOrWhiteSpace(lobbyCode))
+                {
+                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, lobbyCode);
+                }
+
+                _friendsHubPanel?.Refresh();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Lobby friends init skipped: {ex.Message}");
+            }
+        }
+
+        private void OnInviteFriendsClicked()
+        {
+            if (_friendsInviteOverlay == null || _isTransitioning)
+            {
+                return;
+            }
+
+            _friendsHubPanel?.Refresh();
+            _friendsInviteOverlay.RemoveFromClassList(OverlayHiddenClass);
+        }
+
+        private void CloseFriendsInviteOverlay()
+        {
+            _friendsInviteOverlay?.AddToClassList(OverlayHiddenClass);
         }
 
         private void OnReadyClicked()
@@ -253,6 +343,15 @@ namespace Game.UI.Controllers
                 MatchNetworkSession.Shutdown();
             }
 
+            try
+            {
+                FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInLauncher).Forget();
+            }
+            catch (System.Exception)
+            {
+                // Presence optional for LocalDev.
+            }
+
             LoadSceneAsync(GameSceneNames.MainMenu, this.GetCancellationTokenOnDestroy()).Forget();
         }
 
@@ -306,6 +405,7 @@ namespace Game.UI.Controllers
             }
 
             _startButton?.SetEnabled(isHost && LobbyReadyRules.CanHostStart(lobby) && !lobby.MatchStarted);
+            _inviteFriendsButton?.SetEnabled(!lobby.MatchStarted);
 
             RebuildSlotList(lobby);
         }
@@ -337,6 +437,7 @@ namespace Game.UI.Controllers
                 _startButton?.SetEnabled(false);
                 _readyButton?.SetEnabled(false);
                 _fillLocalButton?.SetEnabled(false);
+                _inviteFriendsButton?.SetEnabled(false);
                 _slotList?.Clear();
                 return;
             }
@@ -370,6 +471,7 @@ namespace Game.UI.Controllers
             }
 
             _startButton?.SetEnabled(MatchNetworkSession.CanLocalStart);
+            _inviteFriendsButton?.SetEnabled(!matchStarted);
             RebuildSlotList(_networkLobbySlots);
         }
 

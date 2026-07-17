@@ -102,6 +102,8 @@ namespace Game.Gameplay.Networking
             return new LobbySlotInfo(slot.IsOccupied, slot.IsReady, slot.DisplayName.ToString());
         }
 
+        public int FindClientSlot(ulong clientId) => FindSlotByClientId(clientId);
+
         public MatchSetup ToMatchSetup(int localSlot) =>
             new(PlayerCount, localSlot);
 
@@ -178,13 +180,17 @@ namespace Game.Gameplay.Networking
                 _slots.Add(default);
             }
 
-            // Dedicated / listen server: no phantom Host in slot 0 — first real client is host.
+            if (NetworkLobbySlotRules.ShouldSeatListenHostOnServerInit(NetworkManager.IsHost))
+            {
+                SeatListenHost();
+            }
+
             BumpRevision();
         }
 
         private void OnClientConnected(ulong clientId)
         {
-            if (clientId == NetworkManager.ServerClientId || FindSlotByClientId(clientId) >= 0)
+            if (FindSlotByClientId(clientId) >= 0)
             {
                 return;
             }
@@ -202,7 +208,7 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            OccupySlot(slot, clientId, $"Player {slot + 1}");
+            OccupySlot(slot, clientId, ResolveClientDisplayName(clientId));
             BumpRevision();
         }
 
@@ -268,6 +274,21 @@ namespace Game.Gameplay.Networking
             MatchNetworkBootstrap.Ensure().EnsureMatchAuthority();
         }
 
+        private void SeatListenHost()
+        {
+            if (NetworkManager == null
+                || !NetworkManager.IsHost
+                || _slots.Count == 0
+                || _slots[NetworkLobbySlotRules.HostSlot].IsOccupied)
+            {
+                return;
+            }
+
+            var displayName = ResolveClientDisplayName(NetworkManager.LocalClientId);
+            OccupySlot(NetworkLobbySlotRules.HostSlot, NetworkManager.LocalClientId, displayName);
+            MatchNetworkSession.LocalSlot = NetworkLobbySlotRules.HostSlot;
+        }
+
         private void OccupySlot(int slot, ulong clientId, string displayName)
         {
             _slots[slot] = new NetworkLobbySlot
@@ -277,6 +298,18 @@ namespace Game.Gameplay.Networking
                 IsReady = false,
                 DisplayName = new FixedString64Bytes(displayName),
             };
+        }
+
+        private static string ResolveClientDisplayName(ulong clientId)
+        {
+            if (NetworkManager.Singleton != null
+                && clientId == NetworkManager.Singleton.LocalClientId
+                && !string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName))
+            {
+                return PlayerProfileService.DisplayName;
+            }
+
+            return $"Player {clientId}";
         }
 
         private int FindSlotByClientId(ulong clientId)

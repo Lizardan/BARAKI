@@ -12,9 +12,7 @@
 .mm__profile-badge {
     flex-direction: row;
     align-items: flex-start;
-    height: 120px;
     min-height: 120px;
-    max-height: 120px;
     padding-left: 12px;
     padding-right: 14px;
     padding-top: 12px;
@@ -26,7 +24,8 @@
     border-bottom-width: 1px;
     border-color: rgba(201, 163, 90, 0.55);
     border-radius: 2px;
-    overflow: hidden;
+    overflow: visible;
+    align-self: flex-start;
 }
 
 .mm__avatar {
@@ -56,13 +55,35 @@
 
 .mm__profile-badge-text {
     flex-grow: 1;
+    flex-shrink: 0;
     flex-direction: column;
     justify-content: space-between;
     align-items: flex-start;
-    height: 96px;
+    min-height: 96px;
     padding-right: 4px;
     padding-top: 0;
     padding-bottom: 0;
+    overflow: visible;
+}
+
+.mm__profile-badge--copyable:hover {
+    border-color: rgba(201, 163, 90, 0.85);
+    background-color: rgba(36, 30, 24, 0.96);
+}
+
+.mm__profile-badge--copied {
+    border-color: rgb(201, 163, 90);
+    background-color: rgba(52, 40, 28, 0.98);
+}
+
+.mm__profile-name-row {
+    flex-direction: row;
+    align-items: flex-end;
+    flex-shrink: 0;
+    width: auto;
+    margin-top: -4px;
+    margin-bottom: 0;
+    overflow: visible;
 }
 
 .mm__profile-name {
@@ -70,10 +91,16 @@
     -unity-font-style: bold;
     color: rgb(242, 230, 200);
     letter-spacing: 1px;
-    margin-top: -4px;
+    margin-top: 0;
     margin-bottom: 0;
-    height: 34px;
-    -unity-text-align: upper-left;
+    padding: 0;
+    width: auto;
+    max-width: none;
+    -unity-text-align: lower-left;
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow: visible;
+    white-space: nowrap;
 }
 
 .mm__profile-stats {
@@ -301,6 +328,138 @@
     border-bottom-width: 1px;
     border-color: rgba(201, 163, 90, 0.25);
     border-radius: 2px;
+}
+
+.mm__friends-list-container {
+    flex-direction: column;
+}
+
+.mm__player-id-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.mm__player-id-label {
+    flex-grow: 1;
+    margin-right: 8px;
+    font-size: 11px;
+    white-space: normal;
+}
+
+.mm__player-id-copy {
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+.mm__incoming-requests {
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.mm__incoming-list {
+    flex-direction: column;
+}
+
+.mm__friend-row,
+.mm__friend-request-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-color: rgba(201, 163, 90, 0.15);
+}
+
+.mm__friend-row__text,
+.mm__friend-request-row__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 8px;
+    font-size: 12px;
+    color: rgba(210, 196, 160, 0.92);
+    white-space: normal;
+}
+
+.mm__friend-row__actions {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.mm__friend-row__btn {
+    height: 26px;
+    min-width: 52px;
+    margin-left: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+.mm__friends-outgoing {
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: rgba(168, 152, 120, 0.85);
+}
+
+.mm__friends-error {
+    min-height: 16px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: rgba(201, 163, 90, 0.95);
+    white-space: normal;
+}
+
+.mm__invite-banner {
+    position: absolute;
+    left: 50%;
+    bottom: 72px;
+    translate: -50% 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+    background-color: rgba(28, 23, 18, 0.96);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.65);
+    border-radius: 2px;
+    max-width: 92%;
+}
+
+.mm__invite-banner__text {
+    flex-grow: 1;
+    margin-right: 10px;
+    font-size: 13px;
+    color: rgb(242, 230, 200);
+    white-space: normal;
+}
+
+.mm__invite-banner__btn {
+    height: 32px;
+    margin-right: 6px;
+}
+
+.mm__invite-banner__dismiss {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.mm-friends-invite {
+    width: 420px;
+    max-width: 94%;
+}
+
+.mm-friends-invite__body {
+    flex-direction: column;
+    min-height: 220px;
 }
 
 .mm__friends-list {

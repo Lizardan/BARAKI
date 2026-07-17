@@ -47,6 +47,12 @@ namespace Game.Gameplay.Networking
         static int s_avatarId;
         static bool s_loaded;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetForPlaySession()
+        {
+            s_loaded = false;
+        }
+
         public static string DisplayName => s_displayName;
         public static int Rank => s_rank;
         public static int Points => s_points;
@@ -65,17 +71,53 @@ namespace Game.Gameplay.Networking
         public static int ClampAvatarId(int avatarId) =>
             Mathf.Clamp(avatarId, 0, AvatarCount - 1);
 
+        /// <summary>Loads cached profile from PlayerPrefs without UGS.</summary>
+        public static void PrimeFromLocalPrefs()
+        {
+            LoadLocalPrefs();
+        }
+
         public static async UniTask LoadAsync()
         {
             LoadLocalPrefs();
-            await UnityServicesBootstrap.EnsureInitializedAsync();
+            UnityServicesBootstrap.PrimeCachedPlayerNameFromPrefs();
+
             try
             {
-                var data = await CloudSaveService.Instance.Data.Player.LoadAsync(
-                    new HashSet<string>
-                    {
-                        KeyDisplayName, KeyRank, KeyPoints, KeyWins, KeyLosses, KeyMatches, KeyAvatarId,
-                    });
+                await UnityServicesBootstrap.EnsureInitializedAsync();
+            }
+            catch (Exception initEx)
+            {
+                Debug.LogWarning($"PlayerProfileService.LoadAsync UGS init: {initEx.Message}");
+            }
+
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                s_loaded = true;
+                return;
+            }
+
+            try
+            {
+                const float cloudTimeoutSec = 5f;
+                var keys = new HashSet<string>
+                {
+                    KeyDisplayName, KeyRank, KeyPoints, KeyWins, KeyLosses, KeyMatches, KeyAvatarId,
+                };
+                var loadTask = CloudSaveService.Instance.Data.Player.LoadAsync(keys).AsUniTask();
+                var (hasCloudData, cloudData) = await UniTask.WhenAny(
+                    loadTask,
+                    UniTask.Delay(TimeSpan.FromSeconds(cloudTimeoutSec), ignoreTimeScale: true));
+
+                if (!hasCloudData)
+                {
+                    Debug.LogWarning(
+                        $"PlayerProfileService.LoadAsync: cloud save timed out after {cloudTimeoutSec:0}s, using local profile.");
+                    s_loaded = true;
+                    return;
+                }
+
+                var data = cloudData;
 
                 if (data.TryGetValue(KeyDisplayName, out var nameItem))
                 {
@@ -161,6 +203,14 @@ namespace Game.Gameplay.Networking
                     { KeyAvatarId, s_avatarId },
                 };
                 await CloudSaveService.Instance.Data.Player.SaveAsync(payload);
+                try
+                {
+                    await UnityServicesBootstrap.TrySyncPlayerNameFromDisplayNameAsync(s_displayName);
+                }
+                catch (Exception nameEx)
+                {
+                    Debug.LogWarning($"PlayerProfileService.SaveAsync UGS name sync skipped: {nameEx.Message}");
+                }
             }
             catch (Exception ex)
             {

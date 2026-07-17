@@ -7,14 +7,16 @@
         <ui:VisualElement class="ui-vignette" picking-mode="Ignore" />
 
         <ui:VisualElement name="ProfileBlock" class="mm__profile-block" picking-mode="Position">
-            <ui:VisualElement name="ProfileBadge" class="mm__profile-badge" picking-mode="Ignore">
-                <ui:VisualElement name="ProfileAvatar" class="mm__avatar">
-                    <ui:Label name="ProfileAvatarLabel" text="?" class="mm__avatar-text" />
+            <ui:VisualElement name="ProfileBadge" class="mm__profile-badge mm__profile-badge--copyable" picking-mode="Position">
+                <ui:VisualElement name="ProfileAvatar" class="mm__avatar" picking-mode="Ignore">
+                    <ui:Label name="ProfileAvatarLabel" text="?" class="mm__avatar-text" picking-mode="Ignore" />
                 </ui:VisualElement>
-                <ui:VisualElement class="mm__profile-badge-text">
-                    <ui:Label name="ProfileNameLabel" text="Игрок" class="mm__profile-name" />
-                    <ui:Label name="ProfileStatsLabel" text="Ранг — · Очки —" class="mm__profile-stats" />
-                    <ui:Label name="ProfileRecordLabel" text="Матчи — · Победы — · Поражения —" class="mm__profile-stats mm__profile-stats--bottom" />
+                <ui:VisualElement class="mm__profile-badge-text" picking-mode="Ignore">
+                    <ui:VisualElement name="ProfileNameRow" class="mm__profile-name-row" picking-mode="Ignore">
+                        <ui:Label name="ProfileNameLabel" text="Игрок" class="mm__profile-name" enable-rich-text="true" picking-mode="Ignore" />
+                    </ui:VisualElement>
+                    <ui:Label name="ProfileStatsLabel" text="Ранг — · Очки —" class="mm__profile-stats" picking-mode="Ignore" />
+                    <ui:Label name="ProfileRecordLabel" text="Матчи — · Победы — · Поражения —" class="mm__profile-stats mm__profile-stats--bottom" picking-mode="Ignore" />
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Button name="EditProfileButton" text="РЕДАКТИРОВАТЬ" class="mm__profile-edit-btn" />
@@ -56,12 +58,17 @@
                         <ui:Label text="ДРУЗЬЯ" class="ui-panel__header-text" />
                         <ui:Label name="FriendsCountLabel" text="0" class="mm__friends-count" />
                     </ui:VisualElement>
+                    <ui:VisualElement name="IncomingRequestsSection" class="mm__incoming-requests ui-overlay--hidden">
+                        <ui:Label text="Входящие запросы" class="ui-label mm__friends-add-label" />
+                        <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
+                    </ui:VisualElement>
                     <ui:ScrollView name="FriendsScroll" class="mm__friends-scroll" mode="Vertical">
-                        <ui:Label name="FriendsListLabel" text="Нет друзей онлайн" class="ui-meta mm__friends-list" />
+                        <ui:VisualElement name="FriendsListContainer" class="mm__friends-list-container" />
                     </ui:ScrollView>
-                    <ui:VisualElement class="mm__friends-add">
-                        <ui:Label text="Добавить по Player ID" class="ui-label mm__friends-add-label" />
-                        <ui:TextField name="FriendIdField" class="mm-join__field" max-length="64" />
+                    <ui:Label name="FriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
+                    <ui:VisualElement name="AddFriendSection" class="mm__friends-add">
+                        <ui:Label text="Добавить по имени (Ник#1234)" class="ui-label mm__friends-add-label" />
+                        <ui:TextField name="FriendIdField" class="mm-join__field" max-length="32" />
                         <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
                     </ui:VisualElement>
                     <ui:VisualElement name="HubLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
@@ -146,6 +153,12 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="LobbyInviteBanner" class="mm__invite-banner ui-overlay--hidden">
+            <ui:Label name="LobbyInviteBannerLabel" text="" class="mm__invite-banner__text" />
+            <ui:Button name="LobbyInviteJoinButton" text="ВОЙТИ" class="ui-btn ui-btn--primary mm__invite-banner__btn" />
+            <ui:Button name="LobbyInviteDismissButton" text="✕" class="ui-btn mm__invite-banner__dismiss" />
         </ui:VisualElement>
 
         <ui:VisualElement name="ModeSelectOverlay" class="ui-overlay ui-overlay--hidden">

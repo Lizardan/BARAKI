@@ -7,6 +7,7 @@ using Game.UI;
 using Game.UI.Animations;
 using Game.UI.Bindings;
 using Game.UI.ViewModels;
+using Game.UI.Views;
 using UniRx;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -72,8 +73,19 @@ namespace Game.UI.Controllers
         private Label _profileRecordLabel;
         private Label _profileAvatarLabel;
         private VisualElement _profileAvatar;
-        private Label _friendsListLabel;
+        private VisualElement _profileBadge;
         private Label _friendsCountLabel;
+        private Label _friendsErrorLabel;
+        private VisualElement _incomingRequestsSection;
+        private VisualElement _incomingRequestsList;
+        private VisualElement _friendsListContainer;
+        private VisualElement _addFriendSection;
+        private VisualElement _lobbyInviteBanner;
+        private Label _lobbyInviteBannerLabel;
+        private Button _lobbyInviteJoinButton;
+        private Button _lobbyInviteDismissButton;
+        private FriendsHubPanel _friendsHubPanel;
+        private string _pendingLobbyInviteCode;
         private Label _updateStatusLabel;
         private Label _versionLabel;
         private Label _versionArrowLabel;
@@ -116,6 +128,11 @@ namespace Game.UI.Controllers
 
         private void Awake()
         {
+            // Start UGS auth while UI binds — shaves ~5–9s off perceived hub load.
+            PlayerProfileService.PrimeFromLocalPrefs();
+            UnityServicesBootstrap.PrimeCachedPlayerNameFromPrefs();
+            UnityServicesBootstrap.EnsureInitializedAsync().Forget();
+
             if (_uiDocument == null)
             {
                 TryGetComponent(out _uiDocument);
@@ -146,17 +163,22 @@ namespace Game.UI.Controllers
             _profileRecordLabel = _root.Q<Label>("ProfileRecordLabel");
             _profileAvatarLabel = _root.Q<Label>("ProfileAvatarLabel");
             _profileAvatar = _root.Q<VisualElement>("ProfileAvatar");
-            var profileBadge = _root.Q<VisualElement>("ProfileBadge");
-            if (profileBadge != null)
+            _profileBadge = _root.Q<VisualElement>("ProfileBadge");
+            if (_profileBadge != null)
             {
-                // Keep avatar insets equal: 12px padding + 96px avatar.
-                profileBadge.style.height = 120;
-                profileBadge.style.minHeight = 120;
-                profileBadge.style.maxHeight = 120;
+                _profileBadge.style.minHeight = 120;
             }
 
-            _friendsListLabel = _root.Q<Label>("FriendsListLabel");
             _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
+            _friendsErrorLabel = _root.Q<Label>("FriendsErrorLabel");
+            _incomingRequestsSection = _root.Q<VisualElement>("IncomingRequestsSection");
+            _incomingRequestsList = _root.Q<VisualElement>("IncomingRequestsList");
+            _friendsListContainer = _root.Q<VisualElement>("FriendsListContainer");
+            _addFriendSection = _root.Q<VisualElement>("AddFriendSection");
+            _lobbyInviteBanner = _root.Q<VisualElement>("LobbyInviteBanner");
+            _lobbyInviteBannerLabel = _root.Q<Label>("LobbyInviteBannerLabel");
+            _lobbyInviteJoinButton = _root.Q<Button>("LobbyInviteJoinButton");
+            _lobbyInviteDismissButton = _root.Q<Button>("LobbyInviteDismissButton");
             _updateStatusLabel = _root.Q<Label>("UpdateStatusLabel");
             _versionLabel = _root.Q<Label>("VersionLabel");
             _versionArrowLabel = _root.Q<Label>("VersionArrowLabel");
@@ -176,6 +198,8 @@ namespace Game.UI.Controllers
             _profileEditCloseButton = _root.Q<Button>("ProfileEditCloseButton");
             _addFriendButton = _root.Q<Button>("AddFriendButton");
             BindLoadingOverlays();
+            BindFriendsHubPanel();
+            BindLobbyInviteBanner();
 
             ApplyVersionStrip(updateAvailable: false, remoteVersion: null, downloading: false, progress01: 0f);
 
@@ -290,6 +314,9 @@ namespace Game.UI.Controllers
             }
 
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
+            FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
+            UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
+            _profileBadge?.RegisterCallback<ClickEvent>(OnProfileBadgeClicked);
             var cancellationToken = this.GetCancellationTokenOnDestroy();
             PlayIntroAsync(cancellationToken).Forget();
             RestoreIntroIfStalledAsync(cancellationToken).Forget();
@@ -298,6 +325,8 @@ namespace Game.UI.Controllers
         private void OnDisable()
         {
             _root?.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+            FriendsHubService.LobbyInviteReceived -= OnLobbyInviteReceived;
+            UnityServicesBootstrap.PlayerNameChanged -= OnPlayerNameChanged;
             if (_settingsButton != null)
             {
                 _settingsButton.clicked -= OnSettingsOpen;
@@ -307,6 +336,8 @@ namespace Game.UI.Controllers
             {
                 _settingsCloseButton.clicked -= OnSettingsClose;
             }
+
+            _profileBadge?.UnregisterCallback<ClickEvent>(OnProfileBadgeClicked);
         }
 
         private void OnDestroy()
@@ -314,6 +345,7 @@ namespace Game.UI.Controllers
             _bindingScope?.Dispose();
             _profileLoadingOverlay?.Dispose();
             _friendsLoadingOverlay?.Dispose();
+            _friendsHubPanel?.Dispose();
         }
 
         private async UniTask PlayIntroAsync(System.Threading.CancellationToken cancellationToken)
@@ -636,11 +668,6 @@ namespace Game.UI.Controllers
                 _saveProfileButton.clicked += () => SaveProfileAsync().Forget();
             }
 
-            if (_addFriendButton != null)
-            {
-                _addFriendButton.clicked += () => AddFriendAsync().Forget();
-            }
-
             if (_versionUpdateButton != null)
             {
                 _versionUpdateButton.clicked += () => ApplyUpdateAsync().Forget();
@@ -809,30 +836,31 @@ namespace Game.UI.Controllers
                 // Hub social needs UGS; LocalDev Editor path skips gracefully.
                 try
                 {
-                    try
-                    {
-                        await PlayerProfileService.LoadAsync();
-                        RefreshProfileLabels();
-                    }
-                    finally
-                    {
-                        SetProfileLoadingVisible(false);
-                    }
+                    await UnityServicesBootstrap.EnsureInitializedAsync();
+                    await RefreshProfilePlayerNameAsync();
+                    RefreshProfileLabels();
+                    // Local + auth name are enough to drop the profile spinner; Cloud Save can finish in parallel.
+                    SetProfileLoadingVisible(false);
 
-                    try
-                    {
-                        await FriendsHubService.InitializeAsync();
-                        await FriendsHubService.SetPresenceAsync("InLauncher");
-                        RefreshFriendsLabel();
-                    }
-                    finally
-                    {
-                        SetFriendsLoadingVisible(false);
-                    }
+                    var profileTask = LoadProfileCloudPhaseAsync();
+                    var friendsTask = LoadFriendsPhaseAsync();
+                    await UniTask.WhenAll(profileTask, friendsTask);
+                    // Friends panel already refreshed via HubChanged from InitializeAsync.
+                    RefreshProfileLabels();
                 }
                 catch (System.Exception socialEx)
                 {
                     Debug.LogWarning($"Hub social init skipped: {socialEx.Message}");
+                    RefreshProfileLabels();
+                    SetProfileLoadingVisible(false);
+                    SetFriendsLoadingVisible(false);
+                    if (UnityServicesBootstrap.IsReady)
+                    {
+                        var profileTask = LoadProfileCloudPhaseAsync();
+                        var friendsTask = LoadFriendsPhaseAsync();
+                        await UniTask.WhenAll(profileTask, friendsTask);
+                        RefreshProfileLabels();
+                    }
                 }
             }
             catch (System.Exception ex)
@@ -845,6 +873,263 @@ namespace Game.UI.Controllers
                 SetProfileLoadingVisible(false);
                 SetFriendsLoadingVisible(false);
             }
+
+            if (this == null)
+            {
+                return;
+            }
+
+            ScheduleProfileNameRetryAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private async UniTask LoadProfileCloudPhaseAsync()
+        {
+            try
+            {
+                await PlayerProfileService.LoadAsync();
+                // Name already resolved after auth — only refresh labels for cloud rank/points/avatar.
+                RefreshProfileLabels();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Profile cloud phase skipped: {ex.Message}");
+            }
+            finally
+            {
+                SetProfileLoadingVisible(false);
+            }
+        }
+
+        private async UniTask LoadFriendsPhaseAsync()
+        {
+            try
+            {
+                if (!UnityServicesBootstrap.IsReady)
+                {
+                    if (_friendsErrorLabel != null
+                        && !string.IsNullOrEmpty(UnityServicesBootstrap.LastInitError))
+                    {
+                        _friendsErrorLabel.text =
+                            "Друзья недоступны: нет связи с Unity Auth. Суффикс #xxxx появится после входа.";
+                    }
+
+                    return;
+                }
+
+                await FriendsHubService.InitializeAsync();
+            }
+            catch (System.Exception friendsEx)
+            {
+                Debug.LogWarning($"Friends hub init skipped: {friendsEx.Message}");
+            }
+            finally
+            {
+                SetFriendsLoadingVisible(false);
+            }
+        }
+
+        private async UniTaskVoid ScheduleProfileNameRetryAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            if (FriendsHubRules.IsValidUgsPlayerName(UnityServicesBootstrap.PlayerName))
+            {
+                return;
+            }
+
+            var delaySec = UnityServicesBootstrap.GetRecommendedRetryDelaySeconds(2.5f);
+            await UniTask.Delay(
+                System.TimeSpan.FromSeconds(delaySec),
+                ignoreTimeScale: true,
+                cancellationToken: cancellationToken);
+            if (FriendsHubRules.IsValidUgsPlayerName(UnityServicesBootstrap.PlayerName))
+            {
+                return;
+            }
+
+            try
+            {
+                await RefreshProfilePlayerNameAsync();
+                RefreshProfileLabels();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Profile name retry skipped: {ex.Message}");
+            }
+        }
+
+        private void BindFriendsHubPanel()
+        {
+            _friendsHubPanel?.Dispose();
+            _friendsHubPanel = new FriendsHubPanel(
+                FriendsHubPanelMode.Full,
+                _friendsListContainer,
+                _incomingRequestsSection,
+                _incomingRequestsList,
+                _friendsCountLabel,
+                _friendIdField,
+                _addFriendButton,
+                _friendsErrorLabel,
+                _addFriendSection);
+            _friendsHubPanel.JoinLobbyRequested += OnJoinFriendLobbyRequested;
+            _friendsHubPanel.Bind();
+        }
+
+        private void OnPlayerNameChanged() => RefreshProfileLabels();
+
+        private async UniTask<string> RefreshProfilePlayerNameAsync()
+        {
+            try
+            {
+                await UnityServicesBootstrap.EnsureInitializedAsync();
+            }
+            catch (System.Exception initEx)
+            {
+                Debug.LogWarning($"UGS init for player name: {initEx.Message}");
+            }
+
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                var cached = UnityServicesBootstrap.PlayerName;
+                return cached;
+            }
+
+            try
+            {
+                var playerName = UnityServicesBootstrap.PlayerName;
+                if (!FriendsHubRules.IsValidUgsPlayerName(playerName))
+                {
+                    playerName = await UnityServicesBootstrap.EnsurePlayerNameAsync();
+                }
+
+                if (PlayerProfileService.IsLoaded
+                    && FriendsHubRules.ShouldSyncDisplayNameToUgs(playerName, PlayerProfileService.DisplayName))
+                {
+                    playerName = await UnityServicesBootstrap.TrySyncPlayerNameFromDisplayNameAsync(
+                        PlayerProfileService.DisplayName);
+                }
+
+                return playerName;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"UGS player name unavailable: {ex.Message}");
+                return UnityServicesBootstrap.PlayerName;
+            }
+        }
+
+        private void OnProfileBadgeClicked(ClickEvent evt)
+        {
+            evt.StopPropagation();
+            CopyProfileNameAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private async UniTask CopyProfileNameAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            try
+            {
+                var fullName = await RefreshProfilePlayerNameAsync();
+                var isValid = FriendsHubRules.IsValidUgsPlayerName(fullName);
+                if (!isValid)
+                {
+                    if (_friendsErrorLabel != null)
+                    {
+                        _friendsErrorLabel.text =
+                            "Имя для друзей ещё не готово. Сохраните профиль или проверьте UGS/сеть.";
+                    }
+
+                    return;
+                }
+
+                GUIUtility.systemCopyBuffer = fullName;
+                if (_friendsErrorLabel != null)
+                {
+                    _friendsErrorLabel.text = "Имя скопировано.";
+                }
+
+                await FlashProfileCopiedAsync(cancellationToken);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"CopyProfileNameAsync: {ex.Message}");
+            }
+        }
+
+        private async UniTask FlashProfileCopiedAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            if (_profileBadge == null)
+            {
+                return;
+            }
+
+            _profileBadge.AddToClassList("mm__profile-badge--copied");
+            await UniTask.Delay(
+                System.TimeSpan.FromSeconds(1.2f),
+                ignoreTimeScale: true,
+                cancellationToken: cancellationToken);
+            _profileBadge.RemoveFromClassList("mm__profile-badge--copied");
+        }
+
+        private void BindLobbyInviteBanner()
+        {
+            if (_lobbyInviteJoinButton != null)
+            {
+                _lobbyInviteJoinButton.clicked += OnLobbyInviteJoinClicked;
+            }
+
+            if (_lobbyInviteDismissButton != null)
+            {
+                _lobbyInviteDismissButton.clicked += DismissLobbyInviteBanner;
+            }
+        }
+
+        private void OnJoinFriendLobbyRequested(string lobbyCode)
+        {
+            if (_isTransitioning || string.IsNullOrWhiteSpace(lobbyCode))
+            {
+                return;
+            }
+
+            OpenMatchEntry();
+            _joinCodeRow?.RemoveFromClassList(OverlayHiddenClass);
+            if (_joinCodeField != null)
+            {
+                _joinCodeField.value = lobbyCode;
+            }
+
+            JoinMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        private void OnLobbyInviteReceived(FriendsLobbyInvite invite)
+        {
+            _pendingLobbyInviteCode = invite.LobbyCode;
+            if (_lobbyInviteBannerLabel != null)
+            {
+                var sender = string.IsNullOrWhiteSpace(invite.SenderName)
+                    ? FriendsHubRules.ShortPlayerId(invite.SenderPlayerId)
+                    : invite.SenderName;
+                _lobbyInviteBannerLabel.text =
+                    $"{sender} приглашает в лобби · {invite.LobbyCode}";
+            }
+
+            _lobbyInviteBanner?.RemoveFromClassList(OverlayHiddenClass);
+        }
+
+        private void OnLobbyInviteJoinClicked()
+        {
+            if (string.IsNullOrWhiteSpace(_pendingLobbyInviteCode))
+            {
+                DismissLobbyInviteBanner();
+                return;
+            }
+
+            var code = _pendingLobbyInviteCode;
+            DismissLobbyInviteBanner();
+            OnJoinFriendLobbyRequested(code);
+        }
+
+        private void DismissLobbyInviteBanner()
+        {
+            _pendingLobbyInviteCode = null;
+            _lobbyInviteBanner?.AddToClassList(OverlayHiddenClass);
         }
 
         private void BindLoadingOverlays()
@@ -907,14 +1192,14 @@ namespace Game.UI.Controllers
 
         private void RefreshProfileLabels()
         {
-            var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
-                ? "Игрок"
-                : PlayerProfileService.DisplayName;
+            var displayName = PlayerProfileService.DisplayName;
+            var ugsName = UnityServicesBootstrap.PlayerName;
             var avatarId = PlayerProfileService.AvatarId;
 
             if (_profileNameLabel != null)
             {
-                _profileNameLabel.text = displayName;
+                _profileNameLabel.enableRichText = true;
+                _profileNameLabel.text = FriendsHubRules.FormatProfileNameRichText(displayName, ugsName);
             }
 
             if (_profileStatsLabel != null)
@@ -948,41 +1233,30 @@ namespace Game.UI.Controllers
             RefreshAvatarSelectionUi();
         }
 
-        private void RefreshFriendsLabel()
-        {
-            var friends = FriendsHubService.GetFriendsSnapshot();
-            if (_friendsCountLabel != null)
-            {
-                _friendsCountLabel.text = friends.Count.ToString();
-            }
-
-            if (_friendsListLabel == null)
-            {
-                return;
-            }
-
-            if (friends.Count == 0)
-            {
-                _friendsListLabel.text = "Нет друзей. Добавьте по Player ID.";
-                return;
-            }
-
-            var lines = new List<string>(friends.Count);
-            foreach (var friend in friends)
-            {
-                lines.Add($"{friend.Name}: {friend.Status}");
-            }
-
-            _friendsListLabel.text = string.Join("\n", lines);
-        }
-
         private async UniTaskVoid SaveProfileAsync()
         {
+            if (_profileEditErrorLabel != null)
+            {
+                _profileEditErrorLabel.text = string.Empty;
+            }
+
             try
             {
                 var name = _displayNameField?.value ?? "Player";
                 await PlayerProfileService.SaveProfileAsync(name, _pendingAvatarId);
                 RefreshProfileLabels();
+
+                try
+                {
+                    await RefreshProfilePlayerNameAsync();
+                }
+                catch (System.Exception nameEx)
+                {
+                    Debug.LogWarning($"SaveProfileAsync UGS name sync: {nameEx.Message}");
+                }
+
+                RefreshProfileLabels();
+                _friendsHubPanel?.Refresh();
                 CloseProfileEdit();
             }
             catch (System.Exception ex)
@@ -992,25 +1266,6 @@ namespace Game.UI.Controllers
                 {
                     _profileEditErrorLabel.text = "Не удалось сохранить профиль.";
                 }
-            }
-        }
-
-        private async UniTaskVoid AddFriendAsync()
-        {
-            try
-            {
-                var id = _friendIdField?.value?.Trim();
-                if (string.IsNullOrEmpty(id))
-                {
-                    return;
-                }
-
-                await FriendsHubService.SendFriendRequestByIdAsync(id);
-                RefreshFriendsLabel();
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"AddFriendAsync: {ex.Message}");
             }
         }
 
@@ -1363,7 +1618,7 @@ namespace Game.UI.Controllers
 
                 try
                 {
-                    await FriendsHubService.SetPresenceAsync("InGame", handle.RoomCode);
+                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, handle.RoomCode);
                 }
                 catch (System.Exception)
                 {
@@ -1413,7 +1668,7 @@ namespace Game.UI.Controllers
 
                 try
                 {
-                    await FriendsHubService.SetPresenceAsync("InGame", handle.RoomCode);
+                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, handle.RoomCode);
                 }
                 catch (System.Exception)
                 {
@@ -1479,8 +1734,7 @@ namespace Game.UI.Controllers
             _settingsButton?.SetEnabled(menuEnabled);
             _quitButton?.SetEnabled(menuEnabled);
             _editProfileButton?.SetEnabled(menuEnabled && !profileLoading);
-            _addFriendButton?.SetEnabled(menuEnabled && !friendsLoading);
-            _friendIdField?.SetEnabled(menuEnabled && !friendsLoading);
+            _friendsHubPanel?.SetInteractable(menuEnabled && !friendsLoading);
             _versionUpdateButton?.SetEnabled(IsUpdateActionAvailable());
         }
 

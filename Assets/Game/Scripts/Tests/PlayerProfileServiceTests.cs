@@ -1,5 +1,6 @@
 using Game.Gameplay.Networking;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Game.Tests
 {
@@ -12,6 +13,33 @@ namespace Game.Tests
             Assert.AreEqual(0, PlayerProfileService.ClampAvatarId(0));
             Assert.AreEqual(PlayerProfileService.AvatarCount - 1,
                 PlayerProfileService.ClampAvatarId(PlayerProfileService.AvatarCount + 5));
+        }
+
+        [Test]
+        public void PrimeFromLocalPrefs_LoadsDisplayNameWithoutCloud()
+        {
+            const string key = "baraki.profile.displayName";
+            var previous = PlayerPrefs.GetString(key, string.Empty);
+            try
+            {
+                PlayerPrefs.SetString(key, "Lizardan");
+                PlayerPrefs.Save();
+                PlayerProfileService.PrimeFromLocalPrefs();
+                Assert.AreEqual("Lizardan", PlayerProfileService.DisplayName);
+            }
+            finally
+            {
+                if (string.IsNullOrEmpty(previous))
+                {
+                    PlayerPrefs.DeleteKey(key);
+                }
+                else
+                {
+                    PlayerPrefs.SetString(key, previous);
+                }
+
+                PlayerPrefs.Save();
+            }
         }
 
         [Test]

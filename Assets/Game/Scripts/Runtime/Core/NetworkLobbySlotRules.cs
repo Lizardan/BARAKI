@@ -34,9 +34,15 @@ namespace Game.Core
         public static bool IsHostSlot(int slot) => slot == HostSlot;
 
         /// <summary>
-        /// Dedicated server leaves slots empty; first real client occupies HostSlot and may Start.
+        /// Listen-server host sits in HostSlot at server init. Dedicated server: first client
+        /// occupies HostSlot on connect and may Start when all slots are ready.
         /// </summary>
         public static bool CanDesignatedHostStart(int localSlot, bool matchStarted, bool lobbyReady) =>
             IsHostSlot(localSlot) && lobbyReady && !matchStarted;
+
+        /// <summary>
+        /// Host-as-server (StartAsHost): seat local client in HostSlot when lobby spawns.
+        /// </summary>
+        public static bool ShouldSeatListenHostOnServerInit(bool isHost) => isHost;
     }
 }

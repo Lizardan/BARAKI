@@ -44,5 +44,12 @@ namespace Game.Tests
 
             Assert.AreEqual(NetworkLobbySlotRules.HostSlot, NetworkLobbySlotRules.FindNextFreeSlot(occupied, 2));
         }
+
+        [TestCase(true, true)]
+        [TestCase(false, false)]
+        public void ShouldSeatListenHostOnServerInit_OnlyWhenHost(bool isHost, bool expected)
+        {
+            Assert.AreEqual(expected, NetworkLobbySlotRules.ShouldSeatListenHostOnServerInit(isHost));
+        }
     }
 }
