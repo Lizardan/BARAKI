@@ -46,17 +46,15 @@ namespace Game.Core
                 return false;
             }
 
-            // Search backward and forward in a window for browser_download_url.
-            var windowStart = Math.Max(0, nameIndex - 800);
-            var windowLength = Math.Min(1600, releaseJson.Length - windowStart);
-            var window = releaseJson.Substring(windowStart, windowLength);
+            // Real release JSON inserts a large "uploader" object between name and URL —
+            // search forward from the matched name (not a tiny fixed window).
             const string urlKey = "\"browser_download_url\":\"";
             var urlKeyAlt = "\"browser_download_url\": \"";
-            var urlIndex = window.IndexOf(urlKey, StringComparison.Ordinal);
+            var urlIndex = releaseJson.IndexOf(urlKey, nameIndex, StringComparison.Ordinal);
             var keyLen = urlKey.Length;
             if (urlIndex < 0)
             {
-                urlIndex = window.IndexOf(urlKeyAlt, StringComparison.Ordinal);
+                urlIndex = releaseJson.IndexOf(urlKeyAlt, nameIndex, StringComparison.Ordinal);
                 keyLen = urlKeyAlt.Length;
             }
 
@@ -66,14 +64,27 @@ namespace Game.Core
             }
 
             var start = urlIndex + keyLen;
-            var end = window.IndexOf('"', start);
+            var end = releaseJson.IndexOf('"', start);
             if (end <= start)
             {
                 return false;
             }
 
-            downloadUrl = window.Substring(start, end - start);
+            downloadUrl = releaseJson.Substring(start, end - start);
             return !string.IsNullOrWhiteSpace(downloadUrl);
+        }
+
+        /// <summary>GitHub Unicorn / 5xx pages often return HTML with HTTP 200.</summary>
+        public static bool LooksLikeHtmlErrorPage(string body)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return false;
+            }
+
+            var trimmed = body.TrimStart();
+            return trimmed.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)
+                   || trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool TryGetTagName(string releaseJson, out string tagName)

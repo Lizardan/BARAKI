@@ -21,10 +21,15 @@ namespace Game.Gameplay.Networking
         public static GameUpdateManifest RemoteManifest { get; private set; }
         public static bool UpdateRequired { get; private set; }
         public static bool CheckCompleted { get; private set; }
+        /// <summary>Set when the check finished without a usable remote manifest (network/API/parse).</summary>
+        public static bool CheckFailed { get; private set; }
+        public static string LastError { get; private set; }
 
         public static async UniTask RefreshAsync()
         {
             CheckCompleted = false;
+            CheckFailed = false;
+            LastError = null;
             UpdateRequired = false;
             RemoteManifest = null;
 
@@ -42,37 +47,49 @@ namespace Game.Gameplay.Networking
                 string manifestJson;
                 if (!string.IsNullOrWhiteSpace(overrideManifest))
                 {
-                    manifestJson = await GetTextAsync(overrideManifest.Trim());
+                    manifestJson = await GetTextAsync(overrideManifest.Trim(), githubApi: false);
                 }
                 else
                 {
-                    var releaseJson = await GetTextAsync(ResolveLatestApiUrl());
-                    if (!GitHubReleaseUpdateRules.TryGetAssetDownloadUrl(
-                            releaseJson,
-                            GitHubReleaseUpdateRules.ManifestAssetName,
-                            out var manifestUrl))
+                    var releaseJson = await GetTextAsync(ResolveLatestApiUrl(), githubApi: true);
+                    if (GitHubReleaseUpdateRules.LooksLikeHtmlErrorPage(releaseJson))
                     {
-                        // Fallback: build download URL from tag if version.json naming is stable.
-                        if (!GitHubReleaseUpdateRules.TryGetTagName(releaseJson, out var tag))
-                        {
-                            Debug.LogWarning("GameUpdateService: latest release missing tag/version.json");
-                            CheckCompleted = true;
-                            return;
-                        }
-
-                        manifestUrl = GitHubReleaseUpdateRules.ReleaseDownloadUrl(
-                            tag,
-                            GitHubReleaseUpdateRules.ManifestAssetName);
+                        throw new InvalidOperationException(
+                            "GitHub API returned an HTML error page (temporary outage).");
                     }
 
-                    manifestJson = await GetTextAsync(manifestUrl);
+                    // Prefer constructed download URL from tag — more reliable than scraping
+                    // browser_download_url around GitHub's huge uploader objects.
+                    if (!GitHubReleaseUpdateRules.TryGetTagName(releaseJson, out var tag))
+                    {
+                        throw new InvalidOperationException("Latest release JSON missing tag_name.");
+                    }
+
+                    var manifestUrl = GitHubReleaseUpdateRules.ReleaseDownloadUrl(
+                        tag,
+                        GitHubReleaseUpdateRules.ManifestAssetName);
+
+                    if (GitHubReleaseUpdateRules.TryGetAssetDownloadUrl(
+                            releaseJson,
+                            GitHubReleaseUpdateRules.ManifestAssetName,
+                            out var assetUrl)
+                        && !string.IsNullOrWhiteSpace(assetUrl))
+                    {
+                        manifestUrl = assetUrl;
+                    }
+
+                    manifestJson = await GetTextAsync(manifestUrl, githubApi: false);
+                }
+
+                if (GitHubReleaseUpdateRules.LooksLikeHtmlErrorPage(manifestJson))
+                {
+                    throw new InvalidOperationException(
+                        "version.json download returned an HTML error page.");
                 }
 
                 if (!GameUpdateManifestParser.TryParse(manifestJson, out var manifest))
                 {
-                    Debug.LogWarning("GameUpdateService: invalid version.json");
-                    CheckCompleted = true;
-                    return;
+                    throw new InvalidOperationException("Invalid version.json from release.");
                 }
 
                 RemoteManifest = manifest;
@@ -82,6 +99,8 @@ namespace Game.Gameplay.Networking
             }
             catch (Exception ex)
             {
+                CheckFailed = true;
+                LastError = ex.Message;
                 Debug.LogWarning($"GameUpdateService.RefreshAsync: {ex.Message}");
             }
             finally
@@ -107,7 +126,7 @@ namespace Game.Gameplay.Networking
             using (var req = UnityWebRequest.Get(RemoteManifest.url))
             {
                 req.downloadHandler = new DownloadHandlerFile(zipPath);
-                SetGitHubHeaders(req);
+                SetDownloadHeaders(req);
                 await req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success)
                 {
@@ -162,10 +181,18 @@ namespace Game.Gameplay.Networking
             return GitHubReleaseUpdateRules.LatestReleaseApiUrl();
         }
 
-        static async UniTask<string> GetTextAsync(string url)
+        static async UniTask<string> GetTextAsync(string url, bool githubApi)
         {
             using var req = UnityWebRequest.Get(url);
-            SetGitHubHeaders(req);
+            if (githubApi)
+            {
+                SetGitHubApiHeaders(req);
+            }
+            else
+            {
+                SetDownloadHeaders(req);
+            }
+
             await req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -176,11 +203,17 @@ namespace Game.Gameplay.Networking
             return req.downloadHandler.text;
         }
 
-        static void SetGitHubHeaders(UnityWebRequest req)
+        static void SetGitHubApiHeaders(UnityWebRequest req)
         {
-            // GitHub API requires a User-Agent.
             req.SetRequestHeader("User-Agent", "BARAKI-GameUpdate");
             req.SetRequestHeader("Accept", "application/vnd.github+json");
+        }
+
+        static void SetDownloadHeaders(UnityWebRequest req)
+        {
+            // Asset URLs are CDN/browser downloads — do not send GitHub API Accept.
+            req.SetRequestHeader("User-Agent", "BARAKI-GameUpdate");
+            req.SetRequestHeader("Accept", "*/*");
         }
 
         static string ComputeSha256Hex(string filePath)

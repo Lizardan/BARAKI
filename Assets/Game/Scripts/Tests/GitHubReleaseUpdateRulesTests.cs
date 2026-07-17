@@ -38,6 +38,36 @@ namespace Game.Tests
         }
 
         [Test]
+        public void TryGetAssetDownloadUrl_FindsManifest_WhenUploaderBlockIsLarge()
+        {
+            // Real GitHub assets put a huge "uploader" object between name and browser_download_url.
+            var padding = new string('x', 2000);
+            var releaseJson =
+                "{" +
+                "\"tag_name\":\"v0.1.1\"," +
+                "\"assets\":[{" +
+                "\"name\":\"version.json\"," +
+                "\"uploader\":{\"login\":\"" + padding + "\"}," +
+                "\"browser_download_url\":\"https://github.com/Lizardan/BARAKI/releases/download/v0.1.1/version.json\"" +
+                "}]}";
+
+            Assert.IsTrue(GitHubReleaseUpdateRules.TryGetAssetDownloadUrl(
+                releaseJson,
+                GitHubReleaseUpdateRules.ManifestAssetName,
+                out var url));
+            StringAssert.EndsWith("/version.json", url);
+        }
+
+        [Test]
+        public void LooksLikeHtmlErrorPage_DetectsUnicorn()
+        {
+            Assert.IsTrue(GitHubReleaseUpdateRules.LooksLikeHtmlErrorPage(
+                "<!DOCTYPE html><title>Unicorn! · GitHub</title>"));
+            Assert.IsFalse(GitHubReleaseUpdateRules.LooksLikeHtmlErrorPage(
+                "{\"tag_name\":\"v0.1.1\"}"));
+        }
+
+        [Test]
         public void LatestReleaseApiUrl_UsesDefaultRepo()
         {
             Assert.AreEqual(

@@ -746,9 +746,20 @@ namespace Game.UI.Controllers
 
                 if (_updateStatusLabel != null)
                 {
-                    _updateStatusLabel.text = _playBlockedByUpdate
-                        ? $"Доступна версия {GameUpdateService.RemoteManifest?.version}. Игра заблокирована."
-                        : string.Empty;
+                    if (_playBlockedByUpdate)
+                    {
+                        _updateStatusLabel.text =
+                            $"Доступна версия {GameUpdateService.RemoteManifest?.version}. Игра заблокирована.";
+                    }
+                    else if (GameUpdateService.CheckFailed)
+                    {
+                        _updateStatusLabel.text =
+                            "Не удалось проверить обновления (GitHub). Попробуйте позже.";
+                    }
+                    else
+                    {
+                        _updateStatusLabel.text = string.Empty;
+                    }
                 }
 
                 // Hub social needs UGS; LocalDev Editor path skips gracefully.
