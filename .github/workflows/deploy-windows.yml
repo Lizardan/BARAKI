@@ -2,6 +2,9 @@ name: Deploy Windows (auto release)
 
 # Push to main → auto patch bump → GitHub Release (zip + version.json).
 # Secrets: UNITY_LICENSE (or UNITY_EMAIL / UNITY_PASSWORD / UNITY_SERIAL)
+#
+# Build and release are separate jobs so a GitHub API blip can re-run
+# only the release step without rebuilding Unity.
 
 on:
   push:
@@ -33,17 +36,20 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
-    name: Build Windows + GitHub Release
+  build:
+    name: Build Windows
     runs-on: windows-latest
     timeout-minutes: 180
-    # Avoid release loops from bots / doc-only if filter missed
     if: >
       github.event_name == 'workflow_dispatch' ||
       !contains(github.event.head_commit.message, '[skip release]')
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      zip: ${{ steps.zip.outputs.zip }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
           fetch-depth: 0
@@ -85,7 +91,7 @@ jobs:
           echo "Resolved next release: ${TAG} (bump=${BUMP}, previous=${LATEST:-none})"
 
       - name: Cache Library
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: Library
           key: Library-Win64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
@@ -94,7 +100,7 @@ jobs:
             Library-
 
       - name: Build Windows x64
-        uses: game-ci/unity-builder@v4
+        uses: game-ci/unity-builder@v5
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -132,16 +138,71 @@ jobs:
           Set-Content -Path "version.json" -Value $manifest -NoNewline
           echo "zip=$zip" >> $env:GITHUB_OUTPUT
 
-      - name: Create GitHub Release + tag
-        uses: softprops/action-gh-release@v2
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v7
         with:
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: BARAKI ${{ steps.ver.outputs.tag }}
-          generate_release_notes: true
-          target_commitish: ${{ github.sha }}
-          files: |
+          name: windows-release-${{ steps.ver.outputs.tag }}
+          path: |
             ${{ steps.zip.outputs.zip }}
             version.json
             sha256.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download release bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-release-${{ needs.build.outputs.tag }}
+          path: dist
+
+      - name: Create GitHub Release + tag (with retries)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          ZIP: ${{ needs.build.outputs.zip }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          test -f "$ZIP"
+          test -f version.json
+          test -f sha256.txt
+
+          attempt=1
+          max=8
+          delay=20
+          while true; do
+            echo "Release attempt ${attempt}/${max} for ${TAG}..."
+            if gh release create "$TAG" \
+              "$ZIP" \
+              version.json \
+              sha256.txt \
+              --repo "${{ github.repository }}" \
+              --title "BARAKI ${TAG}" \
+              --target "$SHA" \
+              --generate-notes; then
+              echo "Release ${TAG} created."
+              exit 0
+            fi
+
+            if [ "$attempt" -ge "$max" ]; then
+              echo "Failed to create release after ${max} attempts (GitHub API)."
+              exit 1
+            fi
+
+            echo "GitHub API failed; waiting ${delay}s before retry..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
+            delay=$((delay * 2))
+            if [ "$delay" -gt 120 ]; then
+              delay=120
+            fi
+          done
