@@ -1,20 +1,27 @@
 using System.IO;
 using System.Linq;
+using Game.Core;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace Game.Editor
 {
-    /// <summary>Headless Windows Standalone build for game-ci (tag → R2 pipeline).</summary>
+    /// <summary>Headless Windows Standalone build for game-ci (GitHub Releases pipeline).</summary>
     public static class WindowsCiBuild
     {
         public static void Build()
         {
-            var version = System.Environment.GetEnvironmentVariable("BARAKI_BUILD_VERSION");
+            // game-ci does not reliably forward custom env vars into the Unity process on Windows.
+            // Prefer BuildSupport/ci-version.txt written by the workflow, then env fallback.
+            var projectRoot = Directory.GetCurrentDirectory();
+            var version = BuildVersionStampRules.ResolveFromFileThenEnv(
+                projectRoot,
+                System.Environment.GetEnvironmentVariable("BARAKI_BUILD_VERSION"));
+
             if (!string.IsNullOrWhiteSpace(version))
             {
-                PlayerSettings.bundleVersion = version.Trim().TrimStart('v', 'V');
+                PlayerSettings.bundleVersion = version;
             }
 
             PlayerSettings.productName = "BARAKI";
@@ -44,7 +51,9 @@ namespace Game.Editor
                 options = BuildOptions.None,
             };
 
-            Debug.Log($"WindowsCiBuild: version={PlayerSettings.bundleVersion} → {exePath}");
+            Debug.Log(
+                $"WindowsCiBuild: version={PlayerSettings.bundleVersion} " +
+                $"(stamp={(version ?? "none")}) → {exePath}");
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
             Debug.Log($"WindowsCiBuild: result={summary.result} size={summary.totalSize}");

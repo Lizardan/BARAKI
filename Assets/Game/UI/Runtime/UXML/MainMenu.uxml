@@ -36,7 +36,6 @@
                         <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="ui-btn" />
                         <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted" />
                         <ui:Label name="UpdateStatusLabel" text="" class="ui-meta mm__update-status" />
-                        <ui:Button name="UpdateButton" text="ОБНОВИТЬ ИГРУ" class="ui-btn ui-btn--primary ui-overlay--hidden" />
                         <ui:VisualElement class="ui-hints">
                             <ui:Label text="Enter — в бой" class="ui-hints__text" />
                             <ui:Label text="Esc — выход" class="ui-hints__text" />
@@ -63,7 +62,18 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:Label name="VersionLabel" text="v0.0.0" class="ui-version" picking-mode="Ignore" />
+        <ui:VisualElement name="VersionBar" class="mm__version-bar" picking-mode="Position">
+            <ui:Label name="VersionLabel" text="v0.0.0" class="mm__version-text" picking-mode="Ignore" />
+            <ui:Label name="VersionArrowLabel" text="&gt;" class="mm__version-arrow ui-overlay--hidden" picking-mode="Ignore" />
+            <ui:Label name="VersionRemoteLabel" text="" class="mm__version-text mm__version-remote ui-overlay--hidden" picking-mode="Ignore" />
+            <ui:Button name="VersionUpdateButton" text="update" class="mm__version-update-btn ui-overlay--hidden" />
+            <ui:VisualElement name="VersionProgress" class="mm__version-progress ui-overlay--hidden" picking-mode="Ignore">
+                <ui:VisualElement name="VersionProgressTrack" class="mm__version-progress-track">
+                    <ui:VisualElement name="VersionProgressFill" class="mm__version-progress-fill" />
+                </ui:VisualElement>
+                <ui:Label name="VersionProgressLabel" text="0%" class="mm__version-progress-label" />
+            </ui:VisualElement>
+        </ui:VisualElement>
 
         <ui:VisualElement name="ProfileEditOverlay" class="ui-overlay ui-overlay--hidden">
             <ui:VisualElement name="ProfileEditDim" class="ui-overlay__dim" />

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
@@ -24,6 +25,14 @@ namespace Game.UI.Controllers
         private const string OverlayHiddenClass = "ui-overlay--hidden";
 
         [SerializeField] private UIDocument _uiDocument;
+
+#if UNITY_EDITOR
+        [Header("Editor preview — version strip (Play Mode)")]
+        [SerializeField] private bool _previewUpdateAvailable = true;
+        [SerializeField] private string _previewRemoteVersion = "0.1.4";
+        [SerializeField] private bool _previewDownloading;
+        [SerializeField] [Range(0f, 1f)] private float _previewDownloadProgress = 0.37f;
+#endif
 
         private VisualElement _root;
         private MainMenuViewModel _viewModel;
@@ -62,6 +71,12 @@ namespace Game.UI.Controllers
         private Label _friendsCountLabel;
         private Label _updateStatusLabel;
         private Label _versionLabel;
+        private Label _versionArrowLabel;
+        private Label _versionRemoteLabel;
+        private Button _versionUpdateButton;
+        private VisualElement _versionProgress;
+        private VisualElement _versionProgressFill;
+        private Label _versionProgressLabel;
         private Label _profileEditErrorLabel;
         private VisualElement _hubPanel;
         private VisualElement _profileEditOverlay;
@@ -72,7 +87,6 @@ namespace Game.UI.Controllers
         private Button _editProfileButton;
         private Button _profileEditCloseButton;
         private Button _addFriendButton;
-        private Button _updateButton;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
@@ -80,6 +94,7 @@ namespace Game.UI.Controllers
         private bool _isModeSelectOpen;
         private bool _isProfileEditOpen;
         private bool _playBlockedByUpdate;
+        private bool _isUpdating;
         private int _pendingAvatarId;
 
         private void Awake()
@@ -127,6 +142,12 @@ namespace Game.UI.Controllers
             _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
             _updateStatusLabel = _root.Q<Label>("UpdateStatusLabel");
             _versionLabel = _root.Q<Label>("VersionLabel");
+            _versionArrowLabel = _root.Q<Label>("VersionArrowLabel");
+            _versionRemoteLabel = _root.Q<Label>("VersionRemoteLabel");
+            _versionUpdateButton = _root.Q<Button>("VersionUpdateButton");
+            _versionProgress = _root.Q<VisualElement>("VersionProgress");
+            _versionProgressFill = _root.Q<VisualElement>("VersionProgressFill");
+            _versionProgressLabel = _root.Q<Label>("VersionProgressLabel");
             _profileEditErrorLabel = _root.Q<Label>("ProfileEditErrorLabel");
             _hubPanel = _root.Q<VisualElement>("HubPanel");
             _profileEditOverlay = _root.Q<VisualElement>("ProfileEditOverlay");
@@ -137,13 +158,8 @@ namespace Game.UI.Controllers
             _editProfileButton = _root.Q<Button>("EditProfileButton");
             _profileEditCloseButton = _root.Q<Button>("ProfileEditCloseButton");
             _addFriendButton = _root.Q<Button>("AddFriendButton");
-            _updateButton = _root.Q<Button>("UpdateButton");
 
-            if (_versionLabel != null)
-            {
-                _versionLabel.text = $"v{Application.version}";
-                _versionLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            }
+            ApplyVersionStrip(updateAvailable: false, remoteVersion: null, downloading: false, progress01: 0f);
 
             StyleHubTextField(_displayNameField);
             StyleHubTextField(_friendIdField);
@@ -223,6 +239,18 @@ namespace Game.UI.Controllers
                 _volumeValueLabel.text = $"{Mathf.RoundToInt(volume * 100f)}%";
             }
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (!Application.isPlaying || _root == null)
+            {
+                return;
+            }
+
+            ApplyEditorVersionStripPreview();
+        }
+#endif
 
         private void OnEnable()
         {
@@ -587,9 +615,9 @@ namespace Game.UI.Controllers
                 _addFriendButton.clicked += () => AddFriendAsync().Forget();
             }
 
-            if (_updateButton != null)
+            if (_versionUpdateButton != null)
             {
-                _updateButton.clicked += () => ApplyUpdateAsync().Forget();
+                _versionUpdateButton.clicked += () => ApplyUpdateAsync().Forget();
             }
         }
 
@@ -727,34 +755,23 @@ namespace Game.UI.Controllers
                     _playButton.SetEnabled(!_playBlockedByUpdate);
                 }
 
-                if (_updateButton != null)
-                {
-                    if (_playBlockedByUpdate)
-                    {
-                        _updateButton.RemoveFromClassList(OverlayHiddenClass);
-                    }
-                    else
-                    {
-                        _updateButton.AddToClassList(OverlayHiddenClass);
-                    }
-                }
-
-                if (_versionLabel != null)
-                {
-                    _versionLabel.text = $"v{Application.version}";
-                }
+                ApplyVersionStrip(
+                    updateAvailable: _playBlockedByUpdate,
+                    remoteVersion: GameUpdateService.RemoteManifest?.version,
+                    downloading: false,
+                    progress01: 0f);
+#if UNITY_EDITOR
+                ApplyEditorVersionStripPreview();
+#endif
 
                 if (_updateStatusLabel != null)
                 {
-                    if (_playBlockedByUpdate)
+                    if (GameUpdateService.CheckFailed)
                     {
-                        _updateStatusLabel.text =
-                            $"Доступна версия {GameUpdateService.RemoteManifest?.version}. Игра заблокирована.";
-                    }
-                    else if (GameUpdateService.CheckFailed)
-                    {
-                        _updateStatusLabel.text =
-                            "Не удалось проверить обновления (GitHub). Попробуйте позже.";
+                        var detail = string.IsNullOrWhiteSpace(GameUpdateService.LastError)
+                            ? "Попробуйте позже."
+                            : GameUpdateService.LastError;
+                        _updateStatusLabel.text = $"Не удалось проверить обновления: {detail}";
                     }
                     else
                     {
@@ -894,21 +911,114 @@ namespace Game.UI.Controllers
 
         private async UniTaskVoid ApplyUpdateAsync()
         {
+            if (_isUpdating || !_playBlockedByUpdate)
+            {
+                return;
+            }
+
+            _isUpdating = true;
             try
             {
                 if (_updateStatusLabel != null)
                 {
-                    _updateStatusLabel.text = "Скачивание обновления…";
+                    _updateStatusLabel.text = string.Empty;
                 }
 
-                await GameUpdateService.DownloadAndApplyAsync();
+                ApplyVersionStrip(
+                    updateAvailable: true,
+                    remoteVersion: GameUpdateService.RemoteManifest?.version,
+                    downloading: true,
+                    progress01: 0f);
+
+                var progress = new Progress<float>(p =>
+                {
+                    ApplyVersionStrip(
+                        updateAvailable: true,
+                        remoteVersion: GameUpdateService.RemoteManifest?.version,
+                        downloading: true,
+                        progress01: p);
+                });
+
+                await GameUpdateService.DownloadAndApplyAsync(progress);
             }
             catch (System.Exception ex)
             {
+                _isUpdating = false;
+                ApplyVersionStrip(
+                    updateAvailable: _playBlockedByUpdate,
+                    remoteVersion: GameUpdateService.RemoteManifest?.version,
+                    downloading: false,
+                    progress01: 0f);
                 if (_updateStatusLabel != null)
                 {
                     _updateStatusLabel.text = "Ошибка обновления: " + ex.Message;
                 }
+            }
+        }
+
+#if UNITY_EDITOR
+        private void ApplyEditorVersionStripPreview()
+        {
+            if (!_previewUpdateAvailable && !_previewDownloading)
+            {
+                return;
+            }
+
+            ApplyVersionStrip(
+                updateAvailable: _previewUpdateAvailable || _previewDownloading,
+                remoteVersion: _previewRemoteVersion,
+                downloading: _previewDownloading,
+                progress01: _previewDownloadProgress);
+        }
+#endif
+
+        private void ApplyVersionStrip(
+            bool updateAvailable,
+            string remoteVersion,
+            bool downloading,
+            float progress01)
+        {
+            if (_versionLabel != null)
+            {
+                _versionLabel.text = GameUpdateUiRules.FormatVersionLabel(Application.version);
+            }
+
+            var showRemote = updateAvailable && !string.IsNullOrWhiteSpace(remoteVersion);
+            SetOverlayHidden(_versionArrowLabel, !showRemote);
+            SetOverlayHidden(_versionRemoteLabel, !showRemote);
+            if (_versionRemoteLabel != null && showRemote)
+            {
+                _versionRemoteLabel.text = GameUpdateUiRules.FormatVersionLabel(remoteVersion);
+            }
+
+            SetOverlayHidden(_versionUpdateButton, !updateAvailable || downloading);
+            SetOverlayHidden(_versionProgress, !downloading);
+
+            if (_versionProgressFill != null)
+            {
+                _versionProgressFill.style.width = Length.Percent(GameUpdateUiRules.ProgressPercent(progress01));
+            }
+
+            if (_versionProgressLabel != null)
+            {
+                _versionProgressLabel.text = GameUpdateUiRules.FormatProgressLabel(progress01);
+            }
+        }
+
+        private static void SetOverlayHidden(VisualElement element, bool hidden)
+        {
+            if (element == null)
+            {
+                return;
+            }
+
+            if (hidden)
+            {
+                element.AddToClassList(OverlayHiddenClass);
+            }
+            else
+            {
+                element.RemoveFromClassList(OverlayHiddenClass);
             }
         }
 

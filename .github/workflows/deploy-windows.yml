@@ -1,6 +1,7 @@
 name: Deploy Windows (auto release)
 
-# Push to main → auto patch bump → GitHub Release (zip + version.json).
+# Push to main → auto patch bump → GitHub Release (BARAKI-vX.Y.Z.zip only).
+# Client reads latest tag via /releases/latest redirect — no version.json.
 # Secrets: UNITY_LICENSE (or UNITY_EMAIL / UNITY_PASSWORD / UNITY_SERIAL)
 #
 # Build and release are separate jobs so a GitHub API blip can re-run
@@ -100,6 +101,20 @@ jobs:
             Library-Win64-
             Library-
 
+      # game-ci on Windows often does not forward custom env into Unity — stamp via file + ProjectSettings.
+      - name: Stamp bundle version for build
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path "BuildSupport" | Out-Null
+          Set-Content -Path "BuildSupport/ci-version.txt" -Value $ver -NoNewline -Encoding utf8
+          $ps = "ProjectSettings/ProjectSettings.asset"
+          $raw = Get-Content -Path $ps -Raw
+          $updated = [regex]::Replace($raw, '(?m)^(\s*bundleVersion:\s*).*$', "`${1}$ver")
+          if ($updated -eq $raw) { throw "Failed to patch bundleVersion in $ps" }
+          [System.IO.File]::WriteAllText((Resolve-Path $ps), $updated)
+          Write-Host "Stamped bundleVersion=$ver"
+
       - name: Build Windows x64
         uses: game-ci/unity-builder@v5
         env:
@@ -116,37 +131,22 @@ jobs:
           allowDirtyBuild: true
           buildMethod: Game.Editor.WindowsCiBuild.Build
 
-      - name: Zip + version.json
+      - name: Zip build
         id: zip
         shell: pwsh
         run: |
-          $ver = "${{ steps.ver.outputs.version }}"
           $tag = "${{ steps.ver.outputs.tag }}"
           $src = "build/Windows"
-          $zip = "baraki-windows-$tag.zip"
+          $zip = "BARAKI-$tag.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip
-          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
-          Set-Content -Path "sha256.txt" -Value $hash -NoNewline
-          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/$zip"
-          $manifest = @{
-            version = $ver
-            minVersion = $ver
-            url = $url
-            sha256 = $hash
-            releasedAt = (Get-Date).ToUniversalTime().ToString("o")
-          } | ConvertTo-Json -Compress
-          Set-Content -Path "version.json" -Value $manifest -NoNewline
           echo "zip=$zip" >> $env:GITHUB_OUTPUT
 
       - name: Upload release bundle
         uses: actions/upload-artifact@v7
         with:
           name: windows-release-${{ steps.ver.outputs.tag }}
-          path: |
-            ${{ steps.zip.outputs.zip }}
-            version.json
-            sha256.txt
+          path: ${{ steps.zip.outputs.zip }}
           if-no-files-found: error
           # Safety net if release job fails; successful runs delete these immediately.
           retention-days: 1
@@ -175,8 +175,6 @@ jobs:
           set -euo pipefail
           cd dist
           test -f "$ZIP"
-          test -f version.json
-          test -f sha256.txt
 
           attempt=1
           max=8
@@ -185,8 +183,6 @@ jobs:
             echo "Release attempt ${attempt}/${max} for ${TAG}..."
             if gh release create "$TAG" \
               "$ZIP" \
-              version.json \
-              sha256.txt \
               --repo "${{ github.repository }}" \
               --title "BARAKI ${TAG}" \
               --target "$SHA" \

@@ -5,57 +5,52 @@ namespace Game.Tests
 {
     public sealed class GitHubReleaseUpdateRulesTests
     {
-        const string SampleReleaseJson =
-            "{" +
-            "\"tag_name\":\"v0.3.1\"," +
-            "\"assets\":[" +
-            "{" +
-            "\"name\":\"version.json\"," +
-            "\"browser_download_url\":\"https://github.com/Lizardan/BARAKI/releases/download/v0.3.1/version.json\"" +
-            "}," +
-            "{" +
-            "\"name\":\"baraki-windows-v0.3.1.zip\"," +
-            "\"browser_download_url\":\"https://github.com/Lizardan/BARAKI/releases/download/v0.3.1/baraki-windows-v0.3.1.zip\"" +
-            "}" +
-            "]" +
-            "}";
-
         [Test]
-        public void TryGetTagName_ReadsTag()
+        public void TryParseTagFromReleaseUrl_ReadsTag()
         {
-            Assert.IsTrue(GitHubReleaseUpdateRules.TryGetTagName(SampleReleaseJson, out var tag));
-            Assert.AreEqual("v0.3.1", tag);
+            Assert.IsTrue(GitHubReleaseUpdateRules.TryParseTagFromReleaseUrl(
+                "https://github.com/Lizardan/BARAKI/releases/tag/v0.1.3",
+                out var tag));
+            Assert.AreEqual("v0.1.3", tag);
         }
 
         [Test]
-        public void TryGetAssetDownloadUrl_FindsManifest()
+        public void TryParseTagFromReleaseUrl_IgnoresQueryAndFragment()
         {
-            Assert.IsTrue(GitHubReleaseUpdateRules.TryGetAssetDownloadUrl(
-                SampleReleaseJson,
-                GitHubReleaseUpdateRules.ManifestAssetName,
-                out var url));
-            StringAssert.Contains("version.json", url);
+            Assert.IsTrue(GitHubReleaseUpdateRules.TryParseTagFromReleaseUrl(
+                "https://github.com/Lizardan/BARAKI/releases/tag/v1.2.3?foo=1#bar",
+                out var tag));
+            Assert.AreEqual("v1.2.3", tag);
         }
 
         [Test]
-        public void TryGetAssetDownloadUrl_FindsManifest_WhenUploaderBlockIsLarge()
+        public void TryParseTagFromReleaseUrl_RejectsNonTagUrls()
         {
-            // Real GitHub assets put a huge "uploader" object between name and browser_download_url.
-            var padding = new string('x', 2000);
-            var releaseJson =
-                "{" +
-                "\"tag_name\":\"v0.1.1\"," +
-                "\"assets\":[{" +
-                "\"name\":\"version.json\"," +
-                "\"uploader\":{\"login\":\"" + padding + "\"}," +
-                "\"browser_download_url\":\"https://github.com/Lizardan/BARAKI/releases/download/v0.1.1/version.json\"" +
-                "}]}";
+            Assert.IsFalse(GitHubReleaseUpdateRules.TryParseTagFromReleaseUrl(
+                "https://github.com/Lizardan/BARAKI/releases/latest",
+                out _));
+        }
 
-            Assert.IsTrue(GitHubReleaseUpdateRules.TryGetAssetDownloadUrl(
-                releaseJson,
-                GitHubReleaseUpdateRules.ManifestAssetName,
-                out var url));
-            StringAssert.EndsWith("/version.json", url);
+        [Test]
+        public void ZipFileNameForTag_UsesProductAndTag()
+        {
+            Assert.AreEqual("BARAKI-v0.1.3.zip", GitHubReleaseUpdateRules.ZipFileNameForTag("v0.1.3"));
+        }
+
+        [Test]
+        public void ReleaseZipDownloadUrl_MatchesConvention()
+        {
+            Assert.AreEqual(
+                "https://github.com/Lizardan/BARAKI/releases/download/v0.1.3/BARAKI-v0.1.3.zip",
+                GitHubReleaseUpdateRules.ReleaseZipDownloadUrl("v0.1.3"));
+        }
+
+        [Test]
+        public void LatestReleasePageUrl_UsesDefaultRepo()
+        {
+            Assert.AreEqual(
+                "https://github.com/Lizardan/BARAKI/releases/latest",
+                GitHubReleaseUpdateRules.LatestReleasePageUrl());
         }
 
         [Test]
@@ -68,11 +63,12 @@ namespace Game.Tests
         }
 
         [Test]
-        public void LatestReleaseApiUrl_UsesDefaultRepo()
+        public void LooksLikeGitHubApiError_DetectsRateLimit()
         {
-            Assert.AreEqual(
-                "https://api.github.com/repos/Lizardan/BARAKI/releases/latest",
-                GitHubReleaseUpdateRules.LatestReleaseApiUrl());
+            Assert.IsTrue(GitHubReleaseUpdateRules.LooksLikeGitHubApiError(
+                "{\"message\":\"API rate limit exceeded for 1.2.3.4.\"}"));
+            Assert.IsFalse(GitHubReleaseUpdateRules.LooksLikeGitHubApiError(
+                "{\"version\":\"0.1.3\",\"minVersion\":\"0.1.3\"}"));
         }
     }
 }

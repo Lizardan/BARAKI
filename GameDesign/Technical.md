@@ -120,7 +120,7 @@ MVP netcode:
 
 ## Distribution
 
-See `Platform.md` § Distribution. Client reads latest GitHub Release `version.json`; outdated → block Play → download zip → `ApplyUpdate.bat`.
+See `Platform.md` § Distribution. Client follows GitHub `/releases/latest` to the tag; outdated → block Play → download `BARAKI-{tag}.zip` → `ApplyUpdate.bat`.
 
 ## MatchArenaGenerator
 

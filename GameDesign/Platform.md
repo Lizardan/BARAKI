@@ -69,7 +69,7 @@ post_mvp: true
 | Друзья online / in game | Friends presence |
 | Create / Join | Lobby join code + Relay |
 | Invite | Friends → private Lobby |
-| Update gate | GitHub Releases `version.json`; Play disabled если outdated |
+| Update gate | GitHub Release tag (`/releases/latest` → tag); Play disabled если outdated |
 | Legal | GitHub Pages — https://lizardan.github.io/BARAKI/privacy.html · terms.html |
 
 ## Distribution
@@ -77,9 +77,9 @@ post_mvp: true
 ```entity
 id: DIST_PIPELINE
 build: GitHub_Actions_on_push_main
-artifact: windows_x64_zip
+artifact: BARAKI-vX.Y.Z.zip
 store: GitHub_Releases
-manifest: version.json_asset_on_release
+version_source: release_tag
 versioning: auto_semver_patch_on_push
 client: force_update_via_ApplyUpdate_bat
 mvp: true
@@ -89,7 +89,7 @@ mvp: true
 
 1. `git push` в `main` (изменения в Assets/Packages/ProjectSettings/…)
 2. Actions сам делает `patch` bump (`v0.1.0` → `v0.1.1`), собирает Windows, создаёт Release
-3. Клиент: `GET /repos/Lizardan/BARAKI/releases/latest` → `version.json` → force update
+3. Клиент: `GET …/releases/latest` (redirect → tag) → сравнить с `Application.version` → скачать `BARAKI-{tag}.zip`
 4. Ручной major/minor: Actions → **Deploy Windows** → bump = minor/major
 5. Пропуск релиза: commit message содержит `[skip release]`
 

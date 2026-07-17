@@ -2,79 +2,91 @@ using System;
 
 namespace Game.Core
 {
-    /// <summary>Pure helpers for GitHub Releases force-update channel (no Cloudflare R2).</summary>
+    /// <summary>
+    /// Force-update channel via GitHub Release tags (no version.json / no API).
+    /// Latest tag: follow redirects on /releases/latest → /releases/tag/vX.Y.Z
+    /// Zip asset: BARAKI-vX.Y.Z.zip
+    /// </summary>
     public static class GitHubReleaseUpdateRules
     {
         public const string DefaultOwner = "Lizardan";
         public const string DefaultRepo = "BARAKI";
-        public const string ManifestAssetName = "version.json";
-        public const string ZipAssetPrefix = "baraki-windows-";
+        public const string ProductName = "BARAKI";
 
-        public static string LatestReleaseApiUrl(string owner = DefaultOwner, string repo = DefaultRepo) =>
-            $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+        public static string LatestReleasePageUrl(string owner = DefaultOwner, string repo = DefaultRepo) =>
+            $"https://github.com/{owner}/{repo}/releases/latest";
 
-        public static string ReleaseDownloadUrl(
-            string tag,
-            string assetFileName,
-            string owner = DefaultOwner,
-            string repo = DefaultRepo) =>
-            $"https://github.com/{owner}/{repo}/releases/download/{tag}/{assetFileName}";
-
-        public static bool TryGetAssetDownloadUrl(
-            string releaseJson,
-            string assetFileName,
-            out string downloadUrl)
+        public static string ZipFileNameForTag(string tag)
         {
-            downloadUrl = null;
-            if (string.IsNullOrWhiteSpace(releaseJson) || string.IsNullOrWhiteSpace(assetFileName))
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                return null;
+            }
+
+            var trimmed = tag.Trim();
+            return $"{ProductName}-{trimmed}.zip";
+        }
+
+        public static string ReleaseZipDownloadUrl(
+            string tag,
+            string owner = DefaultOwner,
+            string repo = DefaultRepo)
+        {
+            var fileName = ZipFileNameForTag(tag);
+            if (fileName == null)
+            {
+                return null;
+            }
+
+            return $"https://github.com/{owner}/{repo}/releases/download/{tag.Trim()}/{fileName}";
+        }
+
+        /// <summary>
+        /// Parses tag from a GitHub release URL after redirects, e.g.
+        /// https://github.com/Lizardan/BARAKI/releases/tag/v0.1.3
+        /// </summary>
+        public static bool TryParseTagFromReleaseUrl(string url, out string tag)
+        {
+            tag = null;
+            if (string.IsNullOrWhiteSpace(url))
             {
                 return false;
             }
 
-            // Minimal parse without Json.NET: look for "name":"<asset>" then nearby browser_download_url.
-            var nameToken = "\"name\":\"" + assetFileName + "\"";
-            var nameIndex = releaseJson.IndexOf(nameToken, StringComparison.Ordinal);
-            if (nameIndex < 0)
-            {
-                // Assets order may put url before name — search loose.
-                nameToken = "\"name\": \"" + assetFileName + "\"";
-                nameIndex = releaseJson.IndexOf(nameToken, StringComparison.Ordinal);
-            }
-
-            if (nameIndex < 0)
+            const string marker = "/releases/tag/";
+            var index = url.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
             {
                 return false;
             }
 
-            // Real release JSON inserts a large "uploader" object between name and URL —
-            // search forward from the matched name (not a tiny fixed window).
-            const string urlKey = "\"browser_download_url\":\"";
-            var urlKeyAlt = "\"browser_download_url\": \"";
-            var urlIndex = releaseJson.IndexOf(urlKey, nameIndex, StringComparison.Ordinal);
-            var keyLen = urlKey.Length;
-            if (urlIndex < 0)
-            {
-                urlIndex = releaseJson.IndexOf(urlKeyAlt, nameIndex, StringComparison.Ordinal);
-                keyLen = urlKeyAlt.Length;
-            }
-
-            if (urlIndex < 0)
+            var start = index + marker.Length;
+            if (start >= url.Length)
             {
                 return false;
             }
 
-            var start = urlIndex + keyLen;
-            var end = releaseJson.IndexOf('"', start);
+            var end = start;
+            while (end < url.Length)
+            {
+                var c = url[end];
+                if (c == '/' || c == '?' || c == '#' || c == '&')
+                {
+                    break;
+                }
+
+                end++;
+            }
+
             if (end <= start)
             {
                 return false;
             }
 
-            downloadUrl = releaseJson.Substring(start, end - start);
-            return !string.IsNullOrWhiteSpace(downloadUrl);
+            tag = url.Substring(start, end - start);
+            return !string.IsNullOrWhiteSpace(tag);
         }
 
-        /// <summary>GitHub Unicorn / 5xx pages often return HTML with HTTP 200.</summary>
         public static bool LooksLikeHtmlErrorPage(string body)
         {
             if (string.IsNullOrWhiteSpace(body))
@@ -87,38 +99,17 @@ namespace Game.Core
                    || trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase);
         }
 
-        public static bool TryGetTagName(string releaseJson, out string tagName)
+        public static bool LooksLikeGitHubApiError(string body)
         {
-            tagName = null;
-            if (string.IsNullOrWhiteSpace(releaseJson))
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return false;
             }
 
-            const string key = "\"tag_name\":\"";
-            var keyAlt = "\"tag_name\": \"";
-            var index = releaseJson.IndexOf(key, StringComparison.Ordinal);
-            var keyLen = key.Length;
-            if (index < 0)
-            {
-                index = releaseJson.IndexOf(keyAlt, StringComparison.Ordinal);
-                keyLen = keyAlt.Length;
-            }
-
-            if (index < 0)
-            {
-                return false;
-            }
-
-            var start = index + keyLen;
-            var end = releaseJson.IndexOf('"', start);
-            if (end <= start)
-            {
-                return false;
-            }
-
-            tagName = releaseJson.Substring(start, end - start);
-            return !string.IsNullOrWhiteSpace(tagName);
+            return body.IndexOf("\"message\"", StringComparison.Ordinal) >= 0
+                   && (body.IndexOf("rate limit", StringComparison.OrdinalIgnoreCase) >= 0
+                       || body.IndexOf("API rate limit exceeded", StringComparison.OrdinalIgnoreCase) >= 0
+                       || body.IndexOf("Not Found", StringComparison.OrdinalIgnoreCase) >= 0);
         }
     }
 }

@@ -2,7 +2,7 @@ using System;
 
 namespace Game.Core
 {
-    /// <summary>Pure rules for force-update gate against R2 version.json.</summary>
+    /// <summary>Pure rules for force-update gate against remote semver (GitHub tag).</summary>
     public static class GameUpdateVersionRules
     {
         public static bool TryParseSemVer(string value, out Version version)
