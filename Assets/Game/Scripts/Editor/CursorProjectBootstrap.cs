@@ -20,7 +20,6 @@ namespace Game.Editor
 
         static CursorProjectBootstrap()
         {
-            CoplayMcpSetupMenu.EnsurePreferredPortRegistryOnly();
             EditorApplication.delayCall += OnEditorLoad;
         }
 
@@ -69,7 +68,6 @@ namespace Game.Editor
             }
 
             RunFirstTimeBootstrap(projectRoot);
-            CoplayMcpSetupMenu.EnsureOnEditorLoad();
         }
 
         private static void RunFirstTimeBootstrap(string projectRoot)
@@ -101,11 +99,8 @@ namespace Game.Editor
                 CopyDirectory(embeddedCursor, Path.Combine(projectRoot, ".cursor"), overwrite: true);
             }
 
-            CoplayMcpSetupMenu.ApplyStdioTransport();
-            CoplayMcpSetupMenu.ApplyHiddenConsoleLauncher(logSuccess: false);
-
             Debug.Log(
-                "[Template] Cursor bootstrap complete: .cursor/ copied, MCP stdio applied. " +
+                "[Template] Cursor bootstrap complete: .cursor/ copied. " +
                 "Restart Cursor if it was already open for this folder.");
         }
 

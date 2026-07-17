@@ -152,7 +152,6 @@ jobs:
           restore-keys: |
             Library-Win64-
             Library-
-          save-always: false
 
       # Incomplete restores (missing/zero ArtifactDB) make Unity rebuild Library anyway and poison the next save.
       - name: Verify Library cache
