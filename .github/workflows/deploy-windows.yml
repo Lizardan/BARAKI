@@ -6,6 +6,11 @@ name: Deploy Windows (auto release)
 #
 # Build and release are separate jobs so a GitHub API blip can re-run
 # only the release step without rebuilding Unity.
+#
+# CI speed notes (GitHub-hosted Windows):
+# - Docker Unity image pull dominates (~10+ min); pre-pull overlaps Library cache restore.
+# - windows-mono image tag is not published for 6000.5.1f1 on Windows hosts — use il2cpp.
+# - Packages/manifest.ci.json drops editor-only tooling (MCP / Cursor IDE) for faster resolve.
 
 on:
   push:
@@ -37,6 +42,11 @@ permissions:
   contents: write
   actions: write # delete Actions artifacts after release
 
+env:
+  # Explicit image so background pre-pull matches game-ci/unity-builder customImage.
+  # No windows-mono tag for this version on Windows runners (Docker Hub 2026-07).
+  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.1f1-windows-il2cpp-3
+
 jobs:
   build:
     name: Build Windows
@@ -53,8 +63,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          lfs: true
-          fetch-depth: 0
+          fetch-depth: 1
+          fetch-tags: true
+          lfs: false
 
       - name: Resolve next version
         id: ver
@@ -92,14 +103,111 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "Resolved next release: ${TAG} (bump=${BUMP}, previous=${LATEST:-none})"
 
+      # Slim manifest for CI: skip editor tooling packages (MCP, Cursor IDE).
+      # Keep Packages/manifest.json for local Editor; update manifest.ci.json when adding runtime deps.
+      - name: Use CI manifest
+        shell: pwsh
+        run: |
+          Copy-Item -Force "Packages/manifest.ci.json" "Packages/manifest.json"
+          Write-Host "Applied Packages/manifest.ci.json (no MCP / Cursor IDE packages)."
+
+      # Overlap Docker pull with Library cache restore (biggest fixed cost on hosted runners).
+      - name: Start Docker image pull (background)
+        shell: pwsh
+        run: |
+          $img = $env:UNITY_DOCKER_IMAGE
+          $stateDir = Join-Path $env:RUNNER_TEMP "docker-pull"
+          New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+          $wrapper = Join-Path $stateDir "pull.ps1"
+          $outLog = Join-Path $stateDir "out.log"
+          $exitFile = Join-Path $stateDir "exitcode.txt"
+          $doneFile = Join-Path $stateDir "done.txt"
+          # Avoid @" "@ here-strings (closing "@ must be column 0; awkward in YAML).
+          @(
+            "`$ErrorActionPreference = 'Continue'"
+            "`$sw = [System.Diagnostics.Stopwatch]::StartNew()"
+            "docker pull '$img' *>&1 | Tee-Object -FilePath '$outLog'"
+            "`$code = `$LASTEXITCODE"
+            "`$sw.Stop()"
+            "Set-Content -Path '$exitFile' -Value `$code"
+            "Set-Content -Path '$doneFile' -Value ([int]`$sw.Elapsed.TotalSeconds)"
+            "exit `$code"
+          ) | Set-Content -Path $wrapper -Encoding utf8
+          $p = Start-Process -FilePath "pwsh" `
+            -ArgumentList @("-NoProfile", "-File", $wrapper) `
+            -WorkingDirectory (Get-Location).Path `
+            -PassThru `
+            -WindowStyle Hidden
+          Set-Content -Path (Join-Path $stateDir "pid.txt") -Value $p.Id
+          Write-Host "Background docker pull started (pid=$($p.Id)) for $img"
+
+      # Stable key: package/Unity version changes invalidate; script/asset edits reuse Library.
+      # Hash manifest.ci.json (not post-copy manifest.json) so key stays intentional.
       - name: Cache Library
+        id: cache-library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Library-Win64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-Win64-${{ hashFiles('Packages/manifest.ci.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt', 'Assets/**/*.asmdef') }}
           restore-keys: |
             Library-Win64-
             Library-
+          save-always: false
+
+      # Incomplete restores (missing/zero ArtifactDB) make Unity rebuild Library anyway and poison the next save.
+      - name: Verify Library cache
+        id: verify-library
+        shell: pwsh
+        run: |
+          $lib = "Library"
+          $status = "missing"
+          if (-not (Test-Path $lib)) {
+            Write-Host "No Library folder — cold import."
+            "library_status=$status" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $db = Join-Path $lib "ArtifactDB"
+          $info = Join-Path $lib "SourceAssetDB"
+          $dbOk = (Test-Path $db) -and ((Get-Item $db).Length -gt 0)
+          $infoOk = (Test-Path $info) -and ((Get-Item $info).Length -gt 0)
+          if ($dbOk -and $infoOk) {
+            $status = "usable"
+            Write-Host ("Library cache looks usable: ArtifactDB={0:N0} B, SourceAssetDB={1:N0} B" -f (Get-Item $db).Length, (Get-Item $info).Length)
+            "library_status=$status" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $status = "wiped-incomplete"
+          Write-Warning "Library cache incomplete (ArtifactDB/SourceAssetDB missing or empty) — wiping for a clean import."
+          Remove-Item -Recurse -Force $lib
+          "library_status=$status" >> $env:GITHUB_OUTPUT
+
+      - name: Wait for Docker pull
+        id: docker-pull
+        shell: pwsh
+        run: |
+          $stateDir = Join-Path $env:RUNNER_TEMP "docker-pull"
+          $pidFile = Join-Path $stateDir "pid.txt"
+          if (-not (Test-Path $pidFile)) { throw "Missing docker-pull pid file" }
+          $procId = [int](Get-Content $pidFile)
+          Write-Host "Waiting for docker pull (pid=$procId)..."
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          Wait-Process -Id $procId -ErrorAction SilentlyContinue
+          $sw.Stop()
+          $exitFile = Join-Path $stateDir "exitcode.txt"
+          $doneFile = Join-Path $stateDir "done.txt"
+          if (-not (Test-Path $exitFile)) {
+            throw "Docker pull process exited without writing exit code (waited $([int]$sw.Elapsed.TotalSeconds)s)"
+          }
+          $code = [int](Get-Content $exitFile)
+          $pullSec = if (Test-Path $doneFile) { [int](Get-Content $doneFile) } else { [int]$sw.Elapsed.TotalSeconds }
+          "pull_seconds=$pullSec" >> $env:GITHUB_OUTPUT
+          $outLog = Join-Path $stateDir "out.log"
+          if (Test-Path $outLog) {
+            Write-Host "---- docker pull log (tail) ----"
+            Get-Content $outLog -Tail 30
+          }
+          if ($code -ne 0) { throw "docker pull failed with exit code $code" }
+          Write-Host "Docker pull finished in ${pullSec}s (exit 0)."
 
       # game-ci on Windows often does not forward custom env into Unity — stamp via file + ProjectSettings.
       - name: Stamp bundle version for build
@@ -116,6 +224,7 @@ jobs:
           Write-Host "Stamped bundleVersion=$ver"
 
       - name: Build Windows x64
+        id: unity-build
         uses: game-ci/unity-builder@v5
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -126,6 +235,7 @@ jobs:
         with:
           targetPlatform: StandaloneWindows64
           unityVersion: 6000.5.1f1
+          customImage: ${{ env.UNITY_DOCKER_IMAGE }}
           buildsPath: build
           buildName: Windows
           allowDirtyBuild: true
@@ -150,6 +260,33 @@ jobs:
           if-no-files-found: error
           # Safety net if release job fails; successful runs delete these immediately.
           retention-days: 1
+
+      - name: CI timing summary
+        if: always()
+        shell: pwsh
+        run: |
+          $cacheHit = "${{ steps.cache-library.outputs.cache-hit }}"
+          $libStatus = "${{ steps.verify-library.outputs.library_status }}"
+          $pullSec = "${{ steps.docker-pull.outputs.pull_seconds }}"
+          if ([string]::IsNullOrWhiteSpace($pullSec)) { $pullSec = "n/a" }
+          $lines = @(
+            "## Windows CI timing",
+            "",
+            "| Step | Detail |",
+            "|------|--------|",
+            "| Version | `${{ steps.ver.outputs.tag }}` |",
+            "| Docker image | ``$env:UNITY_DOCKER_IMAGE`` |",
+            "| Docker pull (wall) | ${pullSec}s (overlapped with Library cache) |",
+            "| Library cache-hit | ``$cacheHit`` |",
+            "| Library status | ``$libStatus`` |",
+            "| Unity build | see step duration for **Build Windows x64** |",
+            "",
+            "Baseline before optimizations: ~18 min total (~13 min Docker pull sequential).",
+            "Compare this run's job duration and Docker pull seconds after merge.",
+            "Deferred micro-opts (7z zip, dockerCpuLimit) — only if pull/Library still dominate after measurement."
+          )
+          $lines -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "Wrote CI timing summary."
 
   release:
     name: Create GitHub Release
