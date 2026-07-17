@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
 using Game.Gameplay.Networking;
+using Game.UI;
 using Game.UI.Animations;
 using Game.UI.Bindings;
 using Game.UI.ViewModels;
@@ -32,6 +33,10 @@ namespace Game.UI.Controllers
         [SerializeField] private string _previewRemoteVersion = "0.1.4";
         [SerializeField] private bool _previewDownloading;
         [SerializeField] [Range(0f, 1f)] private float _previewDownloadProgress = 0.37f;
+
+        [Header("Editor preview — hub loading")]
+        [SerializeField] private bool _previewProfileLoading;
+        [SerializeField] private bool _previewFriendsLoading;
 #endif
 
         private VisualElement _root;
@@ -87,6 +92,9 @@ namespace Game.UI.Controllers
         private Button _editProfileButton;
         private Button _profileEditCloseButton;
         private Button _addFriendButton;
+        private PanelLoadingOverlay _profileLoadingOverlay;
+        private PanelLoadingOverlay _friendsLoadingOverlay;
+        private bool _hubDataLoading;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
@@ -96,6 +104,15 @@ namespace Game.UI.Controllers
         private bool _playBlockedByUpdate;
         private bool _isUpdating;
         private int _pendingAvatarId;
+        private bool _overlayBlocksMenu;
+
+        private bool IsMainMenuBlockedByUpdate =>
+#if UNITY_EDITOR
+            _playBlockedByUpdate || _isUpdating ||
+            (Application.isPlaying && (_previewUpdateAvailable || _previewDownloading));
+#else
+            _playBlockedByUpdate || _isUpdating;
+#endif
 
         private void Awake()
         {
@@ -158,6 +175,7 @@ namespace Game.UI.Controllers
             _editProfileButton = _root.Q<Button>("EditProfileButton");
             _profileEditCloseButton = _root.Q<Button>("ProfileEditCloseButton");
             _addFriendButton = _root.Q<Button>("AddFriendButton");
+            BindLoadingOverlays();
 
             ApplyVersionStrip(updateAvailable: false, remoteVersion: null, downloading: false, progress01: 0f);
 
@@ -243,12 +261,17 @@ namespace Game.UI.Controllers
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (!Application.isPlaying || _root == null)
+            if (_root == null)
             {
                 return;
             }
 
-            ApplyEditorVersionStripPreview();
+            if (Application.isPlaying)
+            {
+                ApplyEditorVersionStripPreview();
+            }
+
+            ApplyEditorHubLoadingPreview();
         }
 #endif
 
@@ -289,6 +312,8 @@ namespace Game.UI.Controllers
         private void OnDestroy()
         {
             _bindingScope?.Dispose();
+            _profileLoadingOverlay?.Dispose();
+            _friendsLoadingOverlay?.Dispose();
         }
 
         private async UniTask PlayIntroAsync(System.Threading.CancellationToken cancellationToken)
@@ -439,7 +464,7 @@ namespace Game.UI.Controllers
 
         private void OnKeyDown(KeyDownEvent evt)
         {
-            if (_isTransitioning || _isSettingsAnimating)
+            if (_isTransitioning || _isSettingsAnimating || IsMainMenuBlockedByUpdate)
             {
                 return;
             }
@@ -489,7 +514,8 @@ namespace Game.UI.Controllers
 
         private void OnSettingsOpen()
         {
-            if (_isTransitioning || _isSettingsOpen || _isProfileEditOpen || _settingsOverlay == null)
+            if (_isTransitioning || _isSettingsOpen || _isProfileEditOpen || _settingsOverlay == null
+                || IsMainMenuBlockedByUpdate)
             {
                 return;
             }
@@ -676,7 +702,8 @@ namespace Game.UI.Controllers
 
         private void OpenProfileEdit()
         {
-            if (_profileEditOverlay == null || _isProfileEditOpen || _isTransitioning)
+            if (_profileEditOverlay == null || _isProfileEditOpen || _isTransitioning
+                || IsMainMenuBlockedByUpdate)
             {
                 return;
             }
@@ -746,14 +773,14 @@ namespace Game.UI.Controllers
 
         private async UniTaskVoid RefreshHubAsync()
         {
+            SetProfileLoadingVisible(true);
+            SetFriendsLoadingVisible(true);
+            _hubDataLoading = true;
             try
             {
                 await GameUpdateService.RefreshAsync();
                 _playBlockedByUpdate = GameUpdateService.UpdateRequired;
-                if (_playButton != null)
-                {
-                    _playButton.SetEnabled(!_playBlockedByUpdate);
-                }
+                RefreshMainMenuControlState();
 
                 ApplyVersionStrip(
                     updateAvailable: _playBlockedByUpdate,
@@ -782,23 +809,101 @@ namespace Game.UI.Controllers
                 // Hub social needs UGS; LocalDev Editor path skips gracefully.
                 try
                 {
-                    await PlayerProfileService.LoadAsync();
-                    await FriendsHubService.InitializeAsync();
-                    await FriendsHubService.SetPresenceAsync("InLauncher");
+                    try
+                    {
+                        await PlayerProfileService.LoadAsync();
+                        RefreshProfileLabels();
+                    }
+                    finally
+                    {
+                        SetProfileLoadingVisible(false);
+                    }
+
+                    try
+                    {
+                        await FriendsHubService.InitializeAsync();
+                        await FriendsHubService.SetPresenceAsync("InLauncher");
+                        RefreshFriendsLabel();
+                    }
+                    finally
+                    {
+                        SetFriendsLoadingVisible(false);
+                    }
                 }
                 catch (System.Exception socialEx)
                 {
                     Debug.LogWarning($"Hub social init skipped: {socialEx.Message}");
                 }
-
-                RefreshProfileLabels();
-                RefreshFriendsLabel();
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"RefreshHubAsync: {ex.Message}");
             }
+            finally
+            {
+                _hubDataLoading = false;
+                SetProfileLoadingVisible(false);
+                SetFriendsLoadingVisible(false);
+            }
         }
+
+        private void BindLoadingOverlays()
+        {
+            _profileLoadingOverlay?.Dispose();
+            _friendsLoadingOverlay?.Dispose();
+            _profileLoadingOverlay = new PanelLoadingOverlay(_root.Q<VisualElement>("ProfileLoadingOverlay"));
+            _friendsLoadingOverlay = new PanelLoadingOverlay(_root.Q<VisualElement>("HubLoadingOverlay"));
+        }
+
+        private void SetProfileLoadingVisible(bool visible)
+        {
+#if UNITY_EDITOR
+            if (_previewProfileLoading)
+            {
+                visible = true;
+            }
+#endif
+            _profileLoadingOverlay?.SetVisible(visible);
+            RefreshMainMenuControlState();
+        }
+
+        private void SetFriendsLoadingVisible(bool visible)
+        {
+#if UNITY_EDITOR
+            if (_previewFriendsLoading)
+            {
+                visible = true;
+            }
+#endif
+            _friendsLoadingOverlay?.SetVisible(visible);
+            RefreshMainMenuControlState();
+        }
+
+#if UNITY_EDITOR
+        /// <summary>Inspector / edit-mode preview for hub loading overlays.</summary>
+        public void ApplyEditorHubLoadingPreview()
+        {
+            if (_uiDocument == null)
+            {
+                TryGetComponent(out _uiDocument);
+            }
+
+            var root = _root ?? _uiDocument?.rootVisualElement;
+            if (root == null)
+            {
+                return;
+            }
+
+            if (_profileLoadingOverlay == null || _friendsLoadingOverlay == null)
+            {
+                _root = root;
+                BindLoadingOverlays();
+            }
+
+            _profileLoadingOverlay?.SetVisible(_previewProfileLoading);
+            _friendsLoadingOverlay?.SetVisible(_previewFriendsLoading);
+        }
+#endif
 
         private void RefreshProfileLabels()
         {
@@ -917,6 +1022,7 @@ namespace Game.UI.Controllers
             }
 
             _isUpdating = true;
+            RefreshMainMenuControlState();
             try
             {
                 if (_updateStatusLabel != null)
@@ -944,6 +1050,7 @@ namespace Game.UI.Controllers
             catch (System.Exception ex)
             {
                 _isUpdating = false;
+                RefreshMainMenuControlState();
                 ApplyVersionStrip(
                     updateAvailable: _playBlockedByUpdate,
                     remoteVersion: GameUpdateService.RemoteManifest?.version,
@@ -959,16 +1066,16 @@ namespace Game.UI.Controllers
 #if UNITY_EDITOR
         private void ApplyEditorVersionStripPreview()
         {
-            if (!_previewUpdateAvailable && !_previewDownloading)
+            if (_previewUpdateAvailable || _previewDownloading)
             {
-                return;
+                ApplyVersionStrip(
+                    updateAvailable: _previewUpdateAvailable || _previewDownloading,
+                    remoteVersion: _previewRemoteVersion,
+                    downloading: _previewDownloading,
+                    progress01: _previewDownloadProgress);
             }
 
-            ApplyVersionStrip(
-                updateAvailable: _previewUpdateAvailable || _previewDownloading,
-                remoteVersion: _previewRemoteVersion,
-                downloading: _previewDownloading,
-                progress01: _previewDownloadProgress);
+            RefreshMainMenuControlState();
         }
 #endif
 
@@ -1358,11 +1465,42 @@ namespace Game.UI.Controllers
 
         private void SetMainMenuInteractable(bool interactable)
         {
-            _playButton?.SetEnabled(interactable);
-            _settingsButton?.SetEnabled(interactable);
-            _quitButton?.SetEnabled(interactable);
-            _editProfileButton?.SetEnabled(interactable);
-            _addFriendButton?.SetEnabled(interactable);
+            _overlayBlocksMenu = !interactable;
+            RefreshMainMenuControlState();
+        }
+
+        private void RefreshMainMenuControlState()
+        {
+            var menuEnabled = !_overlayBlocksMenu && !IsMainMenuBlockedByUpdate;
+            var profileLoading = _profileLoadingOverlay?.IsVisible == true;
+            var friendsLoading = _friendsLoadingOverlay?.IsVisible == true;
+
+            _playButton?.SetEnabled(menuEnabled);
+            _settingsButton?.SetEnabled(menuEnabled);
+            _quitButton?.SetEnabled(menuEnabled);
+            _editProfileButton?.SetEnabled(menuEnabled && !profileLoading);
+            _addFriendButton?.SetEnabled(menuEnabled && !friendsLoading);
+            _friendIdField?.SetEnabled(menuEnabled && !friendsLoading);
+            _versionUpdateButton?.SetEnabled(IsUpdateActionAvailable());
+        }
+
+        private bool IsUpdateActionAvailable()
+        {
+            if (_isUpdating)
+            {
+                return false;
+            }
+
+            if (_playBlockedByUpdate)
+            {
+                return true;
+            }
+
+#if UNITY_EDITOR
+            return Application.isPlaying && _previewUpdateAvailable;
+#else
+            return false;
+#endif
         }
     }
 }

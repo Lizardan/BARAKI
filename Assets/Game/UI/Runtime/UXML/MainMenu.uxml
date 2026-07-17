@@ -18,6 +18,12 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Button name="EditProfileButton" text="РЕДАКТИРОВАТЬ" class="mm__profile-edit-btn" />
+            <ui:VisualElement name="ProfileLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
+                <ui:VisualElement class="ui-panel-loading-overlay__content">
+                    <ui:Label text="Загрузка" class="ui-panel-loading-overlay__text" />
+                    <ui:Label class="ui-panel-loading-overlay__dots" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
 
         <ui:VisualElement class="mm__shell" picking-mode="Ignore">
@@ -57,6 +63,12 @@
                         <ui:Label text="Добавить по Player ID" class="ui-label mm__friends-add-label" />
                         <ui:TextField name="FriendIdField" class="mm-join__field" max-length="64" />
                         <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="HubLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
+                        <ui:VisualElement class="ui-panel-loading-overlay__content">
+                            <ui:Label text="Загрузка" class="ui-panel-loading-overlay__text" />
+                            <ui:Label class="ui-panel-loading-overlay__dots" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
