@@ -6,22 +6,22 @@ using UnityEngine.UIElements;
 
 namespace Game.Editor
 {
-    [CustomEditor(typeof(MainMenuController))]
-    public sealed class MainMenuControllerEditor : UnityEditor.Editor
+    [CustomEditor(typeof(BootstrapLoadingController))]
+    public sealed class BootstrapLoadingControllerEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
 
-            var controller = (MainMenuController)target;
+            var controller = (BootstrapLoadingController)target;
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Предпросмотр UI", EditorStyles.boldLabel);
 
             using (new EditorGUI.DisabledScope(!TryGetDocumentRoot(controller, out _)))
             {
-                if (GUILayout.Button("Применить предпросмотр друзей"))
+                if (GUILayout.Button("Применить предпросмотр"))
                 {
-                    controller.ApplyEditorFriendsHubPreview();
+                    controller.ApplyEditorPreview();
                     SceneView.RepaintAll();
                 }
             }
@@ -29,13 +29,13 @@ namespace Game.Editor
             if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox(
-                    "В Edit Mode откройте Game View (сцена MainMenu), включите Preview Friends Hub " +
-                    "и нажмите «Применить предпросмотр друзей». Переключайте вкладку Friends/Invites в Inspector.",
+                    "Откройте сцену Bootstrap и Game View. Выберите Preview Mode " +
+                    "(Loading / UpdateAvailable / Downloading) и нажмите «Применить предпросмотр».",
                     MessageType.Info);
             }
         }
 
-        private static bool TryGetDocumentRoot(MainMenuController controller, out VisualElement root)
+        private static bool TryGetDocumentRoot(BootstrapLoadingController controller, out VisualElement root)
         {
             root = null;
             if (controller == null)

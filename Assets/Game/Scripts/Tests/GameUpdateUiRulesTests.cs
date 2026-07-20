@@ -20,5 +20,12 @@ namespace Game.Tests
             Assert.AreEqual(100, GameUpdateUiRules.ProgressPercent(1.2f));
             Assert.AreEqual("37%", GameUpdateUiRules.FormatProgressLabel(0.374f));
         }
+
+        [Test]
+        public void FormatUpdateRange_JoinsLocalAndRemote()
+        {
+            Assert.AreEqual("v0.1.2 → v0.1.4", GameUpdateUiRules.FormatUpdateRange("0.1.2", "0.1.4"));
+            Assert.AreEqual("v0.1.2 → v0.1.4", GameUpdateUiRules.FormatUpdateRange("v0.1.2", "v0.1.4"));
+        }
     }
 }

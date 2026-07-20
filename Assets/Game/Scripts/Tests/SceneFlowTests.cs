@@ -127,6 +127,48 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BootstrapScene_HasBootstrapLoadingController()
+        {
+            EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
+            var controller = Object.FindAnyObjectByType<BootstrapLoadingController>();
+            Assert.IsNotNull(controller, "Bootstrap scene should include BootstrapLoadingController.");
+
+            var uiDocument = controller.GetComponent<UIDocument>();
+            Assert.IsNotNull(uiDocument, "BootstrapLoading should include UIDocument.");
+            Assert.IsNotNull(uiDocument.visualTreeAsset, "Bootstrap UIDocument should reference BootstrapLoading.uxml.");
+
+            var root = uiDocument.visualTreeAsset.CloneTree();
+            Assert.IsNotNull(root.Q<Label>("StatusLabel"), "BootstrapLoading.uxml should include StatusLabel.");
+            Assert.IsNotNull(root.Q<Label>("UpdateTitleLabel"), "BootstrapLoading.uxml should include UpdateTitleLabel.");
+            Assert.IsNotNull(root.Q<Label>("UpdateRangeLabel"), "BootstrapLoading.uxml should include UpdateRangeLabel.");
+            Assert.IsNotNull(root.Q<Button>("UpdateButton"), "BootstrapLoading.uxml should include UpdateButton.");
+            Assert.IsNotNull(root.Q<VisualElement>("VersionProgress"), "BootstrapLoading.uxml should include VersionProgress.");
+            Assert.IsNotNull(root.Q<VisualElement>("VersionProgressFill"), "BootstrapLoading.uxml should include VersionProgressFill.");
+            Assert.IsNotNull(root.Q<Label>("VersionProgressLabel"), "BootstrapLoading.uxml should include VersionProgressLabel.");
+            Assert.IsNotNull(root.Q<Label>("UpdateStatusLabel"), "BootstrapLoading.uxml should include UpdateStatusLabel.");
+        }
+
+        [Test]
+        public void MainMenuUxml_HasNoHubLoadingOverlaysOrUpdateControls()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                "Assets/Game/UI/Runtime/UXML/MainMenu.uxml");
+            Assert.IsNotNull(asset, "MainMenu.uxml should exist.");
+
+            var root = asset.CloneTree();
+            Assert.IsNull(root.Q<VisualElement>("ProfileLoadingOverlay"),
+                "MainMenu should not include ProfileLoadingOverlay.");
+            Assert.IsNull(root.Q<VisualElement>("HubLoadingOverlay"),
+                "MainMenu should not include HubLoadingOverlay.");
+            Assert.IsNull(root.Q<Button>("VersionUpdateButton"),
+                "MainMenu should not include VersionUpdateButton.");
+            Assert.IsNull(root.Q<VisualElement>("VersionProgress"),
+                "MainMenu should not include VersionProgress.");
+            Assert.IsNotNull(root.Q<Label>("VersionLabel"),
+                "MainMenu should still show local VersionLabel.");
+        }
+
+        [Test]
         public void GameSceneNames_MatchBuildPaths()
         {
             Assert.AreEqual(GameSceneNames.Bootstrap, "Bootstrap");

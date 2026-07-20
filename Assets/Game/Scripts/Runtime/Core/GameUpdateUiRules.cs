@@ -38,5 +38,9 @@ namespace Game.Core
 
         public static string FormatProgressLabel(float progress01) =>
             ProgressPercent(progress01) + "%";
+
+        /// <summary>Centered bootstrap copy: local → remote, e.g. "v0.1.2 → v0.1.4".</summary>
+        public static string FormatUpdateRange(string localVersion, string remoteVersion) =>
+            FormatVersionLabel(localVersion) + " → " + FormatVersionLabel(remoteVersion);
     }
 }

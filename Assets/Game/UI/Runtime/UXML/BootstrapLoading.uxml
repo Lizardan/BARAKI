@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="../USS/BarakiTheme.uss" />
+    <Style src="../USS/BootstrapLoading.uss" />
+    <ui:VisualElement name="BootstrapScreen" class="ui-screen bl" picking-mode="Position">
+        <ui:VisualElement name="MenuBackdrop" class="ui-bg" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-bg-shade" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-vignette" picking-mode="Ignore" />
+
+        <ui:VisualElement name="CenterStack" class="bl__center" picking-mode="Ignore">
+            <ui:VisualElement name="LoadingPanel" class="bl__panel" picking-mode="Ignore">
+                <ui:Label name="LoadingTitleLabel" text="Загрузка" class="bl__title" picking-mode="Ignore" />
+                <ui:Label name="StatusLabel" text="" class="bl__status" picking-mode="Ignore" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="UpdatePanel" class="bl__panel ui-overlay--hidden" picking-mode="Position">
+                <ui:Label name="UpdateTitleLabel" text="Доступно обновление" class="bl__title" picking-mode="Ignore" />
+                <ui:Label name="UpdateRangeLabel" text="" class="bl__range" picking-mode="Ignore" />
+                <ui:Button name="UpdateButton" text="ОБНОВИТЬ" class="ui-btn ui-btn--primary bl__update-btn" />
+                <ui:VisualElement name="VersionProgress" class="bl__progress ui-overlay--hidden" picking-mode="Ignore">
+                    <ui:VisualElement name="VersionProgressTrack" class="bl__progress-track">
+                        <ui:VisualElement name="VersionProgressFill" class="bl__progress-fill" />
+                    </ui:VisualElement>
+                    <ui:Label name="VersionProgressLabel" text="0%" class="bl__progress-label" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="UpdateStatusLabel" text="" class="bl__status bl__status--error" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

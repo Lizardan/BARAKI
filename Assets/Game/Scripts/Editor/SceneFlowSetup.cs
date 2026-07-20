@@ -18,6 +18,7 @@ namespace Game.Editor
         private const string LobbyPath = "Assets/Game/Scenes/Lobby.unity";
         private const string GamePath = "Assets/Game/Scenes/Game.unity";
         private const string PanelSettingsPath = "Assets/Game/Settings/UI/DefaultPanelSettings.asset";
+        private const string BootstrapUxmlPath = "Assets/Game/UI/Runtime/UXML/BootstrapLoading.uxml";
         private const string MainMenuUxmlPath = "Assets/Game/UI/Runtime/UXML/MainMenu.uxml";
         private const string LobbyUxmlPath = "Assets/Game/UI/Runtime/UXML/Lobby.uxml";
 
@@ -40,6 +41,25 @@ namespace Game.Editor
         {
             var scene = EditorSceneManager.OpenScene(BootstrapPath, OpenSceneMode.Single);
             EnsureUiCameraGroup();
+
+            var uiGroup = GameObject.Find("--- UI ---");
+            if (uiGroup == null)
+            {
+                uiGroup = new GameObject("--- UI ---");
+            }
+
+            var existing = GameObject.Find("BootstrapLoading");
+            if (existing != null)
+            {
+                Object.DestroyImmediate(existing);
+            }
+
+            EnsureMenuUi(
+                uiGroup.transform,
+                "BootstrapLoading",
+                BootstrapUxmlPath,
+                typeof(BootstrapLoadingController));
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
         }

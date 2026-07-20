@@ -20,12 +20,6 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Button name="EditProfileButton" text="РЕДАКТИРОВАТЬ" class="mm__profile-edit-btn" />
-            <ui:VisualElement name="ProfileLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
-                <ui:VisualElement class="ui-panel-loading-overlay__content">
-                    <ui:Label text="Загрузка" class="ui-panel-loading-overlay__text" />
-                    <ui:Label class="ui-panel-loading-overlay__dots" />
-                </ui:VisualElement>
-            </ui:VisualElement>
         </ui:VisualElement>
 
         <ui:VisualElement class="mm__shell" picking-mode="Ignore">
@@ -43,7 +37,6 @@
                         <ui:Button name="PlayButton" text="В БОЙ" class="ui-btn ui-btn--primary" />
                         <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="ui-btn" />
                         <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted" />
-                        <ui:Label name="UpdateStatusLabel" text="" class="ui-meta mm__update-status" />
                         <ui:VisualElement class="ui-hints">
                             <ui:Label text="Enter — в бой" class="ui-hints__text" />
                             <ui:Label text="Esc — выход" class="ui-hints__text" />
@@ -78,27 +71,12 @@
                             <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
                         </ui:ScrollView>
                     </ui:VisualElement>
-                    <ui:VisualElement name="HubLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
-                        <ui:VisualElement class="ui-panel-loading-overlay__content">
-                            <ui:Label text="Загрузка" class="ui-panel-loading-overlay__text" />
-                            <ui:Label class="ui-panel-loading-overlay__dots" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="VersionBar" class="mm__version-bar" picking-mode="Position">
+        <ui:VisualElement name="VersionBar" class="mm__version-bar" picking-mode="Ignore">
             <ui:Label name="VersionLabel" text="v0.0.0" class="mm__version-text" picking-mode="Ignore" />
-            <ui:Label name="VersionArrowLabel" text="&gt;" class="mm__version-arrow ui-overlay--hidden" picking-mode="Ignore" />
-            <ui:Label name="VersionRemoteLabel" text="" class="mm__version-text mm__version-remote ui-overlay--hidden" picking-mode="Ignore" />
-            <ui:Button name="VersionUpdateButton" text="update" class="mm__version-update-btn ui-overlay--hidden" />
-            <ui:VisualElement name="VersionProgress" class="mm__version-progress ui-overlay--hidden" picking-mode="Ignore">
-                <ui:VisualElement name="VersionProgressTrack" class="mm__version-progress-track">
-                    <ui:VisualElement name="VersionProgressFill" class="mm__version-progress-fill" />
-                </ui:VisualElement>
-                <ui:Label name="VersionProgressLabel" text="0%" class="mm__version-progress-label" />
-            </ui:VisualElement>
         </ui:VisualElement>
 
         <ui:VisualElement name="ProfileEditOverlay" class="ui-overlay ui-overlay--hidden">

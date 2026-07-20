@@ -1,0 +1,92 @@
+/* Bootstrap loading / force-update screen */
+
+.bl__center {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+.bl__panel {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 720px;
+}
+
+.bl__title {
+    font-size: 48px;
+    -unity-font-style: bold;
+    color: rgb(242, 230, 200);
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.85);
+}
+
+.bl__status {
+    font-size: 22px;
+    color: rgb(168, 152, 120);
+    -unity-text-align: middle-center;
+    margin-top: 4px;
+    white-space: normal;
+}
+
+.bl__status--error {
+    color: rgb(220, 120, 100);
+    margin-top: 18px;
+    max-width: 560px;
+}
+
+.bl__range {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: rgb(201, 163, 90);
+    -unity-text-align: middle-center;
+    margin-bottom: 28px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.bl__update-btn {
+    min-width: 220px;
+    height: 52px;
+    font-size: 20px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.bl__progress {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    width: 420px;
+    max-width: 90%;
+}
+
+.bl__progress-track {
+    width: 100%;
+    height: 16px;
+    background-color: rgb(70, 70, 74);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bl__progress-fill {
+    height: 100%;
+    width: 0;
+    background-color: rgb(72, 180, 90);
+}
+
+.bl__progress-label {
+    margin-top: 10px;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 244, 214);
+    -unity-text-align: middle-center;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
