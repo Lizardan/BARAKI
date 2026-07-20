@@ -36,5 +36,18 @@ namespace Game.Tests
         {
             Assert.IsTrue(GameDisplayRules.RunInBackground);
         }
+
+        [Test]
+        public void StartupWindowPlayerPrefs_MatchWindowedResolution()
+        {
+            Assert.AreEqual("Screenmanager Resolution Width", GameDisplayRules.ScreenWidthPrefsKey);
+            Assert.AreEqual("Screenmanager Resolution Height", GameDisplayRules.ScreenHeightPrefsKey);
+            Assert.AreEqual(
+                "Screenmanager Fullscreen mode",
+                GameDisplayRules.ScreenFullscreenModePrefsKey);
+            Assert.AreEqual(
+                (int)FullScreenMode.Windowed,
+                GameDisplayRules.StartupFullscreenModePrefsValue);
+        }
     }
 }

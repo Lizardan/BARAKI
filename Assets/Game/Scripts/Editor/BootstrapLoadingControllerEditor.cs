@@ -30,7 +30,7 @@ namespace Game.Editor
             {
                 EditorGUILayout.HelpBox(
                     "Откройте сцену Bootstrap и Game View. Выберите Preview Mode " +
-                    "(Loading / UpdateAvailable / Downloading) и нажмите «Применить предпросмотр».",
+                    "(Loading / UpdateAvailable / Downloading / ReadyToEnter) и нажмите «Применить предпросмотр».",
                     MessageType.Info);
             }
         }

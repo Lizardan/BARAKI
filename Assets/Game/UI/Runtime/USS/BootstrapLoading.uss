@@ -60,6 +60,47 @@
     margin-bottom: 8px;
 }
 
+.ui-btn.bl__enter-btn {
+    min-width: 288px;
+    height: 64px;
+    font-size: 35px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    margin-top: 0;
+}
+
+.ui-btn.bl__quit {
+    position: absolute;
+    right: 28px;
+    bottom: 28px;
+    min-width: 288px;
+    height: 64px;
+    font-size: 35px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: 0;
+}
+
+/* Match Main Menu version chip (mm__version-bar / mm__version-text). */
+.bl__version-bar {
+    position: absolute;
+    left: 40px;
+    bottom: 18px;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.bl__version-text {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(255, 244, 214);
+    letter-spacing: 2px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin-right: 8px;
+}
+
 .bl__progress {
     flex-direction: column;
     align-items: center;

@@ -6,6 +6,15 @@ namespace Game.Core
         public const int StartupWidth = 1280;
         public const int StartupHeight = 720;
 
+        /// <summary>Unity PlayerPrefs key for last window width (standalone).</summary>
+        public const string ScreenWidthPrefsKey = "Screenmanager Resolution Width";
+
+        /// <summary>Unity PlayerPrefs key for last window height (standalone).</summary>
+        public const string ScreenHeightPrefsKey = "Screenmanager Resolution Height";
+
+        /// <summary>Unity PlayerPrefs key for last <see cref="UnityEngine.FullScreenMode"/>.</summary>
+        public const string ScreenFullscreenModePrefsKey = "Screenmanager Fullscreen mode";
+
         public static bool RunInBackground => true;
 
         public static UnityEngine.FullScreenMode StartupFullScreenMode =>
@@ -13,6 +22,8 @@ namespace Game.Core
 
         public static UnityEngine.FullScreenMode MainMenuFullScreenMode =>
             UnityEngine.FullScreenMode.FullScreenWindow;
+
+        public static int StartupFullscreenModePrefsValue => (int)StartupFullScreenMode;
 
         public static bool ShouldEnterFullscreen(string sceneName) =>
             sceneName == GameSceneNames.MainMenu;

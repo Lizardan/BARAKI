@@ -5,6 +5,7 @@ using Game.Gameplay.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+
 namespace Game.UI.Controllers
 {
     public enum BootstrapPreviewMode
@@ -12,10 +13,11 @@ namespace Game.UI.Controllers
         Loading = 0,
         UpdateAvailable = 1,
         Downloading = 2,
+        ReadyToEnter = 3,
     }
 
     /// <summary>
-    /// Bootstrap loading screen: version check, force-update UI, UGS/profile/friends warm-up, then MainMenu.
+    /// Bootstrap loading screen: version check, force-update UI, UGS warm-up, then wait for Enter Game.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class BootstrapLoadingController : MonoBehaviour
@@ -38,14 +40,19 @@ namespace Game.UI.Controllers
         private VisualElement _root;
         private VisualElement _loadingPanel;
         private VisualElement _updatePanel;
+        private Label _loadingTitleLabel;
         private Label _statusLabel;
+        private Label _versionLabel;
         private Label _updateRangeLabel;
         private Label _updateStatusLabel;
         private Button _updateButton;
+        private Button _enterGameButton;
+        private Button _quitButton;
         private VisualElement _versionProgress;
         private VisualElement _versionProgressFill;
         private Label _versionProgressLabel;
         private bool _isUpdating;
+        private bool _isEnteringGame;
         private bool _pipelineStarted;
 
         private void Awake()
@@ -64,6 +71,16 @@ namespace Game.UI.Controllers
             if (_updateButton != null)
             {
                 _updateButton.clicked += OnUpdateClicked;
+            }
+
+            if (_enterGameButton != null)
+            {
+                _enterGameButton.clicked += OnEnterGameClicked;
+            }
+
+            if (_quitButton != null)
+            {
+                _quitButton.clicked += OnQuitClicked;
             }
 
 #if UNITY_EDITOR
@@ -86,6 +103,16 @@ namespace Game.UI.Controllers
             if (_updateButton != null)
             {
                 _updateButton.clicked -= OnUpdateClicked;
+            }
+
+            if (_enterGameButton != null)
+            {
+                _enterGameButton.clicked -= OnEnterGameClicked;
+            }
+
+            if (_quitButton != null)
+            {
+                _quitButton.clicked -= OnQuitClicked;
             }
         }
 
@@ -123,6 +150,9 @@ namespace Game.UI.Controllers
                 case BootstrapPreviewMode.Downloading:
                     ShowDownloading(_previewLocalVersion, _previewRemoteVersion, _previewDownloadProgress);
                     break;
+                case BootstrapPreviewMode.ReadyToEnter:
+                    ShowReadyToEnter();
+                    break;
                 default:
                     ShowLoading(string.IsNullOrWhiteSpace(_previewStatusText)
                         ? "Проверка версии"
@@ -142,13 +172,31 @@ namespace Game.UI.Controllers
 
             _loadingPanel = _root.Q<VisualElement>("LoadingPanel");
             _updatePanel = _root.Q<VisualElement>("UpdatePanel");
+            _loadingTitleLabel = _root.Q<Label>("LoadingTitleLabel");
             _statusLabel = _root.Q<Label>("StatusLabel");
+            _versionLabel = _root.Q<Label>("VersionLabel");
             _updateRangeLabel = _root.Q<Label>("UpdateRangeLabel");
             _updateStatusLabel = _root.Q<Label>("UpdateStatusLabel");
             _updateButton = _root.Q<Button>("UpdateButton");
+            _enterGameButton = _root.Q<Button>("EnterGameButton");
+            _quitButton = _root.Q<Button>("QuitButton");
             _versionProgress = _root.Q<VisualElement>("VersionProgress");
             _versionProgressFill = _root.Q<VisualElement>("VersionProgressFill");
             _versionProgressLabel = _root.Q<Label>("VersionProgressLabel");
+
+            if (_versionLabel != null)
+            {
+                _versionLabel.text = GameUpdateUiRules.FormatVersionLabel(GameLocalVersion.Current);
+            }
+
+            if (_updateRangeLabel != null)
+            {
+                _updateRangeLabel.enableRichText = true;
+            }
+
+            // Quit stays visible; interactivity is toggled by pipeline state.
+            SetOverlayHidden(_quitButton, false);
+            SetQuitInteractive(false);
         }
 
         private async UniTaskVoid RunBootstrapPipelineAsync()
@@ -186,8 +234,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            ShowLoading("Открытие меню");
-            await SceneManager.LoadSceneAsync(GameSceneNames.MainMenu);
+            ShowReadyToEnter();
         }
 
         private async UniTask WarmSocialServicesAsync()
@@ -200,7 +247,7 @@ namespace Game.UI.Controllers
                         UgsInitTimeoutSeconds))
                 {
                     Debug.LogWarning(
-                        $"Bootstrap: UGS init timed out after {UgsInitTimeoutSeconds:0}s, opening menu without cloud.");
+                        $"Bootstrap: UGS init timed out after {UgsInitTimeoutSeconds:0}s, continuing without cloud.");
                     return;
                 }
 
@@ -252,6 +299,39 @@ namespace Game.UI.Controllers
             ApplyUpdateAsync().Forget();
         }
 
+        private void OnEnterGameClicked()
+        {
+            if (_isEnteringGame)
+            {
+                return;
+            }
+
+            EnterGameAsync().Forget();
+        }
+
+        private void OnQuitClicked()
+        {
+            if (_isUpdating || _isEnteringGame || _quitButton == null || !_quitButton.enabledSelf)
+            {
+                return;
+            }
+
+            Application.Quit();
+        }
+
+        private async UniTaskVoid EnterGameAsync()
+        {
+            _isEnteringGame = true;
+            SetQuitInteractive(false);
+            if (_enterGameButton != null)
+            {
+                _enterGameButton.SetEnabled(false);
+            }
+
+            ShowEnteringGame();
+            await SceneManager.LoadSceneAsync(GameSceneNames.MainMenu);
+        }
+
         private async UniTaskVoid ApplyUpdateAsync()
         {
             if (_isUpdating || !GameUpdateService.UpdateRequired)
@@ -290,9 +370,44 @@ namespace Game.UI.Controllers
         {
             SetOverlayHidden(_loadingPanel, false);
             SetOverlayHidden(_updatePanel, true);
+            SetOverlayHidden(_enterGameButton, true);
+            SetOverlayHidden(_loadingTitleLabel, false);
+            SetOverlayHidden(_statusLabel, false);
+            SetQuitInteractive(false);
+
             if (_statusLabel != null)
             {
                 _statusLabel.text = status ?? string.Empty;
+            }
+        }
+
+        private void ShowReadyToEnter()
+        {
+            SetOverlayHidden(_loadingPanel, false);
+            SetOverlayHidden(_updatePanel, true);
+            SetOverlayHidden(_loadingTitleLabel, true);
+            SetOverlayHidden(_statusLabel, true);
+            SetOverlayHidden(_enterGameButton, false);
+            if (_enterGameButton != null)
+            {
+                _enterGameButton.SetEnabled(true);
+            }
+
+            SetQuitInteractive(true);
+        }
+
+        private void ShowEnteringGame()
+        {
+            SetOverlayHidden(_loadingPanel, false);
+            SetOverlayHidden(_updatePanel, true);
+            SetOverlayHidden(_loadingTitleLabel, true);
+            SetOverlayHidden(_enterGameButton, true);
+            SetOverlayHidden(_statusLabel, false);
+            SetQuitInteractive(false);
+
+            if (_statusLabel != null)
+            {
+                _statusLabel.text = "Вход в игру";
             }
         }
 
@@ -300,6 +415,7 @@ namespace Game.UI.Controllers
         {
             SetOverlayHidden(_loadingPanel, true);
             SetOverlayHidden(_updatePanel, false);
+            SetOverlayHidden(_enterGameButton, true);
             SetOverlayHidden(_versionProgress, true);
             if (_updateButton != null)
             {
@@ -307,10 +423,8 @@ namespace Game.UI.Controllers
                 SetOverlayHidden(_updateButton, false);
             }
 
-            if (_updateRangeLabel != null)
-            {
-                _updateRangeLabel.text = GameUpdateUiRules.FormatUpdateRange(localVersion, remoteVersion);
-            }
+            ApplyUpdateRange(localVersion, remoteVersion);
+            SetQuitInteractive(true);
 
             if (_updateStatusLabel != null && string.IsNullOrEmpty(_updateStatusLabel.text))
             {
@@ -322,13 +436,12 @@ namespace Game.UI.Controllers
         {
             SetOverlayHidden(_loadingPanel, true);
             SetOverlayHidden(_updatePanel, false);
+            SetOverlayHidden(_enterGameButton, true);
             SetOverlayHidden(_updateButton, true);
             SetOverlayHidden(_versionProgress, false);
+            SetQuitInteractive(false);
 
-            if (_updateRangeLabel != null)
-            {
-                _updateRangeLabel.text = GameUpdateUiRules.FormatUpdateRange(localVersion, remoteVersion);
-            }
+            ApplyUpdateRange(localVersion, remoteVersion);
 
             if (_versionProgressFill != null)
             {
@@ -340,6 +453,28 @@ namespace Game.UI.Controllers
             {
                 _versionProgressLabel.text = GameUpdateUiRules.FormatProgressLabel(progress01);
             }
+        }
+
+        private void ApplyUpdateRange(string localVersion, string remoteVersion)
+        {
+            if (_updateRangeLabel == null)
+            {
+                return;
+            }
+
+            _updateRangeLabel.enableRichText = true;
+            _updateRangeLabel.text = GameUpdateUiRules.FormatUpdateRange(localVersion, remoteVersion);
+        }
+
+        private void SetQuitInteractive(bool interactive)
+        {
+            if (_quitButton == null)
+            {
+                return;
+            }
+
+            SetOverlayHidden(_quitButton, false);
+            _quitButton.SetEnabled(interactive);
         }
 
         private static void SetOverlayHidden(VisualElement element, bool hidden)

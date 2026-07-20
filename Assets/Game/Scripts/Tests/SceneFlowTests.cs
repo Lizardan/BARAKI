@@ -152,6 +152,9 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<Label>("UpdateTitleLabel"), "BootstrapLoading.uxml should include UpdateTitleLabel.");
             Assert.IsNotNull(root.Q<Label>("UpdateRangeLabel"), "BootstrapLoading.uxml should include UpdateRangeLabel.");
             Assert.IsNotNull(root.Q<Button>("UpdateButton"), "BootstrapLoading.uxml should include UpdateButton.");
+            Assert.IsNotNull(root.Q<Button>("EnterGameButton"), "BootstrapLoading.uxml should include EnterGameButton.");
+            Assert.IsNotNull(root.Q<Button>("QuitButton"), "BootstrapLoading.uxml should include QuitButton.");
+            Assert.IsNotNull(root.Q<Label>("VersionLabel"), "BootstrapLoading.uxml should include VersionLabel.");
             Assert.IsNotNull(root.Q<VisualElement>("VersionProgress"), "BootstrapLoading.uxml should include VersionProgress.");
             Assert.IsNotNull(root.Q<VisualElement>("VersionProgressFill"), "BootstrapLoading.uxml should include VersionProgressFill.");
             Assert.IsNotNull(root.Q<Label>("VersionProgressLabel"), "BootstrapLoading.uxml should include VersionProgressLabel.");

@@ -39,8 +39,14 @@ namespace Game.Core
         public static string FormatProgressLabel(float progress01) =>
             ProgressPercent(progress01) + "%";
 
-        /// <summary>Centered bootstrap copy: local → remote, e.g. "v0.1.2 → v0.1.4".</summary>
+        /// <summary>
+        /// Bootstrap copy: local — remote with remote tinted blue for UITK rich text.
+        /// Uses em dash (same as Main Menu copy) — Noto Sans has the glyph.
+        /// </summary>
         public static string FormatUpdateRange(string localVersion, string remoteVersion) =>
-            FormatVersionLabel(localVersion) + " → " + FormatVersionLabel(remoteVersion);
+            FormatVersionLabel(localVersion)
+            + " — <color=#4A9EFF>"
+            + FormatVersionLabel(remoteVersion)
+            + "</color>";
     }
 }
