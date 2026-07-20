@@ -1,17 +1,19 @@
 using System.Collections.Generic;
+using Game.Gameplay.Match;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    /// <summary>WC3-style movement: desired direction + local ally avoidance.</summary>
+    /// <summary>WC3-style movement: desired direction + local ally avoidance + walkable surface clamp.</summary>
     public static class UnitLocomotionRules
     {
         public const float TargetScanInterval = 0.2f;
         public const float RouteLookahead = 3f;
         public const float AvoidanceStrength = 3.5f;
         public const float StoppingDistance = 0.2f;
-        public const float MaxCombatDriftFromLane = 14f;
-        public const float MaxMarchDriftFromLane = 4f;
+
+        /// <summary>Physical road half-width (matches greybox ribbon).</summary>
+        public static float RoadHalfWidth => MatchArenaGreyboxBuilder.RoadWidth * 0.5f;
 
         public static float AvoidanceRadius => CombatFormationRules.MinUnitSeparation;
 
@@ -34,7 +36,9 @@ namespace Game.Gameplay.Combat
             position.y = 0f;
             var distance = route.ProjectDistanceForward(position, progressDistance);
             var lookAhead = Mathf.Max(RouteLookahead, maxStep * 1.25f);
-            var targetDistance = Mathf.Min(distance + lookAhead, route.TotalLength);
+            var targetDistance = route.IsClosedLoop
+                ? distance + lookAhead
+                : Mathf.Min(distance + lookAhead, route.TotalLength);
             var destination = route.EvaluateDistance(targetDistance);
             destination.y = position.y;
             return destination;
@@ -142,27 +146,67 @@ namespace Game.Gameplay.Combat
                 finalDirection.Normalize();
             }
 
-            facingDirection = finalDirection;
             var step = finalDirection * maxStep;
             if (step.sqrMagnitude > toDestination.sqrMagnitude)
             {
                 step = toDestination;
             }
 
+            facingDirection = step.sqrMagnitude > 0.0001f
+                ? step.normalized
+                : desired;
+
             var result = position + step;
             result.y = position.y;
             return result;
         }
 
-        public static Vector3 ClampToLaneDrift(LaneRoute route, Vector3 position, float maxDrift)
+        /// <summary>Facing from actual world displacement (horizontal). False when barely moved.</summary>
+        public static bool TryGetFacingFromDisplacement(Vector3 from, Vector3 to, out Vector3 facing)
         {
-            return ClampToLaneDrift(route, position, maxDrift, route?.ProjectDistance(position) ?? 0f);
+            var delta = to - from;
+            delta.y = 0f;
+            if (delta.sqrMagnitude <= 0.0001f)
+            {
+                facing = default;
+                return false;
+            }
+
+            facing = delta.normalized;
+            return true;
         }
 
-        public static Vector3 ClampToLaneDrift(
+        public static bool IsInsideCenterArena(Vector3 position, float centerArenaRadius)
+        {
+            if (centerArenaRadius <= 0f)
+            {
+                return false;
+            }
+
+            position.y = 0f;
+            return position.sqrMagnitude <= centerArenaRadius * centerArenaRadius;
+        }
+
+        /// <summary>
+        /// Keep units on the road ribbon or inside the center arena. No separate march/combat leash.
+        /// </summary>
+        public static Vector3 ClampToWalkable(
             LaneRoute route,
             Vector3 position,
-            float maxDrift,
+            float progressDistance,
+            float centerArenaRadius)
+        {
+            if (IsInsideCenterArena(position, centerArenaRadius))
+            {
+                return position;
+            }
+
+            return ClampToRoadCorridor(route, position, progressDistance);
+        }
+
+        public static Vector3 ClampToRoadCorridor(
+            LaneRoute route,
+            Vector3 position,
             float progressDistance)
         {
             if (route == null)
@@ -176,6 +220,7 @@ namespace Game.Gameplay.Combat
             position.y = 0f;
             var offset = position - spine;
             var drift = offset.magnitude;
+            var maxDrift = RoadHalfWidth;
             if (drift <= maxDrift || drift <= 0.0001f)
             {
                 position.y = route.EvaluateDistance(distance).y;
@@ -185,6 +230,50 @@ namespace Game.Gameplay.Combat
             var clamped = spine + offset / drift * maxDrift;
             clamped.y = route.EvaluateDistance(distance).y;
             return clamped;
+        }
+
+        /// <summary>Caps world displacement so units never snap farther than one move step.</summary>
+        public static Vector3 LimitDisplacement(Vector3 from, Vector3 to, float maxStep)
+        {
+            from.y = 0f;
+            var targetY = to.y;
+            to.y = 0f;
+            if (maxStep <= 0.0001f)
+            {
+                from.y = targetY;
+                return from;
+            }
+
+            var delta = to - from;
+            var dist = delta.magnitude;
+            if (dist <= maxStep || dist <= 0.0001f)
+            {
+                to.y = targetY;
+                return to;
+            }
+
+            var limited = from + delta * (maxStep / dist);
+            limited.y = targetY;
+            return limited;
+        }
+
+        /// <summary>
+        /// Walkable clamp, then step-limit from the previous position (run back onto surface, never teleport).
+        /// </summary>
+        public static Vector3 ApplyWalkableLimit(
+            LaneRoute route,
+            Vector3 previousPosition,
+            Vector3 proposedPosition,
+            float maxStep,
+            float progressDistance,
+            float centerArenaRadius)
+        {
+            var clamped = ClampToWalkable(
+                route,
+                proposedPosition,
+                progressDistance,
+                centerArenaRadius);
+            return LimitDisplacement(previousPosition, clamped, maxStep);
         }
     }
 }

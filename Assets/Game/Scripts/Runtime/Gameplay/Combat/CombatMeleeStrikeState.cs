@@ -2,10 +2,16 @@ namespace Game.Gameplay.Combat
 {
     public sealed class CombatMeleeStrikeState
     {
-        public CombatMeleeStrikeState(int attackerUnitId, int targetUnitId, float rawDamage, float duration)
+        public CombatMeleeStrikeState(
+            int attackerUnitId,
+            int targetUnitId,
+            float rawDamage,
+            float duration,
+            int? targetBuildingInstanceId = null)
         {
             AttackerUnitId = attackerUnitId;
             TargetUnitId = targetUnitId;
+            TargetBuildingInstanceId = targetBuildingInstanceId;
             RawDamage = rawDamage;
             TimeRemaining = duration;
             Duration = duration;
@@ -13,6 +19,7 @@ namespace Game.Gameplay.Combat
 
         public int AttackerUnitId { get; }
         public int TargetUnitId { get; }
+        public int? TargetBuildingInstanceId { get; }
         public float RawDamage { get; }
         public float Duration { get; }
         public float TimeRemaining { get; set; }

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    static class CombatAttackVisualBuilder
+    public static class CombatAttackVisualBuilder
     {
         static readonly Color HumanArrowColor = new(0.45f, 0.28f, 0.12f);
         static readonly Color BugProjectileColor = new(0.3f, 0.85f, 0.25f);
@@ -16,44 +16,12 @@ namespace Game.Gameplay.Match
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
-            var isHuman = projectile.AttackerRaceId == GameIds.Races.Human;
-            var isRanged = projectile.AttackerRole == UnitRole.Ranged;
-            var isCaster = projectile.AttackerRole == UnitRole.Caster;
-
-            PrimitiveType primitive;
-            Vector3 localScale;
-            Color color;
-
-            if (isRanged)
-            {
-                if (isHuman)
-                {
-                    primitive = PrimitiveType.Cube;
-                    localScale = new Vector3(0.08f, 0.08f, 0.55f) * ProjectileScale;
-                    color = HumanArrowColor;
-                }
-                else
-                {
-                    primitive = PrimitiveType.Sphere;
-                    localScale = Vector3.one * (0.22f * ProjectileScale);
-                    color = BugProjectileColor;
-                }
-            }
-            else if (isCaster)
-            {
-                primitive = PrimitiveType.Cube;
-                localScale = Vector3.one * (0.24f * ProjectileScale);
-                color = isHuman ? HumanSpellColor : BugSpellColor;
-            }
-            else
-            {
-                primitive = PrimitiveType.Cube;
-                localScale = Vector3.one * (0.2f * ProjectileScale);
-                color = isHuman ? HumanSpellColor : BugSpellColor;
-            }
+            ResolveVisualStyle(projectile, out var primitive, out var localScale, out var color);
 
             var visual = GameObject.CreatePrimitive(primitive);
-            visual.name = $"Projectile_{projectile.ProjectileId}";
+            visual.name = projectile.IsBuildingAttack
+                ? $"BuildingShot_{projectile.ProjectileId}"
+                : $"Projectile_{projectile.ProjectileId}";
             visual.transform.SetParent(parent, false);
             visual.transform.localScale = localScale;
 
@@ -72,6 +40,48 @@ namespace Game.Gameplay.Match
             }
 
             return visual;
+        }
+
+        /// <summary>Building shots = owner-colored cubes; unit shots keep race/role styling.</summary>
+        public static void ResolveVisualStyle(
+            CombatProjectileState projectile,
+            out PrimitiveType primitive,
+            out Vector3 localScale,
+            out Color color)
+        {
+            if (projectile.IsBuildingAttack)
+            {
+                primitive = PrimitiveType.Cube;
+                localScale = Vector3.one * TowerCombatRules.ProjectileCubeScale;
+                color = MatchPlayerColors.GetSlotColor(projectile.AttackerOwnerSlot);
+                return;
+            }
+
+            var isHuman = projectile.AttackerRaceId == GameIds.Races.Human;
+            var isRanged = projectile.AttackerRole == UnitRole.Ranged;
+            var isCaster = projectile.AttackerRole == UnitRole.Caster;
+
+            if (isRanged)
+            {
+                if (isHuman)
+                {
+                    primitive = PrimitiveType.Cube;
+                    localScale = new Vector3(0.08f, 0.08f, 0.55f) * ProjectileScale;
+                    color = HumanArrowColor;
+                }
+                else
+                {
+                    primitive = PrimitiveType.Sphere;
+                    localScale = Vector3.one * (0.22f * ProjectileScale);
+                    color = BugProjectileColor;
+                }
+
+                return;
+            }
+
+            primitive = PrimitiveType.Cube;
+            localScale = Vector3.one * ((isCaster ? 0.24f : 0.2f) * ProjectileScale);
+            color = isHuman ? HumanSpellColor : BugSpellColor;
         }
 
         public static void UpdateProjectileTransform(Transform visual, CombatProjectileState projectile)

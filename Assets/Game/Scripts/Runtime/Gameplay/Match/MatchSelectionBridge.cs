@@ -1,4 +1,6 @@
+using Game.Core;
 using Game.Gameplay.Match.Selection;
+using Game.Gameplay.Networking;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -10,6 +12,8 @@ namespace Game.Gameplay.Match
         readonly MatchSelection _selection = new();
 
         MatchSelectionInput _input;
+        MatchRuntime _runtime;
+        int _localPlayerSlot;
 
         public MatchPickRegistry Registry => _registry;
         public MatchSelection Selection => _selection;
@@ -18,6 +22,10 @@ namespace Game.Gameplay.Match
         {
             _registry.Clear();
             _selection.Clear();
+            _runtime = GetComponent<MatchRuntime>() ?? FindAnyObjectByType<MatchRuntime>();
+            _localPlayerSlot = MatchNetworkSession.LocalSlot >= 0
+                ? MatchNetworkSession.LocalSlot
+                : (GameSession.ActiveSetup?.LocalPlayerSlot ?? 0);
             EnsureInput();
         }
 
@@ -48,7 +56,44 @@ namespace Game.Gameplay.Match
                 }
             }
 
-            _input.Initialize(_registry, _selection);
+            _input.Initialize(_registry, _selection, onRightClickTarget: OnRightClickTarget);
+        }
+
+        void OnRightClickTarget(MatchPickTarget target)
+        {
+            if (!target.IsUnit)
+            {
+                return;
+            }
+
+            if (!_selection.Current.IsBuilding)
+            {
+                return;
+            }
+
+            var controller = _runtime != null ? _runtime.Controller : null;
+            if (controller == null)
+            {
+                return;
+            }
+
+            var buildingInstanceId = _selection.Current.EntityId;
+            var building = controller.Buildings.GetByInstanceId(buildingInstanceId);
+            if (building == null
+                || building.OwnerSlot != _localPlayerSlot
+                || !BuildingRules.IsDefensiveBuilding(building.BuildingId)
+                || !building.IsIntact)
+            {
+                return;
+            }
+
+            if (MatchNetworkCommands.IsAvailable)
+            {
+                MatchNetworkCommands.RequestSetTowerTarget(buildingInstanceId, target.EntityId);
+                return;
+            }
+
+            controller.TrySetTowerTarget(_localPlayerSlot, buildingInstanceId, target.EntityId);
         }
     }
 }

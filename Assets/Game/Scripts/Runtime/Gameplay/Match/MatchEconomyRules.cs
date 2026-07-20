@@ -7,7 +7,7 @@ namespace Game.Gameplay.Match
     public static class MatchEconomyRules
     {
         public static readonly int[] BarracksLevelCosts = { 1000, 1500, 2500 };
-        public static readonly float[] BarracksLevelDurationsSeconds = { 45f, 90f, 135f };
+        public static readonly float[] BarracksLevelDurationsSeconds = { 3f, 3f, 3f };
 
         public const int PassiveGoldUpgradeCost = 200;
         public const float PassiveGoldUpgradeSeconds = 25f;

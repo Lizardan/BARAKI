@@ -110,38 +110,45 @@ namespace Game.Gameplay.Match
             return count;
         }
 
-        public BuildingState FindSiegeTarget(
+        public BuildingState FindBuildingTarget(
             int attackerOwnerSlot,
             string laneId,
             Vector3 attackerPosition,
-            float attackRange)
+            float aggroRadius,
+            LaneGraph graph)
         {
             BuildingState best = null;
-            var bestDistanceSq = float.MaxValue;
-            var rangeSq = attackRange * attackRange;
+            var bestScore = float.MaxValue;
 
             foreach (var building in _buildings)
             {
-                if (!building.IsIntact
-                    || building.OwnerSlot == attackerOwnerSlot
-                    || !BuildingRules.CanSiegeTarget(laneId, building.BuildingId))
+                if (!BuildingRules.CanLaneAttackBuilding(attackerOwnerSlot, laneId, building, graph))
                 {
                     continue;
                 }
 
                 var delta = building.WorldPosition - attackerPosition;
                 delta.y = 0f;
-                var distanceSq = delta.sqrMagnitude;
-                if (distanceSq > rangeSq || distanceSq >= bestDistanceSq)
+                var centerDistance = delta.magnitude;
+                var surfaceDistance = BuildingRules.GetSurfaceDistance(centerDistance, building.BuildingId);
+                if (surfaceDistance > aggroRadius || surfaceDistance >= bestScore)
                 {
                     continue;
                 }
 
-                bestDistanceSq = distanceSq;
+                bestScore = surfaceDistance;
                 best = building;
             }
 
             return best;
         }
+
+        /// <summary>Legacy alias for <see cref="FindBuildingTarget"/>.</summary>
+        public BuildingState FindSiegeTarget(
+            int attackerOwnerSlot,
+            string laneId,
+            Vector3 attackerPosition,
+            float attackRange) =>
+            FindBuildingTarget(attackerOwnerSlot, laneId, attackerPosition, attackRange, graph: null);
     }
 }

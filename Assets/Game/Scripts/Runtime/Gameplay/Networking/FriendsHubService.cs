@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
+using Unity.Services.Core;
 using Unity.Services.Friends;
 using Unity.Services.Friends.Models;
 using Unity.Services.Friends.Notifications;
@@ -14,6 +15,8 @@ namespace Game.Gameplay.Networking
     {
         public string status = FriendsHubRules.StatusInLauncher;
         public string lobbyCode = string.Empty;
+        public int occupiedSlots;
+        public int maxSlots;
     }
 
     [Serializable]
@@ -30,13 +33,17 @@ namespace Game.Gameplay.Networking
             string name,
             string status,
             bool isOnline,
-            string lobbyCode)
+            string lobbyCode,
+            int occupiedSlots = 0,
+            int maxSlots = 0)
         {
             PlayerId = playerId ?? string.Empty;
             Name = name ?? string.Empty;
             Status = status ?? "Offline";
             IsOnline = isOnline;
             LobbyCode = lobbyCode ?? string.Empty;
+            OccupiedSlots = occupiedSlots < 0 ? 0 : occupiedSlots;
+            MaxSlots = maxSlots < 0 ? 0 : maxSlots;
         }
 
         public string PlayerId { get; }
@@ -44,6 +51,8 @@ namespace Game.Gameplay.Networking
         public string Status { get; }
         public bool IsOnline { get; }
         public string LobbyCode { get; }
+        public int OccupiedSlots { get; }
+        public int MaxSlots { get; }
     }
 
     public readonly struct FriendRequestInfo
@@ -135,27 +144,42 @@ namespace Game.Gameplay.Networking
             await UnityServicesBootstrap.TrySyncPlayerNameFromDisplayNameAsync(PlayerProfileService.DisplayName);
         }
 
-        public static async UniTask SetPresenceAsync(string status, string lobbyCode = null)
+        public static async UniTask SetPresenceAsync(
+            string status,
+            string lobbyCode = null,
+            int occupiedSlots = 0,
+            int maxSlots = 0)
         {
-            await UnityServicesBootstrap.EnsureInitializedAsync();
-            if (!UnityServicesBootstrap.IsReady)
+            try
             {
-                return;
-            }
+                await UnityServicesBootstrap.EnsureInitializedAsync();
+                if (!UnityServicesBootstrap.IsReady
+                    || UnityServices.State != ServicesInitializationState.Initialized)
+                {
+                    return;
+                }
 
-            if (!s_initialized)
-            {
-                await FriendsService.Instance.InitializeAsync();
-                s_initialized = true;
-                EnsureEventHooks();
-            }
+                if (!s_initialized)
+                {
+                    await FriendsService.Instance.InitializeAsync();
+                    s_initialized = true;
+                    EnsureEventHooks();
+                }
 
-            var activity = new BarakiPresenceActivity
+                var activity = new BarakiPresenceActivity
+                {
+                    status = status ?? FriendsHubRules.StatusInLauncher,
+                    lobbyCode = lobbyCode ?? string.Empty,
+                    occupiedSlots = occupiedSlots < 0 ? 0 : occupiedSlots,
+                    maxSlots = maxSlots < 0 ? 0 : maxSlots,
+                };
+                await FriendsService.Instance.SetPresenceAsync(Availability.Online, activity);
+            }
+            catch (Exception ex)
             {
-                status = status ?? FriendsHubRules.StatusInLauncher,
-                lobbyCode = lobbyCode ?? string.Empty,
-            };
-            await FriendsService.Instance.SetPresenceAsync(Availability.Online, activity);
+                // LocalDev / offline Editor: Friends are optional; never surface via Forget().
+                Debug.LogWarning($"FriendsHubService: presence skipped: {ex.Message}");
+            }
         }
 
         public static async UniTask SendFriendRequestByNameAsync(string playerName)
@@ -230,7 +254,30 @@ namespace Game.Gameplay.Networking
             }
 
             await InitializeAsync();
-            await SetPresenceAsync(FriendsHubRules.StatusInGame, normalizedLobbyCode);
+            var occupied = 0;
+            var maxSlots = 0;
+            if (MatchNetworkSession.HasNetworkLobby)
+            {
+                maxSlots = MatchNetworkSession.LobbySlotCount;
+                for (var i = 0; i < maxSlots; i++)
+                {
+                    if (MatchNetworkSession.GetLobbySlot(i).IsOccupied)
+                    {
+                        occupied++;
+                    }
+                }
+            }
+            else if (MatchNetworkSession.PlayerCount > 0)
+            {
+                occupied = 1;
+                maxSlots = MatchNetworkSession.PlayerCount;
+            }
+
+            await SetPresenceAsync(
+                FriendsHubRules.StatusInGame,
+                normalizedLobbyCode,
+                occupied,
+                maxSlots);
 
             var senderName = UnityServicesBootstrap.PlayerName;
             if (string.IsNullOrWhiteSpace(senderName))
@@ -417,6 +464,8 @@ namespace Game.Gameplay.Networking
             var online = availability is Availability.Online or Availability.Away or Availability.Busy;
             var status = "Offline";
             var lobbyCode = string.Empty;
+            var occupiedSlots = 0;
+            var maxSlots = 0;
 
             if (online)
             {
@@ -430,6 +479,8 @@ namespace Game.Gameplay.Networking
                     }
 
                     lobbyCode = activity.lobbyCode ?? string.Empty;
+                    occupiedSlots = activity.occupiedSlots;
+                    maxSlots = activity.maxSlots;
                 }
             }
 
@@ -438,7 +489,9 @@ namespace Game.Gameplay.Networking
                 member.Profile?.Name ?? member.Id,
                 status,
                 online,
-                lobbyCode);
+                lobbyCode,
+                occupiedSlots,
+                maxSlots);
         }
     }
 }

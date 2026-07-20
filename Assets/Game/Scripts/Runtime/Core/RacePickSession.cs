@@ -5,7 +5,7 @@ namespace Game.Core
 {
     /// <summary>
     /// Pre-match race selection. Match starts only when every slot has a race id.
-    /// Offline MVP: local player picks; unpicked slots are filled with random playable races.
+    /// Offline MVP: local player picks; unpicked slots are filled with random selectable races.
     /// </summary>
     public sealed class RacePickSession
     {
@@ -61,9 +61,9 @@ namespace Game.Core
 
         public void SetLocalPick(string raceId)
         {
-            if (!RacePickRules.IsPlayable(raceId))
+            if (!RacePickRules.IsSelectable(raceId))
             {
-                throw new ArgumentException($"Race is not playable: {raceId}", nameof(raceId));
+                throw new ArgumentException($"Race is not selectable: {raceId}", nameof(raceId));
             }
 
             _raceIds[LocalPlayerSlot] = raceId;
@@ -76,9 +76,9 @@ namespace Game.Core
                 throw new ArgumentOutOfRangeException(nameof(slot));
             }
 
-            if (!RacePickRules.IsPlayable(raceId))
+            if (!RacePickRules.IsSelectable(raceId))
             {
-                throw new ArgumentException($"Race is not playable: {raceId}", nameof(raceId));
+                throw new ArgumentException($"Race is not selectable: {raceId}", nameof(raceId));
             }
 
             _raceIds[slot] = raceId;

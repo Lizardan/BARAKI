@@ -22,6 +22,7 @@ namespace Game.Gameplay.Match
             FrozenSquadLevel = 1;
             IsRuins = false;
             IsSpawnEnabled = true;
+            CallCharges = new BarracksCallChargeState();
         }
 
         public int OwnerSlot { get; }
@@ -35,6 +36,7 @@ namespace Game.Gameplay.Match
         public bool IsSpawnEnabled { get; set; }
         public float TimeUntilNextWaveSeconds { get; set; }
         public float WaveIntervalSeconds { get; private set; }
+        public BarracksCallChargeState CallCharges { get; }
 
         public int EffectiveSquadLevel =>
             BarracksWaveRules.GetEffectiveSquadLevel(Level, IsRuins, FrozenSquadLevel);

@@ -1,6 +1,6 @@
 namespace Game.Gameplay.Match
 {
-    /// <summary>March rules shared by lane graph and future unit movement.</summary>
+    /// <summary>March rules shared by lane graph and unit movement.</summary>
     public static class MatchMarchRules
     {
         /// <summary>

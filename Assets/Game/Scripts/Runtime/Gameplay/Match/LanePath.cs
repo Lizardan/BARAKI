@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Piecewise-linear path through waypoints (MVP). t=0 start, t=1 end.
+    /// Piecewise-linear path through waypoints.
+    /// Closed loops wrap distance so units can march forever.
     /// </summary>
     public sealed class LanePath
     {
@@ -13,19 +14,33 @@ namespace Game.Gameplay.Match
         readonly float[] _segmentLengths;
         readonly float[] _cumulativeLengths;
 
-        public LanePath(IReadOnlyList<Vector3> waypoints)
+        public LanePath(IReadOnlyList<Vector3> waypoints, bool isClosedLoop = false)
         {
             if (waypoints == null || waypoints.Count < 2)
             {
                 throw new ArgumentException("Lane path requires at least 2 waypoints.", nameof(waypoints));
             }
 
-            _waypoints = new Vector3[waypoints.Count];
+            IsClosedLoop = isClosedLoop;
+            var source = new List<Vector3>(waypoints.Count + 1);
             for (var i = 0; i < waypoints.Count; i++)
             {
-                _waypoints[i] = waypoints[i];
+                source.Add(waypoints[i]);
             }
 
+            if (IsClosedLoop)
+            {
+                var first = source[0];
+                var last = source[source.Count - 1];
+                first.y = 0f;
+                last.y = 0f;
+                if ((first - last).sqrMagnitude > 0.01f)
+                {
+                    source.Add(source[0]);
+                }
+            }
+
+            _waypoints = source.ToArray();
             _segmentLengths = new float[_waypoints.Length - 1];
             _cumulativeLengths = new float[_waypoints.Length];
             for (var i = 0; i < _segmentLengths.Length; i++)
@@ -37,6 +52,8 @@ namespace Game.Gameplay.Match
             TotalLength = _cumulativeLengths[^1];
         }
 
+        public bool IsClosedLoop { get; }
+
         public float TotalLength { get; }
 
         public Vector3 Start => _waypoints[0];
@@ -47,8 +64,35 @@ namespace Game.Gameplay.Match
 
         public Vector3 GetWaypoint(int index) => _waypoints[index];
 
+        public float WrapDistance(float distanceFromStart)
+        {
+            if (!IsClosedLoop || TotalLength <= 0.0001f)
+            {
+                return Mathf.Clamp(distanceFromStart, 0f, TotalLength);
+            }
+
+            var wrapped = distanceFromStart % TotalLength;
+            if (wrapped < 0f)
+            {
+                wrapped += TotalLength;
+            }
+
+            return wrapped;
+        }
+
         public Vector3 EvaluateNormalized(float t)
         {
+            if (IsClosedLoop)
+            {
+                t -= Mathf.Floor(t);
+                if (t < 0f)
+                {
+                    t += 1f;
+                }
+
+                return EvaluateDistance(t * TotalLength);
+            }
+
             t = Mathf.Clamp01(t);
             if (t <= 0f)
             {
@@ -60,19 +104,23 @@ namespace Game.Gameplay.Match
                 return _waypoints[^1];
             }
 
-            var targetDistance = t * TotalLength;
-            return EvaluateDistance(targetDistance);
+            return EvaluateDistance(t * TotalLength);
         }
 
         public Vector3 EvaluateDistance(float distanceFromStart)
         {
-            distanceFromStart = Mathf.Clamp(distanceFromStart, 0f, TotalLength);
+            if (TotalLength <= 0.0001f)
+            {
+                return _waypoints[0];
+            }
+
+            distanceFromStart = WrapDistance(distanceFromStart);
             if (distanceFromStart <= 0f)
             {
                 return _waypoints[0];
             }
 
-            if (distanceFromStart >= TotalLength)
+            if (!IsClosedLoop && distanceFromStart >= TotalLength)
             {
                 return _waypoints[^1];
             }
@@ -98,16 +146,8 @@ namespace Game.Gameplay.Match
         public Vector3 EvaluateDirection(float t)
         {
             const float delta = 0.001f;
-            var t0 = Mathf.Clamp01(t);
-            var t1 = Mathf.Clamp01(t + delta);
-            if (t1 <= t0)
-            {
-                t1 = Mathf.Clamp01(t - delta);
-                (t0, t1) = (t1, t0);
-            }
-
-            var a = EvaluateNormalized(t0);
-            var b = EvaluateNormalized(t1);
+            var a = EvaluateNormalized(t);
+            var b = EvaluateNormalized(t + delta);
             var dir = b - a;
             dir.y = 0f;
             return dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.forward;
@@ -116,12 +156,8 @@ namespace Game.Gameplay.Match
         public Vector3 EvaluateDirectionAtDistance(float distanceFromStart)
         {
             const float lookAhead = 2f;
-            distanceFromStart = Mathf.Clamp(distanceFromStart, 0f, TotalLength);
-            var ahead = Mathf.Min(TotalLength, distanceFromStart + lookAhead);
-            var behind = Mathf.Max(0f, distanceFromStart - lookAhead * 0.5f);
-
-            var a = EvaluateDistance(behind);
-            var b = EvaluateDistance(ahead);
+            var a = EvaluateDistance(distanceFromStart - lookAhead * 0.5f);
+            var b = EvaluateDistance(distanceFromStart + lookAhead);
             var dir = b - a;
             dir.y = 0f;
             return dir.sqrMagnitude > 0.0001f ? dir.normalized : EvaluateDirection(0f);
@@ -154,9 +190,7 @@ namespace Game.Gameplay.Match
         public float ProjectDistanceForward(Vector3 worldPosition, float hintDistance, float searchRadius = 10f)
         {
             worldPosition.y = 0f;
-            hintDistance = Mathf.Clamp(hintDistance, 0f, TotalLength);
-            var minDistance = Mathf.Max(0f, hintDistance - 1.5f);
-            var maxDistance = Mathf.Min(TotalLength, hintDistance + searchRadius);
+            hintDistance = WrapDistance(hintDistance);
             var bestDistance = hintDistance;
             var bestDistSq = float.MaxValue;
 
@@ -164,7 +198,11 @@ namespace Game.Gameplay.Match
             {
                 var segmentStart = _cumulativeLengths[i];
                 var segmentEnd = _cumulativeLengths[i + 1];
-                if (segmentEnd < minDistance || segmentStart > maxDistance)
+                if (!SegmentOverlapsForwardWindow(
+                        segmentStart,
+                        segmentEnd,
+                        hintDistance,
+                        searchRadius))
                 {
                     continue;
                 }
@@ -174,7 +212,7 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
-                if (projectedDistance + 0.25f < minDistance)
+                if (!IsForwardProjection(projectedDistance, hintDistance))
                 {
                     continue;
                 }
@@ -186,9 +224,68 @@ namespace Game.Gameplay.Match
                 }
             }
 
-            return bestDistSq < float.MaxValue
-                ? Mathf.Max(hintDistance, bestDistance)
-                : Mathf.Max(hintDistance, ProjectDistance(worldPosition));
+            if (bestDistSq < float.MaxValue)
+            {
+                return PreferForwardDistance(hintDistance, bestDistance);
+            }
+
+            return PreferForwardDistance(hintDistance, ProjectDistance(worldPosition));
+        }
+
+        bool SegmentOverlapsForwardWindow(
+            float segmentStart,
+            float segmentEnd,
+            float hintDistance,
+            float searchRadius)
+        {
+            if (!IsClosedLoop)
+            {
+                var minDistance = Mathf.Max(0f, hintDistance - 1.5f);
+                var maxDistance = Mathf.Min(TotalLength, hintDistance + searchRadius);
+                return segmentEnd >= minDistance && segmentStart <= maxDistance;
+            }
+
+            var windowEnd = hintDistance + searchRadius;
+            if (windowEnd <= TotalLength)
+            {
+                var minDistance = Mathf.Max(0f, hintDistance - 1.5f);
+                return segmentEnd >= minDistance && segmentStart <= windowEnd;
+            }
+
+            var wrapEnd = windowEnd - TotalLength;
+            return segmentEnd >= hintDistance - 1.5f || segmentStart <= wrapEnd;
+        }
+
+        bool IsForwardProjection(float projectedDistance, float hintDistance)
+        {
+            if (!IsClosedLoop)
+            {
+                return projectedDistance + 0.25f >= hintDistance - 1.5f;
+            }
+
+            var delta = projectedDistance - hintDistance;
+            if (delta < -TotalLength * 0.5f)
+            {
+                delta += TotalLength;
+            }
+
+            return delta >= -1.5f;
+        }
+
+        float PreferForwardDistance(float hintDistance, float candidate)
+        {
+            if (!IsClosedLoop)
+            {
+                return Mathf.Max(hintDistance, candidate);
+            }
+
+            var delta = candidate - hintDistance;
+            if (delta < -TotalLength * 0.5f)
+            {
+                delta += TotalLength;
+            }
+
+            return delta < 0f ? hintDistance : candidate;
         }
 
         bool TryGetSegmentProjection(

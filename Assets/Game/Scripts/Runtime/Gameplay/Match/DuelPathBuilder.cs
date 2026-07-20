@@ -163,7 +163,7 @@ namespace Game.Gameplay.Match
                 closed.Add(N4PerimeterLaneGeometry.WithHeight(closed[0]));
             }
 
-            return new LanePath(closed);
+            return new LanePath(closed, isClosedLoop: true);
         }
 
         /// <summary>North or south stadium polyline for minimap / previews.</summary>

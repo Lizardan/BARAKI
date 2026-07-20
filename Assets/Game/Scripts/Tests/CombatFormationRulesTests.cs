@@ -10,6 +10,17 @@ namespace Game.Tests
 {
     public sealed class CombatFormationRulesTests
     {        [Test]
+        public void BarracksSpawnForwardClearance_ClearsBarracksFootprint()
+        {
+            Assert.Greater(
+                CombatFormationRules.BarracksSpawnForwardClearance,
+                CombatFormationRules.BarracksFootprintExtent * 0.5f);
+            Assert.AreEqual(
+                CombatFormationRules.BarracksFootprintExtent * 0.5f + 1.25f,
+                CombatFormationRules.BarracksSpawnForwardClearance);
+        }
+
+        [Test]
         public void BuildRowSpawnFormationOffset_UsesLateralSpread()
         {
             var path = new LanePath(new List<Vector3>

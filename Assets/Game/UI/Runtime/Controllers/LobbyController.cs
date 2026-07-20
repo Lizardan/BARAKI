@@ -48,6 +48,9 @@ namespace Game.UI.Controllers
         private bool _localReady;
         private int _lastLobbyRevision = -1;
         private float _networkConnectWaitStarted = -1f;
+        private int _lastPresenceOccupied = -1;
+        private int _lastPresenceMax = -1;
+        private string _lastPresenceCode = string.Empty;
         private readonly NetworkLobbySlotsView _networkLobbySlots = new();
 
         private void Awake()
@@ -77,6 +80,9 @@ namespace Game.UI.Controllers
             _friendsHubPanel = new FriendsHubPanel(
                 FriendsHubPanelMode.InviteOnly,
                 _lobbyFriendsListContainer,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -227,12 +233,7 @@ namespace Game.UI.Controllers
             try
             {
                 await FriendsHubService.InitializeAsync();
-                var lobbyCode = MatchNetworkSession.RoomCode;
-                if (!string.IsNullOrWhiteSpace(lobbyCode))
-                {
-                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, lobbyCode);
-                }
-
+                SyncLobbyPresence();
                 _friendsHubPanel?.Refresh();
             }
             catch (System.Exception ex)
@@ -408,6 +409,7 @@ namespace Game.UI.Controllers
             _inviteFriendsButton?.SetEnabled(!lobby.MatchStarted);
 
             RebuildSlotList(lobby);
+            SyncLobbyPresence(lobby, lobby.RoomCode);
         }
 
         private void RefreshNetworkLobbyUi()
@@ -473,6 +475,59 @@ namespace Game.UI.Controllers
             _startButton?.SetEnabled(MatchNetworkSession.CanLocalStart);
             _inviteFriendsButton?.SetEnabled(!matchStarted);
             RebuildSlotList(_networkLobbySlots);
+            SyncLobbyPresence(_networkLobbySlots, MatchNetworkSession.RoomCode);
+        }
+
+        private void SyncLobbyPresence()
+        {
+            if (MatchNetworkSession.IsNetworked)
+            {
+                if (MatchNetworkSession.HasNetworkLobby)
+                {
+                    SyncLobbyPresence(_networkLobbySlots, MatchNetworkSession.RoomCode);
+                }
+
+                return;
+            }
+
+            var lobby = LocalMatchRegistry.Active;
+            if (lobby != null)
+            {
+                SyncLobbyPresence(lobby, lobby.RoomCode);
+            }
+        }
+
+        private void SyncLobbyPresence(IReadOnlyLobbySlots lobby, string roomCode)
+        {
+            if (lobby == null || string.IsNullOrWhiteSpace(roomCode))
+            {
+                return;
+            }
+
+            // Editor LocalDev often has no UGS — skip until bootstrap is ready.
+            if (!UnityServicesBootstrap.IsReady)
+            {
+                return;
+            }
+
+            var occupied = LobbyReadyRules.CountOccupied(lobby);
+            var maxSlots = lobby.SlotCount;
+            var code = FriendsHubRules.NormalizeLobbyCode(roomCode);
+            if (occupied == _lastPresenceOccupied
+                && maxSlots == _lastPresenceMax
+                && string.Equals(code, _lastPresenceCode, System.StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastPresenceOccupied = occupied;
+            _lastPresenceMax = maxSlots;
+            _lastPresenceCode = code;
+            FriendsHubService.SetPresenceAsync(
+                FriendsHubRules.StatusInGame,
+                code,
+                occupied,
+                maxSlots).Forget();
         }
 
         private void RebuildSlotList(IReadOnlyLobbySlots lobby)

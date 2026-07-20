@@ -12,8 +12,11 @@ namespace Game.Gameplay.Combat
         public static float SpawnRowDepth => SpawnStaggerStep * UnitScaleFactor;
         public const float SpawnDistanceJitter = 0.6f;
         public static float SpawnLateralSpread => 2.4f * UnitScaleFactor;
-        public static float BarracksSpawnForwardClearance =>
-            BarracksFootprintExtent * 0.5f + MinUnitSeparation + 1f;
+        /// <summary>
+        /// Distance along the lane from barracks center to the first spawn band.
+        /// Must clear half the barracks footprint so units appear outside the mesh (exit gate).
+        /// </summary>
+        public const float BarracksSpawnForwardClearance = BarracksFootprintExtent * 0.5f + 1.25f;
         public static float MinUnitSeparation => 1.7f * UnitScaleFactor;
         public static float MinLaneFollowGap => MinUnitSeparation;
         public static float MaxLateralOffset => 3.5f * UnitScaleFactor;

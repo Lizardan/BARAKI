@@ -441,6 +441,16 @@ namespace Game.Editor
                 runtimeObject.AddComponent<MatchSelectionValidityPresenter>();
             }
 
+            if (runtimeObject.GetComponent<BarracksSpawnDebugOverlay>() == null)
+            {
+                runtimeObject.AddComponent<BarracksSpawnDebugOverlay>();
+            }
+
+            if (runtimeObject.GetComponent<LaneWaypointDebugOverlay>() == null)
+            {
+                runtimeObject.AddComponent<LaneWaypointDebugOverlay>();
+            }
+
             var runtime = runtimeObject.GetComponent<MatchRuntime>();
             var runtimeSo = new SerializedObject(runtime);
             runtimeSo.FindProperty("_raceCatalog").objectReferenceValue =
@@ -515,6 +525,11 @@ namespace Game.Editor
                 hudObject.AddComponent<MatchSelectionUiGate>();
             }
 
+            if (hudObject.GetComponent<MatchDebugHudController>() == null)
+            {
+                hudObject.AddComponent<MatchDebugHudController>();
+            }
+
             var controller = hudObject.GetComponent<MatchHudController>();
             var controllerSo = new SerializedObject(controller);
             controllerSo.FindProperty("_uiDocument").objectReferenceValue = uiDocument;
@@ -524,6 +539,7 @@ namespace Game.Editor
             WireUiDocument(hudObject.GetComponent<MatchContextStripController>(), uiDocument);
             WireUiDocument(hudObject.GetComponent<MatchInspectorController>(), uiDocument);
             WireUiDocument(hudObject.GetComponent<MatchSelectionUiGate>(), uiDocument);
+            WireUiDocument(hudObject.GetComponent<MatchDebugHudController>(), uiDocument);
         }
 
         static void WireUiDocument(MonoBehaviour component, UnityEngine.UIElements.UIDocument uiDocument)

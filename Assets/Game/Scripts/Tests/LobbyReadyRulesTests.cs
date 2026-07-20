@@ -50,5 +50,14 @@ namespace Game.Tests
             Assert.IsTrue(lobby.TryMarkMatchStarted());
             Assert.IsFalse(lobby.TryMarkMatchStarted());
         }
+
+        [Test]
+        public void CountOccupied_CountsFilledSlotsOnly()
+        {
+            var lobby = new MatchLobbyState(4, "ABCD", "Host");
+            Assert.AreEqual(1, LobbyReadyRules.CountOccupied(lobby));
+            lobby.OccupyNext("P2");
+            Assert.AreEqual(2, LobbyReadyRules.CountOccupied(lobby));
+        }
     }
 }

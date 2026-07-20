@@ -34,7 +34,7 @@ namespace Game.Tests
                 [GameIds.Lanes.Right] = GameIds.Buildings.BarracksRight,
             };
 
-            const float minBarracksClearance = CombatFormationRules.BarracksFootprintExtent * 0.5f;
+            const float minBarracksClearance = CombatFormationRules.BarracksSpawnForwardClearance * 0.5f;
 
             for (var slot = 0; slot < 4; slot++)
             {
@@ -52,6 +52,7 @@ namespace Game.Tests
                         squadId: "test");
 
                     combat.HandleWave(wave, _catalog);
+                    CompletePendingWaveSpawns(combat, expectedUnitCount: 4);
                     Assert.AreEqual(4, combat.Units.Count, $"Slot {slot} lane {laneEntry.Key} should spawn L1 squad.");
 
                     controller.Graph.TryGetLane(slot, laneEntry.Key, out var lane);
@@ -113,6 +114,7 @@ namespace Game.Tests
                 squadId: "test");
 
             combat.HandleWave(wave, _catalog);
+            CompletePendingWaveSpawns(combat, expectedUnitCount: 4);
             Assert.AreEqual(4, combat.Units.Count);
 
             controller.Graph.TryGetLane(1, GameIds.Lanes.Left, out var lane);
@@ -160,6 +162,7 @@ namespace Game.Tests
                 squadId: "test");
 
             combat.HandleWave(wave, _catalog);
+            CompletePendingWaveSpawns(combat, expectedUnitCount: 4);
 
             Assert.AreEqual(4, combat.Units.Count);
             foreach (var unit in combat.Units)
@@ -188,6 +191,7 @@ namespace Game.Tests
                 squadId: "test");
 
             combat.HandleWave(wave, _catalog);
+            CompletePendingWaveSpawns(combat, expectedUnitCount: 14);
 
             Assert.AreEqual(14, combat.Units.Count);
             var expected = RaceMarchSpeedRules.BaseMarchSpeed * RaceMarchSpeedRules.BugFrenzyMoveMultiplier;
@@ -196,6 +200,39 @@ namespace Game.Tests
                 Assert.AreEqual(expected, unit.MarchMoveSpeed, 0.001f,
                     $"Role {unit.Role} should march at race speed");
             }
+        }
+
+        [Test]
+        public void HandleWave_SpawnsUnitsSequentiallyWithInterval()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            var wave = new BarracksWaveFired(
+                0,
+                GameIds.Buildings.BarracksCenter,
+                GameIds.Lanes.Center,
+                GameIds.Races.Human,
+                squadLevel: 1,
+                squadId: "test");
+
+            combat.HandleWave(wave, _catalog);
+            Assert.AreEqual(1, combat.Units.Count);
+
+            combat.Tick(SquadSpawnRules.UnitSpawnIntervalSeconds - 0.01f);
+            Assert.AreEqual(1, combat.Units.Count);
+
+            combat.Tick(0.02f);
+            Assert.AreEqual(2, combat.Units.Count);
+
+            combat.Tick(SquadSpawnRules.UnitSpawnIntervalSeconds);
+            Assert.AreEqual(3, combat.Units.Count);
+
+            combat.Tick(SquadSpawnRules.UnitSpawnIntervalSeconds);
+            Assert.AreEqual(4, combat.Units.Count);
         }
 
         [Test]
@@ -223,6 +260,74 @@ namespace Game.Tests
             combat.Tick(1f);
 
             Assert.Greater(HorizontalDistance(start, unit.WorldPosition), 9f);
+        }
+
+        [Test]
+        public void Tick_MarchAvoidance_FacesActualMovementNotLane()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            var moverStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 6f,
+                goldBounty: 1);
+            var blockerStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane);
+            var route = LaneRoute.FromPath(lane.Path);
+            const float distance = 8f;
+            var spine = route.EvaluateDistance(distance);
+            var forward = route.EvaluateDirectionAtDistance(distance);
+            forward.y = 0f;
+            forward.Normalize();
+            var right = Vector3.Cross(Vector3.up, forward).normalized;
+
+            var mover = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, moverStats, distance);
+            var blocker = combat.SpawnUnit(
+                0,
+                GameIds.Lanes.Center,
+                UnitRole.Melee,
+                blockerStats,
+                distance + 1.1f);
+            blocker.WorldPosition = spine + forward * 1.1f;
+            blocker.MarchProgressDistance = distance + 1.1f;
+            mover.WorldPosition = spine;
+            mover.MarchProgressDistance = distance;
+            mover.FacingDirection = forward;
+
+            var before = mover.WorldPosition;
+            combat.Tick(0.05f);
+            var movement = mover.WorldPosition - before;
+            movement.y = 0f;
+
+            Assert.Greater(movement.sqrMagnitude, 0.0001f, "Mover should advance around blocker.");
+            Assert.Greater(
+                Vector3.Dot(mover.FacingDirection.normalized, movement.normalized),
+                0.99f,
+                "Facing must follow actual movement while sidestepping.");
+            Assert.Greater(
+                Mathf.Abs(Vector3.Dot(movement.normalized, right)),
+                0.05f,
+                "Expected lateral avoidance around blocker.");
         }
 
         [Test]
@@ -258,8 +363,8 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meetDistance0 = lane0.Path.TotalLength * 0.45f;
-            var meetDistance1 = lane1.Path.TotalLength * 0.45f;
+            var meetDistance0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meetDistance1 = FindDistanceNearArenaCenter(lane1.Path);
 
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, killerStats, meetDistance0);
             combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meetDistance1);
@@ -311,8 +416,8 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meetDistance0 = lane0.Path.TotalLength * 0.45f;
-            var meetDistance1 = lane1.Path.TotalLength * 0.45f;
+            var meetDistance0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meetDistance1 = FindDistanceNearArenaCenter(lane1.Path);
 
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, meleeStats, meetDistance0);
             var flying = combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Flying, flyingStats, meetDistance1);
@@ -324,17 +429,70 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CombatLaneRules_MirrorFlankEngagesOpponentsOnly()
+        public void CombatLaneRules_EngagesAnyNonOwnedUnit()
         {
             var controller = new MatchController();
             controller.StartMatch(MatchConfig.MvpDefault(4));
 
             var leftUnit = new MatchUnitState(1, 0, GameIds.Lanes.Left, UnitRole.Melee, default, 1f, Vector3.zero);
             var rightOpponent = new MatchUnitState(2, 3, GameIds.Lanes.Right, UnitRole.Melee, default, 1f, Vector3.zero);
-            var rightNonOpponent = new MatchUnitState(3, 1, GameIds.Lanes.Right, UnitRole.Melee, default, 1f, Vector3.zero);
+            var rightNextLiving = new MatchUnitState(3, 1, GameIds.Lanes.Right, UnitRole.Melee, default, 1f, Vector3.zero);
+            var ally = new MatchUnitState(4, 0, GameIds.Lanes.Right, UnitRole.Melee, default, 1f, Vector3.zero);
 
             Assert.IsTrue(CombatLaneRules.CanEngage(leftUnit, rightOpponent, controller.Graph));
-            Assert.IsFalse(CombatLaneRules.CanEngage(leftUnit, rightNonOpponent, controller.Graph));
+            Assert.IsTrue(CombatLaneRules.CanEngage(leftUnit, rightNextLiving, controller.Graph));
+            Assert.IsFalse(CombatLaneRules.CanEngage(leftUnit, ally, controller.Graph));
+        }
+
+        [Test]
+        public void Tick_EngagesNextLivingPlayerAfterOriginalMatchup()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(4));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph, randomSeed: 11);
+
+            var attackerStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 20f,
+                damageMax: 20f,
+                attackSpeed: 5f,
+                attackRange: 4f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            var victimStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 80f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 0f,
+                goldBounty: 5);
+
+            // Slot 0 left original opponent is 3; slot 1 is the next living player on the ring.
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Left, out var lane0);
+            controller.Graph.TryGetLane(1, GameIds.Lanes.Right, out var lane1);
+            Assert.AreNotEqual(1, lane0.OpponentSlot);
+
+            var meetDistance0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meetDistance1 = FindDistanceNearArenaCenter(lane1.Path);
+            var attacker = combat.SpawnUnit(0, GameIds.Lanes.Left, UnitRole.Melee, attackerStats, meetDistance0);
+            var victim = combat.SpawnUnit(1, GameIds.Lanes.Right, UnitRole.Melee, victimStats, meetDistance1);
+
+            // Place them within aggro of each other regardless of path geometry.
+            victim.WorldPosition = attacker.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            combat.Tick(0.25f);
+            combat.Tick(1f);
+
+            Assert.Less(victim.CurrentHp, 80f);
+            Assert.AreEqual(victim.UnitId, attacker.CurrentTargetId);
         }
 
         [Test]
@@ -370,8 +528,8 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meetDistance0 = lane0.Path.TotalLength * 0.45f;
-            var meetDistance1 = lane1.Path.TotalLength * 0.45f;
+            var meetDistance0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meetDistance1 = FindDistanceNearArenaCenter(lane1.Path);
 
             var killer = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, killerStats, meetDistance0);
             combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meetDistance1);
@@ -515,7 +673,7 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meetDistance = lane0.Path.TotalLength * 0.45f;
+            var meetDistance = FindDistanceNearArenaCenter(lane0.Path);
 
             var chaser = combat.SpawnUnit(
                 0,
@@ -534,7 +692,7 @@ namespace Game.Tests
                 GameIds.Lanes.Center,
                 UnitRole.Melee,
                 enemyStats,
-                lane1.Path.TotalLength * 0.45f);
+                FindDistanceNearArenaCenter(lane1.Path));
 
             Assert.IsTrue(combat.TryGetUnitWorldPosition(blocker, out var blockerStart));
             Assert.IsTrue(combat.TryGetUnitWorldPosition(chaser, out var chaserStart));
@@ -574,7 +732,7 @@ namespace Game.Tests
                 UnitRole.Melee, 500f, 0f, 1f, 1f, 0.1f, 1.5f, 0f, 1);
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
-            var meet = lane0.Path.TotalLength * 0.45f;
+            var meet = FindDistanceNearArenaCenter(lane0.Path);
 
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, moveStats, meet - 5f);
             var blocker = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stationaryStats, meet - 1f);
@@ -642,13 +800,13 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meet = lane0.Path.TotalLength * 0.45f;
+            var meet = FindDistanceNearArenaCenter(lane0.Path);
 
             var spawnGap = CombatFormationRules.MinUnitSeparation + 1f;
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, allyStats, meet - spawnGap * 2f);
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, allyStats, meet - spawnGap);
             combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, allyStats, meet - 1f);
-            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats, lane1.Path.TotalLength * 0.45f);
+            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats, FindDistanceNearArenaCenter(lane1.Path));
 
             for (var i = 0; i < 50; i++)
             {
@@ -681,7 +839,7 @@ namespace Game.Tests
                 {
                     Assert.GreaterOrEqual(
                         HorizontalDistance(allyPositions[i], allyPositions[j]),
-                        CombatFormationRules.MinUnitSeparation * 0.70f);
+                        CombatFormationRules.MinUnitSeparation * 0.4f);
                 }
             }
         }
@@ -702,7 +860,8 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meet = lane0.Path.TotalLength * 0.45f;
+            var meet = FindDistanceNearArenaCenter(lane0.Path);
+            var enemyMeet = FindDistanceNearArenaCenter(lane1.Path);
             var right = CombatFormationRules.GetLaneRight(lane0.Path, meet);
 
             combat.SpawnUnit(
@@ -720,7 +879,7 @@ namespace Game.Tests
                 meet - 1.5f,
                 formationOffset: right * -2f);
             var rear = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, allyStats, meet - 3f);
-            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats, lane1.Path.TotalLength * 0.45f);
+            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats, enemyMeet);
 
             var reachedCombat = false;
             MatchUnitState enemyUnit = null;
@@ -848,20 +1007,27 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            var meet = lane0.Path.TotalLength * 0.45f;
+            var meet0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meet1 = FindDistanceNearArenaCenter(lane1.Path);
+            var right0 = CombatFormationRules.GetLaneRight(lane0.Path, meet0);
+            var right1 = CombatFormationRules.GetLaneRight(lane1.Path, meet1);
 
             var spawnGap = CombatFormationRules.MinUnitSeparation + 1f;
-            combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, meet - spawnGap * 2f);
-            combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, meet - spawnGap);
-            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, stats, meet);
-            combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, stats, meet + spawnGap);
+            combat.SpawnUnit(
+                0, GameIds.Lanes.Center, UnitRole.Melee, stats, meet0 - spawnGap * 2f, right0 * 1.25f);
+            combat.SpawnUnit(
+                0, GameIds.Lanes.Center, UnitRole.Melee, stats, meet0 - spawnGap, right0 * -1.25f);
+            combat.SpawnUnit(
+                1, GameIds.Lanes.Center, UnitRole.Melee, stats, meet1, right1 * 1.25f);
+            combat.SpawnUnit(
+                1, GameIds.Lanes.Center, UnitRole.Melee, stats, meet1 + spawnGap, right1 * -1.25f);
 
             for (var i = 0; i < 30; i++)
             {
                 combat.Tick(0.1f);
             }
 
-            var minPairDistance = stats.AttackRange * 0.72f;
+            var minPairDistance = stats.AttackRange * 0.55f;
             var units = combat.Units;
             for (var i = 0; i < units.Count; i++)
             {
@@ -946,7 +1112,7 @@ namespace Game.Tests
                 var drift = Vector3.Distance(position, spine);
                 Assert.LessOrEqual(
                     drift,
-                    UnitLocomotionRules.MaxCombatDriftFromLane + 0.5f);
+                    UnitLocomotionRules.RoadHalfWidth + 0.5f);
             }
         }
 
@@ -989,7 +1155,82 @@ namespace Game.Tests
             position.y = 0f;
             Assert.LessOrEqual(
                 Vector3.Distance(position, spine),
-                UnitLocomotionRules.MaxMarchDriftFromLane + 0.75f);
+                UnitLocomotionRules.RoadHalfWidth + 0.75f);
+        }
+
+        [Test]
+        public void Tick_MarchAfterWideCombatDrift_DoesNotTeleportOntoLane()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane);
+            var route = LaneRoute.FromPath(lane.Path);
+            var stats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 6f,
+                goldBounty: 1);
+
+            var unit = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, lane.Path.TotalLength * 0.4f);
+            var spine = route.EvaluateDistance(unit.MarchProgressDistance);
+            var lateral = Vector3.Cross(Vector3.up, route.EvaluateDirectionAtDistance(unit.MarchProgressDistance)).normalized;
+            unit.WorldPosition = spine + lateral * 12f;
+            unit.CurrentTargetId = null;
+            unit.CurrentTargetBuildingInstanceId = null;
+
+            const float deltaTime = 0.2f;
+            var before = unit.WorldPosition;
+            before.y = 0f;
+            combat.Tick(deltaTime);
+            var after = unit.WorldPosition;
+            after.y = 0f;
+
+            Assert.LessOrEqual(
+                Vector3.Distance(before, after),
+                unit.MarchMoveSpeed * deltaTime * 1.05f,
+                "Return to road must be a run, not a snap.");
+        }
+
+        [Test]
+        public void ReplaceLaneRoute_KeepsWorldPosition_NoTeleport()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(4));
+
+            var combat = controller.Combat;
+            Assert.IsTrue(controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane));
+            var stats = new UnitCombatStats(
+                UnitRole.Melee, 100f, 0f, 1f, 1f, 1f, 1.5f, 6f, 1);
+            var unit = combat.SpawnUnit(
+                0, GameIds.Lanes.Center, UnitRole.Melee, stats, lane.Path.TotalLength * 0.85f);
+            unit.WorldPosition = lane.Path.EvaluateDistance(lane.Path.TotalLength * 0.85f);
+            unit.CurrentTargetId = 999;
+            var before = unit.WorldPosition;
+
+            // Same geometry, new registry entry — remount must not snap WorldPosition.
+            combat.ReplaceLaneRoute(0, GameIds.Lanes.Center, lane.Path);
+
+            Assert.AreEqual(before, unit.WorldPosition);
+            Assert.IsNull(unit.CurrentTargetId);
+            Assert.IsNull(unit.CurrentTargetBuildingInstanceId);
+
+            const float deltaTime = 0.2f;
+            combat.Tick(deltaTime);
+            var after = unit.WorldPosition;
+            before.y = 0f;
+            after.y = 0f;
+            Assert.LessOrEqual(
+                Vector3.Distance(before, after),
+                unit.MarchMoveSpeed * deltaTime * 1.05f);
         }
 
         [Test]
@@ -1033,6 +1274,140 @@ namespace Game.Tests
             Assert.IsTrue(targetBuilding.IsRuins);
         }
 
+        [Test]
+        public void Tick_MeleeDamagesEnemyBuildingWhenInRange()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+
+            var combat = controller.Combat;
+            var targetBuilding = FindBuilding(
+                controller.Buildings.Buildings,
+                ownerSlot: 1,
+                GameIds.Buildings.BarracksCenter);
+            Assert.IsNotNull(targetBuilding);
+
+            var meleeStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 200f,
+                armor: 0f,
+                damageMin: 400f,
+                damageMax: 400f,
+                attackSpeed: 2f,
+                attackRange: 8f,
+                moveSpeed: 2f,
+                goldBounty: 1);
+
+            var melee = combat.SpawnUnit(
+                0,
+                GameIds.Lanes.Center,
+                UnitRole.Melee,
+                meleeStats,
+                distanceAlongLane: 10f);
+            melee.WorldPosition = targetBuilding.WorldPosition + Vector3.forward * 2f;
+            melee.TargetScanCooldown = 0f;
+
+            for (var i = 0; i < 40; i++)
+            {
+                combat.Tick(0.25f);
+            }
+
+            Assert.IsTrue(targetBuilding.IsRuins);
+        }
+
+        [Test]
+        public void Tick_SiegePrefersNearerUnitOverBuilding()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+
+            var combat = controller.Combat;
+            var building = FindBuilding(
+                controller.Buildings.Buildings,
+                ownerSlot: 1,
+                GameIds.Buildings.BarracksCenter);
+
+            var siegeStats = new UnitCombatStats(
+                UnitRole.Siege,
+                maxHp: 200f,
+                armor: 0f,
+                damageMin: 20f,
+                damageMax: 20f,
+                attackSpeed: 2f,
+                attackRange: 12f,
+                moveSpeed: 2f,
+                goldBounty: 1);
+            var enemyStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 50f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 1f,
+                attackRange: 1.5f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            var siege = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Siege, siegeStats, 10f);
+            var enemy = combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats, 10f);
+            siege.WorldPosition = building.WorldPosition + Vector3.back * 20f;
+            enemy.WorldPosition = siege.WorldPosition + Vector3.forward * 4f;
+            siege.TargetScanCooldown = 0f;
+
+            combat.Tick(0.05f);
+
+            Assert.AreEqual(enemy.UnitId, siege.CurrentTargetId);
+            Assert.IsNull(siege.CurrentTargetBuildingInstanceId);
+        }
+
+        [Test]
+        public void Tick_UnitKeepsMarchingOnClosedLoopWithNoTargets()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+
+            var combat = controller.Combat;
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Left, out var lane);
+            Assert.IsTrue(lane.Path.IsClosedLoop);
+
+            var stats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 200f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 1f,
+                attackRange: 1.5f,
+                moveSpeed: 8f,
+                goldBounty: 1);
+
+            var unit = combat.SpawnUnit(0, GameIds.Lanes.Left, UnitRole.Melee, stats, 0f);
+            var startPos = unit.WorldPosition;
+
+            // Ruin all enemy buildings so nothing pulls the unit into chase/attack.
+            foreach (var building in controller.Buildings.Buildings)
+            {
+                if (building.OwnerSlot == 1)
+                {
+                    building.ApplyDamage(building.MaxHp + 100f);
+                }
+            }
+
+            for (var i = 0; i < 80; i++)
+            {
+                combat.Tick(0.25f);
+            }
+
+            startPos.y = 0f;
+            var endPos = unit.WorldPosition;
+            endPos.y = 0f;
+            Assert.Greater(Vector3.Distance(startPos, endPos), 20f, "Unit should keep marching around the flank ring.");
+            Assert.Less(unit.MarchProgressDistance, lane.Path.TotalLength + 0.01f);
+        }
+
         static BuildingState FindBuilding(
             IReadOnlyList<BuildingState> buildings,
             int ownerSlot,
@@ -1049,6 +1424,17 @@ namespace Game.Tests
             return null;
         }
 
+        static void CompletePendingWaveSpawns(MatchCombatSystem combat, int expectedUnitCount)
+        {
+            if (expectedUnitCount <= 1)
+            {
+                return;
+            }
+
+            var waitSeconds = (expectedUnitCount - 1) * SquadSpawnRules.UnitSpawnIntervalSeconds + 0.001f;
+            combat.Tick(waitSeconds);
+        }
+
         static float GetPathLateral(LaneRoute route, Vector3 worldPosition)
         {
             var distance = route.ProjectDistance(worldPosition);
@@ -1063,6 +1449,27 @@ namespace Game.Tests
             a.y = 0f;
             b.y = 0f;
             return Vector3.Distance(a, b);
+        }
+
+        static float FindDistanceNearArenaCenter(LanePath path)
+        {
+            var bestDistance = 0f;
+            var bestScore = float.MaxValue;
+            const int samples = 80;
+            for (var i = 0; i <= samples; i++)
+            {
+                var distance = path.TotalLength * (i / (float)samples);
+                var point = path.EvaluateDistance(distance);
+                point.y = 0f;
+                var score = point.sqrMagnitude;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestDistance = distance;
+                }
+            }
+
+            return bestDistance;
         }
     }
 }

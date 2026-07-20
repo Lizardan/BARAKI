@@ -2,10 +2,11 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Runtime tint for all team-color accent meshes on unit prefabs.</summary>
+    /// <summary>Runtime tint for team-color accent and tint meshes on unit prefabs.</summary>
     public static class UnitVisualAccent
     {
         public const string TeamAccentTransformName = "TeamAccent";
+        public const string TeamTintTransformName = "TeamTint";
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         public static void ApplyTeamColor(Transform visualRoot, Color slotColor)
@@ -32,7 +33,7 @@ namespace Game.Gameplay.Match
 
         static void ApplyRecursive(Transform node, Color slotColor)
         {
-            if (IsAccentName(node.name))
+            if (IsTeamColorTarget(node.name))
             {
                 var renderer = node.GetComponent<Renderer>();
                 if (renderer != null)
@@ -52,7 +53,7 @@ namespace Game.Gameplay.Match
 
         static void CountRecursive(Transform node, ref int count)
         {
-            if (IsAccentName(node.name) && node.GetComponent<Renderer>() != null)
+            if (IsTeamColorTarget(node.name) && node.GetComponent<Renderer>() != null)
             {
                 count++;
             }
@@ -63,8 +64,15 @@ namespace Game.Gameplay.Match
             }
         }
 
-        static bool IsAccentName(string name) =>
+        public static bool IsTeamColorTarget(string name) =>
+            IsAccentName(name) || IsTintName(name);
+
+        public static bool IsAccentName(string name) =>
             name == TeamAccentTransformName
             || name.StartsWith(TeamAccentTransformName + "_", System.StringComparison.Ordinal);
+
+        public static bool IsTintName(string name) =>
+            name == TeamTintTransformName
+            || name.StartsWith(TeamTintTransformName + "_", System.StringComparison.Ordinal);
     }
 }

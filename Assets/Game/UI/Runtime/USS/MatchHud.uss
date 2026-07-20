@@ -77,6 +77,40 @@
     display: none;
 }
 
+.match-hud__command-feedback {
+    margin-left: 8px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(255, 170, 120);
+    letter-spacing: 0.5px;
+}
+
+.match-hud__command-feedback--hidden {
+    display: none;
+}
+
+.match-hud__migration {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(8, 10, 14, 0.55);
+    justify-content: center;
+    align-items: center;
+}
+
+.match-hud__migration--hidden {
+    display: none;
+}
+
+.match-hud__migration-label {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(230, 220, 200);
+    letter-spacing: 1px;
+}
+
 .match-hud__start-countdown {
     margin-left: 20px;
     font-size: 14px;
@@ -144,4 +178,76 @@
     color: rgb(255, 214, 96);
     letter-spacing: 2px;
     -unity-text-align: middle-center;
+}
+
+.match-hud__results-actions {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+.match-hud__results-btn {
+    min-width: 140px;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.match-hud__debug {
+    position: absolute;
+    right: 16px;
+    top: 72px;
+    width: 160px;
+    flex-direction: column;
+    padding: 8px;
+    background-color: rgba(18, 14, 12, 0.92);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.45);
+}
+
+.match-hud__debug--hidden {
+    display: none;
+}
+
+.match-hud__debug-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(201, 163, 90);
+    margin-bottom: 6px;
+    -unity-text-align: middle-center;
+}
+
+.match-hud__debug-btn {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    min-height: 28px;
+}
+
+.match-command-tooltip {
+    position: absolute;
+    max-width: 220px;
+    padding: 8px 10px;
+    background-color: rgba(12, 10, 8, 0.96);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.55);
+    z-index: 1000;
+}
+
+.match-command-tooltip--hidden {
+    display: none;
+}
+
+.match-command-tooltip__label {
+    font-size: 12px;
+    color: rgb(242, 230, 200);
+    white-space: normal;
+    -unity-text-align: middle-left;
+}
+
+.match-hud__passive-ring {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    margin-left: -18px;
+    margin-top: -18px;
 }

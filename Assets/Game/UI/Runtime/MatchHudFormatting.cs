@@ -1,4 +1,5 @@
 using Game.Gameplay.Match;
+using Game.Gameplay.Networking;
 
 namespace Game.UI
 {
@@ -41,6 +42,9 @@ namespace Game.UI
         }
 
         public static string FormatBountyPopup(int goldGranted) => $"+{goldGranted}";
+
+        public static string FormatCommandFeedback(MatchCommandResult result) =>
+            MatchCommandResultRules.FormatFeedback(result);
 
         public static string FormatMatchResult(int winnerSlot) => $"Победа: игрок {winnerSlot + 1}";
     }

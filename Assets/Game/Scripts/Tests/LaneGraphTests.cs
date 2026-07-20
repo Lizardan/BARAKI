@@ -115,7 +115,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void FlankPath_NorthSouthSideBarracks_SpawnClearanceLiesOnForwardSegment()
+        public void FlankPath_NorthSouthSideBarracks_SpawnClearanceLiesOnRing()
         {
             var layout = MatchArenaGenerator.Generate(4, arenaRadius: MatchArenaGenerator.DefaultArenaRadius);
             var graph = LaneGraphBuilder.Build(layout);
@@ -126,6 +126,7 @@ namespace Game.Tests
                 foreach (var laneId in new[] { GameIds.Lanes.Left, GameIds.Lanes.Right })
                 {
                     graph.TryGetLane(slot, laneId, out var lane);
+                    Assert.IsTrue(lane.Path.IsClosedLoop);
                     var route = LaneRoute.FromPath(lane.Path);
                     var spawnPosition = route.ResolveSpawnPosition(clearance, Vector3.zero);
                     var barracksId = laneId == GameIds.Lanes.Left
@@ -137,16 +138,12 @@ namespace Game.Tests
                     barracks.y = 0f;
                     Assert.Greater(
                         Vector3.Distance(spawnPosition, barracks),
-                        CombatFormationRules.BarracksFootprintExtent * 0.45f,
-                        $"Slot {slot} {laneId} spawn should clear barracks footprint.");
-
-                    var forward = route.EvaluateDirectionAtDistance(clearance);
-                    forward.y = 0f;
-                    var offset = spawnPosition - barracks;
-                    Assert.Greater(
-                        Vector3.Dot(offset.normalized, forward.normalized),
-                        0.1f,
-                        $"Slot {slot} {laneId} spawn should lie ahead along march direction.");
+                        CombatFormationRules.BarracksSpawnForwardClearance * 0.5f,
+                        $"Slot {slot} {laneId} spawn should start ahead of barracks.");
+                    Assert.Less(
+                        DistanceFromPath(lane.Path, spawnPosition),
+                        0.5f,
+                        $"Slot {slot} {laneId} spawn should lie on the flank ring.");
                 }
             }
         }
@@ -156,16 +153,72 @@ namespace Game.Tests
         {
             var layout = MatchArenaGenerator.Generate(4);
             var graph = LaneGraphBuilder.Build(layout);
-            var slot = layout.Slots[0];
 
-            graph.TryGetLane(0, GameIds.Lanes.Center, out var lane);
-            var expectedStart = slot.GetBuildingWorldPosition(GameIds.Buildings.BarracksCenter);
+            for (var slot = 0; slot < layout.PlayerCount; slot++)
+            {
+                var playerSlot = layout.Slots[slot];
+                Assert.IsTrue(graph.TryGetLane(slot, GameIds.Lanes.Center, out var center));
+                Assert.Less(
+                    Vector3.Distance(
+                        center.Path.Start,
+                        playerSlot.GetBuildingWorldPosition(GameIds.Buildings.BarracksCenter)),
+                    Epsilon);
 
-            Assert.Less(Vector3.Distance(lane.Path.Start, expectedStart), Epsilon);
+                Assert.IsTrue(graph.TryGetLane(slot, GameIds.Lanes.Left, out var left));
+                Assert.Less(
+                    Vector3.Distance(
+                        left.Path.Start,
+                        playerSlot.GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft)),
+                    Epsilon,
+                    $"Slot {slot} left flank must start at barracks.");
+
+                Assert.IsTrue(graph.TryGetLane(slot, GameIds.Lanes.Right, out var right));
+                Assert.Less(
+                    Vector3.Distance(
+                        right.Path.Start,
+                        playerSlot.GetBuildingWorldPosition(GameIds.Buildings.BarracksRight)),
+                    Epsilon,
+                    $"Slot {slot} right flank must start at barracks.");
+            }
         }
 
         [Test]
-        public void LanePath_EndsAtOpponentBarracks()
+        public void SpawnClearance_IsSameWorldDistanceFromBarracks_OnCenterAndFlanks()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var graph = LaneGraphBuilder.Build(layout);
+            var clearance = CombatFormationRules.BarracksSpawnForwardClearance;
+
+            for (var slot = 0; slot < layout.PlayerCount; slot++)
+            {
+                AssertLaneSpawnDistance(layout, graph, slot, GameIds.Lanes.Center, GameIds.Buildings.BarracksCenter, clearance);
+                AssertLaneSpawnDistance(layout, graph, slot, GameIds.Lanes.Left, GameIds.Buildings.BarracksLeft, clearance);
+                AssertLaneSpawnDistance(layout, graph, slot, GameIds.Lanes.Right, GameIds.Buildings.BarracksRight, clearance);
+            }
+        }
+
+        static void AssertLaneSpawnDistance(
+            MatchArenaLayout layout,
+            LaneGraph graph,
+            int slot,
+            string laneId,
+            string barracksId,
+            float clearance)
+        {
+            Assert.IsTrue(graph.TryGetLane(slot, laneId, out var lane));
+            var barracks = layout.Slots[slot].GetBuildingWorldPosition(barracksId);
+            barracks.y = 0f;
+            var spawn = lane.Path.EvaluateDistance(clearance);
+            spawn.y = 0f;
+            Assert.AreEqual(
+                clearance,
+                Vector3.Distance(spawn, barracks),
+                0.35f,
+                $"Slot {slot} {laneId} spawn should be ~{clearance} from barracks (path start offset bug).");
+        }
+
+        [Test]
+        public void LanePath_FlanksAreClosedRingsPassingOpponentBarracks()
         {
             var layout = MatchArenaGenerator.Generate(4);
             var graph = LaneGraphBuilder.Build(layout);
@@ -174,11 +227,24 @@ namespace Game.Tests
 
             var leftOpponent = layout.Slots[leftLane.OpponentSlot];
             var rightOpponent = layout.Slots[rightLane.OpponentSlot];
-            var expectedLeftEnd = leftOpponent.GetBuildingWorldPosition(GameIds.Buildings.BarracksRight);
-            var expectedRightEnd = rightOpponent.GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft);
+            var leftDestination = leftOpponent.GetBuildingWorldPosition(GameIds.Buildings.BarracksRight);
+            var rightDestination = rightOpponent.GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft);
 
-            Assert.Less(Vector3.Distance(leftLane.Path.End, expectedLeftEnd), Epsilon);
-            Assert.Less(Vector3.Distance(rightLane.Path.End, expectedRightEnd), Epsilon);
+            Assert.IsTrue(leftLane.Path.IsClosedLoop);
+            Assert.IsTrue(rightLane.Path.IsClosedLoop);
+            Assert.Less(Vector3.Distance(leftLane.Path.Start, leftLane.Path.End), 0.25f);
+            Assert.Less(Vector3.Distance(rightLane.Path.Start, rightLane.Path.End), 0.25f);
+
+            var leftJoin = N4RoadCenterlineBuilder.GetStripJoinPoint(
+                leftDestination,
+                leftOpponent.BasePosition,
+                layout.ArenaRadius);
+            var rightJoin = N4RoadCenterlineBuilder.GetStripJoinPoint(
+                rightDestination,
+                rightOpponent.BasePosition,
+                layout.ArenaRadius);
+            Assert.Less(DistanceFromPath(leftLane.Path, leftJoin), 2f);
+            Assert.Less(DistanceFromPath(rightLane.Path, rightJoin), 2f);
         }
 
         [Test]
@@ -242,9 +308,16 @@ namespace Game.Tests
 
             var minDistToCenter = float.MaxValue;
             var insideArenaSamples = 0;
-            for (var i = 0; i <= 40; i++)
+            for (var i = 0; i < lane.Path.WaypointCount; i++)
             {
-                var t = i / 40f;
+                var p = lane.Path.GetWaypoint(i);
+                p.y = 0f;
+                minDistToCenter = Mathf.Min(minDistToCenter, p.magnitude);
+            }
+
+            for (var i = 0; i <= 80; i++)
+            {
+                var t = i / 80f;
                 var p = lane.Path.EvaluateNormalized(t);
                 p.y = 0f;
                 var dist = p.magnitude;
@@ -323,6 +396,14 @@ namespace Game.Tests
             }
 
             return path.GetWaypoint(2);
+        }
+
+        static float DistanceFromPath(LanePath path, Vector3 worldPosition)
+        {
+            var projected = path.EvaluateDistance(path.ProjectDistance(worldPosition));
+            worldPosition.y = 0f;
+            projected.y = 0f;
+            return Vector3.Distance(worldPosition, projected);
         }
     }
 }

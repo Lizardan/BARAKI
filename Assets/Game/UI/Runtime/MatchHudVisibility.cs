@@ -23,5 +23,9 @@ namespace Game.UI
 
             return phase != MatchPhase.End;
         }
+
+        /// <summary>Wave countdown labels are local-player only (no enemy barracks intel).</summary>
+        public static bool ShouldShowBarracksTimer(int barracksOwnerSlot, int localPlayerSlot) =>
+            barracksOwnerSlot == localPlayerSlot;
     }
 }

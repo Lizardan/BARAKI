@@ -19,6 +19,8 @@ namespace Game.Gameplay.Networking
         public static bool IsNetworked { get; private set; }
         public static int PlayerCount { get; internal set; }
         public static int LocalSlot { get; internal set; } = -1;
+        /// <summary>Player slot of the current listen-host (starts at 0; updates after migration).</summary>
+        public static int ListenHostSlot { get; set; }
         public static int LobbyRevision => NetworkLobbyState.Instance?.Revision ?? -1;
         public static string RoomCode =>
             NetworkLobbyState.Instance?.RoomCodeValue ?? s_currentHandle.RoomCode ?? string.Empty;
@@ -65,6 +67,11 @@ namespace Game.Gameplay.Networking
             s_hasHandle = true;
             PlayerCount = handle.PlayerCount;
             LocalSlot = handle.LocalPlayerSlot;
+            if (!HostMigrationSession.IsRebinding)
+            {
+                ListenHostSlot = NetworkLobbySlotRules.HostSlot;
+            }
+
             IsNetworked = MatchNetworkEndpoint.TryParse(handle.TransportEndpoint, out var endpoint)
                             && endpoint.IsNetworked;
         }
@@ -96,7 +103,7 @@ namespace Game.Gameplay.Networking
             }
 
             manager.NetworkConfig.ConnectionData = Encoding.UTF8.GetBytes(
-                s_currentHandle.IsListenHost || LocalSlot == 0 ? "Host" : "Guest");
+                BuildConnectionPayload(s_currentHandle.IsListenHost || LocalSlot == 0));
 
             if (endpoint.IsRelay)
             {
@@ -163,15 +170,146 @@ namespace Game.Gameplay.Networking
                 : new MatchSetup(PlayerCount, LocalSlot < 0 ? 0 : LocalSlot);
         }
 
-        public static void Shutdown()
+        public static void Shutdown(bool clearSession = true)
         {
             MatchNetworkBootstrap.Ensure().Shutdown();
             MatchRelayTransportState.Clear();
+            if (!clearSession)
+            {
+                return;
+            }
+
             s_currentHandle = default;
             s_hasHandle = false;
             IsNetworked = false;
             PlayerCount = 0;
             LocalSlot = -1;
+            ListenHostSlot = NetworkLobbySlotRules.HostSlot;
+            HostMigrationSession.Clear();
+        }
+
+        /// <summary>Drop NGO/Relay only; keep room/slot for host migration rebind.</summary>
+        public static void ShutdownTransportKeepingSession() => Shutdown(clearSession: false);
+
+        /// <summary>Leave match networking and reset session (results → menu/lobby).</summary>
+        public static void LeaveMatch()
+        {
+            Shutdown();
+            GameSession.Reset();
+        }
+
+        /// <summary>Designated host: new Relay allocation + lobby Data update + StartAsHost.</summary>
+        public static async UniTask<bool> TryMigrateAsListenHostAsync()
+        {
+            if (!s_hasHandle)
+            {
+                return false;
+            }
+
+            var lobbyId = s_currentHandle.LobbyId;
+            var playerCount = PlayerCount;
+            var localSlot = LocalSlot;
+            var roomCode = s_currentHandle.RoomCode;
+            var displayName = PlayerProfileService.DisplayName;
+
+            if (MatchSessionService.Backend is UnityLobbyRelaySessionBackend relayBackend
+                && !string.IsNullOrEmpty(lobbyId))
+            {
+                var handle = await relayBackend.MigrateListenHostAsync(
+                    lobbyId,
+                    roomCode,
+                    playerCount,
+                    localSlot,
+                    displayName);
+                ApplyHandle(handle);
+                ListenHostSlot = localSlot;
+                return await TryStartTransportAsync();
+            }
+
+            // LocalDev / non-Relay: apply last-good in-process (no NGO rebind).
+            Debug.Log("HostMigration: LocalDev path — resume without Relay rebind.");
+            return true;
+        }
+
+        /// <summary>Non-host peers: poll lobby for new Relay join code and StartAsClient.</summary>
+        public static async UniTask<bool> TryRejoinMigratedHostAsync()
+        {
+            if (!s_hasHandle)
+            {
+                return false;
+            }
+
+            var lobbyId = s_currentHandle.LobbyId;
+            var localSlot = LocalSlot;
+            var roomCode = s_currentHandle.RoomCode;
+            var displayName = PlayerProfileService.DisplayName;
+            var previousRelay = HostMigrationSession.PreviousRelayJoinCode;
+
+            if (MatchSessionService.Backend is UnityLobbyRelaySessionBackend relayBackend
+                && !string.IsNullOrEmpty(lobbyId))
+            {
+                var handle = await relayBackend.WaitForMigratedRelayAsync(
+                    lobbyId,
+                    roomCode,
+                    previousRelay,
+                    PlayerCount,
+                    localSlot,
+                    displayName);
+                ApplyHandle(handle);
+                return await TryStartTransportAsync();
+            }
+
+            Debug.Log("HostMigration: LocalDev client path — resume without Relay rebind.");
+            return true;
+        }
+
+        public static string BuildReconnectToken()
+        {
+            var room = !string.IsNullOrWhiteSpace(RoomCode)
+                ? RoomCode
+                : s_currentHandle.RoomCode;
+            if (LocalSlot < 0 || string.IsNullOrWhiteSpace(room))
+            {
+                return string.Empty;
+            }
+
+            return PlayerReconnectRules.BuildSessionToken(room, LocalSlot);
+        }
+
+        public static void ClaimReconnectIfNeeded()
+        {
+            var lobby = NetworkLobbyState.Instance;
+            if (lobby == null || !lobby.MatchStartedValue)
+            {
+                return;
+            }
+
+            var token = BuildReconnectToken();
+            if (string.IsNullOrEmpty(token))
+            {
+                return;
+            }
+
+            lobby.RequestReconnect(token);
+        }
+
+        static string BuildConnectionPayload(bool isHost)
+        {
+            var room = !string.IsNullOrWhiteSpace(RoomCode)
+                ? RoomCode
+                : s_currentHandle.RoomCode;
+            if (!string.IsNullOrWhiteSpace(room)
+                && LocalSlot >= 0
+                && (MatchStarted || HostMigrationSession.IsRebinding))
+            {
+                return $"reconnect:{PlayerReconnectRules.BuildSessionToken(room, LocalSlot)}";
+            }
+
+            return isHost
+                   || (HostMigrationSession.IsRebinding
+                       && LocalSlot == HostMigrationSession.DesignatedHostSlot)
+                ? "Host"
+                : "Guest";
         }
 
         private static async UniTask<bool> StartRelayTransportAsync(
@@ -238,7 +376,7 @@ namespace Game.Gameplay.Networking
                         || manager == null
                         || (!manager.IsListening && !manager.IsConnectedClient))
                     {
-                        Shutdown();
+                        Shutdown(clearSession: !HostMigrationSession.IsRebinding);
                         return false;
                     }
 
@@ -252,7 +390,7 @@ namespace Game.Gameplay.Networking
                     await UniTask.Yield();
                 }
 
-                Shutdown();
+                Shutdown(clearSession: !HostMigrationSession.IsRebinding);
                 return false;
             }
             finally
@@ -266,3 +404,4 @@ namespace Game.Gameplay.Networking
 
     }
 }
+

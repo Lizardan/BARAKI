@@ -21,12 +21,67 @@ namespace Game.Tests
         }
 
         [Test]
-        public void FormatFriendLine_InGame_ShowsLobbyCode()
+        public void FormatFriendLine_InGame_OmitsLobbyCode()
         {
             var line = FriendsHubRules.FormatFriendLine("Alpha", FriendsHubRules.StatusInGame, true, "wxyz");
 
-            Assert.That(line, Does.Contain("Alpha"));
-            Assert.That(line, Does.Contain("WXYZ"));
+            Assert.AreEqual("Alpha: в лобби", line);
+            Assert.That(line, Does.Not.Contain("WXYZ"));
+        }
+
+        [Test]
+        public void FormatFriendLine_InGame_ShowsOccupiedSlots()
+        {
+            var line = FriendsHubRules.FormatFriendLine(
+                "Alpha",
+                FriendsHubRules.StatusInGame,
+                true,
+                "wxyz",
+                occupiedSlots: 2,
+                maxSlots: 4);
+
+            Assert.AreEqual("Alpha: в лобби · 2/4", line);
+            Assert.That(line, Does.Not.Contain("WXYZ"));
+        }
+
+        [TestCase(2, 4, "2/4")]
+        [TestCase(4, 4, "4/4")]
+        [TestCase(0, 0, "")]
+        public void FormatLobbySlots_FormatsFill(int occupied, int max, string expected)
+        {
+            Assert.AreEqual(expected, FriendsHubRules.FormatLobbySlots(occupied, max));
+        }
+
+        [Test]
+        public void CanJoinFriendLobby_False_WhenFull()
+        {
+            Assert.IsFalse(
+                FriendsHubRules.CanJoinFriendLobby(
+                    FriendsHubRules.StatusInGame,
+                    "abcd",
+                    occupiedSlots: 4,
+                    maxSlots: 4,
+                    out _));
+        }
+
+        [Test]
+        public void CanJoinFriendLobby_True_WhenHasFreeSlot()
+        {
+            Assert.IsTrue(
+                FriendsHubRules.CanJoinFriendLobby(
+                    FriendsHubRules.StatusInGame,
+                    "abcd",
+                    occupiedSlots: 2,
+                    maxSlots: 4,
+                    out var code));
+            Assert.AreEqual("ABCD", code);
+        }
+
+        [Test]
+        public void IsLobbyFull_RequiresKnownCapacity()
+        {
+            Assert.IsFalse(FriendsHubRules.IsLobbyFull(4, 0));
+            Assert.IsTrue(FriendsHubRules.IsLobbyFull(4, 4));
         }
 
         [TestCase("", false)]
@@ -96,6 +151,26 @@ namespace Game.Tests
             Assert.AreEqual(
                 expected,
                 FriendsHubRules.ShouldSyncDisplayNameToUgs("Other#1234", displayName));
+        }
+
+        [Test]
+        public void FormatInvitesTabLabel_WithoutPending_ReturnsBase()
+        {
+            Assert.AreEqual(FriendsHubRules.InvitesTabLabel, FriendsHubRules.FormatInvitesTabLabel(0));
+            Assert.AreEqual(FriendsHubRules.InvitesTabLabel, FriendsHubRules.FormatInvitesTabLabel(-1));
+        }
+
+        [Test]
+        public void FormatInvitesTabLabel_WithPending_AppendsCount()
+        {
+            Assert.AreEqual("ПРИГЛАШЕНИЯ (2)", FriendsHubRules.FormatInvitesTabLabel(2));
+        }
+
+        [Test]
+        public void IsInvitesTab_MatchesEnum()
+        {
+            Assert.IsFalse(FriendsHubRules.IsInvitesTab(FriendsHubTab.Friends));
+            Assert.IsTrue(FriendsHubRules.IsInvitesTab(FriendsHubTab.Invites));
         }
     }
 }

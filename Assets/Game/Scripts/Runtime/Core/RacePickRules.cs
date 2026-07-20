@@ -4,10 +4,17 @@ namespace Game.Core
 {
     public static class RacePickRules
     {
+        /// <summary>Races with shipped content (tests / future unlocks).</summary>
         public static readonly string[] PlayableRaceIds =
         {
             GameIds.Races.Human,
             GameIds.Races.Bug,
+        };
+
+        /// <summary>Races allowed in race pick UI and bot fill (playtest gate).</summary>
+        public static readonly string[] SelectableRaceIds =
+        {
+            GameIds.Races.Human,
         };
 
         public static bool IsPlayable(string raceId)
@@ -23,6 +30,19 @@ namespace Game.Core
             return false;
         }
 
+        public static bool IsSelectable(string raceId)
+        {
+            for (var i = 0; i < SelectableRaceIds.Length; i++)
+            {
+                if (SelectableRaceIds[i] == raceId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static string PickRandomRace(Random random)
         {
             if (random == null)
@@ -30,8 +50,13 @@ namespace Game.Core
                 throw new ArgumentNullException(nameof(random));
             }
 
-            var index = random.Next(PlayableRaceIds.Length);
-            return PlayableRaceIds[index];
+            if (SelectableRaceIds.Length == 0)
+            {
+                throw new InvalidOperationException("No selectable races.");
+            }
+
+            var index = random.Next(SelectableRaceIds.Length);
+            return SelectableRaceIds[index];
         }
 
         public static string GetDisplayName(string raceId) => raceId switch
@@ -57,7 +82,7 @@ namespace Game.Core
                 return false;
             }
 
-            if (!RacePickRules.IsPlayable(raceId))
+            if (!RacePickRules.IsSelectable(raceId))
             {
                 return false;
             }
@@ -75,7 +100,7 @@ namespace Game.Core
 
             for (var i = 0; i < picks.Length; i++)
             {
-                if (string.IsNullOrEmpty(picks[i]) || !RacePickRules.IsPlayable(picks[i]))
+                if (string.IsNullOrEmpty(picks[i]) || !RacePickRules.IsSelectable(picks[i]))
                 {
                     return false;
                 }

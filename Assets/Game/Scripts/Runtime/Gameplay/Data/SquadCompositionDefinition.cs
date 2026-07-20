@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Game.Gameplay.Data
 {
     [CreateAssetMenu(fileName = "SquadComposition", menuName = "Game/Squad Composition")]
-    public sealed class SquadCompositionDefinition : ScriptableObject
+    public sealed class SquadCompositionDefinition : ScriptableObject, ISquadCounts
     {
         [SerializeField] private int _barracksLevel = 1;
         [SerializeField] private int _meleeCount;
@@ -21,5 +21,16 @@ namespace Game.Gameplay.Data
         public int FlyingCount => _flyingCount;
         public int SuperCount => _superCount;
         public int TotalUnits => _meleeCount + _rangedCount + _casterCount + _siegeCount + _flyingCount + _superCount;
+
+        public int GetCount(UnitRole role) => role switch
+        {
+            UnitRole.Melee => _meleeCount,
+            UnitRole.Ranged => _rangedCount,
+            UnitRole.Caster => _casterCount,
+            UnitRole.Siege => _siegeCount,
+            UnitRole.Flying => _flyingCount,
+            UnitRole.Super => _superCount,
+            _ => 0,
+        };
     }
 }

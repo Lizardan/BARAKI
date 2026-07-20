@@ -145,7 +145,7 @@ namespace Game.Gameplay.Networking
             };
 
             UpdateRequired = GameUpdateVersionRules.IsUpdateRequired(
-                Application.version,
+                GameLocalVersion.Current,
                 RemoteManifest.EffectiveMinVersion);
         }
 
@@ -161,7 +161,7 @@ namespace Game.Gameplay.Networking
 
             RemoteManifest = manifest;
             UpdateRequired = GameUpdateVersionRules.IsUpdateRequired(
-                Application.version,
+                GameLocalVersion.Current,
                 manifest.EffectiveMinVersion);
         }
 

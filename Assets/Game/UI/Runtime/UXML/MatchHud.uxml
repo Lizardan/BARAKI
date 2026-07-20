@@ -11,12 +11,30 @@
                 <ui:Label name="GoldLabel" text="0" class="match-hud__gold" />
             </ui:VisualElement>
             <ui:Label name="BountyPopupLabel" text="" class="match-hud__bounty-popup match-hud__bounty-popup--hidden" />
+            <ui:Label name="CommandFeedbackLabel" text="" class="match-hud__command-feedback match-hud__command-feedback--hidden" />
             <ui:Label name="StartCountdownLabel" text="" class="match-hud__start-countdown" />
         </ui:VisualElement>
+        <ui:VisualElement name="MigrationOverlay" class="match-hud__migration match-hud__migration--hidden" picking-mode="Position">
+            <ui:Label name="MigrationLabel" text="Смена хоста…" class="match-hud__migration-label" />
+        </ui:VisualElement>
         <ui:VisualElement name="BarracksTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
-        <ui:VisualElement name="ResultsOverlay" class="match-hud__results match-hud__results--hidden" picking-mode="Ignore">
+        <ui:VisualElement name="PassiveGoldTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
+        <ui:VisualElement name="DebugHudPanel" class="match-hud__debug match-hud__debug--hidden" picking-mode="Position">
+            <ui:Label text="DEBUG" class="match-hud__debug-title" picking-mode="Ignore" />
+            <ui:Button name="DebugAddGoldButton" text="+1000 Gold" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugAddPassiveButton" text="+1 Passive" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugSkipResearchButton" text="Skip research" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugWinButton" text="Win local" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugSpawnPointsButton" text="Spawn points: OFF" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugWaypointsButton" text="Waypoints: OFF" class="ui-btn match-hud__debug-btn" />
+        </ui:VisualElement>
+        <ui:VisualElement name="ResultsOverlay" class="match-hud__results match-hud__results--hidden" picking-mode="Position">
             <ui:VisualElement class="ui-dialog match-hud__results-panel">
                 <ui:Label name="ResultsTitle" text="" class="match-hud__results-title" />
+                <ui:VisualElement class="match-hud__results-actions">
+                    <ui:Button name="ResultsRematchButton" text="Реванш" class="ui-btn match-hud__results-btn" />
+                    <ui:Button name="ResultsLobbyButton" text="В меню" class="ui-btn match-hud__results-btn" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="BottomDock" class="match-bottom-dock" picking-mode="Position">
@@ -44,6 +62,11 @@
                                     <ui:Label name="EntityStat5" text="" class="match-context-strip__stat-line" />
                                 </ui:VisualElement>
                                 <ui:VisualElement name="ResearchBlock" class="match-context-strip__research-block">
+                                    <ui:VisualElement name="ResearchQueueRow" class="match-context-strip__research-queue" picking-mode="Ignore">
+                                        <ui:Label name="ResearchQueueSlot0" text="" class="match-context-strip__research-queue-slot" picking-mode="Ignore" />
+                                        <ui:Label name="ResearchQueueSlot1" text="" class="match-context-strip__research-queue-slot" picking-mode="Ignore" />
+                                        <ui:Label name="ResearchQueueSlot2" text="" class="match-context-strip__research-queue-slot" picking-mode="Ignore" />
+                                    </ui:VisualElement>
                                     <ui:Label name="ResearchLabel" text="Нет активного исследования" class="match-context-strip__research-label" />
                                     <ui:ProgressBar name="ResearchProgress" high-value="1" value="0" class="match-context-strip__research-bar ui-bar" />
                                 </ui:VisualElement>
@@ -80,6 +103,9 @@
                     <ui:VisualElement name="InspectorEmptyOverlay" class="match-panel__empty-overlay" picking-mode="Ignore" />
                 </ui:VisualElement>
             </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="CommandTooltip" class="match-command-tooltip match-command-tooltip--hidden" picking-mode="Ignore">
+            <ui:Label name="CommandTooltipLabel" text="" class="match-command-tooltip__label" picking-mode="Ignore" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

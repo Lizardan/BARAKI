@@ -42,5 +42,11 @@ namespace Game.Gameplay.Match
             CurrentHp = Mathf.Max(0f, CurrentHp - rawDamage);
             return IsRuins;
         }
+
+        /// <summary>Host snapshot apply — sets HP without firing destroy events.</summary>
+        public void SetAuthoritativeHp(float hp)
+        {
+            CurrentHp = Mathf.Clamp(hp, 0f, MaxHp);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match.Selection;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
@@ -8,6 +9,13 @@ namespace Game.Gameplay.Combat
     public static class CombatRules
     {
         public const float MinDamage = 1f;
+
+        /// <summary>
+        /// Melee bodies need a bit of reach beyond raw AttackRange to hit building surfaces
+        /// when units stack around the footprint.
+        /// </summary>
+        public static float GetBuildingAttackReach(float attackRange) =>
+            attackRange + MatchPickFootprint.DefaultUnitDiameter * 0.5f;
 
         public static float RollDamage(float damageMin, float damageMax, System.Random random)
         {
@@ -45,7 +53,7 @@ namespace Game.Gameplay.Combat
             return attackerRole is UnitRole.Ranged
                 or UnitRole.Flying
                 or UnitRole.Caster
-                or UnitRole.Super;
+                or UnitRole.Hero;
         }
 
         public static float GetAttackIntervalSeconds(float attackSpeed)

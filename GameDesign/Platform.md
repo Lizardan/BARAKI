@@ -109,4 +109,5 @@ mvp: true
 | Net model | **Host-as-server** + Lobby + Relay |
 | Social | **UGS Friends + Cloud Save** |
 | Builds | **GHA → GitHub Releases → in-game force update** |
-| Host migration / reconnect | **Post-MVP** |
+| Host migration / reconnect | **Required** (listen-host peer model) |
+| Dedicated server | **Rejected** |

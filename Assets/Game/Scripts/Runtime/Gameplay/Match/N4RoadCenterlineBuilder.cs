@@ -218,7 +218,7 @@ namespace Game.Gameplay.Match
             AppendCornerArc(points, new Vector3(-h, 0f, h), turnClockwise: true);
 
             AppendUnique(points, points[0]);
-            return new LanePath(points);
+            return new LanePath(points, isClosedLoop: true);
         }
 
         static bool NeedsGapCrossing(float fromTravel, float toTravel, bool increasing)

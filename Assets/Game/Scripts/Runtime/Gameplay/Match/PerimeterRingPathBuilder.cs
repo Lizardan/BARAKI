@@ -36,7 +36,7 @@ namespace Game.Gameplay.Match
                     Mathf.Sin(angle) * radius));
             }
 
-            return new LanePath(points);
+            return new LanePath(points, isClosedLoop: true);
         }
     }
 }

@@ -32,5 +32,15 @@ namespace Game.Gameplay.Combat
         {
             return _routes.TryGetValue((ownerSlot, laneId), out route);
         }
+
+        public void Replace(int ownerSlot, string laneId, LanePath path, float sampleSpacing = 10f)
+        {
+            if (path == null)
+            {
+                return;
+            }
+
+            _routes[(ownerSlot, laneId)] = LaneRoute.FromPath(path, sampleSpacing);
+        }
     }
 }

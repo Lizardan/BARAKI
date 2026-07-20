@@ -29,5 +29,12 @@ namespace Game.Tests
         {
             Assert.IsTrue(MatchHudVisibility.ShouldClearRunningHud(hasController: true, isRunning: false, MatchPhase.Lobby));
         }
+
+        [Test]
+        public void ShouldShowBarracksTimer_OnlyLocalOwner()
+        {
+            Assert.IsTrue(MatchHudVisibility.ShouldShowBarracksTimer(0, 0));
+            Assert.IsFalse(MatchHudVisibility.ShouldShowBarracksTimer(1, 0));
+        }
     }
 }

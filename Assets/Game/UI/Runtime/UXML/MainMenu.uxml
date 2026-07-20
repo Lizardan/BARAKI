@@ -58,18 +58,25 @@
                         <ui:Label text="ДРУЗЬЯ" class="ui-panel__header-text" />
                         <ui:Label name="FriendsCountLabel" text="0" class="mm__friends-count" />
                     </ui:VisualElement>
-                    <ui:VisualElement name="IncomingRequestsSection" class="mm__incoming-requests ui-overlay--hidden">
-                        <ui:Label text="Входящие запросы" class="ui-label mm__friends-add-label" />
-                        <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
+                    <ui:VisualElement name="FriendsTabs" class="mm__friends-tabs">
+                        <ui:Button name="FriendsTabButton" text="ДРУЗЬЯ" class="mm__friends-tab mm__friends-tab--active" />
+                        <ui:Button name="InvitesTabButton" text="ПРИГЛАШЕНИЯ" class="mm__friends-tab" />
                     </ui:VisualElement>
-                    <ui:ScrollView name="FriendsScroll" class="mm__friends-scroll" mode="Vertical">
-                        <ui:VisualElement name="FriendsListContainer" class="mm__friends-list-container" />
-                    </ui:ScrollView>
-                    <ui:Label name="FriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
-                    <ui:VisualElement name="AddFriendSection" class="mm__friends-add">
-                        <ui:Label text="Добавить по имени (Ник#1234)" class="ui-label mm__friends-add-label" />
-                        <ui:TextField name="FriendIdField" class="mm-join__field" max-length="32" />
-                        <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
+                    <ui:VisualElement name="FriendsTabContent" class="mm__friends-tab-pane">
+                        <ui:ScrollView name="FriendsScroll" class="mm__friends-scroll" mode="Vertical">
+                            <ui:VisualElement name="FriendsListContainer" class="mm__friends-list-container" />
+                        </ui:ScrollView>
+                        <ui:Label name="FriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
+                        <ui:VisualElement name="AddFriendSection" class="mm__friends-add">
+                            <ui:Label text="Добавить по имени (Ник#1234)" class="ui-label mm__friends-add-label" />
+                            <ui:TextField name="FriendIdField" class="mm-join__field" max-length="32" />
+                            <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="InvitesTabContent" class="mm__friends-tab-pane ui-overlay--hidden">
+                        <ui:ScrollView name="InvitesScroll" class="mm__friends-scroll" mode="Vertical">
+                            <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
+                        </ui:ScrollView>
                     </ui:VisualElement>
                     <ui:VisualElement name="HubLoadingOverlay" class="ui-panel-loading-overlay ui-panel-loading-overlay--hidden" picking-mode="Ignore">
                         <ui:VisualElement class="ui-panel-loading-overlay__content">

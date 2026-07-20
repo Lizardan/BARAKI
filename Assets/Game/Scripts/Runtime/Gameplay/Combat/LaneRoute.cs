@@ -21,7 +21,30 @@ namespace Game.Gameplay.Combat
 
         public float TotalLength => _path.TotalLength;
 
+        public bool IsClosedLoop => _path.IsClosedLoop;
+
         public int MarchWaypointCount => _marchWaypoints.Length;
+
+        public float WrapDistance(float distanceFromStart) => _path.WrapDistance(distanceFromStart);
+
+        /// <summary>Keeps march progress moving forward, wrapping on closed loops.</summary>
+        public float AdvanceProgress(float currentProgress, float projectedProgress)
+        {
+            if (!IsClosedLoop)
+            {
+                return Mathf.Max(currentProgress, projectedProgress);
+            }
+
+            currentProgress = WrapDistance(currentProgress);
+            projectedProgress = WrapDistance(projectedProgress);
+            var delta = projectedProgress - currentProgress;
+            if (delta < -TotalLength * 0.5f)
+            {
+                delta += TotalLength;
+            }
+
+            return delta < 0f ? currentProgress : projectedProgress;
+        }
 
         public Vector3 GetMarchWaypoint(int index)
         {

@@ -97,8 +97,16 @@ namespace Game.Tests
             var westIndex = layout.Slots[0].BasePosition.x < 0f ? 0 : 1;
             Assert.IsTrue(graph.TryGetLane(westIndex, GameIds.Lanes.Left, out var left));
 
-            var mid = Flat(left.Path.GetWaypoint(left.Path.WaypointCount / 2));
-            Assert.Greater(mid.z, N2RoadReferenceSpec.FlankStraightAbsZ * 0.9f, "West Left must march on the north stadium strip.");
+            var maxZ = 0f;
+            for (var i = 0; i < left.Path.WaypointCount; i++)
+            {
+                maxZ = Mathf.Max(maxZ, Flat(left.Path.GetWaypoint(i)).z);
+            }
+
+            Assert.Greater(
+                maxZ,
+                N2RoadReferenceSpec.FlankStraightAbsZ * 0.9f,
+                "West Left must march on the north stadium strip.");
         }
 
         [Test]
@@ -139,8 +147,10 @@ namespace Game.Tests
 
         static float GetMaxAbsZ(LanePath path)
         {
+            // Ignore the post-base continue tail (last waypoint).
             var max = 0f;
-            for (var i = 0; i < path.WaypointCount; i++)
+            var last = Mathf.Max(1, path.WaypointCount - 1);
+            for (var i = 0; i < last; i++)
             {
                 max = Mathf.Max(max, Mathf.Abs(path.GetWaypoint(i).z));
             }

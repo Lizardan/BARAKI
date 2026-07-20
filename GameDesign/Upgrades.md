@@ -198,7 +198,7 @@ mvp: true
 | Hero hire cap | **= main level** (1 / 2 / 3 героя) |
 | Magic unlock | **800 / 1500 / 2500g**; **60 / 90 / 135 s**; gate = main level |
 | Tower upgrades | **5 tracks × 3 levels**; **4 towers**; race-wide; **500/800/1200g**; **45/90/135s** |
-| Barracks level | Per-barracks, max 4; costs **1000/1500/2500**; time **45/90/135s** |
+| Barracks level | Per-barracks, max 4; costs **1000/1500/2500**; time **5/5/5s** (playtest) |
 | Stat upgrades | **+3%** dmg/armor or **+10%** heal per level; costs см. `UPG_STAT_LEVEL_ECONOMY` |
 | Passive gold | **200g**, **25s** per level; **+25g/30s** per level |
 

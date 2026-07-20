@@ -12,6 +12,7 @@ namespace Game.UI.Controllers
 
         VisualElement _bottomDock;
         VisualElement _topBar;
+        VisualElement _debugHudPanel;
         MatchSelectionInput _boundInput;
 
         void Awake()
@@ -24,6 +25,7 @@ namespace Game.UI.Controllers
             var root = _uiDocument.rootVisualElement;
             _bottomDock = root.Q<VisualElement>("BottomDock");
             _topBar = root.Q<VisualElement>("TopBar");
+            _debugHudPanel = root.Q<VisualElement>("DebugHudPanel");
         }
 
         void OnEnable()
@@ -54,16 +56,17 @@ namespace Game.UI.Controllers
             }
 
             var input = bridge.GetComponent<MatchSelectionInput>();
-            if (input == null || input == _boundInput)
+            if (input == null)
             {
                 return;
             }
 
-            if (_boundInput != null)
+            if (_boundInput != null && _boundInput != input)
             {
                 _boundInput.SetUiBlocker(null);
             }
 
+            // Re-apply every frame so BeginMatch/Initialize cannot leave the gate unbound.
             input.SetUiBlocker(IsPointerOverBlockedUi);
             _boundInput = input;
         }
@@ -81,15 +84,26 @@ namespace Game.UI.Controllers
                 return false;
             }
 
-            var panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
+            var panelPosition = MatchSelectionUiPointer.ScreenToPanelPosition(panel, screenPosition);
             var picked = panel.Pick(panelPosition);
-            if (picked == null)
+            if (MatchSelectionUiPointer.IsPointerOverBlockedUi(
+                    picked,
+                    _bottomDock,
+                    _topBar,
+                    _debugHudPanel))
             {
-                return false;
+                return true;
             }
 
-            return MatchSelectionUiPointer.IsDescendantOf(_bottomDock, picked)
-                   || MatchSelectionUiPointer.IsDescendantOf(_topBar, picked);
+            // Layout fallback when Pick misses (Ignore overlays / scale edge cases).
+            return ContainsPanelPoint(_bottomDock, panelPosition)
+                   || ContainsPanelPoint(_topBar, panelPosition)
+                   || ContainsPanelPoint(_debugHudPanel, panelPosition);
         }
+
+        static bool ContainsPanelPoint(VisualElement element, Vector2 panelPosition) =>
+            element != null
+            && element.resolvedStyle.display != DisplayStyle.None
+            && element.worldBound.Contains(panelPosition);
     }
 }

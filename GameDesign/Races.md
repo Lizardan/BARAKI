@@ -453,7 +453,7 @@ mvp: false
 
 ## Race select UI
 
-- MVP: **2** активных портрета (Люди / Жуки)
+- MVP: **2** расы в контенте (Люди / Жуки); **playtest pick gate:** только Люди (`SelectableRaceIds`), Жуки grey/disabled
 - Показ **passives** (+2/−1) в tooltip при выборе
 - Будущие: `Coming Soon` или скрыты до релиза контента
 - `RaceCatalog` ScriptableObject

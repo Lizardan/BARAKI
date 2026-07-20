@@ -8,5 +8,6 @@ namespace Game.Gameplay.Data
         Siege,
         Flying,
         Super,
+        Hero,
     }
 }

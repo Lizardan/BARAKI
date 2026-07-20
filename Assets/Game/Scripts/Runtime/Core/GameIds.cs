@@ -122,6 +122,8 @@ namespace Game.Core
             public const string MainPassiveGold = "UPG_MAIN_PASSIVE_GOLD";
             public const string MainMagic = "UPG_MAIN_MAGIC";
             public const string BarracksLevel = "UPG_BARRACKS_LEVEL";
+            /// <summary>Prefix for hero hire research; full id is <c>UPG_HERO_HIRE:{slot}</c>.</summary>
+            public const string HeroHire = "UPG_HERO_HIRE";
 
             public const string MeleeDamage = "UPG_MELEE_DMG";
             public const string RangedDamage = "UPG_RANGED_DMG";

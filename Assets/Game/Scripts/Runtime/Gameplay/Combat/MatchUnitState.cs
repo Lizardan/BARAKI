@@ -15,7 +15,9 @@ namespace Game.Gameplay.Combat
             Vector3 worldPosition,
             int marchWaypointIndex = 0,
             float? marchMoveSpeed = null,
-            float marchSpawnDistance = 0f)
+            float marchSpawnDistance = 0f,
+            bool isHero = false,
+            int heroSlot = 0)
         {
             UnitId = unitId;
             OwnerSlot = ownerSlot;
@@ -31,6 +33,9 @@ namespace Game.Gameplay.Combat
             MarchProgressDistance = marchSpawnDistance;
             BehaviorState = UnitBehaviorState.Move;
             FacingDirection = Vector3.forward;
+            IsHero = isHero || role == UnitRole.Hero;
+            HeroSlot = heroSlot;
+            IsParkedAtBase = false;
         }
 
         public int UnitId { get; }
@@ -38,6 +43,10 @@ namespace Game.Gameplay.Combat
         public string LaneId { get; }
         public UnitRole Role { get; }
         public UnitCombatStats Stats { get; }
+        public bool IsHero { get; }
+        public int HeroSlot { get; }
+        /// <summary>Hired hero waiting behind base — no march/combat AI.</summary>
+        public bool IsParkedAtBase { get; set; }
         public float CurrentHp { get; set; }
         public float CurrentMana { get; set; }
         public Vector3 WorldPosition { get; set; }

@@ -14,18 +14,24 @@ namespace Game.Editor
         public const string HumanPath = RootPath + "/Human";
         public const string BugPath = RootPath + "/Bug";
         public const string CatalogPath = "Assets/Game/ScriptableObjects/UnitVisualCatalog.asset";
-        public const string MercenarySwordPath =
-            "Assets/Game/Prefabs/Characters/Mercenaries/MercenarySword.prefab";
-        public const string MercenarySpearThrowerPath =
-            "Assets/Game/Prefabs/Characters/Mercenaries/MercenarySpearThrower.prefab";
-        public const string MercenaryMagePath =
-            "Assets/Game/Prefabs/Characters/Mercenaries/MercenaryMage.prefab";
+        public const string HumanMeleePath = HumanPath + "/Human_Melee.prefab";
+        public const string HumanRangedPath = HumanPath + "/Human_Ranged.prefab";
+        public const string HumanCasterPath = HumanPath + "/Human_Caster.prefab";
+        public const string HumanSiegePath = HumanPath + "/Human_Siege.prefab";
+        public const string HumanFlyingPath = HumanPath + "/Human_Flying.prefab";
+        public const string HumanSuperPath = HumanPath + "/Human_Super.prefab";
         public const string UnitTeamAccentMaterialPath =
             "Assets/Game/Art/Materials/Units/UnitTeamAccent.mat";
-        public const string BanditMaterialPath =
-            "Assets/Game/Art/Models/Mercenaries/Materials/Mat_Bandit.mat";
-        public const string BanditMageMaterialPath =
-            "Assets/Game/Art/Models/Mercenaries/Materials/Mat_BanditMage.mat";
+
+        static readonly string[] HumanAnimatedPrefabPaths =
+        {
+            HumanMeleePath,
+            HumanRangedPath,
+            HumanCasterPath,
+            HumanSiegePath,
+            HumanFlyingPath,
+            HumanSuperPath,
+        };
 
         public static void EnsureContent()
         {
@@ -35,145 +41,38 @@ namespace Game.Editor
             EnsureFolder(BugPath);
             EnsureFolder("Assets/Game/ScriptableObjects");
 
-            var humanPrefabs = CreateRacePrefabs(HumanPath, "Human", isHuman: true);
-            var bugPrefabs = CreateRacePrefabs(BugPath, "Bug", isHuman: false);
-            ReplaceHumanCombatPrefabsWithMercenaries(humanPrefabs);
+            var humanPrefabs = LoadAnimatedHumanPrefabs();
+            var bugPrefabs = CreateBugPrefabs();
             UpdateCatalogFromPrefabs(humanPrefabs, bugPrefabs);
             UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
             AssetDatabase.SaveAssets();
         }
 
         /// <summary>
-        /// Writes mercenary combat visuals into canonical Units/Human paths and refreshes array slots.
+        /// All Human combat roles live under Units/Human (animated FBX + Animator).
+        /// Rebuild via menu BARAKI/Units/Rebuild Human Animated Prefabs when models change.
         /// </summary>
-        static void ReplaceHumanCombatPrefabsWithMercenaries(GameObject[] humanPrefabs)
+        static GameObject[] LoadAnimatedHumanPrefabs()
         {
-            ApplyTeamAccentsToMercenaryTemplate(MercenarySwordPath, useMageBodyMaterial: false);
-            ApplyTeamAccentsToMercenaryTemplate(MercenarySpearThrowerPath, useMageBodyMaterial: false);
-            ApplyTeamAccentsToMercenaryTemplate(MercenaryMagePath, useMageBodyMaterial: true);
-
-            humanPrefabs[0] = CopyMercenaryTemplateToHuman(
-                MercenarySwordPath, $"{HumanPath}/Human_Melee.prefab", "Human_Melee");
-            humanPrefabs[1] = CopyMercenaryTemplateToHuman(
-                MercenarySpearThrowerPath, $"{HumanPath}/Human_Ranged.prefab", "Human_Ranged");
-            humanPrefabs[2] = CopyMercenaryTemplateToHuman(
-                MercenaryMagePath, $"{HumanPath}/Human_Caster.prefab", "Human_Caster");
-        }
-
-        static GameObject CopyMercenaryTemplateToHuman(string sourcePath, string destPath, string destName)
-        {
-            var source = LoadRequiredPrefab(sourcePath);
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(source);
-            instance.name = destName;
-            // Align WC3 +X facing with Unity locomotion (+Z).
-            instance.transform.localRotation = Quaternion.Euler(
-                0f,
-                UnitGreyboxVisuals.AnimatedHumanModelYawDegrees,
-                0f);
-            var saved = PrefabUtility.SaveAsPrefabAsset(instance, destPath);
-            UnityEngine.Object.DestroyImmediate(instance);
-            if (saved == null)
+            var prefabs = new GameObject[HumanAnimatedPrefabPaths.Length];
+            for (var i = 0; i < HumanAnimatedPrefabPaths.Length; i++)
             {
-                throw new InvalidOperationException($"Failed to write human unit prefab at '{destPath}'.");
-            }
-
-            return saved;
-        }
-
-        static void ApplyTeamAccentsToMercenaryTemplate(string prefabPath, bool useMageBodyMaterial)
-        {
-            var root = PrefabUtility.LoadPrefabContents(prefabPath);
-            try
-            {
-                ApplyTeamAccentsToInstance(root, useMageBodyMaterial);
-                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        static void ApplyTeamAccentsToInstance(GameObject root, bool useMageBodyMaterial)
-        {
-            var accentMat = AssetDatabase.LoadAssetAtPath<Material>(UnitTeamAccentMaterialPath);
-            var bodyMatPath = useMageBodyMaterial ? BanditMageMaterialPath : BanditMaterialPath;
-            var bodyMat = AssetDatabase.LoadAssetAtPath<Material>(bodyMatPath);
-            if (accentMat == null)
-            {
-                throw new InvalidOperationException($"Missing team accent material at '{UnitTeamAccentMaterialPath}'.");
-            }
-
-            if (bodyMat == null)
-            {
-                throw new InvalidOperationException($"Missing body material at '{bodyMatPath}'.");
-            }
-
-            var renderers = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            if (renderers.Length == 0)
-            {
-                return;
-            }
-
-            var bodyIndex = 0;
-            var maxVerts = -1;
-            for (var i = 0; i < renderers.Length; i++)
-            {
-                var mesh = renderers[i].sharedMesh;
-                var verts = mesh != null ? mesh.vertexCount : 0;
-                if (verts > maxVerts)
+                var path = HumanAnimatedPrefabPaths[i];
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null)
                 {
-                    maxVerts = verts;
-                    bodyIndex = i;
-                }
-            }
-
-            for (var i = 0; i < renderers.Length; i++)
-            {
-                var renderer = renderers[i];
-                if (i == bodyIndex)
-                {
-                    renderer.sharedMaterial = bodyMat;
-                    if (IsAccentName(renderer.gameObject.name))
-                    {
-                        renderer.gameObject.name = $"Body_{i}";
-                    }
-
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Missing animated human unit prefab at '{path}'. " +
+                        "Run BARAKI/Units/Rebuild Human Animated Prefabs first.");
                 }
 
-                var mesh = renderer.sharedMesh;
-                var verts = mesh != null ? mesh.vertexCount : 0;
-                // Skip tiny FX / leftover geosets (gutz dust).
-                if (verts < 40)
-                {
-                    continue;
-                }
-
-                renderer.sharedMaterial = accentMat;
-                if (!IsAccentName(renderer.gameObject.name))
-                {
-                    renderer.gameObject.name = $"{UnitVisualAccent.TeamAccentTransformName}_{i}";
-                }
-            }
-        }
-
-        static bool IsAccentName(string name) =>
-            name == UnitVisualAccent.TeamAccentTransformName
-            || name.StartsWith(UnitVisualAccent.TeamAccentTransformName + "_", StringComparison.Ordinal);
-
-        static GameObject LoadRequiredPrefab(string path)
-        {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (prefab == null)
-            {
-                throw new InvalidOperationException($"Missing mercenary prefab at '{path}'.");
+                prefabs[i] = prefab;
             }
 
-            return prefab;
+            return prefabs;
         }
 
-        static GameObject[] CreateRacePrefabs(string folder, string prefix, bool isHuman)
+        static GameObject[] CreateBugPrefabs()
         {
             var roles = new[]
             {
@@ -189,15 +88,9 @@ namespace Game.Editor
             for (var i = 0; i < roles.Length; i++)
             {
                 var role = roles[i];
-                // Human Melee/Ranged/Caster are overwritten from mercenary templates after this loop.
-                if (isHuman && (role == UnitRole.Melee || role == UnitRole.Ranged || role == UnitRole.Caster))
-                {
-                    continue;
-                }
-
-                var name = $"{prefix}_{role}";
-                var path = $"{folder}/{name}.prefab";
-                var root = isHuman ? BuildHuman(role, name) : BuildBug(role, name);
+                var name = $"Bug_{role}";
+                var path = $"{BugPath}/{name}.prefab";
+                var root = BuildBug(role, name);
                 prefabs[i] = SavePrefab(root, path);
             }
 

@@ -30,7 +30,7 @@ namespace Game.UI.Controllers
 
 #if UNITY_EDITOR
         [Header("Editor preview — version strip (Play Mode)")]
-        [SerializeField] private bool _previewUpdateAvailable = true;
+        [SerializeField] private bool _previewUpdateAvailable;
         [SerializeField] private string _previewRemoteVersion = "0.1.4";
         [SerializeField] private bool _previewDownloading;
         [SerializeField] [Range(0f, 1f)] private float _previewDownloadProgress = 0.37f;
@@ -38,6 +38,10 @@ namespace Game.UI.Controllers
         [Header("Editor preview — hub loading")]
         [SerializeField] private bool _previewProfileLoading;
         [SerializeField] private bool _previewFriendsLoading;
+
+        [Header("Editor preview — friends hub")]
+        [SerializeField] private bool _previewFriendsHub;
+        [SerializeField] private FriendsHubTab _previewFriendsTab = FriendsHubTab.Invites;
 #endif
 
         private VisualElement _root;
@@ -76,7 +80,10 @@ namespace Game.UI.Controllers
         private VisualElement _profileBadge;
         private Label _friendsCountLabel;
         private Label _friendsErrorLabel;
-        private VisualElement _incomingRequestsSection;
+        private VisualElement _friendsTabContent;
+        private VisualElement _invitesTabContent;
+        private Button _friendsTabButton;
+        private Button _invitesTabButton;
         private VisualElement _incomingRequestsList;
         private VisualElement _friendsListContainer;
         private VisualElement _addFriendSection;
@@ -171,7 +178,10 @@ namespace Game.UI.Controllers
 
             _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
             _friendsErrorLabel = _root.Q<Label>("FriendsErrorLabel");
-            _incomingRequestsSection = _root.Q<VisualElement>("IncomingRequestsSection");
+            _friendsTabContent = _root.Q<VisualElement>("FriendsTabContent");
+            _invitesTabContent = _root.Q<VisualElement>("InvitesTabContent");
+            _friendsTabButton = _root.Q<Button>("FriendsTabButton");
+            _invitesTabButton = _root.Q<Button>("InvitesTabButton");
             _incomingRequestsList = _root.Q<VisualElement>("IncomingRequestsList");
             _friendsListContainer = _root.Q<VisualElement>("FriendsListContainer");
             _addFriendSection = _root.Q<VisualElement>("AddFriendSection");
@@ -200,6 +210,10 @@ namespace Game.UI.Controllers
             BindLoadingOverlays();
             BindFriendsHubPanel();
             BindLobbyInviteBanner();
+#if UNITY_EDITOR
+            ApplyEditorHubLoadingPreview();
+            ApplyEditorFriendsHubPreview();
+#endif
 
             ApplyVersionStrip(updateAvailable: false, remoteVersion: null, downloading: false, progress01: 0f);
 
@@ -296,6 +310,7 @@ namespace Game.UI.Controllers
             }
 
             ApplyEditorHubLoadingPreview();
+            ApplyEditorFriendsHubPreview();
         }
 #endif
 
@@ -962,7 +977,10 @@ namespace Game.UI.Controllers
             _friendsHubPanel = new FriendsHubPanel(
                 FriendsHubPanelMode.Full,
                 _friendsListContainer,
-                _incomingRequestsSection,
+                _friendsTabContent,
+                _invitesTabContent,
+                _friendsTabButton,
+                _invitesTabButton,
                 _incomingRequestsList,
                 _friendsCountLabel,
                 _friendIdField,
@@ -1188,6 +1206,47 @@ namespace Game.UI.Controllers
             _profileLoadingOverlay?.SetVisible(_previewProfileLoading);
             _friendsLoadingOverlay?.SetVisible(_previewFriendsLoading);
         }
+
+        /// <summary>Inspector / edit-mode preview for friends tabs and invite rows.</summary>
+        public void ApplyEditorFriendsHubPreview()
+        {
+            if (_uiDocument == null)
+            {
+                TryGetComponent(out _uiDocument);
+            }
+
+            var root = _root ?? _uiDocument?.rootVisualElement;
+            if (root == null)
+            {
+                return;
+            }
+
+            _root = root;
+            if (_friendsHubPanel == null)
+            {
+                _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
+                _friendsErrorLabel = _root.Q<Label>("FriendsErrorLabel");
+                _friendsTabContent = _root.Q<VisualElement>("FriendsTabContent");
+                _invitesTabContent = _root.Q<VisualElement>("InvitesTabContent");
+                _friendsTabButton = _root.Q<Button>("FriendsTabButton");
+                _invitesTabButton = _root.Q<Button>("InvitesTabButton");
+                _incomingRequestsList = _root.Q<VisualElement>("IncomingRequestsList");
+                _friendsListContainer = _root.Q<VisualElement>("FriendsListContainer");
+                _addFriendSection = _root.Q<VisualElement>("AddFriendSection");
+                _friendIdField = _root.Q<TextField>("FriendIdField");
+                _addFriendButton = _root.Q<Button>("AddFriendButton");
+                BindFriendsHubPanel();
+            }
+
+            if (_previewFriendsHub)
+            {
+                _friendsHubPanel.ApplyDesignPreview(_previewFriendsTab);
+            }
+            else
+            {
+                _friendsHubPanel.ClearDesignPreview();
+            }
+        }
 #endif
 
         private void RefreshProfileLabels()
@@ -1342,7 +1401,7 @@ namespace Game.UI.Controllers
         {
             if (_versionLabel != null)
             {
-                _versionLabel.text = GameUpdateUiRules.FormatVersionLabel(Application.version);
+                _versionLabel.text = GameUpdateUiRules.FormatVersionLabel(GameLocalVersion.Current);
             }
 
             var showRemote = updateAvailable && !string.IsNullOrWhiteSpace(remoteVersion);
@@ -1618,7 +1677,11 @@ namespace Game.UI.Controllers
 
                 try
                 {
-                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, handle.RoomCode);
+                    await FriendsHubService.SetPresenceAsync(
+                        FriendsHubRules.StatusInGame,
+                        handle.RoomCode,
+                        occupiedSlots: 1,
+                        maxSlots: playerCount);
                 }
                 catch (System.Exception)
                 {
@@ -1628,6 +1691,10 @@ namespace Game.UI.Controllers
                 EnsureModeSelectClosed();
                 EnsureMatchEntryClosed();
                 await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // Scene load destroys this controller — cancel is expected success.
             }
             catch (System.Exception ex)
             {
@@ -1668,7 +1735,11 @@ namespace Game.UI.Controllers
 
                 try
                 {
-                    await FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInGame, handle.RoomCode);
+                    await FriendsHubService.SetPresenceAsync(
+                        FriendsHubRules.StatusInGame,
+                        handle.RoomCode,
+                        occupiedSlots: 1,
+                        maxSlots: handle.PlayerCount);
                 }
                 catch (System.Exception)
                 {
@@ -1677,6 +1748,10 @@ namespace Game.UI.Controllers
 
                 EnsureMatchEntryClosed();
                 await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
+            }
+            catch (System.OperationCanceledException)
+            {
+                // Scene load destroys this controller — cancel is expected success.
             }
             catch (System.Exception ex)
             {

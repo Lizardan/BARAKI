@@ -9,6 +9,15 @@ namespace Game.Tests
     public sealed class SquadSpawnRulesTests
     {
         [Test]
+        public void GetSpawnDelaySeconds_StaggersByInterval()
+        {
+            Assert.AreEqual(0.1f, SquadSpawnRules.UnitSpawnIntervalSeconds);
+            Assert.AreEqual(0f, SquadSpawnRules.GetSpawnDelaySeconds(0));
+            Assert.AreEqual(0.1f, SquadSpawnRules.GetSpawnDelaySeconds(1));
+            Assert.AreEqual(0.3f, SquadSpawnRules.GetSpawnDelaySeconds(3));
+        }
+
+        [Test]
         public void BuildEntries_SkipsZeroCounts()
         {
             var squad = ScriptableObject.CreateInstance<SquadCompositionDefinition>();

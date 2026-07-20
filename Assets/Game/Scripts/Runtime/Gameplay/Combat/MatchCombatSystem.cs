@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
+using Game.Gameplay.Networking;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
@@ -26,8 +27,23 @@ namespace Game.Gameplay.Combat
         readonly List<MatchUnitState> _nearbyBuffer = new();
         readonly List<MatchUnitState> _alliesBuffer = new();
         readonly List<MatchUnitState> _nestedBuffer = new();
+        readonly List<CombatProjectileState> _projectileImpactBuffer = new();
+        readonly List<CombatMeleeStrikeState> _meleeImpactBuffer = new();
+        readonly List<PendingBarracksSpawn> _pendingSpawns = new();
         const float SpatialCellSize = 12f;
         readonly Dictionary<(int, int), List<MatchUnitState>> _spatialGrid = new();
+
+        sealed class PendingBarracksSpawn
+        {
+            public float RemainingSeconds;
+            public int OwnerSlot;
+            public string LaneId;
+            public UnitRole Role;
+            public UnitCombatStats Stats;
+            public float MarchMoveSpeed;
+            public float SpawnDistance;
+            public Vector3 FormationOffset;
+        }
 
         public event Action<UnitKillEvent> UnitKilled;
 
@@ -57,6 +73,7 @@ namespace Game.Gameplay.Combat
             _units.Clear();
             _unitById.Clear();
             ClearSpatialGrid();
+            _pendingSpawns.Clear();
             _players.Clear();
             _projectiles.Clear();
             _meleeStrikes.Clear();
@@ -70,8 +87,52 @@ namespace Game.Gameplay.Combat
 
         public void SetBuildings(BuildingRegistry buildings) => _buildings = buildings;
 
+        public bool TryGetRoute(int ownerSlot, string laneId, out LaneRoute route)
+        {
+            route = null;
+            return _routes != null && _routes.TryGetRoute(ownerSlot, laneId, out route);
+        }
+
+        /// <summary>
+        /// Replaces a lane route (center retarget). Units keep their world position and run onto the new path.
+        /// </summary>
+        public void ReplaceLaneRoute(int ownerSlot, string laneId, LanePath path)
+        {
+            if (_routes == null || path == null)
+            {
+                return;
+            }
+
+            _routes.Replace(ownerSlot, laneId, path);
+            if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
+            {
+                return;
+            }
+
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || unit.LaneId != laneId)
+                {
+                    continue;
+                }
+
+                unit.CurrentTargetId = null;
+                unit.CurrentTargetBuildingInstanceId = null;
+                // Nearest point on the new path at the unit's current position — never snap WorldPosition.
+                unit.MarchProgressDistance = route.ProjectDistance(unit.WorldPosition);
+            }
+        }
+
         public void DespawnUnitsForOwner(int ownerSlot)
         {
+            for (var i = _pendingSpawns.Count - 1; i >= 0; i--)
+            {
+                if (_pendingSpawns[i].OwnerSlot == ownerSlot)
+                {
+                    _pendingSpawns.RemoveAt(i);
+                }
+            }
+
             for (var i = _units.Count - 1; i >= 0; i--)
             {
                 if (_units[i].OwnerSlot == ownerSlot)
@@ -150,26 +211,30 @@ namespace Game.Gameplay.Combat
                     slot,
                     _random,
                     spawnDistance,
-                    spawnUnitIndex++);
-                var worldPosition = route.ResolveSpawnPosition(spawnDistance, formationOffset);
-                var progressDistance = Mathf.Clamp(
-                    route.ProjectDistanceForward(worldPosition, spawnDistance),
-                    spawnDistance - 0.5f,
-                    spawnDistance + 1.25f);
-                var unit = new MatchUnitState(
-                    _nextUnitId++,
-                    wave.OwnerSlot,
-                    wave.LaneId,
-                    slot.Role,
-                    stats,
-                    stats.MaxHp,
-                    worldPosition,
-                    route.FindMarchWaypointIndex(worldPosition),
-                    unitMarchSpeed,
-                    spawnDistance);
-                unit.MarchProgressDistance = progressDistance;
-                _units.Add(unit);
-                _unitById[unit.UnitId] = unit;
+                    spawnUnitIndex);
+                var delaySeconds = SquadSpawnRules.GetSpawnDelaySeconds(spawnUnitIndex);
+                spawnUnitIndex++;
+
+                var pending = new PendingBarracksSpawn
+                {
+                    RemainingSeconds = delaySeconds,
+                    OwnerSlot = wave.OwnerSlot,
+                    LaneId = wave.LaneId,
+                    Role = slot.Role,
+                    Stats = stats,
+                    MarchMoveSpeed = unitMarchSpeed,
+                    SpawnDistance = spawnDistance,
+                    FormationOffset = formationOffset,
+                };
+
+                if (pending.RemainingSeconds <= 0f)
+                {
+                    CommitPendingSpawn(pending);
+                }
+                else
+                {
+                    _pendingSpawns.Add(pending);
+                }
             }
         }
 
@@ -180,7 +245,9 @@ namespace Game.Gameplay.Combat
             UnitRole role,
             UnitCombatStats stats,
             float distanceAlongLane = 0f,
-            Vector3 formationOffset = default)
+            Vector3 formationOffset = default,
+            bool isHero = false,
+            int heroSlot = 0)
         {
             if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
             {
@@ -201,11 +268,195 @@ namespace Game.Gameplay.Combat
                 stats.MaxHp,
                 worldPosition,
                 route.FindMarchWaypointIndex(worldPosition),
-                marchSpawnDistance: distanceAlongLane);
+                marchSpawnDistance: distanceAlongLane,
+                isHero: isHero,
+                heroSlot: heroSlot);
             unit.MarchProgressDistance = progressDistance;
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
             return unit;
+        }
+
+        public MatchUnitState GetUnit(int unitId) => GetUnitById(unitId);
+
+        /// <summary>
+        /// Client/host-migration: upsert living units from snapshot; drop missing ones.
+        /// Does not run AI — caller must not tick combat on pure clients.
+        /// </summary>
+        public void ApplyAuthoritativeUnits(
+            MatchUnitSnapshot[] snapshots,
+            ICombatUnitCatalog catalog = null)
+        {
+            ClearSpatialGrid();
+            var keep = new HashSet<int>();
+            if (snapshots != null)
+            {
+                for (var i = 0; i < snapshots.Length; i++)
+                {
+                    var snap = snapshots[i];
+                    if (!snap.IsAlive || snap.UnitId <= 0)
+                    {
+                        continue;
+                    }
+
+                    keep.Add(snap.UnitId);
+                    UpsertAuthoritativeUnit(snap, catalog);
+                }
+            }
+
+            for (var i = _units.Count - 1; i >= 0; i--)
+            {
+                if (keep.Contains(_units[i].UnitId))
+                {
+                    continue;
+                }
+
+                _unitById.Remove(_units[i].UnitId);
+                var last = _units.Count - 1;
+                if (i != last)
+                {
+                    _units[i] = _units[last];
+                }
+
+                _units.RemoveAt(last);
+            }
+        }
+
+        void UpsertAuthoritativeUnit(MatchUnitSnapshot snap, ICombatUnitCatalog catalog)
+        {
+            MatchSnapshotCodec.TryParseUnitRole(snap.UnitDefId, out var role);
+            var laneId = string.IsNullOrEmpty(snap.LaneId) ? GameIds.Lanes.Center : snap.LaneId;
+            var position = new Vector3(snap.PosX, 0.15f, snap.PosZ);
+            var facing = new Vector3(snap.FacingX, 0f, snap.FacingZ);
+            if (facing.sqrMagnitude < 0.0001f)
+            {
+                facing = Vector3.forward;
+            }
+            else
+            {
+                facing.Normalize();
+            }
+
+            if (_unitById.TryGetValue(snap.UnitId, out var existing)
+                && existing.LaneId == laneId
+                && existing.Role == role)
+            {
+                existing.CurrentHp = Mathf.Max(0f, snap.Health);
+                existing.WorldPosition = position;
+                existing.FacingDirection = facing;
+                existing.MarchProgressDistance = _routes != null
+                    && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
+                    ? route.ProjectDistance(position)
+                    : existing.MarchProgressDistance;
+                return;
+            }
+
+            if (existing != null)
+            {
+                _unitById.Remove(existing.UnitId);
+                _units.Remove(existing);
+            }
+
+            var stats = ResolveSnapshotStats(role, snap.OwnerSlot, snap.Health, catalog);
+            var unit = new MatchUnitState(
+                snap.UnitId,
+                snap.OwnerSlot,
+                laneId,
+                role,
+                stats,
+                Mathf.Max(0.01f, snap.Health),
+                position,
+                marchSpawnDistance: 0f,
+                isHero: role == UnitRole.Hero);
+            unit.CurrentHp = Mathf.Max(0f, snap.Health);
+            unit.FacingDirection = facing;
+            if (_routes != null && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var spawnRoute))
+            {
+                unit.MarchProgressDistance = spawnRoute.ProjectDistance(position);
+                unit.MarchWaypointIndex = spawnRoute.FindMarchWaypointIndex(position);
+            }
+
+            _units.Add(unit);
+            _unitById[unit.UnitId] = unit;
+            _nextUnitId = Mathf.Max(_nextUnitId, snap.UnitId + 1);
+        }
+
+        UnitCombatStats ResolveSnapshotStats(
+            UnitRole role,
+            int ownerSlot,
+            float snapshotHp,
+            ICombatUnitCatalog catalog)
+        {
+            if (catalog != null && ownerSlot >= 0 && ownerSlot < _players.Count)
+            {
+                var race = catalog.GetRace(_players[ownerSlot].RaceId);
+                var definition = race?.GetUnit(role);
+                if (definition != null)
+                {
+                    return UnitCombatStats.FromDefinition(definition);
+                }
+            }
+
+            var maxHp = Mathf.Max(snapshotHp, 1f);
+            return new UnitCombatStats(
+                role,
+                maxHp: maxHp,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 1f,
+                attackRange: 1.5f,
+                moveSpeed: 4f,
+                goldBounty: 1);
+        }
+
+        public void ApplyExternalDamage(int targetUnitId, float rawDamage, int killerOwnerSlot)
+        {
+            var target = GetUnitById(targetUnitId);
+            if (target == null || !target.IsAlive)
+            {
+                return;
+            }
+
+            ApplyDamage(null, target, rawDamage, killerOwnerSlot);
+        }
+
+        /// <summary>Defensive building shot — travels as a projectile, damages on impact.</summary>
+        public bool TryFireBuildingProjectile(
+            int buildingInstanceId,
+            int ownerSlot,
+            Vector3 buildingWorldPosition,
+            int targetUnitId,
+            float rawDamage)
+        {
+            var target = GetUnitById(targetUnitId);
+            if (target == null || !target.IsAlive || rawDamage <= 0f)
+            {
+                return false;
+            }
+
+            var start = buildingWorldPosition + Vector3.up * TowerCombatRules.MuzzleHeight;
+            var end = CombatProjectileTrajectory.GetProjectileTarget(target.WorldPosition);
+            var duration = CombatProjectileTrajectory.ComputeFlightDuration(
+                start,
+                end,
+                TowerCombatRules.ProjectileSpeed);
+
+            _projectiles.Add(new CombatProjectileState(
+                _nextProjectileId++,
+                attackerUnitId: 0,
+                targetUnitId,
+                ownerSlot,
+                UnitRole.Ranged,
+                GetPlayerRaceId(ownerSlot),
+                rawDamage,
+                duration,
+                start,
+                end,
+                isParabolic: false,
+                targetBuildingInstanceId: null,
+                sourceBuildingInstanceId: buildingInstanceId));
+            return true;
         }
 
         public void Tick(float deltaTime)
@@ -214,6 +465,8 @@ namespace Game.Gameplay.Combat
             {
                 throw new ArgumentOutOfRangeException(nameof(deltaTime));
             }
+
+            TickPendingSpawns(deltaTime);
 
             if (_units.Count == 0 && _projectiles.Count == 0 && _meleeStrikes.Count == 0)
             {
@@ -237,8 +490,63 @@ namespace Game.Gameplay.Combat
             TickMeleeStrikes(deltaTime);
         }
 
+        void TickPendingSpawns(float deltaTime)
+        {
+            if (_pendingSpawns.Count == 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _pendingSpawns.Count;)
+            {
+                var pending = _pendingSpawns[i];
+                pending.RemainingSeconds -= deltaTime;
+                if (pending.RemainingSeconds > 0f)
+                {
+                    i++;
+                    continue;
+                }
+
+                CommitPendingSpawn(pending);
+                _pendingSpawns.RemoveAt(i);
+            }
+        }
+
+        void CommitPendingSpawn(PendingBarracksSpawn pending)
+        {
+            if (!_routes.TryGetRoute(pending.OwnerSlot, pending.LaneId, out var route))
+            {
+                return;
+            }
+
+            var worldPosition = route.ResolveSpawnPosition(pending.SpawnDistance, pending.FormationOffset);
+            var progressDistance = Mathf.Clamp(
+                route.ProjectDistanceForward(worldPosition, pending.SpawnDistance),
+                pending.SpawnDistance - 0.5f,
+                pending.SpawnDistance + 1.25f);
+            var unit = new MatchUnitState(
+                _nextUnitId++,
+                pending.OwnerSlot,
+                pending.LaneId,
+                pending.Role,
+                pending.Stats,
+                pending.Stats.MaxHp,
+                worldPosition,
+                route.FindMarchWaypointIndex(worldPosition),
+                pending.MarchMoveSpeed,
+                pending.SpawnDistance);
+            unit.MarchProgressDistance = progressDistance;
+            _units.Add(unit);
+            _unitById[unit.UnitId] = unit;
+        }
+
         void TickUnit(MatchUnitState unit, float deltaTime)
         {
+            if (unit.IsParkedAtBase)
+            {
+                return;
+            }
+
             if (!_routes.TryGetRoute(unit.OwnerSlot, unit.LaneId, out var route))
             {
                 return;
@@ -253,33 +561,15 @@ namespace Game.Gameplay.Combat
                 && unit.TargetScanCooldown <= 0f)
             {
                 unit.TargetScanCooldown = UnitLocomotionRules.TargetScanInterval;
-                if (unit.Role == UnitRole.Siege && _buildings != null)
-                {
-                    var building = _buildings.FindSiegeTarget(
-                        unit.OwnerSlot,
-                        unit.LaneId,
-                        unit.WorldPosition,
-                        CombatRules.GetAggroRadius(unit.Stats));
-                    if (building != null)
-                    {
-                        unit.CurrentTargetBuildingInstanceId = building.InstanceId;
-                    }
-                }
-                else
-                {
-                    var scanned = ScanForEnemy(unit);
-                    if (scanned != null)
-                    {
-                        unit.CurrentTargetId = scanned.UnitId;
-                    }
-                }
+                ScanForNearestTarget(unit);
             }
 
             var buildingTarget = GetBuildingByInstanceId(unit.CurrentTargetBuildingInstanceId);
-            if (buildingTarget != null && unit.Role == UnitRole.Siege)
+            if (buildingTarget != null)
             {
-                var buildingDistance = HorizontalDistance(unit.WorldPosition, buildingTarget.WorldPosition);
-                if (buildingDistance <= unit.Stats.AttackRange)
+                var buildingDistance = GetBuildingSurfaceDistance(unit.WorldPosition, buildingTarget);
+                var buildingReach = CombatRules.GetBuildingAttackReach(unit.Stats.AttackRange);
+                if (buildingDistance <= buildingReach)
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
                     TickBuildingAttack(unit, buildingTarget, deltaTime);
@@ -330,27 +620,24 @@ namespace Game.Gameplay.Combat
                 unit.MarchProgressDistance);
             destination = ApplyRouteBypassIfBlocked(unit, route, destination);
             var allies = CollectMarchAlliesForAvoidance(unit, route);
-            unit.WorldPosition = UnitLocomotionRules.MoveTowards(
+            var previousPosition = unit.WorldPosition;
+            var proposed = UnitLocomotionRules.MoveTowards(
                 unit.WorldPosition,
                 destination,
                 maxStep,
                 allies,
                 out _,
                 unit.UnitId);
-            unit.WorldPosition = UnitLocomotionRules.ClampToLaneDrift(
+            unit.WorldPosition = ApplyWalkableMovement(
                 route,
-                unit.WorldPosition,
-                UnitLocomotionRules.MaxMarchDriftFromLane,
+                previousPosition,
+                proposed,
+                maxStep,
                 unit.MarchProgressDistance);
-            unit.MarchProgressDistance = Mathf.Max(
+            unit.MarchProgressDistance = route.AdvanceProgress(
                 unit.MarchProgressDistance,
                 route.ProjectDistanceForward(unit.WorldPosition, unit.MarchProgressDistance));
-            var marchFacing = route.EvaluateDirectionAtDistance(
-                Mathf.Min(route.TotalLength, unit.MarchProgressDistance + 0.75f));
-            marchFacing.y = 0f;
-            unit.FacingDirection = marchFacing.sqrMagnitude > 0.0001f
-                ? marchFacing.normalized
-                : unit.FacingDirection;
+            ApplyFacingFromMovement(unit, previousPosition);
         }
 
         void TickChase(MatchUnitState unit, LaneRoute route, MatchUnitState target, float deltaTime)
@@ -374,18 +661,21 @@ namespace Game.Gameplay.Combat
             }
 
             var allies = CollectAlliesForAvoidance(unit);
-            unit.WorldPosition = UnitLocomotionRules.MoveTowards(
+            var previousPosition = unit.WorldPosition;
+            var proposed = UnitLocomotionRules.MoveTowards(
                 unit.WorldPosition,
                 target.WorldPosition,
                 maxStep,
                 allies,
-                out var facing,
+                out _,
                 unit.UnitId);
-            unit.FacingDirection = facing;
-            unit.WorldPosition = UnitLocomotionRules.ClampToLaneDrift(
+            unit.WorldPosition = ApplyWalkableMovement(
                 route,
-                unit.WorldPosition,
-                UnitLocomotionRules.MaxCombatDriftFromLane);
+                previousPosition,
+                proposed,
+                maxStep,
+                route.ProjectDistance(proposed));
+            ApplyFacingFromMovement(unit, previousPosition);
         }
 
         void TickAttack(MatchUnitState unit, MatchUnitState target, float deltaTime)
@@ -428,7 +718,8 @@ namespace Game.Gameplay.Combat
         {
             if (unit.CurrentTargetId == null)
             {
-                if (unit.BehaviorState is UnitBehaviorState.Chase or UnitBehaviorState.Attack)
+                if (!unit.CurrentTargetBuildingInstanceId.HasValue
+                    && unit.BehaviorState is UnitBehaviorState.Chase or UnitBehaviorState.Attack)
                 {
                     unit.BehaviorState = UnitBehaviorState.Move;
                 }
@@ -456,13 +747,12 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        MatchUnitState ScanForEnemy(MatchUnitState unit)
+        void ScanForNearestTarget(MatchUnitState unit)
         {
             var myPosition = unit.WorldPosition;
             var aggroRadius = CombatRules.GetAggroRadius(unit.Stats);
-            var aggroRadiusSq = aggroRadius * aggroRadius;
-            MatchUnitState best = null;
-            var bestScore = float.MaxValue;
+            MatchUnitState bestUnit = null;
+            var bestUnitScore = float.MaxValue;
 
             _nearbyBuffer.Clear();
             QueryNearbyUnits(myPosition, aggroRadius, _nearbyBuffer);
@@ -479,26 +769,78 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                var distanceSq = HorizontalDistanceSq(myPosition, other.WorldPosition);
-                if (distanceSq > aggroRadiusSq)
+                var distance = HorizontalDistance(myPosition, other.WorldPosition);
+                if (distance > aggroRadius)
                 {
                     continue;
                 }
 
-                var score = distanceSq;
+                var score = distance;
                 if (IsEngagedByAlly(other, unit.OwnerSlot))
                 {
                     score *= 0.5f;
                 }
 
-                if (score < bestScore)
+                if (score < bestUnitScore)
                 {
-                    bestScore = score;
-                    best = other;
+                    bestUnitScore = score;
+                    bestUnit = other;
                 }
             }
 
-            return best;
+            BuildingState bestBuilding = null;
+            var bestBuildingScore = float.MaxValue;
+            if (_buildings != null)
+            {
+                bestBuilding = _buildings.FindBuildingTarget(
+                    unit.OwnerSlot,
+                    unit.LaneId,
+                    myPosition,
+                    aggroRadius,
+                    _graph);
+                if (bestBuilding != null)
+                {
+                    bestBuildingScore = GetBuildingSurfaceDistance(myPosition, bestBuilding);
+                }
+            }
+
+            unit.CurrentTargetId = null;
+            unit.CurrentTargetBuildingInstanceId = null;
+
+            if (bestUnit == null && bestBuilding == null)
+            {
+                return;
+            }
+
+            if (bestBuilding == null || (bestUnit != null && bestUnitScore <= bestBuildingScore))
+            {
+                unit.CurrentTargetId = bestUnit.UnitId;
+                return;
+            }
+
+            unit.CurrentTargetBuildingInstanceId = bestBuilding.InstanceId;
+        }
+
+        static float GetBuildingSurfaceDistance(Vector3 from, BuildingState building)
+        {
+            var centerDistance = HorizontalDistance(from, building.WorldPosition);
+            return BuildingRules.GetSurfaceDistance(centerDistance, building.BuildingId);
+        }
+
+        static Vector3 GetBuildingEngagePoint(Vector3 from, BuildingState building)
+        {
+            var center = building.WorldPosition;
+            center.y = 0f;
+            from.y = 0f;
+            var away = from - center;
+            var dist = away.magnitude;
+            var radius = BuildingRules.GetEngageRadius(building.BuildingId);
+            if (dist < 0.0001f)
+            {
+                return center + Vector3.forward * radius;
+            }
+
+            return center + away / dist * radius;
         }
 
         bool IsTargetInAggroRange(MatchUnitState unit, MatchUnitState target)
@@ -535,15 +877,17 @@ namespace Game.Gameplay.Combat
             var building = GetBuildingByInstanceId(unit.CurrentTargetBuildingInstanceId);
             if (building == null
                 || building.IsRuins
-                || building.OwnerSlot == unit.OwnerSlot
-                || unit.Role != UnitRole.Siege
-                || !BuildingRules.CanSiegeTarget(unit.LaneId, building.BuildingId))
+                || !BuildingRules.CanLaneAttackBuilding(
+                    unit.OwnerSlot,
+                    unit.LaneId,
+                    building,
+                    _graph))
             {
                 unit.CurrentTargetBuildingInstanceId = null;
                 return;
             }
 
-            if (HorizontalDistance(unit.WorldPosition, building.WorldPosition)
+            if (GetBuildingSurfaceDistance(unit.WorldPosition, building)
                 > CombatRules.GetAggroRadius(unit.Stats))
             {
                 unit.CurrentTargetBuildingInstanceId = null;
@@ -569,18 +913,41 @@ namespace Game.Gameplay.Combat
             }
 
             var allies = CollectAlliesForAvoidance(unit);
-            unit.WorldPosition = UnitLocomotionRules.MoveTowards(
+            var previousPosition = unit.WorldPosition;
+            var engagePoint = GetBuildingEngagePoint(unit.WorldPosition, building);
+            var proposed = UnitLocomotionRules.MoveTowards(
                 unit.WorldPosition,
-                building.WorldPosition,
+                engagePoint,
                 maxStep,
                 allies,
-                out var facing,
+                out _,
                 unit.UnitId);
-            unit.FacingDirection = facing;
-            unit.WorldPosition = UnitLocomotionRules.ClampToLaneDrift(
+            unit.WorldPosition = ApplyWalkableMovement(
                 route,
-                unit.WorldPosition,
-                UnitLocomotionRules.MaxCombatDriftFromLane);
+                previousPosition,
+                proposed,
+                maxStep,
+                route.ProjectDistance(proposed));
+            ApplyFacingFromMovement(unit, previousPosition);
+        }
+
+        Vector3 ApplyWalkableMovement(
+            LaneRoute route,
+            Vector3 previousPosition,
+            Vector3 proposedPosition,
+            float maxStep,
+            float progressDistance)
+        {
+            var centerRadius = _graph != null
+                ? _graph.CenterArenaRadius
+                : LaneGraphBuilder.DefaultCenterArenaRadius;
+            return UnitLocomotionRules.ApplyWalkableLimit(
+                route,
+                previousPosition,
+                proposedPosition,
+                maxStep,
+                progressDistance,
+                centerRadius);
         }
 
         void TickBuildingAttack(MatchUnitState unit, BuildingState building, float deltaTime)
@@ -591,8 +958,9 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var distance = HorizontalDistance(unit.WorldPosition, building.WorldPosition);
-            if (distance > unit.Stats.AttackRange)
+            var distance = GetBuildingSurfaceDistance(unit.WorldPosition, building);
+            var buildingReach = CombatRules.GetBuildingAttackReach(unit.Stats.AttackRange);
+            if (distance > buildingReach)
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
                 return;
@@ -620,9 +988,15 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMax,
                 _random);
 
-            if (!CombatAttackRules.UsesProjectile(attacker.Role))
+            if (CombatAttackRules.UsesMeleeStrike(attacker.Role)
+                || !CombatAttackRules.UsesProjectile(attacker.Role))
             {
-                _buildings.TryApplyDamage(building.InstanceId, rawDamage, attacker.OwnerSlot);
+                _meleeStrikes.Add(new CombatMeleeStrikeState(
+                    attacker.UnitId,
+                    targetUnitId: -1,
+                    rawDamage,
+                    CombatAttackRules.MeleeStrikeDuration,
+                    targetBuildingInstanceId: building.InstanceId));
                 return;
             }
 
@@ -817,6 +1191,17 @@ namespace Game.Gameplay.Combat
             }
         }
 
+        static void ApplyFacingFromMovement(MatchUnitState unit, Vector3 previousPosition)
+        {
+            if (UnitLocomotionRules.TryGetFacingFromDisplacement(
+                    previousPosition,
+                    unit.WorldPosition,
+                    out var facing))
+            {
+                unit.FacingDirection = facing;
+            }
+        }
+
         void BeginAttack(MatchUnitState attacker, MatchUnitState target)
         {
             if (attacker == null || target == null || !target.IsAlive)
@@ -873,6 +1258,9 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            // Collect impacts first — ApplyDamage / building ruin may DespawnUnitsForOwner
+            // and mutate _projectiles (reentrancy). Resolving mid-loop throws IndexOutOfRange.
+            _projectileImpactBuffer.Clear();
             for (var i = _projectiles.Count - 1; i >= 0; i--)
             {
                 var projectile = _projectiles[i];
@@ -883,24 +1271,39 @@ namespace Game.Gameplay.Combat
                 }
 
                 var last = _projectiles.Count - 1;
-                if (i != last) _projectiles[i] = _projectiles[last];
+                if (i != last)
+                {
+                    _projectiles[i] = _projectiles[last];
+                }
+
                 _projectiles.RemoveAt(last);
+                _projectileImpactBuffer.Add(projectile);
+            }
 
-                if (projectile.TargetBuildingInstanceId.HasValue)
-                {
-                    _buildings?.TryApplyDamage(
-                        projectile.TargetBuildingInstanceId.Value,
-                        projectile.RawDamage,
-                        projectile.AttackerOwnerSlot);
-                    continue;
-                }
+            for (var i = 0; i < _projectileImpactBuffer.Count; i++)
+            {
+                ResolveProjectileImpact(_projectileImpactBuffer[i]);
+            }
 
-                var attacker = GetUnitById(projectile.AttackerUnitId);
-                var target = GetUnitById(projectile.TargetUnitId);
-                if (target != null && target.IsAlive)
-                {
-                    ApplyDamage(attacker, target, projectile.RawDamage, projectile.AttackerOwnerSlot);
-                }
+            _projectileImpactBuffer.Clear();
+        }
+
+        void ResolveProjectileImpact(CombatProjectileState projectile)
+        {
+            if (projectile.TargetBuildingInstanceId.HasValue)
+            {
+                _buildings?.TryApplyDamage(
+                    projectile.TargetBuildingInstanceId.Value,
+                    projectile.RawDamage,
+                    projectile.AttackerOwnerSlot);
+                return;
+            }
+
+            var attacker = GetUnitById(projectile.AttackerUnitId);
+            var target = GetUnitById(projectile.TargetUnitId);
+            if (target != null && target.IsAlive)
+            {
+                ApplyDamage(attacker, target, projectile.RawDamage, projectile.AttackerOwnerSlot);
             }
         }
 
@@ -911,6 +1314,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            _meleeImpactBuffer.Clear();
             for (var i = _meleeStrikes.Count - 1; i >= 0; i--)
             {
                 var strike = _meleeStrikes[i];
@@ -921,16 +1325,41 @@ namespace Game.Gameplay.Combat
                 }
 
                 var last = _meleeStrikes.Count - 1;
-                if (i != last) _meleeStrikes[i] = _meleeStrikes[last];
-                _meleeStrikes.RemoveAt(last);
-
-                var attacker = GetUnitById(strike.AttackerUnitId);
-                var target = GetUnitById(strike.TargetUnitId);
-                if (target != null && target.IsAlive)
+                if (i != last)
                 {
-                    var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
-                    ApplyDamage(attacker, target, strike.RawDamage, killerSlot);
+                    _meleeStrikes[i] = _meleeStrikes[last];
                 }
+
+                _meleeStrikes.RemoveAt(last);
+                _meleeImpactBuffer.Add(strike);
+            }
+
+            for (var i = 0; i < _meleeImpactBuffer.Count; i++)
+            {
+                ResolveMeleeImpact(_meleeImpactBuffer[i]);
+            }
+
+            _meleeImpactBuffer.Clear();
+        }
+
+        void ResolveMeleeImpact(CombatMeleeStrikeState strike)
+        {
+            var attacker = GetUnitById(strike.AttackerUnitId);
+            if (strike.TargetBuildingInstanceId.HasValue)
+            {
+                var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
+                _buildings?.TryApplyDamage(
+                    strike.TargetBuildingInstanceId.Value,
+                    strike.RawDamage,
+                    killerSlot);
+                return;
+            }
+
+            var target = GetUnitById(strike.TargetUnitId);
+            if (target != null && target.IsAlive)
+            {
+                var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
+                ApplyDamage(attacker, target, strike.RawDamage, killerSlot);
             }
         }
 
@@ -954,7 +1383,7 @@ namespace Game.Gameplay.Combat
                 ClearTarget(attacker);
             }
 
-            var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty);
+            var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty, target.IsHero);
             GrantGold(killerOwnerSlot, bounty);
             RemoveUnit(target);
             UnitKilled?.Invoke(new UnitKillEvent(
@@ -994,6 +1423,18 @@ namespace Game.Gameplay.Combat
                     return;
                 }
             }
+        }
+
+        public bool DespawnUnit(int unitId)
+        {
+            var unit = GetUnitById(unitId);
+            if (unit == null)
+            {
+                return false;
+            }
+
+            RemoveUnit(unit);
+            return true;
         }
 
         void RemoveUnit(MatchUnitState unit)

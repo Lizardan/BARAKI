@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Game.Core;
 
 using Game.Gameplay.Combat;
@@ -78,6 +80,8 @@ namespace Game.UI.Controllers
 
         ProgressBar _researchProgress;
 
+        readonly Label[] _researchQueueSlots = new Label[MatchResearchQueue.MaxQueueLength];
+
 
 
         void Awake()
@@ -125,6 +129,14 @@ namespace Game.UI.Controllers
             _researchLabel = root.Q<Label>("ResearchLabel");
 
             _researchProgress = root.Q<ProgressBar>("ResearchProgress");
+
+            for (var i = 0; i < _researchQueueSlots.Length; i++)
+
+            {
+
+                _researchQueueSlots[i] = root.Q<Label>($"ResearchQueueSlot{i}");
+
+            }
 
             SetResearchVisible(false);
 
@@ -570,6 +582,8 @@ namespace Game.UI.Controllers
 
             SetResearchVisible(true);
 
+            UpdateResearchQueueSlots(controller, buildingInstanceId);
+
             if (controller != null && controller.TryGetResearch(buildingInstanceId, out var research))
 
             {
@@ -584,13 +598,165 @@ namespace Game.UI.Controllers
 
 
 
-            ClearResearch();
+            ClearResearchLabelAndBar();
+
+        }
+
+
+
+        void UpdateResearchQueueSlots(MatchController controller, int buildingInstanceId)
+
+        {
+
+            IReadOnlyList<BuildingResearchState> queue = null;
+
+            var hasQueue = controller != null
+
+                && controller.TryGetResearchQueue(buildingInstanceId, out queue);
+
+            var passiveBase = 0;
+
+            var barracksBase = 0;
+
+            var building = controller?.Buildings.GetByInstanceId(buildingInstanceId);
+
+            if (controller != null && building != null)
+
+            {
+
+                if (building.OwnerSlot >= 0 && building.OwnerSlot < controller.Players.Count)
+
+                {
+
+                    passiveBase = controller.Players[building.OwnerSlot].PassiveGoldLevel;
+
+                }
+
+                var barracks = controller.WaveScheduler.GetBarracks(building.OwnerSlot, building.BuildingId);
+
+                if (barracks != null)
+
+                {
+
+                    barracksBase = barracks.Level;
+
+                }
+
+            }
+
+            var passiveSeen = 0;
+
+            var barracksSeen = 0;
+
+            for (var i = 0; i < _researchQueueSlots.Length; i++)
+
+            {
+
+                var slot = _researchQueueSlots[i];
+
+                if (slot == null)
+
+                {
+
+                    continue;
+
+                }
+
+                if (!hasQueue || queue == null || i >= queue.Count)
+
+                {
+
+                    slot.text = string.Empty;
+
+                    slot.EnableInClassList("match-context-strip__research-queue-slot--active", false);
+
+                    continue;
+
+                }
+
+                var research = queue[i];
+
+                var displayLevel = 0;
+
+                if (research.UpgradeId == GameIds.Upgrades.MainPassiveGold)
+
+                {
+
+                    displayLevel = passiveBase + 1 + passiveSeen;
+
+                    passiveSeen++;
+
+                }
+
+                else if (research.UpgradeId == GameIds.Upgrades.BarracksLevel)
+
+                {
+
+                    displayLevel = barracksBase + 1 + barracksSeen;
+
+                    barracksSeen++;
+
+                }
+
+                else if (HeroRules.TryParseHireUpgradeId(research.UpgradeId, out var heroSlot))
+
+                {
+
+                    displayLevel = heroSlot;
+
+                }
+
+                slot.text = MatchUpgradeLabelRules.FormatQueueSlotShort(research.UpgradeId, displayLevel);
+
+                slot.EnableInClassList("match-context-strip__research-queue-slot--active", i == 0);
+
+            }
 
         }
 
 
 
         void ClearResearch()
+
+        {
+
+            ClearResearchQueueSlots();
+
+            ClearResearchLabelAndBar();
+
+        }
+
+
+
+        void ClearResearchQueueSlots()
+
+        {
+
+            for (var i = 0; i < _researchQueueSlots.Length; i++)
+
+            {
+
+                var slot = _researchQueueSlots[i];
+
+                if (slot == null)
+
+                {
+
+                    continue;
+
+                }
+
+                slot.text = string.Empty;
+
+                slot.EnableInClassList("match-context-strip__research-queue-slot--active", false);
+
+            }
+
+        }
+
+
+
+        void ClearResearchLabelAndBar()
 
         {
 

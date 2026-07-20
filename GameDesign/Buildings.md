@@ -26,9 +26,11 @@ main_level: int            # 1..3
 barracks_level: int         # 1..4 — squad; frozen при уничтожении
 wave_interval: float
 wave_timer: float
+manual_call_charges: int[]  # per role; max = squad composition count
+manual_call_regen: 30s      # sequential: one charge at a time; next starts at 0 after previous
 
-# Tower only (alive)
-player_control: target_priority
+# Tower / Main / Barracks (alive) — defensive fire
+player_control: rmb_target_or_auto   # RMB sticky; on lose → random in range; else nearest
 
 grants: SquadCompositionId   # barracks only
 ```
@@ -133,6 +135,36 @@ mvp: true
 
 Каждый level barracks: **+5%** скорости spawn (см. `Balance.md`).
 
+## Barracks manual call (параллельно автоволнам)
+
+Ручной призыв **не заменяет** автоволны — отдельный канал (золото + 1 заряд роли).
+
+```entity
+id: BARRACKS_MANUAL_CALL
+requires: [gold, charge]
+max_charges: squad_composition_count(role)   # L1 Melee=2, Ranged=1, Caster=1, …
+regen_seconds: 30                            # по очереди: следующий заряд с 0 после предыдущего
+costs:
+  Melee: 50
+  Ranged: 70
+  Caster: 80
+  Siege: 100
+  Flying: 150
+  Super: 150
+spawn: barracks_lane_spawn_point
+reject: [ruins, eliminated, wrong_owner, no_gold, no_charge]
+on_level_up:
+  max: recalculate
+  current: min(old, newMax)
+  new_slots: full
+mvp: true
+```
+
+## Defensive building fire (Main / Barracks / Tower)
+
+Intact **Tower + Main + Barracks** стреляют в радиусе (MVP: те же `TowerCombatRules` — range/dmg/AS).  
+Таргет: авто = nearest enemy in range; **ПКМ** по врагу при выделенном своём defensive building → sticky manual (если в range); цель умерла/вышла → **случайный** враг в радиусе. Кнопки «Цель» в inspector нет.
+
 ## Building definitions (MVP)
 
 ```entity
@@ -177,8 +209,8 @@ armor: 3
 damage: 15-20
 range: 12
 attack_speed: 0.5
-player_control: target_priority
-player_actions: [set_target_priority, upgrade_tower_race]
+player_control: rmb_target_or_auto
+player_actions: [rmb_set_target, upgrade_tower_race]
 count_per_base: 4
 mvp: true
 ```
@@ -279,6 +311,7 @@ Stat research — только через **живой** barracks.
 | Решение | Значение |
 |---------|----------|
 | Barracks upgrade cost | **1000 / 1500 / 2500** gold (L1→2→3→4) |
+| Barracks upgrade time | **5 s** на каждый уровень (L1→2→3→4) |
 | Base spawn interval | **35 s** (level 1) |
 | Spawn speed per level | **+5%** за каждый level barracks |
 | Tower destroyed | **Ruins** (подножье); без функций; не чинится |

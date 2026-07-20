@@ -37,7 +37,7 @@ provides: [unity_architecture, assemblies, scenes, networking, data_pipeline, ag
 
 **Implemented (local MVP):** `MatchController`, `MatchArenaGenerator`, `LaneGraph`, `BarracksWaveScheduler`, `MatchCombatSystem`, `BuildingRegistry`, `EliminationService`, `MatchRuntime`.
 
-**Online path:** `MatchNetworkAuthority`, snapshots, `NetworkLobbyState`, `IMatchSessionBackend` → Unity Lobby/Relay.
+**Online path:** listen-host + snapshots — `MatchNetworkAuthority` (fixed 30 Hz host tick), `NetworkLobbyState`, `IMatchSessionBackend` → Unity Lobby/Relay. **Host migration required** (peer-only). Dedicated server and WC3-style lockstep are **rejected**.
 
 ```
 MatchController (server tick via MatchNetworkAuthority)
@@ -113,10 +113,13 @@ mvp: true
 | Tower target / hero summon | Client request → host validate |
 | Unit positions | Host sim |
 
-MVP netcode:
-- Windows host-as-server + Lobby join code + Relay
+MVP / playtest netcode:
+- Windows listen-host + Lobby join code + Relay
+- Host sim: fixed **30 Hz**; snapshots ~15 Hz; clients render-only (+ unit lerp)
+- Command ack/fail ClientRpc for research/hire/deploy/tower
+- Host migration: last-good snapshot → elect → Relay rebind → apply → resume
 - LocalDev offline path retained
-- Reconnect / host migration: **post-MVP** (contracts in code + GDD)
+- **Not in scope:** dedicated server, full lockstep / shared RNG peer sim
 
 ## Distribution
 
@@ -157,7 +160,10 @@ void Generate(int playerCount, IReadOnlyList<PlayerSlot> slots)
 | Решение | Значение |
 |---------|----------|
 | Ship client | **Windows x64 Standalone** |
-| Host-as-server | **Production path** |
+| Listen-host + snapshots | **Production path** |
+| Host migration | **Required** (peer-only survival) |
+| Dedicated server | **Rejected** |
+| WC3 lockstep | **Rejected** |
 | Discord / WebGL | **Non-goals** |
 | Transport (online) | **UTP via Unity Relay** (UDP) |
 | Netcode tick rate | **30 Hz** |

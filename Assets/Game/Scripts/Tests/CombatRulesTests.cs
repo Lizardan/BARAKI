@@ -30,6 +30,7 @@ namespace Game.Tests
         {
             Assert.IsFalse(CombatRules.CanAttackTarget(UnitRole.Melee, UnitRole.Flying));
             Assert.IsFalse(CombatRules.CanAttackTarget(UnitRole.Siege, UnitRole.Flying));
+            Assert.IsFalse(CombatRules.CanAttackTarget(UnitRole.Super, UnitRole.Flying));
             Assert.IsTrue(CombatRules.CanAttackTarget(UnitRole.Ranged, UnitRole.Flying));
             Assert.IsTrue(CombatRules.CanAttackTarget(UnitRole.Melee, UnitRole.Melee));
         }

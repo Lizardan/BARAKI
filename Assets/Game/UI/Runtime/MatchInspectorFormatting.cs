@@ -130,11 +130,11 @@ namespace Game.UI
 
 
 
-        /// <summary>Research progress UI is shown only for main and towers.</summary>
+        /// <summary>Research progress UI is shown for main, barracks, and towers.</summary>
 
         public static bool IsResearchBuilding(string buildingId) =>
 
-            IsMainBuilding(buildingId) || IsTowerBuilding(buildingId);
+            IsMainBuilding(buildingId) || IsBarracksBuilding(buildingId) || IsTowerBuilding(buildingId);
 
     }
 

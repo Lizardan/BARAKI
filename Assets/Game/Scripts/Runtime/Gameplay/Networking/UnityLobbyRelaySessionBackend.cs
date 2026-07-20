@@ -119,6 +119,119 @@ namespace Game.Gameplay.Networking
                 lobbyId: lobby.Id);
         }
 
+        /// <summary>
+        /// New listen-host: allocate fresh Relay and publish join code on the existing lobby.
+        /// Preserves <paramref name="localPlayerSlot"/> (may be ≠ 0).
+        /// </summary>
+        public async UniTask<MatchSessionHandle> MigrateListenHostAsync(
+            string lobbyId,
+            string roomCode,
+            int playerCount,
+            int localPlayerSlot,
+            string displayName)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                throw new InvalidOperationException("Lobby id required for host migration.");
+            }
+
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+
+            var maxConnections = Math.Max(1, playerCount - 1);
+            var allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+            var relayJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+            MatchRelayTransportState.SetHost(allocation, relayJoinCode);
+
+            await LobbyService.Instance.UpdateLobbyAsync(
+                lobbyId,
+                new UpdateLobbyOptions
+                {
+                    Data = new Dictionary<string, DataObject>
+                    {
+                        {
+                            DataRelayJoinCode,
+                            new DataObject(DataObject.VisibilityOptions.Member, relayJoinCode)
+                        },
+                        {
+                            DataHostPlayerId,
+                            new DataObject(
+                                DataObject.VisibilityOptions.Member,
+                                UnityServicesBootstrap.PlayerId)
+                        },
+                    },
+                });
+
+            Debug.Log(
+                $"UnityLobbyRelay: migrated host lobby={roomCode} relay={relayJoinCode} slot={localPlayerSlot}");
+
+            return new MatchSessionHandle(
+                roomCode,
+                playerCount,
+                localPlayerSlot,
+                MatchNetworkEndpoint.FormatRelayHost(relayJoinCode),
+                isListenHost: true,
+                relayJoinCode: relayJoinCode,
+                lobbyId: lobbyId);
+        }
+
+        /// <summary>Poll lobby until Relay join code changes, then join the new allocation.</summary>
+        public async UniTask<MatchSessionHandle> WaitForMigratedRelayAsync(
+            string lobbyId,
+            string roomCode,
+            string previousRelayJoinCode,
+            int playerCount,
+            int localPlayerSlot,
+            string displayName,
+            float timeoutSeconds = 20f)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                throw new InvalidOperationException("Lobby id required for migrated rejoin.");
+            }
+
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+
+            var startedAt = Time.realtimeSinceStartup;
+            string relayJoinCode = null;
+            while (Time.realtimeSinceStartup - startedAt < timeoutSeconds)
+            {
+                var lobby = await LobbyService.Instance.GetLobbyAsync(lobbyId);
+                if (lobby.Data != null
+                    && lobby.Data.TryGetValue(DataRelayJoinCode, out var relayData)
+                    && !string.IsNullOrEmpty(relayData.Value)
+                    && !string.Equals(
+                        relayData.Value,
+                        previousRelayJoinCode,
+                        StringComparison.Ordinal))
+                {
+                    relayJoinCode = relayData.Value;
+                    break;
+                }
+
+                await UniTask.Delay(400);
+            }
+
+            if (string.IsNullOrEmpty(relayJoinCode))
+            {
+                throw new TimeoutException("Timed out waiting for migrated Relay join code.");
+            }
+
+            var joinAllocation = await RelayService.Instance.JoinAllocationAsync(relayJoinCode);
+            MatchRelayTransportState.SetClient(joinAllocation, relayJoinCode);
+
+            Debug.Log(
+                $"UnityLobbyRelay: rejoined migrated host lobby={roomCode} relay={relayJoinCode} slot={localPlayerSlot}");
+
+            return new MatchSessionHandle(
+                roomCode,
+                playerCount,
+                localPlayerSlot,
+                MatchNetworkEndpoint.FormatRelayClient(relayJoinCode),
+                isListenHost: false,
+                relayJoinCode: relayJoinCode,
+                lobbyId: lobbyId);
+        }
+
         static Player BuildPlayer(string displayName) =>
             new Player
             {

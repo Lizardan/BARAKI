@@ -81,11 +81,11 @@ namespace Game.Editor
                 CreateUnit(GameIds.Units.HumanCaster, GameIds.Races.Human, UnitRole.Caster,
                     60f, 0f, 4f, 5f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 7),
                 CreateUnit(GameIds.Units.HumanSiege, GameIds.Races.Human, UnitRole.Siege,
-                    200f, 0f, 12f, 16f, 1f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
+                    200f, 0f, 12f, 16f, 1f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
                 CreateUnit(GameIds.Units.HumanFlying, GameIds.Races.Human, UnitRole.Flying,
                     90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
                 CreateUnit(GameIds.Units.HumanSuper, GameIds.Races.Human, UnitRole.Super,
-                    500f, 2f, 30f, 40f, 0.5f, 12f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+                    500f, 2f, 30f, 40f, 0.5f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
         }
 
@@ -100,11 +100,11 @@ namespace Game.Editor
                 CreateUnit(GameIds.Units.BugCaster, GameIds.Races.Bug, UnitRole.Caster,
                     60f, 0f, 4f, 5f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 7),
                 CreateUnit(GameIds.Units.BugSiege, GameIds.Races.Bug, UnitRole.Siege,
-                    200f, 0f, 12f, 16f, 1f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
+                    200f, 0f, 12f, 16f, 1f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
                 CreateUnit(GameIds.Units.BugFlying, GameIds.Races.Bug, UnitRole.Flying,
                     90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
                 CreateUnit(GameIds.Units.BugSuper, GameIds.Races.Bug, UnitRole.Super,
-                    500f, 2f, 30f, 40f, 0.5f, 12f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+                    500f, 2f, 30f, 40f, 0.5f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
         }
 

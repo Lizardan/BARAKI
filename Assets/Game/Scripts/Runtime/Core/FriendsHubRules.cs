@@ -3,11 +3,21 @@ using System.Linq;
 
 namespace Game.Core
 {
+    public enum FriendsHubTab
+    {
+        Friends = 0,
+        Invites = 1,
+    }
+
     public static class FriendsHubRules
     {
         public const string StatusInLauncher = "InLauncher";
         public const string StatusInGame = "InGame";
         public const int UgsNameSuffixMinLength = 4;
+        public const string FriendsTabLabel = "ДРУЗЬЯ";
+        public const string InvitesTabLabel = "ПРИГЛАШЕНИЯ";
+        public const string IncomingEmptyText = "Нет входящих приглашений.";
+        public const string LobbyFullLabel = "НЕТ МЕСТ";
 
         public static string NormalizePlayerId(string value)
         {
@@ -165,7 +175,57 @@ namespace Game.Core
             return true;
         }
 
-        public static string FormatFriendLine(string name, string status, bool isOnline, string lobbyCode)
+        public static bool HasLobbyCapacity(int occupiedSlots, int maxSlots)
+        {
+            if (maxSlots <= 0)
+            {
+                return true;
+            }
+
+            return occupiedSlots < maxSlots;
+        }
+
+        public static bool IsLobbyFull(int occupiedSlots, int maxSlots) =>
+            maxSlots > 0 && occupiedSlots >= maxSlots;
+
+        public static bool CanJoinFriendLobby(
+            string status,
+            string lobbyCode,
+            int occupiedSlots,
+            int maxSlots,
+            out string joinCode)
+        {
+            if (!TryGetJoinableLobbyCode(status, lobbyCode, out joinCode))
+            {
+                return false;
+            }
+
+            return HasLobbyCapacity(occupiedSlots, maxSlots);
+        }
+
+        public static string FormatLobbySlots(int occupiedSlots, int maxSlots)
+        {
+            if (maxSlots <= 0)
+            {
+                return string.Empty;
+            }
+
+            var occupied = occupiedSlots < 0 ? 0 : occupiedSlots;
+            if (occupied > maxSlots)
+            {
+                occupied = maxSlots;
+            }
+
+            return $"{occupied}/{maxSlots}";
+        }
+
+        public static string FormatFriendLine(
+            string name,
+            string status,
+            bool isOnline,
+            string lobbyCode,
+            int occupiedSlots = 0,
+            int maxSlots = 0)
         {
             var displayName = string.IsNullOrWhiteSpace(name) ? "Игрок" : name.Trim();
             if (!isOnline)
@@ -173,9 +233,12 @@ namespace Game.Core
                 return $"{displayName}: офлайн";
             }
 
-            if (TryGetJoinableLobbyCode(status, lobbyCode, out var code))
+            if (TryGetJoinableLobbyCode(status, lobbyCode, out _))
             {
-                return $"{displayName}: в лобби · {code}";
+                var slots = FormatLobbySlots(occupiedSlots, maxSlots);
+                return string.IsNullOrEmpty(slots)
+                    ? $"{displayName}: в лобби"
+                    : $"{displayName}: в лобби · {slots}";
             }
 
             return status switch
@@ -191,6 +254,18 @@ namespace Game.Core
             var displayName = string.IsNullOrWhiteSpace(name) ? ShortPlayerId(playerId) : name.Trim();
             return $"{displayName} ({ShortPlayerId(playerId)})";
         }
+
+        public static string FormatInvitesTabLabel(int pendingCount)
+        {
+            if (pendingCount <= 0)
+            {
+                return InvitesTabLabel;
+            }
+
+            return $"{InvitesTabLabel} ({pendingCount})";
+        }
+
+        public static bool IsInvitesTab(FriendsHubTab tab) => tab == FriendsHubTab.Invites;
 
         public static string ShortPlayerId(string playerId)
         {

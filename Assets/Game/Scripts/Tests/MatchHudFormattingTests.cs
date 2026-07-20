@@ -1,4 +1,5 @@
 using Game.Gameplay.Match;
+using Game.Gameplay.Networking;
 using Game.UI;
 using NUnit.Framework;
 
@@ -43,6 +44,14 @@ namespace Game.Tests
         public void FormatBountyPopup_PrefixesPlus()
         {
             Assert.AreEqual("+12", MatchHudFormatting.FormatBountyPopup(12));
+        }
+
+        [Test]
+        public void FormatCommandFeedback_NotEnoughGold()
+        {
+            Assert.AreEqual(
+                "Не хватает золота",
+                MatchHudFormatting.FormatCommandFeedback(MatchCommandResult.NotEnoughGold));
         }
 
         [Test]

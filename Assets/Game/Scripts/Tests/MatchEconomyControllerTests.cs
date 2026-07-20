@@ -23,7 +23,7 @@ namespace Game.Tests
             Assert.IsTrue(controller.TryGetResearch(barracks.InstanceId, out var research));
             Assert.AreEqual(GameIds.Upgrades.BarracksLevel, research.UpgradeId);
 
-            controller.Tick(45f);
+            controller.Tick(5f);
 
             Assert.IsFalse(controller.TryGetResearch(barracks.InstanceId, out _));
             Assert.AreEqual(2, controller.WaveScheduler.GetBarracks(0, GameIds.Buildings.BarracksLeft).Level);
@@ -65,15 +65,38 @@ namespace Game.Tests
         }
 
         [Test]
-        public void TryStartResearch_RejectsSecondActiveOnSameBuilding()
+        public void TryStartResearch_EnqueuesSecondAndThirdPassiveGold()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].Gold = 800;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
+            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
+            Assert.AreEqual(200, controller.Players[0].Gold);
+            Assert.IsTrue(controller.TryGetResearchQueue(main.InstanceId, out var queue));
+            Assert.AreEqual(3, queue.Count);
+        }
+
+        [Test]
+        public void TryStartResearch_PassiveGoldQueueCompletesToLevelTwo()
         {
             var controller = CreateEarlyMatch();
             controller.Players[0].Gold = 400;
             var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
 
             Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
-            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
-            Assert.AreEqual(200, controller.Players[0].Gold);
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainPassiveGold));
+
+            controller.Tick(MatchEconomyRules.PassiveGoldUpgradeSeconds);
+            Assert.AreEqual(1, controller.Players[0].PassiveGoldLevel);
+            Assert.IsTrue(controller.TryGetResearch(main.InstanceId, out _));
+
+            controller.Tick(MatchEconomyRules.PassiveGoldUpgradeSeconds);
+            Assert.AreEqual(2, controller.Players[0].PassiveGoldLevel);
+            Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
         }
 
         static MatchController CreateEarlyMatch()

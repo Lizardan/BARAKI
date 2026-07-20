@@ -23,6 +23,7 @@ namespace Game.Gameplay.Match
         private bool _isMatchStarted;
         private MatchTickMode _tickMode = MatchTickMode.Offline;
         private MatchSnapshot _lastNetworkSnapshot;
+        private byte[] _lastNetworkSnapshotBytes;
 
         private GameplayCameraPanController _panController;
         private MatchSelectionBridge _selectionBridge;
@@ -31,6 +32,8 @@ namespace Game.Gameplay.Match
         public bool IsMatchStarted => _isMatchStarted;
         public MatchTickMode TickMode => _tickMode;
         public MatchSnapshot LastNetworkSnapshot => _lastNetworkSnapshot;
+        /// <summary>Raw last-good snapshot bytes for host migration (all peers).</summary>
+        public byte[] LastNetworkSnapshotBytes => _lastNetworkSnapshotBytes;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
 
@@ -101,9 +104,23 @@ namespace Game.Gameplay.Match
             TryBeginEarlyPhaseWhenReady();
         }
 
-        public void ApplyNetworkSnapshot(MatchSnapshot snapshot)
+        public void ApplyNetworkSnapshot(MatchSnapshot snapshot, byte[] rawBytes = null)
+        {
+            StoreLastNetworkSnapshot(snapshot, rawBytes);
+            Controller?.ApplyAuthoritativeSnapshot(snapshot);
+        }
+
+        public void StoreLastNetworkSnapshot(MatchSnapshot snapshot, byte[] rawBytes = null)
         {
             _lastNetworkSnapshot = snapshot;
+            if (rawBytes is { Length: > 0 })
+            {
+                _lastNetworkSnapshotBytes = rawBytes;
+            }
+            else if (snapshot != null)
+            {
+                _lastNetworkSnapshotBytes = MatchSnapshotCodec.Serialize(snapshot);
+            }
         }
 
         private void TryBeginEarlyPhaseWhenReady()
@@ -218,6 +235,11 @@ namespace Game.Gameplay.Match
             if (_selectionBridge == null)
             {
                 _selectionBridge = gameObject.AddComponent<MatchSelectionBridge>();
+            }
+
+            if (GetComponent<MatchBuildingStatusPresenter>() == null)
+            {
+                gameObject.AddComponent<MatchBuildingStatusPresenter>();
             }
         }
 

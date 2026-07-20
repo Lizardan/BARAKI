@@ -15,7 +15,7 @@ namespace Game.Editor
 
             var controller = (MainMenuController)target;
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Предпросмотр загрузки", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Предпросмотр UI", EditorStyles.boldLabel);
 
             using (new EditorGUI.DisabledScope(!TryGetDocumentRoot(controller, out _)))
             {
@@ -24,13 +24,19 @@ namespace Game.Editor
                     controller.ApplyEditorHubLoadingPreview();
                     SceneView.RepaintAll();
                 }
+
+                if (GUILayout.Button("Применить предпросмотр друзей"))
+                {
+                    controller.ApplyEditorFriendsHubPreview();
+                    SceneView.RepaintAll();
+                }
             }
 
             if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox(
-                    "В Edit Mode откройте Game View (сцена MainMenu) и нажмите «Применить предпросмотр загрузки». " +
-                    "В Play Mode переключатели обновляются автоматически.",
+                    "В Edit Mode откройте Game View (сцена MainMenu), включите Preview Friends Hub " +
+                    "и нажмите «Применить предпросмотр друзей». Переключайте вкладку Friends/Invites в Inspector.",
                     MessageType.Info);
             }
         }

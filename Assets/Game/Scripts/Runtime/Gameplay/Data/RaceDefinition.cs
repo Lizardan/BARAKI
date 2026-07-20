@@ -40,5 +40,23 @@ namespace Game.Gameplay.Data
             UnitRole.Super => _super,
             _ => null,
         };
+
+        public HeroDefinition GetHeroBySlot(int heroSlot)
+        {
+            if (_heroes == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < _heroes.Length; i++)
+            {
+                if (_heroes[i] != null && _heroes[i].Slot == heroSlot)
+                {
+                    return _heroes[i];
+                }
+            }
+
+            return heroSlot >= 1 && heroSlot <= _heroes.Length ? _heroes[heroSlot - 1] : null;
+        }
     }
 }

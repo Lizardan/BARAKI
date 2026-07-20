@@ -316,6 +316,50 @@
     letter-spacing: 1px;
 }
 
+.mm__friends-tabs {
+    flex-direction: row;
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding: 2px;
+    background-color: rgba(10, 8, 6, 0.55);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.28);
+    border-radius: 2px;
+}
+
+.mm__friends-tab {
+    flex-grow: 1;
+    height: 30px;
+    margin: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.8px;
+    color: rgba(168, 152, 120, 0.85);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 1px;
+}
+
+.mm__friends-tab:hover {
+    color: rgba(242, 230, 200, 0.95);
+    background-color: rgba(201, 163, 90, 0.12);
+}
+
+.mm__friends-tab--active {
+    color: rgb(242, 230, 200);
+    background-color: rgba(201, 163, 90, 0.28);
+    border-width: 1px;
+    border-color: rgba(201, 163, 90, 0.55);
+}
+
+.mm__friends-tab-pane {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .mm__friends-scroll {
     flex-grow: 1;
     min-height: 160px;
@@ -358,11 +402,6 @@
     letter-spacing: 1px;
 }
 
-.mm__incoming-requests {
-    margin-bottom: 8px;
-    flex-shrink: 0;
-}
-
 .mm__incoming-list {
     flex-direction: column;
 }
@@ -391,6 +430,7 @@
 .mm__friend-row__actions {
     flex-direction: row;
     flex-shrink: 0;
+    align-items: center;
 }
 
 .mm__friend-row__btn {
@@ -402,6 +442,67 @@
     font-size: 10px;
     -unity-font-style: bold;
     letter-spacing: 0.5px;
+}
+
+.mm__friend-row__btn--accept,
+.mm__friend-row__btn--decline {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 14px;
+    -unity-font-style: bold;
+    border-width: 1px;
+    border-radius: 2px;
+}
+
+.mm__friend-row__btn--accept {
+    color: rgb(220, 255, 220);
+    background-color: rgba(46, 120, 58, 0.9);
+    border-color: rgba(90, 190, 100, 0.85);
+}
+
+.mm__friend-row__btn--accept:hover {
+    background-color: rgba(58, 150, 72, 0.98);
+}
+
+.mm__friend-row__btn--join {
+    min-width: 64px;
+    color: rgb(220, 255, 220);
+    background-color: rgba(46, 120, 58, 0.9);
+    border-width: 1px;
+    border-color: rgba(90, 190, 100, 0.85);
+}
+
+.mm__friend-row__btn--join:hover {
+    background-color: rgba(58, 150, 72, 0.98);
+}
+
+.mm__friend-row__full {
+    margin-left: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+    height: 28px;
+    -unity-text-align: middle-center;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: rgba(210, 140, 140, 0.95);
+    background-color: rgba(90, 30, 30, 0.45);
+    border-width: 1px;
+    border-color: rgba(180, 80, 80, 0.55);
+    border-radius: 2px;
+}
+
+.mm__friend-row__btn--decline {
+    color: rgb(255, 220, 220);
+    background-color: rgba(140, 42, 42, 0.92);
+    border-color: rgba(210, 90, 90, 0.85);
+}
+
+.mm__friend-row__btn--decline:hover {
+    background-color: rgba(170, 52, 52, 0.98);
 }
 
 .mm__friends-outgoing {

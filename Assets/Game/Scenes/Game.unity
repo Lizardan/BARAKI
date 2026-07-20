@@ -213,7 +213,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 40
+  field of view: 70
   orthographic: 0
   orthographic size: 10
   m_Depth: -1
@@ -481,6 +481,7 @@ GameObject:
   - component: {fileID: 411625586}
   - component: {fileID: 411625585}
   - component: {fileID: 411625584}
+  - component: {fileID: 411625588}
   m_Layer: 0
   m_Name: MatchHud
   m_TagString: Untagged
@@ -517,6 +518,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchHudController
   _uiDocument: {fileID: 411625583}
   _barracksLabelWorldOffsetY: 4
+  _passiveRingWorldOffsetY: 6
 --- !u!114 &411625583
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -592,6 +594,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0644ab7f39962241ae537e273522aa7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchMinimapController
+  _uiDocument: {fileID: 411625583}
+--- !u!114 &411625588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 411625580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f71af0366407b2e4081086239c4e8966, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchDebugHudController
   _uiDocument: {fileID: 411625583}
 --- !u!1 &659531375
 GameObject:
@@ -870,6 +885,8 @@ GameObject:
   - component: {fileID: 1399539382}
   - component: {fileID: 1399539384}
   - component: {fileID: 1399539385}
+  - component: {fileID: 1399539386}
+  - component: {fileID: 1399539387}
   m_Layer: 0
   m_Name: MatchRuntime
   m_TagString: Untagged
@@ -978,6 +995,40 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.Selection.MatchSelectionValidityPresenter
   _runtime: {fileID: 0}
+--- !u!114 &1399539386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c57b2887e357d5478ffce42be0fa1ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.BarracksSpawnDebugOverlay
+  _runtime: {fileID: 1399539380}
+  _pointColor: {r: 0.2, g: 1, b: 0.35, a: 1}
+  _areaColor: {r: 0.2, g: 1, b: 0.35, a: 0.85}
+  _pointRadius: 0.35
+  _yOffset: 0.2
+--- !u!114 &1399539387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3ce3c6fbd71b924ea9172b9058180f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.LaneWaypointDebugOverlay
+  _runtime: {fileID: 0}
+  _pointColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  _lineColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
+  _pointRadius: 0.28
+  _yOffset: 0.25
 --- !u!1 &1477253634
 GameObject:
   m_ObjectHideFlags: 0
@@ -1312,8 +1363,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2042117575}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
-  m_LocalPosition: {x: 0, y: 72, z: -72}
+  m_LocalRotation: {x: 0.4694716, y: 0, z: 0, w: 0.8829476}
+  m_LocalPosition: {x: 0, y: 84.56183, z: -57.037674}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -11,6 +11,7 @@ namespace Game.UI.Controllers
     public sealed class RacePickController : MonoBehaviour
     {
         private const string SelectedClass = "race-pick__race-btn--selected";
+        private const string LockedClass = "race-pick__race-btn--locked";
         private const string HiddenClass = "race-pick--hidden";
         private const string ConfirmDisabledClass = "race-pick__confirm--disabled";
 
@@ -49,6 +50,7 @@ namespace Game.UI.Controllers
             _humanButton.clicked += () => SelectRace(GameIds.Races.Human);
             _bugButton.clicked += () => SelectRace(GameIds.Races.Bug);
             _confirmButton.clicked += OnConfirm;
+            RefreshRaceAvailability();
         }
 
         private void OnEnable()
@@ -106,6 +108,11 @@ namespace Game.UI.Controllers
         private void SelectRace(string raceId)
         {
             if (_localPickSubmitted || _matchRuntime == null || _matchRuntime.IsMatchStarted)
+            {
+                return;
+            }
+
+            if (!RacePickRules.IsSelectable(raceId))
             {
                 return;
             }
@@ -203,10 +210,26 @@ namespace Game.UI.Controllers
         {
             var canSelect = !_localPickSubmitted
                 && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
-            _humanButton.SetEnabled(canSelect);
-            _bugButton.SetEnabled(canSelect);
+            _humanButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Human));
+            _bugButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Bug));
             _humanButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Human);
             _bugButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Bug);
+            RefreshRaceAvailability();
+        }
+
+        void RefreshRaceAvailability()
+        {
+            if (_bugButton == null || _humanButton == null)
+            {
+                return;
+            }
+
+            _bugButton.EnableInClassList(LockedClass, !RacePickRules.IsSelectable(GameIds.Races.Bug));
+            _humanButton.EnableInClassList(LockedClass, !RacePickRules.IsSelectable(GameIds.Races.Human));
+            if (!RacePickRules.IsSelectable(GameIds.Races.Bug))
+            {
+                _bugButton.tooltip = "Раса недоступна в текущем playtest";
+            }
         }
 
         private void UpdateConfirmButton()

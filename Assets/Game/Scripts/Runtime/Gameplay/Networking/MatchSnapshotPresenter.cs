@@ -36,7 +36,47 @@ namespace Game.Gameplay.Networking
             }
 
             _lastAppliedSnapshot = snapshot;
+
+            // Prefer MatchCombatPresenter once Combat is filled from snapshot apply.
+            if (HasLiveCombatUnits())
+            {
+                ClearMarkers();
+                return;
+            }
+
             ApplySnapshot(snapshot);
+        }
+
+        bool HasLiveCombatUnits()
+        {
+            var units = _matchRuntime.Controller?.Combat?.Units;
+            if (units == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < units.Count; i++)
+            {
+                if (units[i] != null && units[i].IsAlive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void ClearMarkers()
+        {
+            foreach (var pair in _markers)
+            {
+                if (pair.Value != null)
+                {
+                    Destroy(pair.Value.gameObject);
+                }
+            }
+
+            _markers.Clear();
         }
 
         private void OnDestroy()

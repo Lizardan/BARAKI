@@ -35,6 +35,13 @@ namespace Game.Gameplay.Match
             EliminatePlayer(destroyed.OwnerSlot, players, waveScheduler, combat);
         }
 
+        public void EliminateForDisconnect(
+            int ownerSlot,
+            IList<MatchPlayerState> players,
+            BarracksWaveScheduler waveScheduler,
+            MatchCombatSystem combat) =>
+            EliminatePlayer(ownerSlot, players, waveScheduler, combat);
+
         public int? TryGetLastStandingWinner(IReadOnlyList<MatchPlayerState> players)
         {
             if (players == null)

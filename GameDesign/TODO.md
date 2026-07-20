@@ -31,8 +31,8 @@ provides: [backlog, priorities, acceptance_criteria]
 | MVP-N10 | UGS Auth + Lobby + Relay packages | done | multiplayer/auth/friends/cloudsave in manifest |
 | MVP-N11 | `UnityLobbyRelaySessionBackend` + StartAsHost | done | relay-host/relay endpoints; AllocationUtils |
 | MVP-N12 | Remove Discord/WebGL ship path from bootstrap/UI | done | LocalDev/NetDev/UGS; Discord bridge removed |
-| MVP-N02 | Lobby slots / ready / start | in progress | NetworkLobbyState |
-| MVP-N03 | Server-authoritative gold + spawn | in progress | Snapshots |
+| MVP-N02 | Lobby slots / ready / start | done | NetworkLobbyState + mid-match reserve |
+| MVP-N03 | Server-authoritative gold + spawn | done | Snapshots + command RPCs + HUD gold |
 
 ### Map / data / match (carry-over)
 
@@ -41,9 +41,9 @@ provides: [backlog, priorities, acceptance_criteria]
 | MVP-001..004 | Arena / LaneGraph / greybox | done |
 | MVP-010..012 | 2 races SO | done |
 | MVP-020..022 | MatchController / waves / gold | done |
-| MVP-023 | Elimination + disconnect grace | in progress |
-| MVP-024 | Hero summon + tower targeting | pending |
-| MVP-030..033 | Match HUD / results / selection | in progress / done |
+| MVP-023 | Elimination + disconnect grace | done |
+| MVP-024 | Hero summon + tower targeting | done |
+| MVP-030..033 | Match HUD / results / selection | done |
 
 ### Cancelled (Discord / FREE-*)
 
@@ -79,8 +79,8 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| RES-001 | Mid-match host migration (pause → full state → resume) | in progress | Rules + HostMigrationCoordinator; full Relay rebind TBD |
-| RES-002 | Player reconnect into active match | in progress | PlayerReconnectRules + session token; wire into lobby TBD |
+| RES-001 | Mid-match host migration (pause → full state → resume) | done | Pause/elect/capture/rebinding phases; Relay rebind notify hooked |
+| RES-002 | Player reconnect into active match | done | Grace reserve + session token ClaimReconnect |
 
 ---
 
@@ -99,6 +99,9 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-07-20 | Playtest UX: barracks manual call (gold+charges), own timers only, building HP bars, idle hero park, defensive building auto-fire + RMB target, tooltips on top; race pick Humans-only (Bugs grey) |
+| 2026-07-20 | Listen-host polish: fixed 30 Hz tick, client unit lerp, command ack/fail UI, host migration end-to-end + last-good snapshot, debug checksum; GDD locks listen-host+migration (no dedicated/lockstep) |
+| 2026-07-20 | MVP online close-out: command RPCs + snapshot gold/HUD, disconnect grace, heroes/towers, results rematch/menu, host-migration/reconnect wiring |
 | 2026-07-16 | Full GitHub migration: Releases + Pages; removed Cloudflare/Discord/WebGL infra and legacy code |
 
 ---
@@ -110,5 +113,8 @@ provides: [backlog, priorities, acceptance_criteria]
 - [x] Host-as-server + Unity Lobby + Relay
 - [x] Friends + Cloud Save (UGS)
 - [x] GHA → GitHub Releases → force update
-- [x] Full host migration + reconnect — после MVP
+- [x] Full host migration + reconnect — фундамент listen-host (не optional)
+- [x] Dedicated server — rejected
+- [x] WC3 lockstep — rejected
+- [x] Playtest race gate — только Люди (Жуки disabled)
 - [x] Уникальные расы, без ботов, 2–8 игроков

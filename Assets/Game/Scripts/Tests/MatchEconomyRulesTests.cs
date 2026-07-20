@@ -20,11 +20,11 @@ namespace Game.Tests
         {
             Assert.IsTrue(MatchEconomyRules.TryGetBarracksLevelUpgrade(1, out var cost, out var time));
             Assert.AreEqual(1000, cost);
-            Assert.AreEqual(45f, time);
+            Assert.AreEqual(3f, time);
 
             Assert.IsTrue(MatchEconomyRules.TryGetBarracksLevelUpgrade(3, out cost, out time));
             Assert.AreEqual(2500, cost);
-            Assert.AreEqual(135f, time);
+            Assert.AreEqual(3f, time);
 
             Assert.IsFalse(MatchEconomyRules.TryGetBarracksLevelUpgrade(4, out _, out _));
         }

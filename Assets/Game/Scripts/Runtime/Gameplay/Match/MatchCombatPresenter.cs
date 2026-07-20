@@ -5,6 +5,7 @@ using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
+using Game.Gameplay.Networking;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -20,6 +21,7 @@ namespace Game.Gameplay.Match
             public UnitWorldStatusBars StatusBars;
             public Collider PickCollider;
             public float GroundRingDiameter;
+            public bool HasSpawned;
             public readonly HashSet<int> TriggeredMeleeStrikeKeys = new();
             public readonly HashSet<int> TriggeredProjectileIds = new();
         }
@@ -142,7 +144,19 @@ namespace Game.Gameplay.Match
                     _visuals[unit.UnitId] = visual;
                 }
 
-                visual.Root.position = position;
+                if (!visual.HasSpawned
+                    || !NetworkUnitVisualRules.ShouldLerpPositions(_runtime.TickMode))
+                {
+                    visual.Root.position = position;
+                    visual.HasSpawned = true;
+                }
+                else
+                {
+                    visual.Root.position = NetworkUnitVisualRules.StepToward(
+                        visual.Root.position,
+                        position,
+                        Time.deltaTime);
+                }
 
                 var facing = unit.FacingDirection;
                 facing.y = 0f;
@@ -157,7 +171,7 @@ namespace Game.Gameplay.Match
 
                 if (visual.Model != null)
                 {
-                    visual.Model.localPosition = Vector3.zero;
+                    visual.Model.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 }
 
                 DriveAnimator(visual, unit, combat);
@@ -291,7 +305,8 @@ namespace Game.Gameplay.Match
                     animator.applyRootMotion = false;
                 }
 
-                instance.transform.localScale = Vector3.one * scale;
+                // Keep authored prefab normalize (WC3 meshes) and apply presenter scale on top.
+                instance.transform.localScale = prefab.transform.localScale * scale;
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));
                 model = instance.transform;
             }
