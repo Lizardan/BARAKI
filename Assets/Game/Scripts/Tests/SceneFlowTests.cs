@@ -56,6 +56,14 @@ namespace Game.Tests
             Assert.IsNotNull(Camera.main, "Lobby scene should include Main Camera.");
             var controller = Object.FindAnyObjectByType<LobbyController>();
             Assert.IsNotNull(controller, "Lobby scene should include LobbyController.");
+
+            var uiDocument = controller.GetComponent<UIDocument>();
+            Assert.IsNotNull(uiDocument, "Lobby should include UIDocument.");
+            Assert.IsNotNull(uiDocument.visualTreeAsset, "Lobby UIDocument should reference Lobby.uxml.");
+            var root = uiDocument.visualTreeAsset.CloneTree();
+            Assert.IsNotNull(
+                root.Q<Button>("FillLocalButton"),
+                "Lobby.uxml should keep FillLocalButton for Editor-only fill-slots.");
         }
 
         [Test]
@@ -112,8 +120,7 @@ namespace Game.Tests
         {
             EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
             var lobbySources = Object.FindObjectsByType<Unity.Netcode.NetworkObject>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
             var lobbyPrefabSources = 0;
             foreach (var networkObject in lobbySources)
             {
@@ -132,6 +139,9 @@ namespace Game.Tests
             EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
             var controller = Object.FindAnyObjectByType<BootstrapLoadingController>();
             Assert.IsNotNull(controller, "Bootstrap scene should include BootstrapLoadingController.");
+            Assert.IsTrue(
+                controller.enabled,
+                "BootstrapLoadingController must be enabled or bootstrap pipeline never starts.");
 
             var uiDocument = controller.GetComponent<UIDocument>();
             Assert.IsNotNull(uiDocument, "BootstrapLoading should include UIDocument.");

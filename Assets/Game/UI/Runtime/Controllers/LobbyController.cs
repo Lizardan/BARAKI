@@ -110,10 +110,17 @@ namespace Game.UI.Controllers
                 _readyButton.clicked += OnReadyClicked;
             }
 
+#if UNITY_EDITOR
             if (_fillLocalButton != null)
             {
                 _fillLocalButton.clicked += OnFillLocalClicked;
             }
+#else
+            if (_fillLocalButton != null)
+            {
+                _fillLocalButton.style.display = DisplayStyle.None;
+            }
+#endif
 
             if (_inviteFriendsButton != null)
             {
@@ -145,10 +152,12 @@ namespace Game.UI.Controllers
                 _readyButton.clicked -= OnReadyClicked;
             }
 
+#if UNITY_EDITOR
             if (_fillLocalButton != null)
             {
                 _fillLocalButton.clicked -= OnFillLocalClicked;
             }
+#endif
 
             if (_inviteFriendsButton != null)
             {
@@ -284,6 +293,7 @@ namespace Game.UI.Controllers
             RefreshLobbyUi();
         }
 
+#if UNITY_EDITOR
         private void OnFillLocalClicked()
         {
             if (MatchNetworkSession.IsNetworked)
@@ -307,6 +317,7 @@ namespace Game.UI.Controllers
 
             RefreshLobbyUi();
         }
+#endif
 
         private void OnStartMatch()
         {

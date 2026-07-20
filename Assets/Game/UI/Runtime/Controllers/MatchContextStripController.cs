@@ -506,7 +506,7 @@ namespace Game.UI.Controllers
 
                 _portrait.style.backgroundImage = new StyleBackground(portrait);
 
-                _portrait.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+                _portrait.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover);
 
                 _portrait.style.backgroundColor = Color.clear;
 

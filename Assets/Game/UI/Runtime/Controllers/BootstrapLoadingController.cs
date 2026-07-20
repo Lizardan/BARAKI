@@ -21,6 +21,8 @@ namespace Game.UI.Controllers
     public sealed class BootstrapLoadingController : MonoBehaviour
     {
         private const string OverlayHiddenClass = "ui-overlay--hidden";
+        private const float UgsInitTimeoutSeconds = 8f;
+        private const float FriendsInitTimeoutSeconds = 8f;
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -193,7 +195,14 @@ namespace Game.UI.Controllers
             try
             {
                 ShowLoading("Авторизация");
-                await UnityServicesBootstrap.EnsureInitializedAsync();
+                if (!await TryAwaitWithTimeout(
+                        UnityServicesBootstrap.EnsureInitializedAsync(),
+                        UgsInitTimeoutSeconds))
+                {
+                    Debug.LogWarning(
+                        $"Bootstrap: UGS init timed out after {UgsInitTimeoutSeconds:0}s, opening menu without cloud.");
+                    return;
+                }
 
                 ShowLoading("Профиль");
                 try
@@ -210,7 +219,13 @@ namespace Game.UI.Controllers
                 {
                     try
                     {
-                        await FriendsHubService.InitializeAsync();
+                        if (!await TryAwaitWithTimeout(
+                                FriendsHubService.InitializeAsync(),
+                                FriendsInitTimeoutSeconds))
+                        {
+                            Debug.LogWarning(
+                                $"Bootstrap: Friends init timed out after {FriendsInitTimeoutSeconds:0}s.");
+                        }
                     }
                     catch (Exception friendsEx)
                     {
@@ -222,6 +237,14 @@ namespace Game.UI.Controllers
             {
                 Debug.LogWarning($"Bootstrap social warm-up skipped: {socialEx.Message}");
             }
+        }
+
+        private static async UniTask<bool> TryAwaitWithTimeout(UniTask task, float timeoutSeconds)
+        {
+            var winner = await UniTask.WhenAny(
+                task,
+                UniTask.Delay(TimeSpan.FromSeconds(timeoutSeconds), ignoreTimeScale: true));
+            return winner == 0;
         }
 
         private void OnUpdateClicked()
