@@ -131,6 +131,57 @@ namespace Game.Tests
             Assert.IsFalse(fired);
         }
 
+        [Test]
+        public void DebugFireAllWaves_FiresEveryEnabledBarracksAndResetsTimers()
+        {
+            var scheduler = new BarracksWaveScheduler();
+            scheduler.Initialize(CreatePlayers(2));
+            scheduler.SetPlayerSpawnEnabled(1, false);
+
+            foreach (var barracks in scheduler.Barracks)
+            {
+                barracks.TimeUntilNextWaveSeconds = 20f;
+            }
+
+            var fired = new List<BarracksWaveFired>();
+            scheduler.WaveFired += fired.Add;
+
+            var count = scheduler.DebugFireAllWaves();
+
+            Assert.AreEqual(3, count);
+            Assert.AreEqual(3, fired.Count);
+            foreach (var barracks in scheduler.Barracks)
+            {
+                if (barracks.OwnerSlot == 1)
+                {
+                    Assert.AreEqual(20f, barracks.TimeUntilNextWaveSeconds, 0.01f);
+                    continue;
+                }
+
+                Assert.AreEqual(barracks.WaveIntervalSeconds, barracks.TimeUntilNextWaveSeconds, 0.01f);
+            }
+
+            Assert.AreEqual(0, fired[0].OwnerSlot);
+            Assert.AreEqual(0, fired[1].OwnerSlot);
+            Assert.AreEqual(0, fired[2].OwnerSlot);
+        }
+
+        [Test]
+        public void MatchController_DebugFireAllBarracksWaves_EmitsForAllPlayers()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+
+            var fired = 0;
+            controller.WaveFired += _ => fired++;
+
+            var count = controller.DebugFireAllBarracksWaves();
+
+            Assert.AreEqual(6, count);
+            Assert.AreEqual(6, fired);
+        }
+
         private static List<MatchPlayerState> CreatePlayers(int count)
         {
             var players = new List<MatchPlayerState>(count);

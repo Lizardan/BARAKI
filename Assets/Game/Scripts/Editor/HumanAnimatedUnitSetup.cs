@@ -287,30 +287,20 @@ namespace Game.Editor
             deathState.motion = death;
             root.defaultState = standState;
 
-            var toWalk = standState.AddTransition(walkState);
-            toWalk.hasExitTime = false;
-            toWalk.duration = 0.15f;
-            toWalk.AddCondition(AnimatorConditionMode.Greater, 0.1f, UnitCombatAnimatorDriver.SpeedParam);
-
-            var toStand = walkState.AddTransition(standState);
-            toStand.hasExitTime = false;
-            toStand.duration = 0.15f;
-            toStand.AddCondition(AnimatorConditionMode.Less, 0.1f, UnitCombatAnimatorDriver.SpeedParam);
+            // Locomotion is driven by CrossFade at runtime; keep Speed param for compatibility
+            // but do not add Stand↔Walk transitions that fight CrossFade when Speed is stale.
 
             var anyAttack = root.AddAnyStateTransition(attackState);
             anyAttack.hasExitTime = false;
-            anyAttack.duration = 0.05f;
+            anyAttack.duration = UnitCombatAnimatorDriver.AttackCrossFadeDuration;
             anyAttack.canTransitionToSelf = false;
             anyAttack.AddCondition(AnimatorConditionMode.If, 0f, UnitCombatAnimatorDriver.AttackParam);
 
-            var attackToStand = attackState.AddTransition(standState);
-            attackToStand.hasExitTime = true;
-            attackToStand.exitTime = 0.9f;
-            attackToStand.duration = 0.1f;
+            // No Attack→Stand exit-time transition: runtime CrossFade owns all switches immediately.
 
             var anyDeath = root.AddAnyStateTransition(deathState);
             anyDeath.hasExitTime = false;
-            anyDeath.duration = 0.05f;
+            anyDeath.duration = UnitCombatAnimatorDriver.DeathCrossFadeDuration;
             anyDeath.canTransitionToSelf = false;
             anyDeath.AddCondition(AnimatorConditionMode.If, 0f, UnitCombatAnimatorDriver.DeathParam);
 

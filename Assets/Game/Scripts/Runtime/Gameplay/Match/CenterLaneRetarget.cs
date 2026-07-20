@@ -50,12 +50,70 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
+                // Snapshot old mid before rebuild.
+                var oldPath = lane.Path;
+                var atEnd = combat?.CollectUnitsAtRouteEnd(lane.OwnerSlot, GameIds.Lanes.Center);
+                var pastHalfway = combat?.CollectUnitsPastMidHalfway(
+                    lane.OwnerSlot,
+                    GameIds.Lanes.Center,
+                    excludeUnitIds: atEnd);
+
+                if (combat != null && pastHalfway != null && pastHalfway.Count > 0 && oldPath != null)
+                {
+                    combat.CommitUnitsToMidPath(
+                        lane.OwnerSlot,
+                        pastHalfway,
+                        oldPath,
+                        next.Value);
+                }
+
+                var skip = MergeUnitIds(atEnd, pastHalfway);
+
                 var owner = layout.Slots[lane.OwnerSlot];
                 var nextOpponent = layout.Slots[next.Value];
                 lane.OpponentSlot = next.Value;
                 lane.Path = LaneGraphBuilder.BuildCenterPath(owner, nextOpponent, graph.CenterArenaRadius);
-                combat?.ReplaceLaneRoute(lane.OwnerSlot, GameIds.Lanes.Center, lane.Path);
+
+                combat?.ReplaceLaneRoute(
+                    lane.OwnerSlot,
+                    GameIds.Lanes.Center,
+                    lane.Path,
+                    skipUnitIds: skip);
+
+                if (atEnd == null || atEnd.Count == 0 || combat == null)
+                {
+                    continue;
+                }
+
+                combat.RemountUnitsToFlankToward(
+                    lane.OwnerSlot,
+                    atEnd,
+                    next.Value,
+                    layout);
             }
+
+            combat?.RetargetUnitsFocusingEliminated(eliminatedSlot, players, layout);
+        }
+
+        static HashSet<int> MergeUnitIds(HashSet<int> a, HashSet<int> b)
+        {
+            if ((a == null || a.Count == 0) && (b == null || b.Count == 0))
+            {
+                return null;
+            }
+
+            var merged = new HashSet<int>();
+            if (a != null)
+            {
+                merged.UnionWith(a);
+            }
+
+            if (b != null)
+            {
+                merged.UnionWith(b);
+            }
+
+            return merged;
         }
     }
 }

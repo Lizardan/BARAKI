@@ -12,6 +12,9 @@ namespace Game.Gameplay.Combat
         public const float AvoidanceStrength = 3.5f;
         public const float StoppingDistance = 0.2f;
 
+        /// <summary>Max yaw turn rate for sim FacingDirection (visual Slerp tracks this).</summary>
+        public const float FacingTurnDegreesPerSecond = 450f;
+
         /// <summary>Physical road half-width (matches greybox ribbon).</summary>
         public static float RoadHalfWidth => MatchArenaGreyboxBuilder.RoadWidth * 0.5f;
 
@@ -176,6 +179,41 @@ namespace Game.Gameplay.Combat
             return true;
         }
 
+        /// <summary>
+        /// Yaw-only step toward desired facing. Never snaps; capped by
+        /// <see cref="FacingTurnDegreesPerSecond"/> (or override).
+        /// </summary>
+        public static Vector3 StepFacingTowards(
+            Vector3 currentFacing,
+            Vector3 desiredFacing,
+            float deltaTime,
+            float maxDegreesPerSecond = FacingTurnDegreesPerSecond)
+        {
+            desiredFacing.y = 0f;
+            if (desiredFacing.sqrMagnitude <= 0.0001f || deltaTime <= 0f || maxDegreesPerSecond <= 0f)
+            {
+                currentFacing.y = 0f;
+                return currentFacing.sqrMagnitude > 0.0001f
+                    ? currentFacing.normalized
+                    : Vector3.forward;
+            }
+
+            desiredFacing.Normalize();
+            currentFacing.y = 0f;
+            if (currentFacing.sqrMagnitude <= 0.0001f)
+            {
+                return desiredFacing;
+            }
+
+            currentFacing.Normalize();
+            var from = Quaternion.LookRotation(currentFacing, Vector3.up);
+            var to = Quaternion.LookRotation(desiredFacing, Vector3.up);
+            var stepped = Quaternion.RotateTowards(from, to, maxDegreesPerSecond * deltaTime);
+            var result = stepped * Vector3.forward;
+            result.y = 0f;
+            return result.sqrMagnitude > 0.0001f ? result.normalized : desiredFacing;
+        }
+
         public static bool IsInsideCenterArena(Vector3 position, float centerArenaRadius)
         {
             if (centerArenaRadius <= 0f)
@@ -188,7 +226,7 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// Keep units on the road ribbon or inside the center arena. No separate march/combat leash.
+        /// Keep units on the road ribbon or inside the center arena. Legacy fallback when no SourceParts surface.
         /// </summary>
         public static Vector3 ClampToWalkable(
             LaneRoute route,
@@ -259,6 +297,7 @@ namespace Game.Gameplay.Combat
 
         /// <summary>
         /// Walkable clamp, then step-limit from the previous position (run back onto surface, never teleport).
+        /// When <paramref name="surface"/> is set, clamp uses SourceParts area only (no lane corridor).
         /// </summary>
         public static Vector3 ApplyWalkableLimit(
             LaneRoute route,
@@ -266,13 +305,16 @@ namespace Game.Gameplay.Combat
             Vector3 proposedPosition,
             float maxStep,
             float progressDistance,
-            float centerArenaRadius)
+            float centerArenaRadius,
+            WalkableSurface surface = null)
         {
-            var clamped = ClampToWalkable(
-                route,
-                proposedPosition,
-                progressDistance,
-                centerArenaRadius);
+            var clamped = surface != null
+                ? surface.Clamp(proposedPosition)
+                : ClampToWalkable(
+                    route,
+                    proposedPosition,
+                    progressDistance,
+                    centerArenaRadius);
             return LimitDisplacement(previousPosition, clamped, maxStep);
         }
     }

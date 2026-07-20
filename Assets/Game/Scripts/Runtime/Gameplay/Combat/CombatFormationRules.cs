@@ -8,9 +8,9 @@ namespace Game.Gameplay.Combat
     {
         public const float UnitScaleFactor = UnitGreyboxVisuals.Scale;
         public const float BarracksFootprintExtent = 4.5f;
-        public const float SpawnStaggerStep = 1.8f;
+        public const float SpawnStaggerStep = 0.9f;
         public static float SpawnRowDepth => SpawnStaggerStep * UnitScaleFactor;
-        public const float SpawnDistanceJitter = 0.6f;
+        public const float SpawnDistanceJitter = 0.3f;
         public static float SpawnLateralSpread => 2.4f * UnitScaleFactor;
         /// <summary>
         /// Distance along the lane from barracks center to the first spawn band.

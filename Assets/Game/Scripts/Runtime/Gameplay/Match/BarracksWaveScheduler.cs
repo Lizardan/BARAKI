@@ -92,6 +92,28 @@ namespace Game.Gameplay.Match
             }
         }
 
+        /// <summary>
+        /// Editor/debug: complete every barracks wave timer and fire a wave from each enabled barracks.
+        /// </summary>
+        public int DebugFireAllWaves()
+        {
+            var fired = 0;
+            for (var i = 0; i < _barracks.Count; i++)
+            {
+                var barracks = _barracks[i];
+                if (!barracks.IsSpawnEnabled)
+                {
+                    continue;
+                }
+
+                FireWave(barracks);
+                barracks.TimeUntilNextWaveSeconds = barracks.WaveIntervalSeconds;
+                fired++;
+            }
+
+            return fired;
+        }
+
         public void SetBarracksLevel(int ownerSlot, string barracksId, int level)
         {
             var barracks = GetBarracks(ownerSlot, barracksId);

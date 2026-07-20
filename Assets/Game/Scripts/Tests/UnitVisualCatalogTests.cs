@@ -568,6 +568,70 @@ namespace Game.Tests
         {
             Assert.AreEqual(0f, UnitCombatAnimatorDriver.ResolveSpeed(UnitBehaviorState.Attack));
         }
+
+        [Test]
+        public void ResolveLocomotionState_UsesWalkForMoveAndStandOtherwise()
+        {
+            Assert.AreEqual(UnitCombatAnimatorDriver.WalkState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Move));
+            Assert.AreEqual(UnitCombatAnimatorDriver.WalkState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Chase));
+            Assert.AreEqual(UnitCombatAnimatorDriver.StandState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Attack));
+        }
+
+        [Test]
+        public void ResolveDesiredState_AttackStatusBlendsToAttackImmediately()
+        {
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.AttackState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Attack,
+                    fireAttack: false,
+                    fireDeath: false,
+                    isDead: false));
+        }
+
+        [Test]
+        public void ResolveDesiredState_MoveLeavesAttackWithoutWaiting()
+        {
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.WalkState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Move,
+                    fireAttack: false,
+                    fireDeath: false,
+                    isDead: false));
+        }
+
+        [Test]
+        public void ResolveDesiredState_FireAttackOverridesLocomotion()
+        {
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.AttackState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Chase,
+                    fireAttack: true,
+                    fireDeath: false,
+                    isDead: false));
+        }
+
+        [Test]
+        public void ShouldForceRestartAttack_OnlyOnNewSwing()
+        {
+            Assert.IsTrue(UnitCombatAnimatorDriver.ShouldForceRestartAttack(
+                fireAttack: true,
+                desiredState: UnitCombatAnimatorDriver.AttackState));
+            Assert.IsFalse(UnitCombatAnimatorDriver.ShouldForceRestartAttack(
+                fireAttack: false,
+                desiredState: UnitCombatAnimatorDriver.AttackState));
+            Assert.IsFalse(UnitCombatAnimatorDriver.ShouldForceRestartAttack(
+                fireAttack: true,
+                desiredState: UnitCombatAnimatorDriver.WalkState));
+        }
+
+        [Test]
+        public void IsInStateOrTransitioningTo_NullAnimator_ReturnsFalse()
+        {
+            Assert.IsFalse(UnitCombatAnimatorDriver.IsInStateOrTransitioningTo(null, UnitCombatAnimatorDriver.WalkState));
+        }
     }
 
     public sealed class MatchCombatPresenterTests

@@ -88,6 +88,36 @@ namespace Game.Tests
         }
 
         [Test]
+        public void StepFacingTowards_OneTick_DoesNotSnapOppositeDirection()
+        {
+            var current = Vector3.forward;
+            var desired = Vector3.back;
+            const float deltaTime = 0.05f;
+            var maxDeg = UnitLocomotionRules.FacingTurnDegreesPerSecond;
+            var maxAngle = maxDeg * deltaTime + 0.5f;
+
+            var next = UnitLocomotionRules.StepFacingTowards(current, desired, deltaTime);
+            var turned = Vector3.Angle(current, next);
+
+            Assert.Less(turned, maxAngle, "Facing must not snap 180° in one tick.");
+            Assert.Less(Vector3.Dot(next.normalized, desired.normalized), 0.5f,
+                "One short tick must not fully reach opposite facing.");
+        }
+
+        [Test]
+        public void StepFacingTowards_ManyTicks_ConvergesToDesired()
+        {
+            var facing = Vector3.forward;
+            var desired = Vector3.right;
+            for (var i = 0; i < 80; i++)
+            {
+                facing = UnitLocomotionRules.StepFacingTowards(facing, desired, 0.05f);
+            }
+
+            Assert.Greater(Vector3.Dot(facing.normalized, desired.normalized), 0.99f);
+        }
+
+        [Test]
         public void GetRouteLookaheadDestination_AdvancesAlongPath()
         {
             var path = new Game.Gameplay.Match.LanePath(new List<Vector3>

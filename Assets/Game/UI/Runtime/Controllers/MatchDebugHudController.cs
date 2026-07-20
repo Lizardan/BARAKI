@@ -23,6 +23,7 @@ namespace Game.UI.Controllers
         Button _addPassiveButton;
         Button _skipResearchButton;
         Button _winButton;
+        Button _fireAllBarracksButton;
         Button _spawnPointsButton;
         Button _waypointsButton;
         int _localPlayerSlot = MatchSetup.DefaultLocalPlayerSlot;
@@ -40,6 +41,7 @@ namespace Game.UI.Controllers
             _addPassiveButton = root.Q<Button>("DebugAddPassiveButton");
             _skipResearchButton = root.Q<Button>("DebugSkipResearchButton");
             _winButton = root.Q<Button>("DebugWinButton");
+            _fireAllBarracksButton = root.Q<Button>("DebugFireAllBarracksButton");
             _spawnPointsButton = root.Q<Button>("DebugSpawnPointsButton");
             _waypointsButton = root.Q<Button>("DebugWaypointsButton");
             RefreshSpawnPointsButtonLabel();
@@ -75,6 +77,11 @@ namespace Game.UI.Controllers
                 _winButton.clicked += OnWinLocal;
             }
 
+            if (_fireAllBarracksButton != null)
+            {
+                _fireAllBarracksButton.clicked += OnFireAllBarracks;
+            }
+
             if (_spawnPointsButton != null)
             {
                 _spawnPointsButton.clicked += OnToggleSpawnPoints;
@@ -108,6 +115,11 @@ namespace Game.UI.Controllers
             if (_winButton != null)
             {
                 _winButton.clicked -= OnWinLocal;
+            }
+
+            if (_fireAllBarracksButton != null)
+            {
+                _fireAllBarracksButton.clicked -= OnFireAllBarracks;
             }
 
             if (_spawnPointsButton != null)
@@ -215,6 +227,16 @@ namespace Game.UI.Controllers
             }
 
             controller.EndMatch(_localPlayerSlot);
+        }
+
+        void OnFireAllBarracks()
+        {
+            if (!TryGetMutableController(out var controller))
+            {
+                return;
+            }
+
+            controller.DebugFireAllBarracksWaves();
         }
 
         void OnToggleSpawnPoints()

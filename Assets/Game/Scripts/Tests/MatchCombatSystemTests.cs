@@ -236,6 +236,36 @@ namespace Game.Tests
         }
 
         [Test]
+        public void SpawnUnit_FacesLaneForwardAtSpawnDistance()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            var stats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 5f,
+                damageMax: 5f,
+                attackSpeed: 1f,
+                attackRange: 1.5f,
+                moveSpeed: 3f,
+                goldBounty: 1);
+
+            const float spawnDistance = 5f;
+            var unit = combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, spawnDistance);
+            Assert.IsTrue(combat.TryGetRoute(0, GameIds.Lanes.Center, out var route));
+            var expected = route.EvaluateDirectionAtDistance(spawnDistance);
+            expected.y = 0f;
+            expected.Normalize();
+
+            Assert.Greater(Vector3.Dot(unit.FacingDirection.normalized, expected), 0.99f);
+        }
+
+        [Test]
         public void Tick_UnitMarchesAlongLane()
         {
             var controller = new MatchController();
@@ -321,13 +351,30 @@ namespace Game.Tests
 
             Assert.Greater(movement.sqrMagnitude, 0.0001f, "Mover should advance around blocker.");
             Assert.Greater(
-                Vector3.Dot(mover.FacingDirection.normalized, movement.normalized),
-                0.99f,
-                "Facing must follow actual movement while sidestepping.");
-            Assert.Greater(
                 Mathf.Abs(Vector3.Dot(movement.normalized, right)),
                 0.05f,
                 "Expected lateral avoidance around blocker.");
+
+            var angleAfterOneTick = Vector3.Angle(forward, mover.FacingDirection);
+            Assert.LessOrEqual(
+                angleAfterOneTick,
+                UnitLocomotionRules.FacingTurnDegreesPerSecond * 0.05f + 0.5f,
+                "Facing must not snap to sidestep in one tick.");
+
+            Vector3 lastStep = movement;
+            for (var i = 0; i < 40; i++)
+            {
+                var p0 = mover.WorldPosition;
+                combat.Tick(0.05f);
+                lastStep = mover.WorldPosition - p0;
+                lastStep.y = 0f;
+            }
+
+            Assert.Greater(lastStep.sqrMagnitude, 0.0001f);
+            Assert.Greater(
+                Vector3.Dot(mover.FacingDirection.normalized, lastStep.normalized),
+                0.9f,
+                "Facing must converge toward actual movement while sidestepping.");
         }
 
         [Test]

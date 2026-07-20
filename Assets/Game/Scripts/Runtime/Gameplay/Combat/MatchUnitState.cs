@@ -1,4 +1,5 @@
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
@@ -40,7 +41,7 @@ namespace Game.Gameplay.Combat
 
         public int UnitId { get; }
         public int OwnerSlot { get; }
-        public string LaneId { get; }
+        public string LaneId { get; set; }
         public UnitRole Role { get; }
         public UnitCombatStats Stats { get; }
         public bool IsHero { get; }
@@ -55,11 +56,23 @@ namespace Game.Gameplay.Combat
         public float MarchSpawnDistance { get; }
         public float MarchProgressDistance { get; set; }
         public float AttackCooldownRemaining { get; set; }
+        /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>
+        public int AttackSwingSerial { get; set; }
         public UnitBehaviorState BehaviorState { get; set; }
         public int? CurrentTargetId { get; set; }
         public int? CurrentTargetBuildingInstanceId { get; set; }
         public float TargetScanCooldown { get; set; }
         public Vector3 FacingDirection { get; set; }
+        /// <summary>
+        /// Old open mid path kept after enemy wipe when past mid-halfway.
+        /// Null = use the shared lane route.
+        /// </summary>
+        public LanePath CommittedMarchPath { get; set; }
+        /// <summary>
+        /// Opponent slot this unit is marching toward (flank remount / mid commit / flank spawn).
+        /// Used to retarget when that foe is eliminated mid-march.
+        /// </summary>
+        public int MarchFocusOpponentSlot { get; set; } = -1;
         public bool IsAlive => CurrentHp > 0f;
     }
 }

@@ -94,6 +94,8 @@ namespace Game.Gameplay.Match
             _elimination.PlayerEliminated += OnPlayerEliminated;
             _combat.Reset(_players, Graph);
             _combat.SetBuildings(_buildings);
+            _combat.SetArenaLayout(Layout);
+            _combat.SetWalkableSurface(WalkableSurfaceCache.GetOrCreate(config.PlayerCount));
             _combat.UnitKilled += OnUnitKilled;
             _waveScheduler.Deactivate();
             _research.Clear();
@@ -205,6 +207,19 @@ namespace Game.Gameplay.Match
                 // MatchResearchQueue.Tick ignores non-positive delta; use a tiny step to flush.
                 TickResearch(0.001f);
             }
+        }
+
+        /// <summary>
+        /// Editor/debug: finish all barracks wave timers and spawn a wave from every enabled barracks.
+        /// </summary>
+        public int DebugFireAllBarracksWaves()
+        {
+            if (Phase is MatchPhase.Lobby or MatchPhase.End)
+            {
+                return 0;
+            }
+
+            return _waveScheduler.DebugFireAllWaves();
         }
 
         /// <summary>Editor/debug: bump Passive Gold level within Main-level cap.</summary>

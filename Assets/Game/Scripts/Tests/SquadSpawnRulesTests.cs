@@ -11,10 +11,10 @@ namespace Game.Tests
         [Test]
         public void GetSpawnDelaySeconds_StaggersByInterval()
         {
-            Assert.AreEqual(0.1f, SquadSpawnRules.UnitSpawnIntervalSeconds);
+            Assert.AreEqual(0.2f, SquadSpawnRules.UnitSpawnIntervalSeconds);
             Assert.AreEqual(0f, SquadSpawnRules.GetSpawnDelaySeconds(0));
-            Assert.AreEqual(0.1f, SquadSpawnRules.GetSpawnDelaySeconds(1));
-            Assert.AreEqual(0.3f, SquadSpawnRules.GetSpawnDelaySeconds(3));
+            Assert.AreEqual(0.2f, SquadSpawnRules.GetSpawnDelaySeconds(1));
+            Assert.AreEqual(0.6f, SquadSpawnRules.GetSpawnDelaySeconds(3));
         }
 
         [Test]
@@ -85,6 +85,21 @@ namespace Game.Tests
 
             Assert.Greater(front, mid);
             Assert.Greater(mid, rear);
+        }
+
+        [Test]
+        public void GetSpawnDistanceForRow_KeepsNearestClearance_HalvesDepthSpan()
+        {
+            const int rearmost = 2;
+            var rear = CombatFormationRules.GetSpawnDistanceForRow(rearmost, rearmost, new System.Random(1));
+            var front = CombatFormationRules.GetSpawnDistanceForRow(0, rearmost, new System.Random(1));
+
+            Assert.GreaterOrEqual(rear, CombatFormationRules.BarracksSpawnForwardClearance - CombatFormationRules.SpawnDistanceJitter);
+            Assert.LessOrEqual(
+                front - CombatFormationRules.BarracksSpawnForwardClearance,
+                rearmost * CombatFormationRules.SpawnRowDepth + CombatFormationRules.SpawnDistanceJitter + 0.001f);
+            Assert.AreEqual(0.9f, CombatFormationRules.SpawnStaggerStep, 0.001f);
+            Assert.AreEqual(0.3f, CombatFormationRules.SpawnDistanceJitter, 0.001f);
         }
     }
 }

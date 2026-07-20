@@ -35,7 +35,7 @@ namespace Game.Gameplay.Combat
     public static class SquadSpawnRules
     {
         /// <summary>Delay between consecutive units leaving the same barracks wave.</summary>
-        public const float UnitSpawnIntervalSeconds = 0.1f;
+        public const float UnitSpawnIntervalSeconds = 0.2f;
 
         public static float GetSpawnDelaySeconds(int spawnIndex)
         {

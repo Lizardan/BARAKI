@@ -143,6 +143,23 @@ namespace Game.Gameplay.Match
             return best;
         }
 
+        /// <summary>
+        /// Nearest intact enemy building with no aggro cap (end-of-lane push toward remaining base).
+        /// </summary>
+        public BuildingState FindNearestEnemyBuilding(
+            int attackerOwnerSlot,
+            string laneId,
+            Vector3 attackerPosition,
+            LaneGraph graph)
+        {
+            return FindBuildingTarget(
+                attackerOwnerSlot,
+                laneId,
+                attackerPosition,
+                aggroRadius: float.MaxValue,
+                graph);
+        }
+
         /// <summary>Legacy alias for <see cref="FindBuildingTarget"/>.</summary>
         public BuildingState FindSiegeTarget(
             int attackerOwnerSlot,

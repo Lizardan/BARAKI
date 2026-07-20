@@ -19,6 +19,8 @@ namespace Game.Gameplay.Combat
         LaneGraph _graph;
         LaneRouteRegistry _routes;
         BuildingRegistry _buildings;
+        WalkableSurface _walkable;
+        MatchArenaLayout _layout;
         int _nextUnitId = 1;
         int _nextProjectileId = 1;
         System.Random _random;
@@ -30,6 +32,7 @@ namespace Game.Gameplay.Combat
         readonly List<CombatProjectileState> _projectileImpactBuffer = new();
         readonly List<CombatMeleeStrikeState> _meleeImpactBuffer = new();
         readonly List<PendingBarracksSpawn> _pendingSpawns = new();
+        readonly Dictionary<int, LaneRoute> _committedRoutes = new();
         const float SpatialCellSize = 12f;
         readonly Dictionary<(int, int), List<MatchUnitState>> _spatialGrid = new();
 
@@ -80,12 +83,21 @@ namespace Game.Gameplay.Combat
             _players.AddRange(players);
             _graph = graph;
             _routes = LaneRouteRegistry.Build(graph);
+            _walkable = null;
+            _layout = null;
+            _committedRoutes.Clear();
             _nextUnitId = 1;
             _nextProjectileId = 1;
             _random = new System.Random(randomSeed);
         }
 
         public void SetBuildings(BuildingRegistry buildings) => _buildings = buildings;
+
+        /// <summary>Arena layout for flank remount scoring after mid retarget.</summary>
+        public void SetArenaLayout(MatchArenaLayout layout) => _layout = layout;
+
+        /// <summary>SourceParts walkable area (static bake per map mode). Null = legacy corridor clamp.</summary>
+        public void SetWalkableSurface(WalkableSurface surface) => _walkable = surface;
 
         public bool TryGetRoute(int ownerSlot, string laneId, out LaneRoute route)
         {
@@ -96,7 +108,12 @@ namespace Game.Gameplay.Combat
         /// <summary>
         /// Replaces a lane route (center retarget). Units keep their world position and run onto the new path.
         /// </summary>
-        public void ReplaceLaneRoute(int ownerSlot, string laneId, LanePath path)
+        /// <param name="skipUnitIds">Units that should not remount onto this path (e.g. mid finishers going to flank).</param>
+        public void ReplaceLaneRoute(
+            int ownerSlot,
+            string laneId,
+            LanePath path,
+            HashSet<int> skipUnitIds = null)
         {
             if (_routes == null || path == null)
             {
@@ -116,10 +133,392 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
+                if (skipUnitIds != null && skipUnitIds.Contains(unit.UnitId))
+                {
+                    continue;
+                }
+
+                if (unit.CommittedMarchPath != null)
+                {
+                    continue;
+                }
+
                 unit.CurrentTargetId = null;
                 unit.CurrentTargetBuildingInstanceId = null;
                 // Nearest point on the new path at the unit's current position — never snap WorldPosition.
                 unit.MarchProgressDistance = route.ProjectDistance(unit.WorldPosition);
+                if (_graph != null && _graph.TryGetLane(ownerSlot, laneId, out var lane) && lane != null)
+                {
+                    unit.MarchFocusOpponentSlot = lane.OpponentSlot;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Collect center-lane units that have arrived at the current mid route finish.
+        /// Call before replacing the center path.
+        /// </summary>
+        public HashSet<int> CollectUnitsAtRouteEnd(int ownerSlot, string laneId)
+        {
+            var result = new HashSet<int>();
+            if (_routes == null || !_routes.TryGetRoute(ownerSlot, laneId, out var route))
+            {
+                return result;
+            }
+
+            var end = route.Path.End;
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || unit.LaneId != laneId)
+                {
+                    continue;
+                }
+
+                if (unit.CommittedMarchPath != null)
+                {
+                    continue;
+                }
+
+                if (CenterMarchRetargetRules.HasReachedRouteEnd(
+                        CenterMarchRetargetRules.ResolveEffectiveMarchProgress(
+                            unit.MarchProgressDistance,
+                            unit.WorldPosition,
+                            route.Path),
+                        route.TotalLength,
+                        unit.WorldPosition,
+                        end))
+                {
+                    result.Add(unit.UnitId);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Units past mid-halfway (but not yet at finish) that must keep the old mid path.
+        /// </summary>
+        public HashSet<int> CollectUnitsPastMidHalfway(int ownerSlot, string laneId, HashSet<int> excludeUnitIds = null)
+        {
+            var result = new HashSet<int>();
+            if (_routes == null || !_routes.TryGetRoute(ownerSlot, laneId, out var route))
+            {
+                return result;
+            }
+
+            var meet = CenterMarchRetargetRules.GetCenterMeetDistance(route.Path);
+            var end = route.Path.End;
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || unit.LaneId != laneId)
+                {
+                    continue;
+                }
+
+                if (unit.CommittedMarchPath != null)
+                {
+                    continue;
+                }
+
+                if (excludeUnitIds != null && excludeUnitIds.Contains(unit.UnitId))
+                {
+                    continue;
+                }
+
+                var progress = CenterMarchRetargetRules.ResolveEffectiveMarchProgress(
+                    unit.MarchProgressDistance,
+                    unit.WorldPosition,
+                    route.Path);
+
+                if (CenterMarchRetargetRules.HasReachedRouteEnd(
+                        progress,
+                        route.TotalLength,
+                        unit.WorldPosition,
+                        end))
+                {
+                    continue;
+                }
+
+                if (CenterMarchRetargetRules.HasPassedMidHalfway(
+                        progress,
+                        meet,
+                        route.TotalLength))
+                {
+                    result.Add(unit.UnitId);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>Keep old open mid path until these units reach its finish, then flank.</summary>
+        public void CommitUnitsToMidPath(
+            int ownerSlot,
+            HashSet<int> unitIds,
+            LanePath oldMidPath,
+            int nextOpponentSlot)
+        {
+            if (unitIds == null || unitIds.Count == 0 || oldMidPath == null)
+            {
+                return;
+            }
+
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || !unitIds.Contains(unit.UnitId))
+                {
+                    continue;
+                }
+
+                unit.CommittedMarchPath = oldMidPath;
+                unit.MarchFocusOpponentSlot = nextOpponentSlot;
+                unit.CurrentTargetId = null;
+                unit.CurrentTargetBuildingInstanceId = null;
+                unit.BehaviorState = UnitBehaviorState.Move;
+                unit.MarchProgressDistance = CenterMarchRetargetRules.ResolveEffectiveMarchProgress(
+                    unit.MarchProgressDistance,
+                    unit.WorldPosition,
+                    oldMidPath);
+                _committedRoutes[unit.UnitId] = LaneRoute.FromPath(oldMidPath);
+            }
+        }
+
+        /// <summary>
+        /// Remount finished mid units onto a flank toward <paramref name="nextOpponentSlot"/>,
+        /// choosing Left/Right per unit so the arc does not go through the owner's base.
+        /// </summary>
+        public void RemountUnitsToFlankToward(
+            int ownerSlot,
+            HashSet<int> unitIds,
+            int nextOpponentSlot,
+            MatchArenaLayout layout)
+        {
+            if (_routes == null || unitIds == null || unitIds.Count == 0 || layout == null)
+            {
+                return;
+            }
+
+            _routes.TryGetRoute(ownerSlot, GameIds.Lanes.Left, out var leftRoute);
+            _routes.TryGetRoute(ownerSlot, GameIds.Lanes.Right, out var rightRoute);
+
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || !unitIds.Contains(unit.UnitId))
+                {
+                    continue;
+                }
+
+                ClearCommittedMarch(unit);
+                var flankLaneId = CenterMarchRetargetRules.ResolveFlankLaneIdFromPosition(
+                    ownerSlot,
+                    nextOpponentSlot,
+                    unit.WorldPosition,
+                    layout,
+                    leftRoute,
+                    rightRoute);
+                if (!_routes.TryGetRoute(ownerSlot, flankLaneId, out var route))
+                {
+                    continue;
+                }
+
+                unit.LaneId = flankLaneId;
+                unit.MarchFocusOpponentSlot = nextOpponentSlot;
+                unit.CurrentTargetId = null;
+                unit.CurrentTargetBuildingInstanceId = null;
+                unit.MarchProgressDistance = route.ProjectDistance(unit.WorldPosition);
+                unit.BehaviorState = UnitBehaviorState.Move;
+            }
+        }
+
+        /// <summary>
+        /// Remount finished mid units onto a flank route without teleporting their world position.
+        /// </summary>
+        public void RemountUnitsToLane(int ownerSlot, HashSet<int> unitIds, string newLaneId)
+        {
+            if (_routes == null || unitIds == null || unitIds.Count == 0 || string.IsNullOrEmpty(newLaneId))
+            {
+                return;
+            }
+
+            if (!_routes.TryGetRoute(ownerSlot, newLaneId, out var route))
+            {
+                return;
+            }
+
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot || !unitIds.Contains(unit.UnitId))
+                {
+                    continue;
+                }
+
+                ClearCommittedMarch(unit);
+                unit.LaneId = newLaneId;
+                unit.CurrentTargetId = null;
+                unit.CurrentTargetBuildingInstanceId = null;
+                unit.MarchProgressDistance = route.ProjectDistance(unit.WorldPosition);
+                unit.BehaviorState = UnitBehaviorState.Move;
+            }
+        }
+
+        void ClearCommittedMarch(MatchUnitState unit)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            unit.CommittedMarchPath = null;
+            _committedRoutes.Remove(unit.UnitId);
+        }
+
+        bool TryGetEffectiveRoute(MatchUnitState unit, out LaneRoute route)
+        {
+            route = null;
+            if (unit == null)
+            {
+                return false;
+            }
+
+            if (unit.CommittedMarchPath != null)
+            {
+                if (!_committedRoutes.TryGetValue(unit.UnitId, out route)
+                    || route == null
+                    || route.Path != unit.CommittedMarchPath)
+                {
+                    route = LaneRoute.FromPath(unit.CommittedMarchPath);
+                    _committedRoutes[unit.UnitId] = route;
+                }
+
+                return true;
+            }
+
+            return _routes != null && _routes.TryGetRoute(unit.OwnerSlot, unit.LaneId, out route);
+        }
+
+        void TryCompleteCommittedMidMarch(MatchUnitState unit)
+        {
+            if (unit?.CommittedMarchPath == null || _layout == null)
+            {
+                return;
+            }
+
+            if (!TryGetEffectiveRoute(unit, out var route))
+            {
+                return;
+            }
+
+            if (!CenterMarchRetargetRules.HasReachedRouteEnd(
+                    unit.MarchProgressDistance,
+                    route.TotalLength,
+                    unit.WorldPosition,
+                    route.Path.End))
+            {
+                return;
+            }
+
+            var opponent = unit.MarchFocusOpponentSlot;
+            if (opponent < 0)
+            {
+                ClearCommittedMarch(unit);
+                unit.MarchFocusOpponentSlot = -1;
+                return;
+            }
+
+            var ids = new HashSet<int> { unit.UnitId };
+            RemountUnitsToFlankToward(unit.OwnerSlot, ids, opponent, _layout);
+        }
+
+        /// <summary>
+        /// Units whose march focus is the eliminated foe (flank marchers + mid-commit).
+        /// </summary>
+        public HashSet<int> CollectUnitsFocusingOpponent(int ownerSlot, int opponentSlot)
+        {
+            var result = new HashSet<int>();
+            foreach (var unit in _units)
+            {
+                if (!unit.IsAlive || unit.OwnerSlot != ownerSlot)
+                {
+                    continue;
+                }
+
+                if (unit.MarchFocusOpponentSlot == opponentSlot)
+                {
+                    result.Add(unit.UnitId);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// After a flank/mid focus foe dies: remount living owner's units onto a flank
+        /// toward the next alive enemy (no arc through own base).
+        /// </summary>
+        public void RetargetUnitsFocusingEliminated(
+            int eliminatedSlot,
+            IReadOnlyList<MatchPlayerState> players,
+            MatchArenaLayout layout)
+        {
+            if (players == null || layout == null)
+            {
+                return;
+            }
+
+            for (var owner = 0; owner < players.Count; owner++)
+            {
+                if (players[owner].IsEliminated || owner == eliminatedSlot)
+                {
+                    continue;
+                }
+
+                var focusing = CollectUnitsFocusingOpponent(owner, eliminatedSlot);
+                if (focusing.Count == 0)
+                {
+                    continue;
+                }
+
+                var next = CenterMarchRetargetRules.ResolveNextAliveClockwise(
+                    eliminatedSlot,
+                    players,
+                    owner);
+                if (!next.HasValue)
+                {
+                    foreach (var id in focusing)
+                    {
+                        if (_unitById.TryGetValue(id, out var unit))
+                        {
+                            unit.MarchFocusOpponentSlot = -1;
+                        }
+                    }
+
+                    continue;
+                }
+
+                // Still finishing old mid: only retarget the eventual flank foe.
+                var remountIds = new HashSet<int>();
+                foreach (var id in focusing)
+                {
+                    if (!_unitById.TryGetValue(id, out var unit))
+                    {
+                        continue;
+                    }
+
+                    if (unit.CommittedMarchPath != null)
+                    {
+                        unit.MarchFocusOpponentSlot = next.Value;
+                        continue;
+                    }
+
+                    remountIds.Add(id);
+                }
+
+                if (remountIds.Count == 0)
+                {
+                    continue;
+                }
+
+                RemountUnitsToFlankToward(owner, remountIds, next.Value, layout);
             }
         }
 
@@ -272,6 +671,8 @@ namespace Game.Gameplay.Combat
                 isHero: isHero,
                 heroSlot: heroSlot);
             unit.MarchProgressDistance = progressDistance;
+            ApplySpawnFacing(unit, route, distanceAlongLane);
+            ApplyMarchFocusFromLane(unit, ownerSlot, laneId);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
             return unit;
@@ -536,8 +937,33 @@ namespace Game.Gameplay.Combat
                 pending.MarchMoveSpeed,
                 pending.SpawnDistance);
             unit.MarchProgressDistance = progressDistance;
+            ApplySpawnFacing(unit, route, pending.SpawnDistance);
+            ApplyMarchFocusFromLane(unit, pending.OwnerSlot, pending.LaneId);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
+        }
+
+        void ApplyMarchFocusFromLane(MatchUnitState unit, int ownerSlot, string laneId)
+        {
+            if (unit == null || _graph == null || string.IsNullOrEmpty(laneId))
+            {
+                return;
+            }
+
+            if (_graph.TryGetLane(ownerSlot, laneId, out var lane) && lane != null)
+            {
+                unit.MarchFocusOpponentSlot = lane.OpponentSlot;
+            }
+        }
+
+        static void ApplySpawnFacing(MatchUnitState unit, LaneRoute route, float distanceAlongLane)
+        {
+            var facing = route.EvaluateDirectionAtDistance(distanceAlongLane);
+            facing.y = 0f;
+            if (facing.sqrMagnitude > 0.0001f)
+            {
+                unit.FacingDirection = facing.normalized;
+            }
         }
 
         void TickUnit(MatchUnitState unit, float deltaTime)
@@ -547,7 +973,14 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            if (!_routes.TryGetRoute(unit.OwnerSlot, unit.LaneId, out var route))
+            if (!TryGetEffectiveRoute(unit, out var route))
+            {
+                return;
+            }
+
+            TryCompleteCommittedMidMarch(unit);
+            if (unit.CommittedMarchPath == null
+                && !TryGetEffectiveRoute(unit, out route))
             {
                 return;
             }
@@ -562,6 +995,7 @@ namespace Game.Gameplay.Combat
             {
                 unit.TargetScanCooldown = UnitLocomotionRules.TargetScanInterval;
                 ScanForNearestTarget(unit);
+                TryAcquireEndOfLaneBuilding(unit, route);
             }
 
             var buildingTarget = GetBuildingByInstanceId(unit.CurrentTargetBuildingInstanceId);
@@ -599,6 +1033,7 @@ namespace Game.Gameplay.Combat
 
             unit.BehaviorState = UnitBehaviorState.Move;
             TickMove(unit, route, deltaTime);
+            TryCompleteCommittedMidMarch(unit);
         }
 
         void TickMove(MatchUnitState unit, LaneRoute route, float deltaTime)
@@ -626,7 +1061,7 @@ namespace Game.Gameplay.Combat
                 destination,
                 maxStep,
                 allies,
-                out _,
+                out var moveFacing,
                 unit.UnitId);
             unit.WorldPosition = ApplyWalkableMovement(
                 route,
@@ -637,7 +1072,7 @@ namespace Game.Gameplay.Combat
             unit.MarchProgressDistance = route.AdvanceProgress(
                 unit.MarchProgressDistance,
                 route.ProjectDistanceForward(unit.WorldPosition, unit.MarchProgressDistance));
-            ApplyFacingFromMovement(unit, previousPosition);
+            ApplyMoveFacing(unit, moveFacing, previousPosition, deltaTime);
         }
 
         void TickChase(MatchUnitState unit, LaneRoute route, MatchUnitState target, float deltaTime)
@@ -667,7 +1102,7 @@ namespace Game.Gameplay.Combat
                 target.WorldPosition,
                 maxStep,
                 allies,
-                out _,
+                out var moveFacing,
                 unit.UnitId);
             unit.WorldPosition = ApplyWalkableMovement(
                 route,
@@ -675,7 +1110,10 @@ namespace Game.Gameplay.Combat
                 proposed,
                 maxStep,
                 route.ProjectDistance(proposed));
-            ApplyFacingFromMovement(unit, previousPosition);
+            unit.MarchProgressDistance = route.AdvanceProgress(
+                unit.MarchProgressDistance,
+                route.ProjectDistanceForward(unit.WorldPosition, unit.MarchProgressDistance));
+            ApplyMoveFacing(unit, moveFacing, previousPosition, deltaTime);
         }
 
         void TickAttack(MatchUnitState unit, MatchUnitState target, float deltaTime)
@@ -699,7 +1137,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            UpdateFacingTowards(unit, target.WorldPosition);
+            UpdateFacingTowards(unit, target.WorldPosition, deltaTime);
 
             unit.AttackCooldownRemaining -= deltaTime;
             if (unit.AttackCooldownRemaining <= 0f)
@@ -884,13 +1322,42 @@ namespace Game.Gameplay.Combat
                     _graph))
             {
                 unit.CurrentTargetBuildingInstanceId = null;
+            }
+        }
+
+        /// <summary>
+        /// At open-path finish with nothing in aggro: push toward nearest remaining enemy building
+        /// (e.g. flank barracks past Main — outside normal aggro).
+        /// </summary>
+        void TryAcquireEndOfLaneBuilding(MatchUnitState unit, LaneRoute route)
+        {
+            if (unit.CurrentTargetId != null || unit.CurrentTargetBuildingInstanceId != null)
+            {
                 return;
             }
 
-            if (GetBuildingSurfaceDistance(unit.WorldPosition, building)
-                > CombatRules.GetAggroRadius(unit.Stats))
+            if (_buildings == null || route == null || route.IsClosedLoop)
             {
-                unit.CurrentTargetBuildingInstanceId = null;
+                return;
+            }
+
+            if (!CenterMarchRetargetRules.HasReachedRouteEnd(
+                    unit.MarchProgressDistance,
+                    route.TotalLength,
+                    unit.WorldPosition,
+                    route.Path.End))
+            {
+                return;
+            }
+
+            var building = _buildings.FindNearestEnemyBuilding(
+                unit.OwnerSlot,
+                unit.LaneId,
+                unit.WorldPosition,
+                _graph);
+            if (building != null)
+            {
+                unit.CurrentTargetBuildingInstanceId = building.InstanceId;
             }
         }
 
@@ -920,7 +1387,7 @@ namespace Game.Gameplay.Combat
                 engagePoint,
                 maxStep,
                 allies,
-                out _,
+                out var moveFacing,
                 unit.UnitId);
             unit.WorldPosition = ApplyWalkableMovement(
                 route,
@@ -928,7 +1395,10 @@ namespace Game.Gameplay.Combat
                 proposed,
                 maxStep,
                 route.ProjectDistance(proposed));
-            ApplyFacingFromMovement(unit, previousPosition);
+            unit.MarchProgressDistance = route.AdvanceProgress(
+                unit.MarchProgressDistance,
+                route.ProjectDistanceForward(unit.WorldPosition, unit.MarchProgressDistance));
+            ApplyMoveFacing(unit, moveFacing, previousPosition, deltaTime);
         }
 
         Vector3 ApplyWalkableMovement(
@@ -947,7 +1417,8 @@ namespace Game.Gameplay.Combat
                 proposedPosition,
                 maxStep,
                 progressDistance,
-                centerRadius);
+                centerRadius,
+                _walkable);
         }
 
         void TickBuildingAttack(MatchUnitState unit, BuildingState building, float deltaTime)
@@ -966,7 +1437,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            UpdateFacingTowards(unit, building.WorldPosition);
+            UpdateFacingTowards(unit, building.WorldPosition, deltaTime);
 
             unit.AttackCooldownRemaining -= deltaTime;
             if (unit.AttackCooldownRemaining <= 0f)
@@ -983,6 +1454,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            attacker.AttackSwingSerial++;
             var rawDamage = CombatRules.RollDamage(
                 attacker.Stats.DamageMin,
                 attacker.Stats.DamageMax,
@@ -1181,24 +1653,49 @@ namespace Game.Gameplay.Combat
             return false;
         }
 
-        void UpdateFacingTowards(MatchUnitState unit, Vector3 targetPosition)
+        void UpdateFacingTowards(MatchUnitState unit, Vector3 targetPosition, float deltaTime)
         {
             var direction = targetPosition - unit.WorldPosition;
             direction.y = 0f;
             if (direction.sqrMagnitude > 0.0001f)
             {
-                unit.FacingDirection = direction.normalized;
+                unit.FacingDirection = UnitLocomotionRules.StepFacingTowards(
+                    unit.FacingDirection,
+                    direction,
+                    deltaTime);
             }
         }
 
-        static void ApplyFacingFromMovement(MatchUnitState unit, Vector3 previousPosition)
+        static void ApplyMoveFacing(
+            MatchUnitState unit,
+            Vector3 moveFacing,
+            Vector3 previousPosition,
+            float deltaTime)
+        {
+            moveFacing.y = 0f;
+            if (moveFacing.sqrMagnitude > 0.0001f)
+            {
+                unit.FacingDirection = UnitLocomotionRules.StepFacingTowards(
+                    unit.FacingDirection,
+                    moveFacing,
+                    deltaTime);
+                return;
+            }
+
+            ApplyFacingFromMovement(unit, previousPosition, deltaTime);
+        }
+
+        static void ApplyFacingFromMovement(MatchUnitState unit, Vector3 previousPosition, float deltaTime)
         {
             if (UnitLocomotionRules.TryGetFacingFromDisplacement(
                     previousPosition,
                     unit.WorldPosition,
                     out var facing))
             {
-                unit.FacingDirection = facing;
+                unit.FacingDirection = UnitLocomotionRules.StepFacingTowards(
+                    unit.FacingDirection,
+                    facing,
+                    deltaTime);
             }
         }
 
@@ -1209,6 +1706,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            attacker.AttackSwingSerial++;
             var rawDamage = CombatRules.RollDamage(
                 attacker.Stats.DamageMin,
                 attacker.Stats.DamageMax,
@@ -1441,6 +1939,7 @@ namespace Game.Gameplay.Combat
         {
             var index = _units.IndexOf(unit);
             if (index < 0) return;
+            ClearCommittedMarch(unit);
             var last = _units.Count - 1;
             if (index != last) _units[index] = _units[last];
             _units.RemoveAt(last);

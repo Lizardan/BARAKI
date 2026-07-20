@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
@@ -18,12 +17,12 @@ namespace Game.Gameplay.Match
             public Transform Root;
             public Transform Model;
             public Animator Animator;
+            public UnitCombatAnimatorPlayback AnimPlayback = new();
             public UnitWorldStatusBars StatusBars;
             public Collider PickCollider;
             public float GroundRingDiameter;
             public bool HasSpawned;
-            public readonly HashSet<int> TriggeredMeleeStrikeKeys = new();
-            public readonly HashSet<int> TriggeredProjectileIds = new();
+            public int LastAttackSwingSerial;
         }
 
         sealed class DyingVisual
@@ -144,7 +143,8 @@ namespace Game.Gameplay.Match
                     _visuals[unit.UnitId] = visual;
                 }
 
-                if (!visual.HasSpawned
+                var isFirstSpawn = !visual.HasSpawned;
+                if (isFirstSpawn
                     || !NetworkUnitVisualRules.ShouldLerpPositions(_runtime.TickMode))
                 {
                     visual.Root.position = position;
@@ -163,10 +163,13 @@ namespace Game.Gameplay.Match
                 if (facing.sqrMagnitude > 0.0001f)
                 {
                     var targetRotation = Quaternion.LookRotation(facing.normalized, Vector3.up);
-                    visual.Root.rotation = Quaternion.Slerp(
-                        visual.Root.rotation,
-                        targetRotation,
-                        12f * Time.deltaTime);
+                    // Instant facing only on first visual spawn; otherwise keep smooth turn.
+                    visual.Root.rotation = isFirstSpawn
+                        ? targetRotation
+                        : Quaternion.Slerp(
+                            visual.Root.rotation,
+                            targetRotation,
+                            8f * Time.deltaTime);
                 }
 
                 if (visual.Model != null)
@@ -210,36 +213,19 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            visual.Animator.SetFloat(
-                UnitCombatAnimatorDriver.SpeedParam,
-                UnitCombatAnimatorDriver.ResolveSpeed(unit.BehaviorState));
-
-            foreach (var strike in combat.MeleeStrikes)
+            var fireAttack = false;
+            if (unit.AttackSwingSerial != visual.LastAttackSwingSerial)
             {
-                if (strike.AttackerUnitId != unit.UnitId)
-                {
-                    continue;
-                }
-
-                var key = RuntimeHelpers.GetHashCode(strike);
-                if (visual.TriggeredMeleeStrikeKeys.Add(key))
-                {
-                    visual.Animator.SetTrigger(UnitCombatAnimatorDriver.AttackParam);
-                }
+                visual.LastAttackSwingSerial = unit.AttackSwingSerial;
+                fireAttack = unit.AttackSwingSerial > 0;
             }
 
-            foreach (var projectile in combat.Projectiles)
-            {
-                if (projectile.AttackerUnitId != unit.UnitId)
-                {
-                    continue;
-                }
-
-                if (visual.TriggeredProjectileIds.Add(projectile.ProjectileId))
-                {
-                    visual.Animator.SetTrigger(UnitCombatAnimatorDriver.AttackParam);
-                }
-            }
+            UnitCombatAnimatorDriver.Tick(
+                visual.Animator,
+                visual.AnimPlayback,
+                unit.BehaviorState,
+                fireAttack,
+                fireDeath: false);
         }
 
         void BeginDeath(UnitVisual visual)
@@ -253,7 +239,12 @@ namespace Game.Gameplay.Match
 
             if (visual.Animator != null)
             {
-                visual.Animator.SetTrigger(UnitCombatAnimatorDriver.DeathParam);
+                UnitCombatAnimatorDriver.Tick(
+                    visual.Animator,
+                    visual.AnimPlayback,
+                    UnitBehaviorState.Attack,
+                    fireAttack: false,
+                    fireDeath: true);
             }
 
             _dyingVisuals.Add(new DyingVisual

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Billboard HP and optional mana strips above a greybox unit (Dota-style).</summary>
+    /// <summary>HP/mana strips above units and buildings; pitch-only billboard toward the camera.</summary>
     public sealed class UnitWorldStatusBars : MonoBehaviour
     {
         const float SizeMultiplier = 1.5f;
@@ -121,13 +121,31 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var toCamera = transform.position - camera.transform.position;
-            if (toCamera.sqrMagnitude < 0.001f)
+            // Pitch only (around X): face camera elevation. No yaw spin around Y.
+            transform.rotation = ResolvePitchOnlyBillboard(
+                transform.position,
+                camera.transform.position,
+                lockedYawDegrees: 0f);
+        }
+
+        /// <summary>
+        /// Pitch-only billboard: tilt around X toward the camera, keep yaw locked (no spin around Y).
+        /// </summary>
+        public static Quaternion ResolvePitchOnlyBillboard(
+            Vector3 barPosition,
+            Vector3 cameraPosition,
+            float lockedYawDegrees = 0f)
+        {
+            var toCamera = cameraPosition - barPosition;
+            var horizontalDistance = new Vector2(toCamera.x, toCamera.z).magnitude;
+            if (horizontalDistance < 0.0001f && Mathf.Abs(toCamera.y) < 0.0001f)
             {
-                return;
+                return Quaternion.Euler(0f, lockedYawDegrees, 0f);
             }
 
-            transform.rotation = Quaternion.LookRotation(toCamera.normalized, Vector3.up);
+            // Camera above → positive Euler X so the bar face tips toward the camera (not mirrored).
+            var pitchDegrees = Mathf.Atan2(toCamera.y, Mathf.Max(horizontalDistance, 0.0001f)) * Mathf.Rad2Deg;
+            return Quaternion.Euler(pitchDegrees, lockedYawDegrees, 0f);
         }
 
         static void DestroyCollider(GameObject target)
