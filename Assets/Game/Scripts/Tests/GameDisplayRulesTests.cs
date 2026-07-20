@@ -46,8 +46,30 @@ namespace Game.Tests
                 "Screenmanager Fullscreen mode",
                 GameDisplayRules.ScreenFullscreenModePrefsKey);
             Assert.AreEqual(
+                "Screenmanager Window Position X",
+                GameDisplayRules.ScreenWindowPositionXPrefsKey);
+            Assert.AreEqual(
+                "Screenmanager Window Position Y",
+                GameDisplayRules.ScreenWindowPositionYPrefsKey);
+            Assert.AreEqual(
                 (int)FullScreenMode.Windowed,
                 GameDisplayRules.StartupFullscreenModePrefsValue);
+        }
+
+        [Test]
+        public void GetCenteredWindowPosition_CentersInsideWorkArea()
+        {
+            var workArea = new RectInt(0, 0, 1920, 1080);
+            var position = GameDisplayRules.GetCenteredWindowPosition(workArea, 1280, 720);
+            Assert.AreEqual(new Vector2Int(320, 180), position);
+        }
+
+        [Test]
+        public void GetCenteredWindowPosition_UsesWorkAreaOrigin()
+        {
+            var workArea = new RectInt(100, 50, 1600, 900);
+            var position = GameDisplayRules.GetCenteredWindowPosition(workArea, 1280, 720);
+            Assert.AreEqual(new Vector2Int(260, 140), position);
         }
     }
 }

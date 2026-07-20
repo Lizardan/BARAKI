@@ -7,6 +7,7 @@ namespace Game.Core
     /// Applies startup windowed resolution and Main Menu fullscreen.
     /// Keeps the player running when the window loses focus.
     /// Persists windowed prefs on quit so the next cold start is not Fullscreen Window.
+    /// Centers the windowed client after FullScreenWindow would leave it at top-left.
     /// </summary>
     public static class GameDisplayBootstrap
     {
@@ -49,7 +50,7 @@ namespace Game.Core
             ApplyMainMenuFullscreen();
         }
 
-        /// <summary>1280×720 windowed — used during Bootstrap and on quit.</summary>
+        /// <summary>1280×720 windowed, centered — used during Bootstrap and on quit.</summary>
         public static void ApplyStartupWindow()
         {
 #if !UNITY_EDITOR
@@ -57,6 +58,7 @@ namespace Game.Core
                 GameDisplayRules.StartupWidth,
                 GameDisplayRules.StartupHeight,
                 GameDisplayRules.StartupFullScreenMode);
+            CenterStartupWindow();
 #endif
         }
 
@@ -83,8 +85,39 @@ namespace Game.Core
             PlayerPrefs.SetInt(
                 GameDisplayRules.ScreenFullscreenModePrefsKey,
                 GameDisplayRules.StartupFullscreenModePrefsValue);
+
+            var display = Screen.mainWindowDisplayInfo;
+            if (display.width > 0 && display.height > 0)
+            {
+                var position = GameDisplayRules.GetCenteredWindowPosition(
+                    display.workArea,
+                    GameDisplayRules.StartupWidth,
+                    GameDisplayRules.StartupHeight);
+                PlayerPrefs.SetInt(GameDisplayRules.ScreenWindowPositionXPrefsKey, position.x);
+                PlayerPrefs.SetInt(GameDisplayRules.ScreenWindowPositionYPrefsKey, position.y);
+            }
+
             PlayerPrefs.Save();
 #endif
+        }
+
+        static void CenterStartupWindow()
+        {
+            var display = Screen.mainWindowDisplayInfo;
+            if (display.width <= 0 || display.height <= 0)
+            {
+                return;
+            }
+
+            var position = GameDisplayRules.GetCenteredWindowPosition(
+                display.workArea,
+                GameDisplayRules.StartupWidth,
+                GameDisplayRules.StartupHeight);
+            Screen.MoveMainWindowTo(display, position);
+
+            PlayerPrefs.SetInt(GameDisplayRules.ScreenWindowPositionXPrefsKey, position.x);
+            PlayerPrefs.SetInt(GameDisplayRules.ScreenWindowPositionYPrefsKey, position.y);
+            PlayerPrefs.Save();
         }
     }
 }
