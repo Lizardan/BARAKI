@@ -350,7 +350,6 @@
     right: -4px;
     top: 0;
     height: 54px;
-    z-index: 0;
 }
 
 .bl__cta-progress-track {
@@ -385,7 +384,6 @@
     height: 54px;
     margin: 0;
     padding: 0;
-    z-index: 2;
     font-size: 17px;
     -unity-font-style: bold;
     color: rgb(255, 255, 255);
@@ -395,8 +393,6 @@
 }
 
 .ui-btn.bl__cta.bl__cta--downloading {
-    position: relative;
-    z-index: 1;
     color: rgba(0, 0, 0, 0);
     background-color: rgba(0, 0, 0, 0);
     border-left-width: 2px;
