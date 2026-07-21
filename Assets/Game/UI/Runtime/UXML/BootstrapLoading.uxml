@@ -1,36 +1,75 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/BarakiTheme.uss" />
-    <Style src="../USS/BootstrapLoading.uss" />
+    <ui:Style src="../USS/BarakiTheme.uss" />
+    <ui:Style src="../USS/BootstrapLoading.uss" />
     <ui:VisualElement name="BootstrapScreen" class="ui-screen bl" picking-mode="Position">
-        <ui:VisualElement name="MenuBackdrop" class="ui-bg" picking-mode="Ignore" />
-        <ui:VisualElement class="ui-bg-shade" picking-mode="Ignore" />
-        <ui:VisualElement class="ui-vignette" picking-mode="Ignore" />
+        <ui:VisualElement name="MenuBackdrop" class="ui-bg bl__bg" picking-mode="Ignore" />
+        <ui:VisualElement class="bl__ambient bl__ambient--fire" picking-mode="Ignore" />
+        <ui:VisualElement class="bl__ambient bl__ambient--ice" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-bg-shade bl__shade" picking-mode="Ignore" />
+        <ui:VisualElement class="ui-vignette bl__vignette" picking-mode="Ignore" />
 
-        <ui:VisualElement name="CenterStack" class="bl__center" picking-mode="Ignore">
-            <ui:VisualElement name="LoadingPanel" class="bl__panel" picking-mode="Position">
-                <ui:Label name="LoadingTitleLabel" text="Загрузка" class="bl__title" picking-mode="Ignore" />
-                <ui:Button name="EnterGameButton" text="В ИГРУ" class="ui-btn ui-btn--primary bl__enter-btn ui-overlay--hidden" />
-                <ui:Label name="StatusLabel" text="" class="bl__status" picking-mode="Ignore" />
-            </ui:VisualElement>
-
-            <ui:VisualElement name="UpdatePanel" class="bl__panel ui-overlay--hidden" picking-mode="Position">
-                <ui:Label name="UpdateTitleLabel" text="Доступно обновление" class="bl__title" picking-mode="Ignore" />
-                <ui:Label name="UpdateRangeLabel" text="" class="bl__range" picking-mode="Ignore" enable-rich-text="true" />
-                <ui:Button name="UpdateButton" text="ОБНОВИТЬ" class="ui-btn ui-btn--primary bl__update-btn" />
-                <ui:VisualElement name="VersionProgress" class="bl__progress ui-overlay--hidden" picking-mode="Ignore">
-                    <ui:VisualElement name="VersionProgressTrack" class="bl__progress-track">
-                        <ui:VisualElement name="VersionProgressFill" class="bl__progress-fill" />
+        <ui:VisualElement name="Shell" class="bl__shell" picking-mode="Ignore">
+            <ui:VisualElement name="NewsFeed" class="bl__feed" picking-mode="Ignore">
+                <ui:VisualElement name="NewsFeatured" class="bl__featured ui-panel ui-panel--lg" picking-mode="Ignore">
+                    <ui:VisualElement class="ui-panel__inner bl__featured-inner" picking-mode="Ignore">
+                        <ui:Label name="NewsFeaturedTag" text="НОВОСТИ" class="bl__news-tag" picking-mode="Ignore" />
+                        <ui:Label name="NewsFeaturedTitle" text="" class="bl__featured-title" picking-mode="Ignore" />
+                        <ui:Label name="NewsFeaturedBody" text="" class="bl__featured-body" picking-mode="Ignore" />
                     </ui:VisualElement>
-                    <ui:Label name="VersionProgressLabel" text="0%" class="bl__progress-label" picking-mode="Ignore" />
                 </ui:VisualElement>
-                <ui:Label name="UpdateStatusLabel" text="" class="bl__status bl__status--error" picking-mode="Ignore" />
+                <ui:VisualElement name="NewsListContainer" class="bl__news-list" picking-mode="Ignore" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="SideRail" class="bl__control ui-panel ui-panel--lg" picking-mode="Position">
+                <ui:VisualElement class="ui-panel__inner bl__control-inner" picking-mode="Position">
+                    <ui:VisualElement name="TopChrome" class="bl__control-head" picking-mode="Ignore">
+                        <ui:Label name="BrandWordmark" text="BARAKI" class="bl__brand" picking-mode="Ignore" />
+                        <ui:Label name="VersionLabel" text="v0.0.0" class="bl__version-text" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="bl__chip-row" picking-mode="Ignore">
+                        <ui:Label text="Windows · FFA" class="bl__chip" picking-mode="Ignore" />
+                        <ui:Label text="2–8 игроков" class="bl__chip bl__chip--muted" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="bl__control-divider" picking-mode="Ignore" />
+
+                    <ui:Label name="SideStatusTitle" text="ПОДГОТОВКА" class="bl__status-tag" picking-mode="Ignore" />
+                    <ui:Label name="SideStatusLabel" text="" class="bl__status-text" picking-mode="Ignore" />
+
+                    <ui:VisualElement name="UpdateMeta" class="bl__update-meta ui-overlay--hidden" picking-mode="Ignore">
+                        <ui:VisualElement name="UpdateRangeLabel" class="bl__range" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <ui:Label name="UpdateStatusLabel" text="" class="bl__update-error ui-overlay--hidden" picking-mode="Ignore" />
+
+                    <ui:VisualElement class="bl__control-spacer" picking-mode="Ignore" />
+
+                    <ui:VisualElement name="LauncherDock" class="bl__actions" picking-mode="Position">
+                        <ui:VisualElement name="LoadingPanel" class="bl__action-panel" picking-mode="Position">
+                            <ui:Button name="EnterGameButton" text="ИГРАТЬ" class="ui-btn ui-btn--primary bl__cta ui-overlay--hidden" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="UpdatePanel" class="bl__action-panel ui-overlay--hidden" picking-mode="Position">
+                            <ui:VisualElement name="UpdateButtonHost" class="bl__cta-host" picking-mode="Position">
+                                <ui:VisualElement name="VersionProgress" class="bl__cta-progress ui-overlay--hidden" picking-mode="Ignore">
+                                    <ui:VisualElement name="VersionProgressTrack" class="bl__cta-progress-track">
+                                        <ui:VisualElement name="VersionProgressFill" class="bl__cta-progress-fill" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                                <ui:Button name="UpdateButton" text="ОБНОВИТЬ" class="ui-btn ui-btn--primary bl__cta" />
+                                <ui:Label name="VersionProgressLabel" text="" class="bl__cta-progress-label ui-overlay--hidden" picking-mode="Ignore" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted bl__quit" />
+
+                    <ui:Label name="LoadingTitleLabel" text="ПОДГОТОВКА" class="bl__sr" picking-mode="Ignore" />
+                    <ui:Label name="StatusLabel" text="" class="bl__sr" picking-mode="Ignore" />
+                    <ui:Label name="UpdateTitleLabel" text="ДОСТУПНО ОБНОВЛЕНИЕ" class="bl__sr" picking-mode="Ignore" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <ui:VisualElement name="VersionBar" class="bl__version-bar" picking-mode="Ignore">
-            <ui:Label name="VersionLabel" text="v0.0.0" class="bl__version-text" picking-mode="Ignore" />
-        </ui:VisualElement>
-
-        <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted bl__quit" />
     </ui:VisualElement>
 </ui:UXML>

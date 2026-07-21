@@ -172,5 +172,12 @@ namespace Game.Tests
             Assert.IsFalse(FriendsHubRules.IsInvitesTab(FriendsHubTab.Friends));
             Assert.IsTrue(FriendsHubRules.IsInvitesTab(FriendsHubTab.Invites));
         }
+
+        [Test]
+        public void FriendRequestActionGlyphs_AreCheckAndBallotX()
+        {
+            Assert.AreEqual("✓", FriendsHubRules.AcceptRequestGlyph);
+            Assert.AreEqual("✕", FriendsHubRules.DeclineRequestGlyph);
+        }
     }
 }

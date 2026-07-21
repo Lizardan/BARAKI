@@ -392,13 +392,13 @@ namespace Game.UI.Views
             var actions = new VisualElement();
             actions.AddToClassList("mm__friend-row__actions");
 
-            var acceptButton = new Button { text = "✓" };
+            var acceptButton = new Button { text = FriendsHubRules.AcceptRequestGlyph };
             acceptButton.clicked += () => AcceptRequestAsync(request.PlayerId).Forget();
             acceptButton.AddToClassList("mm__friend-row__btn");
             acceptButton.AddToClassList("mm__friend-row__btn--accept");
             actions.Add(acceptButton);
 
-            var declineButton = new Button { text = "✕" };
+            var declineButton = new Button { text = FriendsHubRules.DeclineRequestGlyph };
             declineButton.AddToClassList("mm__friend-row__btn");
             declineButton.AddToClassList("mm__friend-row__btn--decline");
             declineButton.clicked += () => DeclineRequestAsync(request.PlayerId).Forget();

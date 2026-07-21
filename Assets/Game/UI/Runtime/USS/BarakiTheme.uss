@@ -3,7 +3,20 @@
 /* Tokens: cream #F2E6C8 | accent #C9A35A | muted #A89878 | ink #12100E | panel #1C1712 */
 
 * {
-    -unity-font-definition: url("../Fonts/NotoSans.asset");
+    -unity-font: url("../Fonts/NotoSans.ttf");
+}
+
+/* Dingbats / check / ballot-X live in Symbols 2 — not in Noto Sans */
+.mm__friend-row__btn--accept,
+.mm__friend-row__btn--decline,
+.mm__avatar-text,
+.mm-avatar-option {
+    -unity-font: url("../Fonts/NotoSansSymbols2-Regular.ttf");
+}
+
+/* Arrow → lives in Noto Sans Symbols (v1) */
+.bl__range-arrow {
+    -unity-font: url("../Fonts/NotoSansSymbols-Regular.ttf");
 }
 
 .ui-screen {

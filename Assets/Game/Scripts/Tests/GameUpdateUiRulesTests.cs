@@ -25,10 +25,10 @@ namespace Game.Tests
         public void FormatUpdateRange_HighlightsRemoteVersionInBlue()
         {
             Assert.AreEqual(
-                "v0.1.2 — <color=#4A9EFF>v0.1.4</color>",
+                "v0.1.2 → <color=#4A9EFF>v0.1.4</color>",
                 GameUpdateUiRules.FormatUpdateRange("0.1.2", "0.1.4"));
             Assert.AreEqual(
-                "v0.1.2 — <color=#4A9EFF>v0.1.4</color>",
+                "v0.1.2 → <color=#4A9EFF>v0.1.4</color>",
                 GameUpdateUiRules.FormatUpdateRange("v0.1.2", "v0.1.4"));
         }
     }

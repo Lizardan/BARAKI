@@ -84,7 +84,7 @@
             <ui:VisualElement name="ProfileEditDialog" class="ui-dialog mm-profile-edit">
                 <ui:VisualElement class="ui-dialog__header mm-modes__header">
                     <ui:Label text="ПРОФИЛЬ" class="ui-dialog__title" />
-                    <ui:Button name="ProfileEditCloseButton" text="✕" class="ui-dialog__close" />
+                    <ui:Button name="ProfileEditCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body mm-profile-edit__body">
                     <ui:Label text="Аватар" class="ui-label mm-profile-edit__label" />
@@ -102,7 +102,7 @@
             <ui:VisualElement name="MenuDialog" class="ui-dialog">
                 <ui:VisualElement class="ui-dialog__header">
                     <ui:Label text="НАСТРОЙКИ" class="ui-dialog__title" />
-                    <ui:Button name="SettingsCloseButton" text="✕" class="ui-dialog__close" />
+                    <ui:Button name="SettingsCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body">
                     <ui:VisualElement class="ui-dialog__row">
@@ -125,7 +125,7 @@
             <ui:VisualElement class="ui-dialog mm-entry">
                 <ui:VisualElement class="ui-dialog__header mm-modes__header">
                     <ui:Label text="МАТЧ" class="ui-dialog__title" />
-                    <ui:Button name="MatchEntryCloseButton" text="✕" class="ui-dialog__close" />
+                    <ui:Button name="MatchEntryCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body mm-entry__body">
                     <ui:Label name="MatchEntryErrorLabel" text="" class="ui-meta mm-modes__error" />
@@ -143,7 +143,7 @@
         <ui:VisualElement name="LobbyInviteBanner" class="mm__invite-banner ui-overlay--hidden">
             <ui:Label name="LobbyInviteBannerLabel" text="" class="mm__invite-banner__text" />
             <ui:Button name="LobbyInviteJoinButton" text="ВОЙТИ" class="ui-btn ui-btn--primary mm__invite-banner__btn" />
-            <ui:Button name="LobbyInviteDismissButton" text="✕" class="ui-btn mm__invite-banner__dismiss" />
+            <ui:Button name="LobbyInviteDismissButton" text="×" class="ui-btn mm__invite-banner__dismiss" />
         </ui:VisualElement>
 
         <ui:VisualElement name="ModeSelectOverlay" class="ui-overlay ui-overlay--hidden">
@@ -151,7 +151,7 @@
             <ui:VisualElement class="ui-dialog mm-modes">
                 <ui:VisualElement class="ui-dialog__header mm-modes__header">
                     <ui:Label text="РЕЖИМ" class="ui-dialog__title" />
-                    <ui:Button name="ModeSelectCloseButton" text="✕" class="ui-dialog__close" />
+                    <ui:Button name="ModeSelectCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:Label name="ModeSelectErrorLabel" text="" class="ui-meta mm-modes__error" />
                 <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />

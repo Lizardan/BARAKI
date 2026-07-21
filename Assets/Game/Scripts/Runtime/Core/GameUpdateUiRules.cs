@@ -39,13 +39,15 @@ namespace Game.Core
         public static string FormatProgressLabel(float progress01) =>
             ProgressPercent(progress01) + "%";
 
+        /// <summary>Bootstrap version range separator (Noto Sans Symbols — not in Noto Sans).</summary>
+        public const string UpdateRangeArrow = "→";
+
         /// <summary>
-        /// Bootstrap copy: local — remote with remote tinted blue for UITK rich text.
-        /// Uses em dash (same as Main Menu copy) — Noto Sans has the glyph.
+        /// Bootstrap copy: local → remote with remote tinted blue for UITK rich text.
         /// </summary>
         public static string FormatUpdateRange(string localVersion, string remoteVersion) =>
             FormatVersionLabel(localVersion)
-            + " — <color=#4A9EFF>"
+            + " " + UpdateRangeArrow + " <color=#4A9EFF>"
             + FormatVersionLabel(remoteVersion)
             + "</color>";
     }

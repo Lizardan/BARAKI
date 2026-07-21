@@ -50,5 +50,16 @@ namespace Game.Tests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(PlayerProfileService.GetAvatarGlyph(i)));
             }
         }
+
+        [Test]
+        public void GetAvatarGlyph_UsesGeometricDingbats()
+        {
+            var expected = new[] { "◆", "●", "▲", "■", "✦", "❖", "◉", "▣" };
+            Assert.AreEqual(PlayerProfileService.AvatarCount, expected.Length);
+            for (var i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(expected[i], PlayerProfileService.GetAvatarGlyph(i));
+            }
+        }
     }
 }

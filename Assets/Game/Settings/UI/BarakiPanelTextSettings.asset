@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.PanelTextSettings
   m_Version: 
   m_ShowObsoleteProperties: 0
-  m_DefaultFontAsset: {fileID: 11400000, guid: 9c59a2c32b3038641a09b19579628b46, type: 2}
+  m_DefaultFontAsset: {fileID: 0}
   m_DefaultFontAssetPath: Fonts & Materials/
   m_FallbackFontAssets: []
   m_MatchMaterialPreset: 0
   m_MissingCharacterUnicode: 0
   m_FallbackOSFontAssets: []
-  m_ClearDynamicDataOnBuild: 1
+  m_ClearDynamicDataOnBuild: 0
   m_EnableEmojiSupport: 0
   m_EmojiFallbackTextAssets: []
   m_DefaultSpriteAsset: {fileID: 0}
@@ -35,4 +35,6 @@ MonoBehaviour:
     m_FollowingCharacters: {fileID: 0}
     m_UseModernHangulLineBreakingRules: 0
   m_DisplayWarnings: 0
-  m_FontReferences: []
+  m_FontReferences:
+  - font: {fileID: 12800000, guid: 94a84e8c6f626d94e85dee37e072070c, type: 3}
+    fontAsset: {fileID: 0}

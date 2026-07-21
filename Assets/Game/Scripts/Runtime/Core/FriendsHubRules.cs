@@ -19,6 +19,10 @@ namespace Game.Core
         public const string IncomingEmptyText = "Нет входящих приглашений.";
         public const string LobbyFullLabel = "НЕТ МЕСТ";
 
+        /// <summary>Accept / decline glyphs (Noto Sans Symbols 2 — not in Noto Sans).</summary>
+        public const string AcceptRequestGlyph = "✓";
+        public const string DeclineRequestGlyph = "✕";
+
         public static string NormalizePlayerId(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();

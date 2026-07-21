@@ -150,7 +150,7 @@ namespace Game.Tests
             var root = uiDocument.visualTreeAsset.CloneTree();
             Assert.IsNotNull(root.Q<Label>("StatusLabel"), "BootstrapLoading.uxml should include StatusLabel.");
             Assert.IsNotNull(root.Q<Label>("UpdateTitleLabel"), "BootstrapLoading.uxml should include UpdateTitleLabel.");
-            Assert.IsNotNull(root.Q<Label>("UpdateRangeLabel"), "BootstrapLoading.uxml should include UpdateRangeLabel.");
+            Assert.IsNotNull(root.Q<VisualElement>("UpdateRangeLabel"), "BootstrapLoading.uxml should include UpdateRangeLabel.");
             Assert.IsNotNull(root.Q<Button>("UpdateButton"), "BootstrapLoading.uxml should include UpdateButton.");
             Assert.IsNotNull(root.Q<Button>("EnterGameButton"), "BootstrapLoading.uxml should include EnterGameButton.");
             Assert.IsNotNull(root.Q<Button>("QuitButton"), "BootstrapLoading.uxml should include QuitButton.");
@@ -159,6 +159,18 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<VisualElement>("VersionProgressFill"), "BootstrapLoading.uxml should include VersionProgressFill.");
             Assert.IsNotNull(root.Q<Label>("VersionProgressLabel"), "BootstrapLoading.uxml should include VersionProgressLabel.");
             Assert.IsNotNull(root.Q<Label>("UpdateStatusLabel"), "BootstrapLoading.uxml should include UpdateStatusLabel.");
+
+            Assert.IsNotNull(root.Q<VisualElement>("TopChrome"), "BootstrapLoading.uxml should include TopChrome.");
+            Assert.IsNotNull(root.Q<VisualElement>("SideRail"), "BootstrapLoading.uxml should include SideRail.");
+            Assert.IsNotNull(root.Q<VisualElement>("NewsFeed"), "BootstrapLoading.uxml should include NewsFeed.");
+            Assert.IsNotNull(root.Q<VisualElement>("NewsFeatured"), "BootstrapLoading.uxml should include NewsFeatured.");
+            Assert.IsNotNull(root.Q<VisualElement>("NewsListContainer"), "BootstrapLoading.uxml should include NewsListContainer.");
+            Assert.IsNotNull(root.Q<Label>("NewsFeaturedTitle"), "BootstrapLoading.uxml should include NewsFeaturedTitle.");
+            Assert.IsNotNull(root.Q<Label>("NewsFeaturedBody"), "BootstrapLoading.uxml should include NewsFeaturedBody.");
+            Assert.IsNotNull(root.Q<Label>("SideStatusTitle"), "BootstrapLoading.uxml should include SideStatusTitle.");
+            Assert.IsNotNull(root.Q<Label>("SideStatusLabel"), "BootstrapLoading.uxml should include SideStatusLabel.");
+            Assert.IsNull(root.Q<VisualElement>("BrandLogo"), "Bootstrap launcher should not include BrandLogo.");
+            Assert.IsNull(root.Q<VisualElement>("Hero"), "Bootstrap launcher should not include centered Hero.");
         }
 
         [Test]
