@@ -61,7 +61,8 @@ namespace Game.Gameplay.Match
             var halfHeight = height * 0.5f;
             var centerline = GetCanonicalArcSamples(corner, RoadArcSegments, radius);
             GetClockwiseEndpoints(corner, out var entry, out var exit, radius);
-            var perimeterHalfSize = Mathf.Max(Mathf.Abs(corner.x), Mathf.Abs(corner.z));
+            var halfX = Mathf.Abs(corner.x);
+            var halfZ = Mathf.Abs(corner.z);
             var vertexCount = centerline.Count * 2;
             var vertices = new Vector3[vertexCount];
             var triangles = new int[(centerline.Count - 1) * 6];
@@ -73,7 +74,8 @@ namespace Game.Gameplay.Match
                 GetRoadWidthAxes(
                     point,
                     corner,
-                    perimeterHalfSize,
+                    halfX,
+                    halfZ,
                     i == 0 ? entry : null,
                     i == centerline.Count - 1 ? exit : null,
                     i > 0 ? centerline[i - 1] : centerline[i + 1],
@@ -153,7 +155,8 @@ namespace Game.Gameplay.Match
         static void GetRoadWidthAxes(
             Vector3 point,
             Vector3 corner,
-            float perimeterHalfSize,
+            float halfX,
+            float halfZ,
             Vector3? pinnedEntry,
             Vector3? pinnedExit,
             Vector3 previous,
@@ -163,13 +166,13 @@ namespace Game.Gameplay.Match
         {
             if (pinnedEntry.HasValue)
             {
-                GetStraightStripWidthAxes(pinnedEntry.Value, perimeterHalfSize, out innerDir, out outerDir);
+                GetStraightStripWidthAxes(pinnedEntry.Value, halfX, halfZ, out innerDir, out outerDir);
                 return;
             }
 
             if (pinnedExit.HasValue)
             {
-                GetStraightStripWidthAxes(pinnedExit.Value, perimeterHalfSize, out innerDir, out outerDir);
+                GetStraightStripWidthAxes(pinnedExit.Value, halfX, halfZ, out innerDir, out outerDir);
                 return;
             }
 
@@ -177,7 +180,7 @@ namespace Game.Gameplay.Match
             tangent.y = 0f;
             if (tangent.sqrMagnitude < 0.0001f)
             {
-                GetStraightStripWidthAxes(point, perimeterHalfSize, out innerDir, out outerDir);
+                GetStraightStripWidthAxes(point, halfX, halfZ, out innerDir, out outerDir);
                 return;
             }
 
@@ -194,27 +197,39 @@ namespace Game.Gameplay.Match
             outerDir = -innerDir;
         }
 
-        static void GetStraightStripWidthAxes(Vector3 edgePoint, float perimeterHalfSize, out Vector3 innerDir, out Vector3 outerDir)
+        static void GetStraightStripWidthAxes(
+            Vector3 edgePoint,
+            float halfX,
+            float halfZ,
+            out Vector3 innerDir,
+            out Vector3 outerDir)
         {
             const float epsilon = 0.01f;
-            if (Mathf.Abs(edgePoint.z - perimeterHalfSize) < epsilon)
+            if (Mathf.Abs(edgePoint.z - halfZ) < epsilon)
             {
                 innerDir = Vector3.back;
                 outerDir = Vector3.forward;
                 return;
             }
 
-            if (Mathf.Abs(edgePoint.z + perimeterHalfSize) < epsilon)
+            if (Mathf.Abs(edgePoint.z + halfZ) < epsilon)
             {
                 innerDir = Vector3.forward;
                 outerDir = Vector3.back;
                 return;
             }
 
-            if (Mathf.Abs(edgePoint.x - perimeterHalfSize) < epsilon)
+            if (Mathf.Abs(edgePoint.x - halfX) < epsilon)
             {
                 innerDir = Vector3.left;
                 outerDir = Vector3.right;
+                return;
+            }
+
+            if (Mathf.Abs(edgePoint.x + halfX) < epsilon)
+            {
+                innerDir = Vector3.right;
+                outerDir = Vector3.left;
                 return;
             }
 

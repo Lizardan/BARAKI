@@ -34,7 +34,7 @@ namespace Game.Gameplay.Match
 
         public const float FilletStripOverlap = 0.5f;
 
-        public const float CenterArenaPlatformY = 0.04f;
+        public const float CenterArenaPlatformY = 0f;
 
         public static float NegativeHalfMin => -PerimeterHalfStripCenter - PerimeterHalfStripLength * 0.5f;
 

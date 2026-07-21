@@ -127,7 +127,7 @@ namespace Game.Gameplay.Match
             var platform = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             platform.name = "CenterArena";
             platform.transform.SetParent(root, false);
-            platform.transform.localPosition = new Vector3(0f, roadHeight * 0.5f, 0f);
+            platform.transform.localPosition = new Vector3(0f, 0f, 0f);
             platform.transform.localRotation = Quaternion.identity;
             platform.transform.localScale = new Vector3(radius * 2f, roadHeight * 0.5f, radius * 2f);
 

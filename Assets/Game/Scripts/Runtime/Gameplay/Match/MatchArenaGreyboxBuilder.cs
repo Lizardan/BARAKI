@@ -376,7 +376,7 @@ namespace Game.Gameplay.Match
             platform.name = name;
             platform.transform.SetParent(parent, false);
 
-            var position = new Vector3(0f, RoadHeight * 0.5f, 0f);
+            var position = new Vector3(0f, 0f, 0f);
             if (localSpace)
             {
                 platform.transform.localPosition = position;
@@ -442,7 +442,7 @@ namespace Game.Gameplay.Match
             var delta = to - from;
             var length = delta.magnitude;
             var mid = (from + to) * 0.5f;
-            mid.y = RoadHeight * 0.5f;
+            mid.y = 0f;
 
             if (localSpace)
             {
@@ -488,7 +488,7 @@ namespace Game.Gameplay.Match
             var patch = GameObject.CreatePrimitive(PrimitiveType.Cube);
             patch.name = "RoadCorner";
             patch.transform.SetParent(parent, false);
-            patch.transform.position = new Vector3(corner.x, RoadHeight * 0.5f, corner.z);
+            patch.transform.position = new Vector3(corner.x, 0f, corner.z);
             patch.transform.localScale = new Vector3(RoadWidth, RoadHeight, RoadWidth);
 
             DestroyCollider(patch.GetComponent<Collider>());
@@ -501,7 +501,7 @@ namespace Game.Gameplay.Match
             var patch = GameObject.CreatePrimitive(PrimitiveType.Cube);
             patch.name = "RoadCorner";
             patch.transform.SetParent(parent, false);
-            patch.transform.localPosition = new Vector3(localCorner.x, RoadHeight * 0.5f, localCorner.z);
+            patch.transform.localPosition = new Vector3(localCorner.x, 0f, localCorner.z);
             patch.transform.localRotation = Quaternion.identity;
             patch.transform.localScale = new Vector3(RoadWidth, RoadHeight, RoadWidth);
 
@@ -526,7 +526,7 @@ namespace Game.Gameplay.Match
             var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
             platform.name = "BaseArena";
             platform.transform.SetParent(slotRoot, false);
-            platform.transform.localPosition = new Vector3(0f, RoadHeight * 0.5f, -BaseArenaOutwardOffset);
+            platform.transform.localPosition = new Vector3(0f, 0f, -BaseArenaOutwardOffset);
             platform.transform.localRotation = Quaternion.identity;
             platform.transform.localScale = new Vector3(BaseArenaWidth, RoadHeight, BaseArenaDepth);
 

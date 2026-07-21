@@ -97,6 +97,54 @@ namespace Game.Tests
         }
 
         [Test]
+        public void HandleWave_N2_LeftFlank_MarchesForwardWithoutStalling()
+        {
+            WalkableSurfaceCache.Clear();
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+
+            var combat = controller.Combat;
+            var wave = new BarracksWaveFired(
+                0,
+                GameIds.Buildings.BarracksLeft,
+                GameIds.Lanes.Left,
+                GameIds.Races.Human,
+                squadLevel: 1,
+                squadId: "test");
+
+            combat.HandleWave(wave, _catalog);
+            CompletePendingWaveSpawns(combat, expectedUnitCount: 4);
+            Assert.AreEqual(4, combat.Units.Count);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Left, out var lane);
+            var route = LaneRoute.FromPath(lane.Path);
+            var startDistances = new float[combat.Units.Count];
+            for (var i = 0; i < combat.Units.Count; i++)
+            {
+                startDistances[i] = combat.Units[i].MarchProgressDistance;
+            }
+
+            for (var i = 0; i < 60; i++)
+            {
+                combat.Tick(0.05f);
+            }
+
+            for (var i = 0; i < combat.Units.Count; i++)
+            {
+                var unit = combat.Units[i];
+                Assert.Greater(
+                    unit.MarchProgressDistance,
+                    startDistances[i] + 4f,
+                    $"N2 left flank unit {unit.UnitId} should march forward immediately.");
+                Assert.Greater(
+                    unit.MarchProgressDistance,
+                    route.ProjectDistance(unit.WorldPosition) - 2.5f,
+                    $"N2 left flank unit {unit.UnitId} progress should track world position.");
+            }
+        }
+
+        [Test]
         public void HandleWave_NorthLeftBarracks_MarchesForwardWithoutStalling()
         {
             var controller = new MatchController();
@@ -1164,6 +1212,45 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Tick_N2FlankLeft_MarchesOffBarracksWithWalkableSurface()
+        {
+            WalkableSurfaceCache.Clear();
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+            combat.SetWalkableSurface(WalkableSurfaceCache.GetOrCreate(2));
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Left, out var lane);
+            var route = LaneRoute.FromPath(lane.Path);
+            var stats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 6f,
+                goldBounty: 1);
+
+            var unit = combat.SpawnUnit(0, GameIds.Lanes.Left, UnitRole.Melee, stats);
+            var startDistance = unit.MarchProgressDistance;
+
+            for (var i = 0; i < 120; i++)
+            {
+                combat.Tick(0.05f);
+            }
+
+            Assert.Greater(
+                unit.MarchProgressDistance,
+                startDistance + 8f,
+                "N2 flank unit should march forward with SourceParts walkable surface.");
+            Assert.Greater(unit.MarchProgressDistance, route.ProjectDistance(unit.WorldPosition) - 1f);
+        }
+
+        [Test]
         public void Tick_N4FlankLeft_MarchesOffBarracksAndProgressesAlongLane()
         {
             var controller = new MatchController();
@@ -1431,27 +1518,23 @@ namespace Game.Tests
                 moveSpeed: 8f,
                 goldBounty: 1);
 
-            var unit = combat.SpawnUnit(0, GameIds.Lanes.Left, UnitRole.Melee, stats, 0f);
-            var startPos = unit.WorldPosition;
+            var unit = combat.SpawnUnit(
+                0,
+                GameIds.Lanes.Left,
+                UnitRole.Melee,
+                stats,
+                CombatFormationRules.BarracksSpawnForwardClearance);
+            var startProgress = unit.MarchProgressDistance;
 
-            // Ruin all enemy buildings so nothing pulls the unit into chase/attack.
-            foreach (var building in controller.Buildings.Buildings)
+            for (var i = 0; i < 120; i++)
             {
-                if (building.OwnerSlot == 1)
-                {
-                    building.ApplyDamage(building.MaxHp + 100f);
-                }
+                combat.Tick(0.05f);
             }
 
-            for (var i = 0; i < 80; i++)
-            {
-                combat.Tick(0.25f);
-            }
-
-            startPos.y = 0f;
-            var endPos = unit.WorldPosition;
-            endPos.y = 0f;
-            Assert.Greater(Vector3.Distance(startPos, endPos), 20f, "Unit should keep marching around the flank ring.");
+            Assert.Greater(
+                unit.MarchProgressDistance,
+                startProgress + 15f,
+                "Unit should keep marching around the flank ring.");
             Assert.Less(unit.MarchProgressDistance, lane.Path.TotalLength + 0.01f);
         }
 

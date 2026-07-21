@@ -16,24 +16,53 @@ namespace Game.Gameplay.Match
         /// <summary>Same corner radius as N=4 map corners.</summary>
         public const float CornerRadius = N4RoadReferenceSpec.PerimeterCornerCenterlineRadius;
 
-        /// <summary>Straight run from side barracks before the first corner.</summary>
-        public const float SideExitStraightLength = 10f;
+        /// <summary>
+        /// Straight run from side barracks to the E/W flank strip join (inner bound),
+        /// same idea as N=4 barracks → strip join.
+        /// </summary>
+        public static float SideExitStraightLength =>
+            SideFlankInnerBound - BarracksLateralOffset;
 
         /// <summary>Local |offset| of side barracks on the base (world |Z| for duel sides).</summary>
         public const float BarracksLateralOffset = 12f;
 
-        /// <summary>Absolute Z of the north/south straight between the two corner arcs.</summary>
-        public static float FlankStraightAbsZ =>
-            BarracksLateralOffset + SideExitStraightLength + CornerRadius;
+        /// <summary>Absolute Z of the north/south perimeter edge (matches greybox).</summary>
+        public static float FlankStraightAbsZ => GetNorthSouthRoadEdge();
 
-        /// <summary>Peak |Z| of the flank (alias for tests / ring).</summary>
-        public static float SemiMinor => FlankStraightAbsZ;
+        /// <summary>Peak |Z| of the flank ring.</summary>
+        public static float SemiMinor => GetNorthSouthRoadEdge();
 
         public const int FlankArcSegments = 12;
         public const int PathArcSegments = 12;
-        public const float CenterArenaDiameter = 44f;
-        public const float CenterArenaHalfSize = CenterArenaDiameter * 0.5f;
-        public const int SourcePartsCount = 6;
+
+        /// <summary>Matches N=4 center platform for duel greybox.</summary>
+        public const float CenterArenaDiameter = N4RoadReferenceSpec.CenterArenaDiameter;
+
+        public const float CenterArenaHalfSize = N4RoadReferenceSpec.CenterArenaHalfSize;
+
+        /// <summary>Side flank half-strip length on E/W walls (N=4 uses 70).</summary>
+        public const float SideFlankHalfStripLength = 20f;
+
+        /// <summary>Spoke × perimeter junction; same as N=4 inner bound (±20).</summary>
+        public static float SideFlankInnerBound => N4RoadReferenceSpec.PerimeterHalfStripOuterBound;
+
+        /// <summary>Outer end of side flank strips on E/W walls (±40).</summary>
+        public static float SideFlankOuterBound => SideFlankInnerBound + SideFlankHalfStripLength;
+
+        /// <summary>N/S perimeter edge moved inward so r=25 corners meet shortened flanks.</summary>
+        public static float GetNorthSouthRoadEdge() => SideFlankOuterBound + CornerRadius;
+
+        public static Vector3 GetMapCornerArcCorner(int index, float halfSize = SemiMajor) =>
+            index switch
+            {
+                0 => new Vector3(halfSize, 0f, GetNorthSouthRoadEdge()),
+                1 => new Vector3(halfSize, 0f, -GetNorthSouthRoadEdge()),
+                2 => new Vector3(-halfSize, 0f, -GetNorthSouthRoadEdge()),
+                _ => new Vector3(-halfSize, 0f, GetNorthSouthRoadEdge()),
+            };
+
+        /// <summary>6 perimeter + 2 E/W spokes + 1 arena + 4 fillets + 4 corners + 2 bases.</summary>
+        public const int SourcePartsCount = 19;
     }
 
     public static class DuelPathBuilder
@@ -53,7 +82,7 @@ namespace Game.Gameplay.Match
             return BuildFlankCenterlineFromBarracks(westStart, eastEnd, northSide);
         }
 
-        /// <summary>Stadium half: barracks → straight → N4 corner → straight → corner → barracks.</summary>
+        /// <summary>Square N=2 half-loop: west barracks → perimeter → east barracks.</summary>
         public static List<Vector3> BuildFlankCenterlineFromBarracks(
             Vector3 westBarracks,
             Vector3 eastBarracks,
@@ -62,17 +91,34 @@ namespace Game.Gameplay.Match
             westBarracks = Flat(westBarracks);
             eastBarracks = Flat(eastBarracks);
 
-            var r = N2RoadReferenceSpec.CornerRadius;
+            var halfSize = N2RoadReferenceSpec.SemiMajor;
             var straight = N2RoadReferenceSpec.SideExitStraightLength;
-            var flankZ = northSide
-                ? N2RoadReferenceSpec.FlankStraightAbsZ
-                : -N2RoadReferenceSpec.FlankStraightAbsZ;
             var westOut = northSide ? Vector3.forward : Vector3.back;
             var eastOut = northSide ? Vector3.forward : Vector3.back;
 
-            var westCorner = new Vector3(westBarracks.x, 0f, flankZ);
-            var eastCorner = new Vector3(eastBarracks.x, 0f, flankZ);
+            var points = new List<Vector3>(48);
+            Append(points, westBarracks);
+            Append(points, westBarracks + westOut * straight);
+            AppendSquarePerimeterHalf(points, northSide, halfSize);
+            Append(points, eastBarracks + eastOut * straight);
+            Append(points, eastBarracks);
+            return points;
+        }
+
+        static void AppendSquarePerimeterHalf(List<Vector3> points, bool northSide, float halfSize)
+        {
+            var r = N2RoadReferenceSpec.CornerRadius;
+            var inner = N2RoadReferenceSpec.SideFlankInnerBound;
+            var outer = N2RoadReferenceSpec.SideFlankOuterBound;
+            var edgeZ = northSide
+                ? N2RoadReferenceSpec.GetNorthSouthRoadEdge()
+                : -N2RoadReferenceSpec.GetNorthSouthRoadEdge();
+            var westX = -halfSize;
+            var eastX = halfSize;
             var turnClockwise = northSide;
+
+            var westCorner = new Vector3(westX, 0f, edgeZ);
+            var eastCorner = new Vector3(eastX, 0f, edgeZ);
 
             PerimeterCornerArc.GetClockwiseEndpoints(westCorner, out var westCwEntry, out var westCwExit, r);
             PerimeterCornerArc.GetClockwiseEndpoints(eastCorner, out var eastCwEntry, out var eastCwExit, r);
@@ -82,9 +128,8 @@ namespace Game.Gameplay.Match
             var eastEntry = turnClockwise ? eastCwEntry : eastCwExit;
             var eastExit = turnClockwise ? eastCwExit : eastCwEntry;
 
-            var points = new List<Vector3>(48);
-            Append(points, westBarracks);
-            Append(points, westBarracks + westOut * straight);
+            Append(points, new Vector3(westX, 0f, northSide ? inner : -inner));
+            Append(points, new Vector3(westX, 0f, northSide ? outer : -outer));
             Append(points, westEntry);
             PerimeterCornerArc.AppendPathWaypoints(
                 points,
@@ -92,7 +137,6 @@ namespace Game.Gameplay.Match
                 turnClockwise,
                 N4PerimeterLaneGeometry.LaneHeight,
                 r);
-            Append(points, westExit);
             AppendStraight(points, westExit, eastEntry);
             Append(points, eastEntry);
             PerimeterCornerArc.AppendPathWaypoints(
@@ -102,9 +146,7 @@ namespace Game.Gameplay.Match
                 N4PerimeterLaneGeometry.LaneHeight,
                 r);
             Append(points, eastExit);
-            Append(points, eastBarracks + eastOut * straight);
-            Append(points, eastBarracks);
-            return points;
+            Append(points, new Vector3(eastX, 0f, northSide ? inner : -inner));
         }
 
         public static LanePath BuildFlankPath(
@@ -192,10 +234,11 @@ namespace Game.Gameplay.Match
         public static Vector3 GetFlankCorner(bool northSide, bool eastSide, float halfSize = -1f)
         {
             halfSize = halfSize > 0f ? halfSize : N2RoadReferenceSpec.SemiMajor;
-            var flankZ = northSide
-                ? N2RoadReferenceSpec.FlankStraightAbsZ
-                : -N2RoadReferenceSpec.FlankStraightAbsZ;
-            return new Vector3(eastSide ? halfSize : -halfSize, 0f, flankZ);
+            var edge = N2RoadReferenceSpec.GetNorthSouthRoadEdge();
+            return new Vector3(
+                eastSide ? halfSize : -halfSize,
+                0f,
+                northSide ? edge : -edge);
         }
 
         static void AppendStraight(List<Vector3> points, Vector3 from, Vector3 to)

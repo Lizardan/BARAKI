@@ -95,6 +95,7 @@ namespace Game.Gameplay.Match
             _combat.Reset(_players, Graph);
             _combat.SetBuildings(_buildings);
             _combat.SetArenaLayout(Layout);
+            WalkableSurfaceCache.Clear();
             _combat.SetWalkableSurface(WalkableSurfaceCache.GetOrCreate(config.PlayerCount));
             _combat.UnitKilled += OnUnitKilled;
             _waveScheduler.Deactivate();

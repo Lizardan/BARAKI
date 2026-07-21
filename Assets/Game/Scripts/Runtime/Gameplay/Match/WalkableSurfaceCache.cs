@@ -44,7 +44,7 @@ namespace Game.Gameplay.Match
                 var graph = LaneGraphBuilder.Build(layout);
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
 
-                var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
+                var sourceParts = FindSourcePartsRoot(root.transform);
                 if (sourceParts != null)
                 {
                     return WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
@@ -64,6 +64,13 @@ namespace Game.Gameplay.Match
                     Object.DestroyImmediate(root);
                 }
             }
+        }
+
+        static Transform FindSourcePartsRoot(Transform root)
+        {
+            // N=2 and N=4 both emit a flat "_SourceParts" child (see N2/N4 SourcePartsBuilder).
+            var sourceParts = root.Find(N2SourcePartsBuilder.RootName);
+            return sourceParts != null ? sourceParts : root.Find(N4SourcePartsBuilder.RootName);
         }
     }
 }

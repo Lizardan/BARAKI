@@ -40,7 +40,85 @@ namespace Game.Tests
         }
 
         [Test]
-        public void PopulateN2_SourceParts_HasOrganicOvalRoadParts()
+        public void N2_SideFlankConstants_UseTwentyUnitStrips()
+        {
+            Assert.AreEqual(20f, N2RoadReferenceSpec.SideFlankHalfStripLength);
+            Assert.AreEqual(40f, N2RoadReferenceSpec.SideFlankOuterBound);
+            Assert.AreEqual(65f, N2RoadReferenceSpec.GetNorthSouthRoadEdge());
+            Assert.AreEqual(25f, N2RoadReferenceSpec.CornerRadius);
+        }
+
+        [Test]
+        public void PopulateN2_SideFlankStrips_EndAtOuterBound()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN2FlankTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+
+                AssertSourcePartStrip(
+                    sourceParts,
+                    new Vector3(120f, 0f, 30f),
+                    new Vector3(19.999998f, 0.08f, 20f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PerimeterCornerArc_N2_AsymmetricCorner_HasValidMesh()
+        {
+            var corner = N2RoadReferenceSpec.GetMapCornerArcCorner(0);
+            var mesh = PerimeterCornerArc.BuildCornerRoadMesh(
+                corner,
+                turnClockwise: true,
+                MatchArenaGreyboxBuilder.RoadHeight);
+
+            Assert.Greater(mesh.vertexCount, 0);
+            Assert.Greater(mesh.triangles.Length, 0);
+
+            PerimeterCornerArc.GetClockwiseEndpoints(corner, out var entry, out var exit);
+            foreach (var vertex in mesh.vertices)
+            {
+                var flat = new Vector3(vertex.x, 0f, vertex.z);
+                Assert.Less(Vector3.Distance(flat, entry), 45f);
+                Assert.Less(Vector3.Distance(flat, exit), 45f);
+            }
+        }
+
+        [Test]
+        public void PopulateN2_CornerArcs_KeepN4Radius()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN2CornerTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+
+                PerimeterCornerArc.GetClockwiseEndpoints(
+                    N2RoadReferenceSpec.GetMapCornerArcCorner(0),
+                    out var entry,
+                    out var exit);
+                AssertVector3(new Vector3(95f, 0f, 65f), entry);
+                AssertVector3(new Vector3(120f, 0f, 40f), exit);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PopulateN2_SourceParts_MatchesN4SquareLayout()
         {
             var layout = MatchArenaGenerator.Generate(2);
             var graph = LaneGraphBuilder.Build(layout);
@@ -51,17 +129,92 @@ namespace Game.Tests
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
                 Assert.AreEqual(N2SourcePartsBuilder.PartCount, sourceParts.childCount);
-                Assert.AreEqual(1, CountNamedChildren(sourceParts, "FlankArcNorth"));
-                Assert.AreEqual(1, CountNamedChildren(sourceParts, "FlankArcSouth"));
-                Assert.AreEqual(1, CountNamedChildren(sourceParts, "RoadStrip"));
+                Assert.AreEqual(8, CountNamedChildren(sourceParts, "RoadStrip"));
                 Assert.AreEqual(1, CountNamedChildren(sourceParts, "CenterArena"));
+                Assert.AreEqual(4, CountNamedChildren(sourceParts, "PerimeterCornerArc"));
+                Assert.AreEqual(4, CountNamedChildren(sourceParts, "RoadFilletArc"));
                 Assert.AreEqual(2, CountNamedChildren(sourceParts, "BaseArena"));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "FlankArcNorth"));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "RoadCorner"));
                 Assert.IsNull(root.transform.Find("Roads"));
             }
             finally
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        [Test]
+        public void PopulateN2_PlayerSlots_HaveNoRoadGeometry()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN2SlotsTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.Populate(root.transform, layout, graph);
+                for (var slot = 0; slot < layout.PlayerCount; slot++)
+                {
+                    var slotRoot = root.transform.Find($"Bases/Player_{slot}");
+                    Assert.NotNull(slotRoot);
+                    foreach (Transform child in slotRoot)
+                    {
+                        Assert.IsFalse(
+                            child.name is "RoadStrip" or "RoadFilletArc" or "RoadCorner" or "BaseArena",
+                            $"Player_{slot} should not contain road geometry '{child.name}'.");
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PopulateN2_BaseArenas_AreOnEastAndWest()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN2BasesTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+
+                var baseArenaPositions = new[]
+                {
+                    new Vector3(125f, 0f, 0f),
+                    new Vector3(-125f, 0f, 0f),
+                };
+
+                var baseIndex = 0;
+                foreach (Transform child in sourceParts)
+                {
+                    if (child.name != "BaseArena")
+                    {
+                        continue;
+                    }
+
+                    AssertVector3(baseArenaPositions[baseIndex], child.position);
+                    AssertVector3(new Vector3(40f, MatchArenaGreyboxBuilder.RoadHeight, 30f), child.localScale);
+                    baseIndex++;
+                }
+
+                Assert.AreEqual(2, baseIndex);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void N2SourceParts_HasExpectedPartCount()
+        {
+            Assert.AreEqual(19, N2SourcePartsBuilder.PartCount);
+            Assert.AreEqual(N2SourcePartsBuilder.PartCount, N2RoadReferenceSpec.SourcePartsCount);
         }
 
         [Test]
@@ -122,7 +275,7 @@ namespace Game.Tests
 
                 var centerArena = FindFirstNamedChild(sourceParts, "CenterArena");
                 var roadHeight = MatchArenaGreyboxBuilder.RoadHeight;
-                Assert.AreEqual(roadHeight * 0.5f, centerArena.localPosition.y, 0.01f);
+                Assert.AreEqual(0f, centerArena.localPosition.y, 0.01f);
                 var expectedDiameter = N4RoadReferenceSpec.CenterArenaDiameter;
                 Assert.AreEqual(expectedDiameter, centerArena.localScale.x, 0.01f);
                 Assert.AreEqual(expectedDiameter, centerArena.localScale.z, 0.01f);
@@ -147,15 +300,15 @@ namespace Game.Tests
                 var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
 
-                AssertSourcePartStrip(sourceParts, new Vector3(-57.5f, 0.04f, 120f), new Vector3(19.999998f, 0.08f, 75f));
-                AssertSourcePartStrip(sourceParts, new Vector3(-55.25f, 0.04f, 0f), new Vector3(19.999998f, 0.08f, 70.5f));
+                AssertSourcePartStrip(sourceParts, new Vector3(-57.5f, 0f, 120f), new Vector3(19.999998f, 0.08f, 75f));
+                AssertSourcePartStrip(sourceParts, new Vector3(-55.25f, 0f, 0f), new Vector3(19.999998f, 0.08f, 70.5f));
 
                 var baseArenaPositions = new[]
                 {
-                    new Vector3(125f, 0.04f, 0f),
-                    new Vector3(0f, 0.04f, 125f),
-                    new Vector3(-125f, 0.04f, 0f),
-                    new Vector3(0f, 0.04f, -125f),
+                    new Vector3(125f, 0f, 0f),
+                    new Vector3(0f, 0f, 125f),
+                    new Vector3(-125f, 0f, 0f),
+                    new Vector3(0f, 0f, -125f),
                 };
 
                 var baseIndex = 0;

@@ -73,7 +73,7 @@ namespace Game.Tests
                         continue;
                     }
 
-                    if (Vector3.Distance(child.position, new Vector3(0f, 0.04f, 55.25f)) < Tolerance
+                    if (Vector3.Distance(child.position, new Vector3(0f, 0f, 55.25f)) < Tolerance
                         && Mathf.Abs(child.localScale.z - 70.5f) < Tolerance)
                     {
                         foundConnector = true;
