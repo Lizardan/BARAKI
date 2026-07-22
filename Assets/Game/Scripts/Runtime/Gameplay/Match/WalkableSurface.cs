@@ -17,6 +17,26 @@ namespace Game.Gameplay.Match
 
         public int PartCount => _parts.Length;
 
+        /// <summary>XZ AABB covering every walkable part (empty surface → zero rect).</summary>
+        public void GetBounds(out Vector2 min, out Vector2 max)
+        {
+            if (_parts.Length == 0)
+            {
+                min = Vector2.zero;
+                max = Vector2.zero;
+                return;
+            }
+
+            min = _parts[0].Min;
+            max = _parts[0].Max;
+            for (var i = 1; i < _parts.Length; i++)
+            {
+                var part = _parts[i];
+                min = Vector2.Min(min, part.Min);
+                max = Vector2.Max(max, part.Max);
+            }
+        }
+
         public bool Contains(Vector3 worldPosition)
         {
             var point = new Vector2(worldPosition.x, worldPosition.z);

@@ -48,6 +48,12 @@ namespace Game.Gameplay.Match
             _visualRoot = new GameObject("GreyboxVisual").transform;
             _visualRoot.SetParent(transform, false);
             MatchArenaGreyboxBuilder.Populate(_visualRoot, Layout, Graph);
+
+            MatchArenaEnvironmentDecorator.Populate(
+                transform,
+                Layout,
+                WalkableSurfaceCache.GetOrCreate(_playerCount),
+                MatchArenaEnvironmentDecorator.LoadPrefabSetOrEmpty());
         }
 
         /// <summary>Layout/graph stay available on server; mesh materials do not.</summary>
@@ -78,6 +84,8 @@ namespace Game.Gameplay.Match
 
                 _visualRoot = null;
             }
+
+            MatchArenaEnvironmentDecorator.ClearDecor(transform);
         }
 
 #if UNITY_EDITOR

@@ -139,7 +139,8 @@ namespace Game.Gameplay.Match
             LaneGraph graph,
             Material roadMaterial = null)
         {
-            roadMaterial ??= CreateRoadMaterial(new Color(0.18f, 0.2f, 0.24f));
+            roadMaterial ??= LoadRoadMaterial()
+                             ?? CreateRoadMaterial(new Color(0.55f, 0.48f, 0.38f));
 
             if (layout.PlayerCount == 4)
             {
@@ -674,6 +675,13 @@ namespace Game.Gameplay.Match
             return material;
         }
 
+        const string RoadMaterialResourcePath = "Art/RoadGreybox";
+
+        static Material LoadRoadMaterial()
+        {
+            return Resources.Load<Material>(RoadMaterialResourcePath);
+        }
+
         static Material CreateRoadMaterial(Color color)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit");
@@ -695,7 +703,8 @@ namespace Game.Gameplay.Match
             var material = new Material(shader);
             material.SetColor("_BaseColor", color);
             material.SetColor("_Color", color);
-            material.SetFloat("_Smoothness", 0.05f);
+            material.SetFloat("_Smoothness", 0.18f);
+            material.SetFloat("_Metallic", 0f);
             return material;
         }
 

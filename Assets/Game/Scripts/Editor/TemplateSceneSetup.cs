@@ -82,8 +82,8 @@ namespace Game.Editor
 
             var groundMaterial = EnsureLitMaterial(
                 GroundMaterialPath,
-                new Color(0.07f, 0.09f, 0.13f),
-                0.35f);
+                new Color(0.28f, 0.48f, 0.22f),
+                0.28f);
 
             var groundScale = MatchArenaGenerator.DefaultGroundPlaneScale;
             EnsureScaledPrimitive(
@@ -103,15 +103,15 @@ namespace Game.Editor
             var light = Object.FindAnyObjectByType<Light>();
             if (light != null)
             {
-                light.transform.rotation = Quaternion.Euler(42f, -28f, 0f);
-                light.color = new Color(0.92f, 0.95f, 1f);
+                light.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+                light.color = new Color(1f, 0.96f, 0.88f);
                 light.intensity = 0.22f;
             }
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.12f, 0.16f, 0.26f);
-            RenderSettings.ambientEquatorColor = new Color(0.08f, 0.1f, 0.14f);
-            RenderSettings.ambientGroundColor = new Color(0.04f, 0.05f, 0.08f);
+            RenderSettings.ambientSkyColor = new Color(0.55f, 0.72f, 0.92f);
+            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.52f, 0.38f);
+            RenderSettings.ambientGroundColor = new Color(0.22f, 0.28f, 0.16f);
             RenderSettings.fog = false;
             RenderSettings.fogDensity = 0f;
         }
