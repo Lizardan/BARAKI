@@ -196,7 +196,7 @@ namespace Game.Tests
         {
             WalkableSurfaceCache.Clear();
             var surface = WalkableSurfaceCache.GetOrCreate(2);
-            Assert.GreaterOrEqual(surface.PartCount, N2SourcePartsBuilder.PartCount - 2);
+            Assert.AreEqual(1, surface.PartCount);
         }
 
         [Test]

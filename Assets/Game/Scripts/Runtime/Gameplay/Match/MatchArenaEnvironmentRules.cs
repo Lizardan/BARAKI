@@ -42,8 +42,8 @@ namespace Game.Gameplay.Match
     }
 
     /// <summary>
-    /// Deterministic décor: uniform cobble on walkable roads; landscape + forest only in
-    /// non-walkable pockets inside the map (roads stay flat).
+    /// Deterministic landscape and forest décor outside walkable roads.
+    /// Roads use one continuous material so units remain visually readable.
     /// </summary>
     public static class MatchArenaEnvironmentRules
     {
@@ -51,18 +51,14 @@ namespace Game.Gameplay.Match
 
         public const float MinBaseDistance = 40f;
         public const float LandscapeOuterMargin = 6f;
-        public const float CobbleStep = 1.85f;
-        public const float CobbleLiftY = 0.03f;
-        public const float NatureCellSize = 9f;
-        public const float FlowerCellSize = 5.5f;
+        public const float NatureCellSize = 8.5f;
+        public const float FlowerCellSize = 7.5f;
         const int FootprintSampleCount = 8;
-        static readonly Vector3 CobbleScale = new(1.55f, 1f, 1.55f);
 
         public static int SeedForPlayerCount(int playerCount) =>
             unchecked(playerCount * 104729 + 17);
 
-        public static bool AllowsWalkableOverlay(EnvironmentPropKind kind) =>
-            kind == EnvironmentPropKind.PathPiece;
+        public static bool AllowsWalkableOverlay(EnvironmentPropKind kind) => false;
 
         /// <summary>Square map half-extent covering perimeter + corner fillets + thin fringe.</summary>
         public static float MapHalfExtent(float arenaRadius) =>
@@ -186,7 +182,6 @@ namespace Game.Gameplay.Match
             var result = new List<EnvironmentPropPlacement>(4096);
             var radius = layout.ArenaRadius;
 
-            TryAddCobblestoneGrid(result, walkable, rng);
             TryAddPocketLandscape(result, layout, walkable, rng, radius);
             TryAddNatureGrid(result, layout, walkable, rng, radius);
             TryAddRoadsideClutter(result, layout, walkable, rng, radius);
@@ -208,47 +203,7 @@ namespace Game.Gameplay.Match
             return count;
         }
 
-        /// <summary>Uniform cobble carpet: sample walkable AABB on a fixed grid (no geometric gaps).</summary>
-        static void TryAddCobblestoneGrid(
-            List<EnvironmentPropPlacement> result,
-            WalkableSurface walkable,
-            System.Random rng)
-        {
-            if (walkable == null || walkable.PartCount == 0)
-            {
-                return;
-            }
-
-            walkable.GetBounds(out var min, out var max);
-            var y = MatchArenaGreyboxBuilder.RoadHeight + CobbleLiftY;
-            var step = CobbleStep;
-            // Snap grid origin so coverage is stable across regenerations.
-            var startX = Mathf.Floor(min.x / step) * step;
-            var startZ = Mathf.Floor(min.y / step) * step;
-
-            for (var x = startX; x <= max.x + 0.01f; x += step)
-            {
-                for (var z = startZ; z <= max.y + 0.01f; z += step)
-                {
-                    // Tiny deterministic jitter so stones don't look like a perfect lattice.
-                    var jx = ((Hash(x, z) & 255) / 255f - 0.5f) * 0.35f;
-                    var jz = (((Hash(x, z) >> 8) & 255) / 255f - 0.5f) * 0.35f;
-                    var pos = new Vector3(x + jx, y, z + jz);
-                    if (!walkable.Contains(pos))
-                    {
-                        continue;
-                    }
-
-                    result.Add(new EnvironmentPropPlacement(
-                        EnvironmentPropKind.PathPiece,
-                        pos,
-                        (Hash(x, z) % 360),
-                        CobbleScale));
-                }
-            }
-        }
-
-        /// <summary>Rivers + raised cliffs/rocks in diagonal pockets between roads (inside the map).</summary>
+        /// <summary>Dark pockets between roads: black water, cliffs, rocks and mountain silhouettes.</summary>
         static void TryAddPocketLandscape(
             List<EnvironmentPropPlacement> result,
             MatchArenaLayout layout,
@@ -268,9 +223,6 @@ namespace Game.Gameplay.Match
                 var hub = radial * hubDist;
                 var yaw = pocketAngle * Mathf.Rad2Deg + 90f;
 
-                // Soft hill height at pocket center.
-                var hillY = 1.2f + (float)rng.NextDouble() * 1.4f;
-
                 if (CanPlace(hub, walkable, layout.Slots, EnvironmentPropKind.River, radius, MinBaseDistance * 0.5f))
                 {
                     result.Add(new EnvironmentPropPlacement(
@@ -279,22 +231,17 @@ namespace Game.Gameplay.Match
                         yaw,
                         new Vector3(12f, 0.1f, 18f)));
 
-                    var boatPos = hub + tangent * 4f;
-                    boatPos.y = 0.06f;
-                    if (CanPlace(boatPos, walkable, layout.Slots, EnvironmentPropKind.Boat, radius, MinBaseDistance * 0.5f))
-                    {
-                        result.Add(new EnvironmentPropPlacement(EnvironmentPropKind.Boat, boatPos, yaw + 20f));
-                    }
+                    TryAddPocketRockCluster(result, layout, walkable, rng, radius, hub, tangent, radial);
                 }
 
-                // Raised cliffs framing the pocket (terrain, not flat ground).
-                for (var c = 0; c < 3; c++)
+                // Cliffs framing the pocket — sit on the ground plane (no airborne Y).
+                for (var c = 0; c < 4; c++)
                 {
-                    var offset = tangent * ((c - 1) * 14f) + radial * (c == 1 ? -6f : 4f);
+                    var offset = tangent * ((c - 1.5f) * 12f) + radial * (c % 2 == 0 ? -5f : 5f);
                     var cliffPos = hub + offset;
-                    cliffPos.y = hillY * (0.4f + c * 0.15f);
+                    cliffPos.y = 0f;
                     if (!CanPlace(
-                            new Vector3(cliffPos.x, 0f, cliffPos.z),
+                            cliffPos,
                             walkable,
                             layout.Slots,
                             EnvironmentPropKind.Cliff,
@@ -312,11 +259,11 @@ namespace Game.Gameplay.Match
                         Vector3.one * scale));
                 }
 
-                // Compact mound deeper in the pocket.
+                // Compact mountain mound deeper in the pocket — also grounded.
                 var mound = hub + radial * 10f;
-                mound.y = hillY + 0.8f;
+                mound.y = 0f;
                 if (CanPlace(
-                        new Vector3(mound.x, 0f, mound.z),
+                        mound,
                         walkable,
                         layout.Slots,
                         EnvironmentPropKind.Mountain,
@@ -327,7 +274,7 @@ namespace Game.Gameplay.Match
                         EnvironmentPropKind.Mountain,
                         mound,
                         Yaw(rng),
-                        Vector3.one * 0.22f));
+                        Vector3.one * 0.28f));
                 }
 
                 // Guaranteed pocket clutter (crates) off walkable.
@@ -340,12 +287,41 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
-                    clutter.y = LandscapeElevation(clutter, walkable) * 0.2f;
                     result.Add(new EnvironmentPropPlacement(
                         c == 0 ? EnvironmentPropKind.Crate : EnvironmentPropKind.Bench,
                         clutter,
                         Yaw(rng)));
                 }
+            }
+        }
+
+        static void TryAddPocketRockCluster(
+            List<EnvironmentPropPlacement> result,
+            MatchArenaLayout layout,
+            WalkableSurface walkable,
+            System.Random rng,
+            float radius,
+            Vector3 hub,
+            Vector3 tangent,
+            Vector3 radial)
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                var rockPos = hub
+                              + tangent * ((i - 1) * 5f)
+                              + radial * (4f + (float)rng.NextDouble() * 3f);
+                rockPos.y = 0f;
+                if (!CanPlace(rockPos, walkable, layout.Slots, EnvironmentPropKind.Rock, radius, MinBaseDistance * 0.35f))
+                {
+                    continue;
+                }
+
+                var scale = 1.1f + (float)rng.NextDouble() * 0.45f;
+                result.Add(new EnvironmentPropPlacement(
+                    EnvironmentPropKind.Rock,
+                    rockPos,
+                    Yaw(rng),
+                    Vector3.one * scale));
             }
         }
 
@@ -381,27 +357,21 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
-                    // Height rises toward pocket centers (away from roads).
-                    var elev = LandscapeElevation(flat, walkable);
                     var roll = Hash(x, z) % 10;
                     EnvironmentPropKind kind;
                     float scale = 1f;
-                    if (roll <= 4)
-                    {
-                        kind = EnvironmentPropKind.Tree;
-                    }
-                    else if (roll <= 7)
+                    if (roll <= 5)
                     {
                         kind = EnvironmentPropKind.Pine;
                     }
-                    else if (roll == 8)
+                    else if (roll <= 7)
                     {
-                        kind = EnvironmentPropKind.Rock;
-                        scale = 0.9f + (float)rng.NextDouble() * 0.4f;
+                        kind = EnvironmentPropKind.Tree;
                     }
                     else
                     {
-                        kind = EnvironmentPropKind.Flower;
+                        kind = EnvironmentPropKind.Rock;
+                        scale = 0.9f + (float)rng.NextDouble() * 0.4f;
                     }
 
                     if (!CanPlace(flat, walkable, layout.Slots, kind, radius, MinBaseDistance * 0.55f))
@@ -409,23 +379,24 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
-                    var pos = flat;
-                    pos.y = elev;
+                    // Props sit on the ground plane; only cliffs/mountains are raised as terrain.
+                    flat.y = 0f;
                     result.Add(new EnvironmentPropPlacement(
                         kind,
-                        pos,
+                        flat,
                         Yaw(rng),
                         scale == 1f ? null : Vector3.one * scale));
                 }
             }
 
-            // Denser flowers in a finer pass near road edges (still off walkable).
+            // Sparse low-contrast accents near road edges. Keep rocks away from unit routes.
             var fCell = FlowerCellSize;
             for (var z = -half; z <= half; z += fCell)
             {
                 for (var x = -half; x <= half; x += fCell)
                 {
-                    if (((Hash(x, z) >> 4) & 3) != 0)
+                    var accentHash = Hash(x, z) >> 4;
+                    if ((accentHash & 3) != 0)
                     {
                         continue;
                     }
@@ -441,13 +412,19 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
-                    if (!CanPlace(flat, walkable, layout.Slots, EnvironmentPropKind.Flower, radius, MinBaseDistance * 0.5f))
+                    var kind = (accentHash % 12) switch
+                    {
+                        0 => EnvironmentPropKind.Lantern,
+                        1 or 2 => EnvironmentPropKind.Flower,
+                        _ => EnvironmentPropKind.Pine,
+                    };
+
+                    if (!CanPlace(flat, walkable, layout.Slots, kind, radius, MinBaseDistance * 0.5f))
                     {
                         continue;
                     }
 
-                    flat.y = LandscapeElevation(flat, walkable) * 0.35f;
-                    result.Add(new EnvironmentPropPlacement(EnvironmentPropKind.Flower, flat, Yaw(rng)));
+                    result.Add(new EnvironmentPropPlacement(kind, flat, Yaw(rng)));
                 }
             }
         }
@@ -476,11 +453,11 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
-                var kind = (i % 6) switch
+                var kind = (i % 8) switch
                 {
                     0 => EnvironmentPropKind.Lantern,
-                    1 => EnvironmentPropKind.Rock,
-                    _ => EnvironmentPropKind.Flower,
+                    1 or 2 or 3 or 4 or 5 => EnvironmentPropKind.Pine,
+                    _ => EnvironmentPropKind.Crate,
                 };
 
                 if (!CanPlace(pos, walkable, layout.Slots, kind, radius, MinBaseDistance * 0.5f))
@@ -488,7 +465,6 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
-                pos.y = LandscapeElevation(pos, walkable) * 0.25f;
                 result.Add(new EnvironmentPropPlacement(kind, pos, Yaw(rng)));
             }
 
@@ -505,13 +481,12 @@ namespace Game.Gameplay.Match
                     var side = (i % 2 == 0 ? 1f : -1f) * roadside;
                     var pos = radial * t + tangent * side;
                     pos.y = 0f;
-                    var kind = i % 4 == 0 ? EnvironmentPropKind.Lantern : EnvironmentPropKind.Flower;
+                    var kind = i % 5 == 0 ? EnvironmentPropKind.Lantern : EnvironmentPropKind.Pine;
                     if (!CanPlace(pos, walkable, layout.Slots, kind, radius, MinBaseDistance * 0.5f))
                     {
                         continue;
                     }
 
-                    pos.y = LandscapeElevation(pos, walkable) * 0.25f;
                     result.Add(new EnvironmentPropPlacement(kind, pos, Yaw(rng)));
                 }
             }
@@ -541,21 +516,6 @@ namespace Game.Gameplay.Match
                     result.Add(new EnvironmentPropPlacement(kind, pos, Yaw(rng)));
                 }
             }
-        }
-
-        static float LandscapeElevation(Vector3 position, WalkableSurface walkable)
-        {
-            if (walkable == null)
-            {
-                return 0f;
-            }
-
-            // Approximate distance to road via clamp delta.
-            var onRoad = walkable.Clamp(position);
-            var dx = position.x - onRoad.x;
-            var dz = position.z - onRoad.z;
-            var dist = Mathf.Sqrt(dx * dx + dz * dz);
-            return Mathf.Clamp(dist * 0.08f, 0f, 3.5f);
         }
 
         static bool NearWalkable(Vector3 position, WalkableSurface walkable, float maxDist)

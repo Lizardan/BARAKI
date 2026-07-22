@@ -64,24 +64,10 @@ namespace Game.Tests
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
-
-                var foundConnector = false;
-                foreach (Transform child in sourceParts)
-                {
-                    if (child.name != "RoadStrip")
-                    {
-                        continue;
-                    }
-
-                    if (Vector3.Distance(child.position, new Vector3(0f, 0f, 55.25f)) < Tolerance
-                        && Mathf.Abs(child.localScale.z - 70.5f) < Tolerance)
-                    {
-                        foundConnector = true;
-                        break;
-                    }
-                }
-
-                Assert.IsTrue(foundConnector, "Missing N-S spoke connector strip at (0, 55.25).");
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.IsTrue(
+                    walkable.Contains(new Vector3(0f, 0f, 54.5f)),
+                    "Missing N-S spoke connector coverage at (0, 54.5).");
             }
             finally
             {

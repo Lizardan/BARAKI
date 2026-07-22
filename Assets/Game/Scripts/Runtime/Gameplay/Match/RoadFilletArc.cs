@@ -78,6 +78,7 @@ namespace Game.Gameplay.Match
             var centerline = SampleArc(entry, exit, center, arcRadius, RoadArcSegments);
             var vertexCount = centerline.Count * 2;
             var vertices = new Vector3[vertexCount];
+            var uvs = new Vector2[vertexCount];
             var triangles = new int[(centerline.Count - 1) * 6];
 
             for (var i = 0; i < centerline.Count; i++)
@@ -101,6 +102,8 @@ namespace Game.Gameplay.Match
                     point.x + outerDir.x * halfWidth,
                     halfHeight,
                     point.z + outerDir.z * halfWidth);
+                uvs[i * 2] = RoadMeshUv.FromWorld(vertices[i * 2]);
+                uvs[i * 2 + 1] = RoadMeshUv.FromWorld(vertices[i * 2 + 1]);
             }
 
             var triangleIndex = 0;
@@ -110,18 +113,14 @@ namespace Game.Gameplay.Match
                 var i1 = i * 2 + 1;
                 var i2 = (i + 1) * 2;
                 var i3 = (i + 1) * 2 + 1;
-                triangles[triangleIndex++] = i0;
-                triangles[triangleIndex++] = i1;
-                triangles[triangleIndex++] = i2;
-                triangles[triangleIndex++] = i1;
-                triangles[triangleIndex++] = i3;
-                triangles[triangleIndex++] = i2;
+                RoadMeshTopology.AddUpFacingQuad(vertices, triangles, ref triangleIndex, i0, i1, i2, i3);
             }
 
             var mesh = new Mesh
             {
                 vertices = vertices,
                 triangles = triangles,
+                uv = uvs,
             };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();

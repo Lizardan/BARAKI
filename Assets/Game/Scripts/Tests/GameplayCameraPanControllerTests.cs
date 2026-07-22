@@ -77,9 +77,9 @@ namespace Game.Tests
         [Test]
         public void ClampZoomDistance_RespectsMinMax()
         {
-            Assert.AreEqual(64f, GameplayCameraSettings.ClampZoomDistance(10f, 64f, 144f), 0.001f);
-            Assert.AreEqual(144f, GameplayCameraSettings.ClampZoomDistance(200f, 64f, 144f), 0.001f);
-            Assert.AreEqual(100f, GameplayCameraSettings.ClampZoomDistance(100f, 64f, 144f), 0.001f);
+            Assert.AreEqual(16f, GameplayCameraSettings.ClampZoomDistance(10f, 16f, 64f), 0.001f);
+            Assert.AreEqual(64f, GameplayCameraSettings.ClampZoomDistance(200f, 16f, 64f), 0.001f);
+            Assert.AreEqual(32f, GameplayCameraSettings.ClampZoomDistance(32f, 16f, 64f), 0.001f);
         }
 
         [Test]

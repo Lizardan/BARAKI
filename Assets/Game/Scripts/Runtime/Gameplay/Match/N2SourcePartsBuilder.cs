@@ -3,9 +3,7 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Duel (N=2) road mesh: same square <c>_SourceParts</c> layout as N=4,
-    /// with E/W flank strips shortened (20 vs 70) so N/S edges sit closer to the bases.
-    /// N/S perimeter is a single straight strip each (no N/S bases / spoke gap).
+    /// Duel (N=2) road mesh: same square layout as N=4, emitted as one unioned <c>RoadSurface</c>.
     /// </summary>
     public static class N2SourcePartsBuilder
     {
@@ -14,175 +12,15 @@ namespace Game.Gameplay.Match
 
         public static Transform Populate(Transform parent, MatchArenaLayout layout, Material roadMaterial)
         {
-            var halfSize = layout.ArenaRadius;
-
             var root = new GameObject(RootName).transform;
             root.SetParent(parent, false);
             root.localPosition = Vector3.zero;
             root.localRotation = Quaternion.identity;
             root.localScale = Vector3.one;
 
-            CreatePerimeterStrips(root, halfSize, roadMaterial);
-            CreateEastWestSpokeStrips(root, roadMaterial);
-            CreateCenterArena(root, roadMaterial);
-            RoadJunctionBuilder.CreateDuelSpokeFillets(
-                root,
-                halfSize,
-                MatchArenaGreyboxBuilder.RoadHeight,
-                roadMaterial);
-            CreatePerimeterCornerArcs(root, halfSize, roadMaterial);
-            CreateWorldBaseArenas(root, layout, roadMaterial);
-
+            var footprints = RoadFootprintFactory.BuildN2(layout);
+            RoadSurfaceMeshBuilder.Create(root, footprints, roadMaterial);
             return root;
-        }
-
-        static void CreatePerimeterStrips(Transform root, float halfSize, Material roadMaterial)
-        {
-            var innerNeg = -N2RoadReferenceSpec.SideFlankInnerBound;
-            var innerPos = N2RoadReferenceSpec.SideFlankInnerBound;
-            var flankOuter = N2RoadReferenceSpec.SideFlankOuterBound;
-            var northSouthEdge = N2RoadReferenceSpec.GetNorthSouthRoadEdge();
-            var cornerOuterX = N4RoadReferenceSpec.GetPerimeterStripCornerOuter(halfSize);
-
-            // One continuous N/S straight (replaces N=4's two half-strips + spoke gap).
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(-cornerOuterX, 0f, northSouthEdge),
-                new Vector3(cornerOuterX, 0f, northSouthEdge),
-                roadMaterial,
-                endExtension: 0f);
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(-cornerOuterX, 0f, -northSouthEdge),
-                new Vector3(cornerOuterX, 0f, -northSouthEdge),
-                roadMaterial,
-                endExtension: 0f);
-
-            // E/W flank half-strips (shortened vs N=4's 70).
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(halfSize, 0f, innerPos),
-                new Vector3(halfSize, 0f, flankOuter),
-                roadMaterial,
-                endExtension: 0f);
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(halfSize, 0f, -flankOuter),
-                new Vector3(halfSize, 0f, innerNeg),
-                roadMaterial,
-                endExtension: 0f);
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(-halfSize, 0f, innerPos),
-                new Vector3(-halfSize, 0f, flankOuter),
-                roadMaterial,
-                endExtension: 0f);
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(-halfSize, 0f, -flankOuter),
-                new Vector3(-halfSize, 0f, innerNeg),
-                roadMaterial,
-                endExtension: 0f);
-        }
-
-        static void CreateEastWestSpokeStrips(Transform root, Material roadMaterial)
-        {
-            var center = N4RoadReferenceSpec.SpokeConnectorCenter;
-            var halfLength = N4RoadReferenceSpec.SpokeConnectorHalfLength;
-
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(center - halfLength, 0f, 0f),
-                new Vector3(center + halfLength, 0f, 0f),
-                roadMaterial,
-                endExtension: 0f);
-            MatchArenaGreyboxBuilder.CreateRoadStripWorld(
-                root,
-                new Vector3(-center - halfLength, 0f, 0f),
-                new Vector3(-center + halfLength, 0f, 0f),
-                roadMaterial,
-                endExtension: 0f);
-        }
-
-        static void CreateCenterArena(Transform root, Material roadMaterial)
-        {
-            var radius = N4RoadReferenceSpec.CenterArenaHalfSize;
-            var roadHeight = MatchArenaGreyboxBuilder.RoadHeight;
-
-            var platform = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            platform.name = "CenterArena";
-            platform.transform.SetParent(root, false);
-            platform.transform.localPosition = new Vector3(0f, 0f, 0f);
-            platform.transform.localRotation = Quaternion.identity;
-            platform.transform.localScale = new Vector3(radius * 2f, roadHeight * 0.5f, radius * 2f);
-
-            DestroyCollider(platform.GetComponent<Collider>());
-            platform.GetComponent<Renderer>().sharedMaterial = roadMaterial;
-        }
-
-        static void CreatePerimeterCornerArcs(Transform root, float halfSize, Material roadMaterial)
-        {
-            for (var i = 0; i < 4; i++)
-            {
-                CreatePerimeterCornerArc(
-                    root,
-                    N2RoadReferenceSpec.GetMapCornerArcCorner(i, halfSize),
-                    roadMaterial);
-            }
-        }
-
-        static void CreatePerimeterCornerArc(Transform parent, Vector3 corner, Material roadMaterial)
-        {
-            var fill = new GameObject("PerimeterCornerArc");
-            fill.transform.SetParent(parent, false);
-
-            var mesh = PerimeterCornerArc.BuildCornerRoadMesh(
-                corner,
-                turnClockwise: true,
-                MatchArenaGreyboxBuilder.RoadHeight);
-            var filter = fill.AddComponent<MeshFilter>();
-            filter.sharedMesh = mesh;
-            var renderer = fill.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = roadMaterial;
-        }
-
-        static void CreateWorldBaseArenas(Transform root, MatchArenaLayout layout, Material roadMaterial)
-        {
-            foreach (var slot in layout.Slots)
-            {
-                var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                platform.name = "BaseArena";
-                platform.transform.SetParent(root, false);
-                platform.transform.position = slot.BasePosition + slot.BaseRotation * new Vector3(
-                    0f,
-                    N4RoadReferenceSpec.CenterArenaPlatformY,
-                    -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
-                platform.transform.rotation = slot.BaseRotation;
-                platform.transform.localScale = new Vector3(
-                    MatchArenaGreyboxBuilder.BaseArenaWidth,
-                    MatchArenaGreyboxBuilder.RoadHeight,
-                    MatchArenaGreyboxBuilder.BaseArenaDepth);
-
-                DestroyCollider(platform.GetComponent<Collider>());
-                platform.GetComponent<Renderer>().sharedMaterial = roadMaterial;
-            }
-        }
-
-        static void DestroyCollider(Collider collider)
-        {
-            if (collider == null)
-            {
-                return;
-            }
-
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                Object.DestroyImmediate(collider);
-                return;
-            }
-#endif
-            Object.Destroy(collider);
         }
     }
 }

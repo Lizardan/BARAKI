@@ -5,7 +5,7 @@ namespace Game.Gameplay.Match
     /// <summary>Hand-tuned N=4 procedural road geometry constants.</summary>
     public static class N4RoadReferenceSpec
     {
-        public const int SourcePartsCount = 29;
+        public const int SourcePartsCount = 1;
 
         public const float TransformTolerance = 0.06f;
 
@@ -34,6 +34,9 @@ namespace Game.Gameplay.Match
 
         public const float FilletStripOverlap = 0.5f;
 
+        /// <summary>How far spoke centerlines extend inside the center arena disc.</summary>
+        public const float SpokeArenaOverlap = 6f;
+
         public const float CenterArenaPlatformY = 0f;
 
         public static float NegativeHalfMin => -PerimeterHalfStripCenter - PerimeterHalfStripLength * 0.5f;
@@ -45,6 +48,45 @@ namespace Game.Gameplay.Match
         public static float PositiveHalfMax => PerimeterHalfStripCenter + PerimeterHalfStripLength * 0.5f;
 
         public static float SpokeConnectorHalfLength => SpokeConnectorLength * 0.5f;
+
+        public static float SpokeStripInnerRadius => CenterArenaHalfSize - SpokeArenaOverlap;
+
+        public static float GetSpokeStripOuterRadius(float halfSize) =>
+            halfSize - JunctionFilletRadius;
+
+        public static float GetSpokeConnectorCenter(float halfSize) =>
+            (SpokeStripInnerRadius + GetSpokeStripOuterRadius(halfSize)) * 0.5f;
+
+        public static float GetSpokeConnectorLength(float halfSize) =>
+            GetSpokeStripOuterRadius(halfSize) - SpokeStripInnerRadius;
+
+        public static void GetPositiveZSpokeStrip(float halfSize, out Vector3 from, out Vector3 to)
+        {
+            var outer = GetSpokeStripOuterRadius(halfSize);
+            from = new Vector3(0f, 0f, SpokeStripInnerRadius);
+            to = new Vector3(0f, 0f, outer);
+        }
+
+        public static void GetNegativeZSpokeStrip(float halfSize, out Vector3 from, out Vector3 to)
+        {
+            var outer = GetSpokeStripOuterRadius(halfSize);
+            from = new Vector3(0f, 0f, -outer);
+            to = new Vector3(0f, 0f, -SpokeStripInnerRadius);
+        }
+
+        public static void GetPositiveXSpokeStrip(float halfSize, out Vector3 from, out Vector3 to)
+        {
+            var outer = GetSpokeStripOuterRadius(halfSize);
+            from = new Vector3(SpokeStripInnerRadius, 0f, 0f);
+            to = new Vector3(outer, 0f, 0f);
+        }
+
+        public static void GetNegativeXSpokeStrip(float halfSize, out Vector3 from, out Vector3 to)
+        {
+            var outer = GetSpokeStripOuterRadius(halfSize);
+            from = new Vector3(-outer, 0f, 0f);
+            to = new Vector3(-SpokeStripInnerRadius, 0f, 0f);
+        }
 
         /// <summary>Perimeter half-strip outer centerline toward a map corner (tangent to corner arc).</summary>
         public static float GetPerimeterStripCornerOuter(float halfSize) =>

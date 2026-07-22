@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Gameplay.Match;
 using NUnit.Framework;
 using UnityEngine;
@@ -59,11 +60,8 @@ namespace Game.Tests
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
-
-                AssertSourcePartStrip(
-                    sourceParts,
-                    new Vector3(120f, 0f, 30f),
-                    new Vector3(19.999998f, 0.08f, 20f));
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.IsTrue(walkable.Contains(new Vector3(120f, 0f, 30f)));
             }
             finally
             {
@@ -129,11 +127,8 @@ namespace Game.Tests
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
                 Assert.AreEqual(N2SourcePartsBuilder.PartCount, sourceParts.childCount);
-                Assert.AreEqual(8, CountNamedChildren(sourceParts, "RoadStrip"));
-                Assert.AreEqual(1, CountNamedChildren(sourceParts, "CenterArena"));
-                Assert.AreEqual(4, CountNamedChildren(sourceParts, "PerimeterCornerArc"));
-                Assert.AreEqual(4, CountNamedChildren(sourceParts, "RoadFilletArc"));
-                Assert.AreEqual(2, CountNamedChildren(sourceParts, "BaseArena"));
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, RoadSurfaceMeshBuilder.ObjectName));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "RoadStrip"));
                 Assert.AreEqual(0, CountNamedChildren(sourceParts, "FlankArcNorth"));
                 Assert.AreEqual(0, CountNamedChildren(sourceParts, "RoadCorner"));
                 Assert.IsNull(root.transform.Find("Roads"));
@@ -182,27 +177,9 @@ namespace Game.Tests
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
-
-                var baseArenaPositions = new[]
-                {
-                    new Vector3(125f, 0f, 0f),
-                    new Vector3(-125f, 0f, 0f),
-                };
-
-                var baseIndex = 0;
-                foreach (Transform child in sourceParts)
-                {
-                    if (child.name != "BaseArena")
-                    {
-                        continue;
-                    }
-
-                    AssertVector3(baseArenaPositions[baseIndex], child.position);
-                    AssertVector3(new Vector3(40f, MatchArenaGreyboxBuilder.RoadHeight, 30f), child.localScale);
-                    baseIndex++;
-                }
-
-                Assert.AreEqual(2, baseIndex);
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.IsTrue(walkable.Contains(new Vector3(125f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(-125f, 0f, 0f)));
             }
             finally
             {
@@ -213,7 +190,7 @@ namespace Game.Tests
         [Test]
         public void N2SourceParts_HasExpectedPartCount()
         {
-            Assert.AreEqual(19, N2SourcePartsBuilder.PartCount);
+            Assert.AreEqual(1, N2SourcePartsBuilder.PartCount);
             Assert.AreEqual(N2SourcePartsBuilder.PartCount, N2RoadReferenceSpec.SourcePartsCount);
         }
 
@@ -246,11 +223,10 @@ namespace Game.Tests
             {
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
-                Assert.AreEqual(12, CountNamedChildren(sourceParts, "RoadStrip"));
-                Assert.AreEqual(1, CountNamedChildren(sourceParts, "CenterArena"));
-                Assert.AreEqual(4, CountNamedChildren(sourceParts, "PerimeterCornerArc"));
-                Assert.AreEqual(8, CountNamedChildren(sourceParts, "RoadFilletArc"));
-                Assert.AreEqual(4, CountNamedChildren(sourceParts, "BaseArena"));
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, RoadSurfaceMeshBuilder.ObjectName));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "RoadStrip"));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "CenterArena"));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "BaseArena"));
             }
             finally
             {
@@ -268,19 +244,19 @@ namespace Game.Tests
             {
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
-                var centerArenaCount = CountNamedChildren(sourceParts, "CenterArena");
-                Assert.AreEqual(1, centerArenaCount);
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, RoadSurfaceMeshBuilder.ObjectName));
                 Assert.IsNull(sourceParts.Find("CenterArena/Platform"));
                 Assert.IsNull(sourceParts.Find("Platform"));
 
-                var centerArena = FindFirstNamedChild(sourceParts, "CenterArena");
-                var roadHeight = MatchArenaGreyboxBuilder.RoadHeight;
-                Assert.AreEqual(0f, centerArena.localPosition.y, 0.01f);
-                var expectedDiameter = N4RoadReferenceSpec.CenterArenaDiameter;
-                Assert.AreEqual(expectedDiameter, centerArena.localScale.x, 0.01f);
-                Assert.AreEqual(expectedDiameter, centerArena.localScale.z, 0.01f);
-                Assert.AreEqual(roadHeight * 0.5f, centerArena.localScale.y, 0.01f);
-                Assert.IsNotNull(centerArena.GetComponent<MeshFilter>()?.sharedMesh);
+                var roadSurface = FindFirstNamedChild(sourceParts, RoadSurfaceMeshBuilder.ObjectName);
+                var mesh = roadSurface.GetComponent<MeshFilter>()?.sharedMesh;
+                Assert.NotNull(mesh);
+                Assert.GreaterOrEqual(mesh.bounds.size.x, N4RoadReferenceSpec.CenterArenaDiameter - 0.5f);
+                Assert.GreaterOrEqual(mesh.bounds.size.z, N4RoadReferenceSpec.CenterArenaDiameter - 0.5f);
+
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, 24f)));
             }
             finally
             {
@@ -299,32 +275,15 @@ namespace Game.Tests
                 MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
                 var sourceParts = root.transform.Find(N4SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, RoadSurfaceMeshBuilder.ObjectName));
 
-                AssertSourcePartStrip(sourceParts, new Vector3(-57.5f, 0f, 120f), new Vector3(19.999998f, 0.08f, 75f));
-                AssertSourcePartStrip(sourceParts, new Vector3(-55.25f, 0f, 0f), new Vector3(19.999998f, 0.08f, 70.5f));
-
-                var baseArenaPositions = new[]
-                {
-                    new Vector3(125f, 0f, 0f),
-                    new Vector3(0f, 0f, 125f),
-                    new Vector3(-125f, 0f, 0f),
-                    new Vector3(0f, 0f, -125f),
-                };
-
-                var baseIndex = 0;
-                foreach (Transform child in sourceParts)
-                {
-                    if (child.name != "BaseArena")
-                    {
-                        continue;
-                    }
-
-                    AssertVector3(baseArenaPositions[baseIndex], child.position);
-                    AssertVector3(new Vector3(40f, MatchArenaGreyboxBuilder.RoadHeight, 30f), child.localScale);
-                    baseIndex++;
-                }
-
-                Assert.AreEqual(4, baseIndex);
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.IsTrue(walkable.Contains(new Vector3(-57.5f, 0f, 120f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(54.5f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(125f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, 125f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(-125f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, -125f)));
             }
             finally
             {
@@ -362,7 +321,7 @@ namespace Game.Tests
         [Test]
         public void N4SourceParts_HasExpectedPartCount()
         {
-            Assert.AreEqual(29, N4SourcePartsBuilder.PartCount);
+            Assert.AreEqual(1, N4SourcePartsBuilder.PartCount);
             Assert.AreEqual(N4SourcePartsBuilder.PartCount, N4RoadReferenceSpec.SourcePartsCount);
         }
 
@@ -393,6 +352,34 @@ namespace Game.Tests
             return null;
         }
 
+        static void AssertSourcePartStripBounds(Transform sourceParts, Vector3 expectedCenter, Vector3 expectedSize)
+        {
+            Transform match = null;
+            foreach (Transform child in sourceParts)
+            {
+                if (child.name != "RoadStrip")
+                {
+                    continue;
+                }
+
+                var mesh = child.GetComponent<MeshFilter>()?.sharedMesh;
+                if (mesh == null)
+                {
+                    continue;
+                }
+
+                var bounds = mesh.bounds;
+                if (Vector3.Distance(bounds.center, expectedCenter) < 0.1f
+                    && Vector3.Distance(bounds.size, expectedSize) < 0.1f)
+                {
+                    match = child;
+                    break;
+                }
+            }
+
+            Assert.NotNull(match, $"Missing road strip near {expectedCenter} size {expectedSize}");
+        }
+
         static void AssertSourcePartStrip(Transform sourceParts, Vector3 expectedPosition, Vector3 expectedScale)
         {
             Transform match = null;
@@ -419,6 +406,64 @@ namespace Game.Tests
             Assert.Less(Mathf.Abs(expected.x - actual.x), tolerance, $"X mismatch: expected {expected.x}, got {actual.x}");
             Assert.Less(Mathf.Abs(expected.y - actual.y), tolerance, $"Y mismatch: expected {expected.y}, got {actual.y}");
             Assert.Less(Mathf.Abs(expected.z - actual.z), tolerance, $"Z mismatch: expected {expected.z}, got {actual.z}");
+        }
+
+        [Test]
+        public void RoadPlatformMesh_FacesUp_ForRectAndDisc()
+        {
+            var rect = RoadPlatformMesh.BuildRect(new Vector3(40f, MatchArenaGreyboxBuilder.RoadHeight, 30f));
+            var disc = RoadPlatformMesh.BuildDisc(50f, MatchArenaGreyboxBuilder.RoadHeight);
+
+            Assert.Greater(rect.normals[0].y, 0.9f);
+            Assert.Greater(disc.normals[0].y, 0.9f);
+            Assert.AreEqual(6, rect.triangles.Length);
+            Assert.AreEqual(4, new HashSet<int>(rect.triangles).Count, "Rect must use all four corners.");
+            Assert.AreEqual(40f, rect.bounds.size.x, 0.01f);
+            Assert.AreEqual(30f, rect.bounds.size.z, 0.01f);
+        }
+
+        [Test]
+        public void RoadStripMesh_FacesUp_ForOppositeTravelDirections()
+        {
+            var north = RoadStripMesh.BuildStraight(
+                new Vector3(0f, 0f, 19f),
+                new Vector3(0f, 0f, 90f),
+                MatchArenaGreyboxBuilder.RoadWidth,
+                MatchArenaGreyboxBuilder.RoadHeight);
+            var south = RoadStripMesh.BuildStraight(
+                new Vector3(0f, 0f, -90f),
+                new Vector3(0f, 0f, -19f),
+                MatchArenaGreyboxBuilder.RoadWidth,
+                MatchArenaGreyboxBuilder.RoadHeight);
+
+            Assert.Greater(north.normals[0].y, 0.9f);
+            Assert.Greater(south.normals[0].y, 0.9f);
+        }
+
+        [Test]
+        public void RoadStripMesh_HasWidthPerpendicularToTravelDirection()
+        {
+            var mesh = RoadStripMesh.BuildStraight(
+                new Vector3(-95f, 0f, 120f),
+                new Vector3(-20f, 0f, 120f),
+                MatchArenaGreyboxBuilder.RoadWidth,
+                MatchArenaGreyboxBuilder.RoadHeight);
+
+            Assert.Greater(mesh.vertexCount, 0);
+            var bounds = mesh.bounds;
+            Assert.Greater(bounds.size.z, 10f, "North strip width should span Z.");
+            Assert.Greater(bounds.size.x, bounds.size.z, "North strip length should run along X.");
+        }
+
+        [Test]
+        public void SpokeStripBounds_StopBeforeJunctionFilletAndCenterArena()
+        {
+            const float halfSize = 120f;
+            N4RoadReferenceSpec.GetPositiveZSpokeStrip(halfSize, out var from, out var to);
+
+            Assert.AreEqual(19f, from.z, 0.01f);
+            Assert.AreEqual(90f, to.z, 0.01f);
+            Assert.AreEqual(71f, to.z - from.z, 0.01f);
         }
 
         [Test]

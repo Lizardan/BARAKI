@@ -1,12 +1,30 @@
 using System.Linq;
 using Game.Gameplay.Match;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace Game.Tests
 {
     public sealed class MatchArenaEnvironmentRulesTests
     {
+        static readonly string[] OccaTreePrefabPaths =
+        {
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Pine Tree_1.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Pine Tree_2.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Pine Tree_3.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Pine Tree_4.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Pine Tree_5.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_1.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_2.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_3.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_4.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_5.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_6.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_7.prefab",
+            "Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/Tree_8.prefab",
+        };
+
         [TearDown]
         public void TearDown()
         {
@@ -26,23 +44,16 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CanPlace_PathPiece_AllowsWalkable()
+        public void BuildPlacements_N4_DoesNotPlaceMeshDecorOnWalkable()
         {
-            var surface = WalkableSurfaceBuilder.FromTriangles(
-                new Vector2(-5f, -5f),
-                new Vector2(5f, -5f),
-                new Vector2(0f, 5f));
+            var layout = MatchArenaGenerator.Generate(4);
+            var walkable = WalkableSurfaceCache.GetOrCreate(4);
+            var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
 
-            Assert.IsTrue(MatchArenaEnvironmentRules.CanPlace(
-                new Vector3(0f, 0f, 0f),
-                surface,
-                null,
-                EnvironmentPropKind.PathPiece,
-                arenaRadius: 120f));
-            Assert.IsTrue(MatchArenaEnvironmentRules.FootprintClearOfWalkable(
-                new Vector3(0f, 0f, 0f),
-                EnvironmentPropKind.PathPiece,
-                surface));
+            Assert.AreEqual(0, MatchArenaEnvironmentRules.CountKind(
+                placements,
+                EnvironmentPropKind.PathPiece));
+            Assert.IsFalse(placements.Any(placement => walkable.Contains(placement.Position)));
         }
 
         [Test]
@@ -111,45 +122,18 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BuildPlacements_N4_CobbleCoversWalkableUniformly()
+        public void BuildPlacements_N4_RoadsRemainClearOfCobbleAndRocks()
         {
             var layout = MatchArenaGenerator.Generate(4);
             var walkable = WalkableSurfaceCache.GetOrCreate(4);
             var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
-            var pathPieces = placements
-                .Where(p => p.Kind == EnvironmentPropKind.PathPiece)
-                .ToList();
 
-            Assert.Greater(pathPieces.Count, 200);
-            Assert.AreEqual(pathPieces.Count, pathPieces.Count(p => walkable.Contains(p.Position)));
-
-            // Spot-check: random walkable samples should have a nearby cobble.
-            var hits = 0;
-            var samples = 40;
-            var half = MatchArenaEnvironmentRules.MapHalfExtent(layout.ArenaRadius);
-            for (var i = 0; i < samples; i++)
-            {
-                var angle = (Mathf.PI * 2f * i) / samples;
-                var probe = new Vector3(Mathf.Cos(angle) * layout.ArenaRadius, 0f, Mathf.Sin(angle) * layout.ArenaRadius);
-                if (!walkable.Contains(probe))
-                {
-                    probe = walkable.Clamp(probe);
-                }
-
-                var near = pathPieces.Any(p =>
-                {
-                    var dx = p.Position.x - probe.x;
-                    var dz = p.Position.z - probe.z;
-                    return dx * dx + dz * dz < 4f * 4f;
-                });
-                if (near)
-                {
-                    hits++;
-                }
-            }
-
-            Assert.Greater(hits, samples * 0.7f);
-            Assert.LessOrEqual(Mathf.Abs(half), layout.ArenaRadius + 30f);
+            Assert.AreEqual(0, MatchArenaEnvironmentRules.CountKind(
+                placements,
+                EnvironmentPropKind.PathPiece));
+            Assert.IsFalse(placements
+                .Where(placement => placement.Kind == EnvironmentPropKind.Rock)
+                .Any(placement => walkable.Contains(placement.Position)));
         }
 
         [Test]
@@ -159,12 +143,33 @@ namespace Game.Tests
             var walkable = WalkableSurfaceCache.GetOrCreate(4);
             var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
 
-            Assert.Greater(MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Flower), 10);
             Assert.Greater(MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Lantern), 0);
+            Assert.Greater(MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Pine), 10);
             Assert.Greater(
                 MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Crate)
                 + MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Bench),
                 0);
+        }
+
+        [Test]
+        public void BuildPlacements_N4_DarkFantasyPaletteDominates()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var walkable = WalkableSurfaceCache.GetOrCreate(4);
+            var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
+
+            var pineCount = MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Pine);
+            var treeCount = MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Tree);
+            var ruggedCount = pineCount
+                              + MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Rock)
+                              + MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Cliff)
+                              + MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Mountain);
+            var brightVillageCount = MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Flower)
+                                     + MatchArenaEnvironmentRules.CountKind(placements, EnvironmentPropKind.Boat);
+
+            Assert.GreaterOrEqual(pineCount, treeCount);
+            Assert.Greater(ruggedCount, brightVillageCount * 2);
+            Assert.Less(brightVillageCount, placements.Count * 0.08f);
         }
 
         [Test]
@@ -179,6 +184,27 @@ namespace Game.Tests
             {
                 Assert.LessOrEqual(Mathf.Abs(placement.Position.x), max + 0.05f);
                 Assert.LessOrEqual(Mathf.Abs(placement.Position.z), max + 0.05f);
+            }
+        }
+
+        [Test]
+        public void BuildPlacements_N4_NoFloatingProps()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var walkable = WalkableSurfaceCache.GetOrCreate(4);
+            var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
+
+            foreach (var placement in placements)
+            {
+                // Rivers/boats sit slightly above water plane; everything else is grounded.
+                if (placement.Kind is EnvironmentPropKind.River or EnvironmentPropKind.Boat
+                    or EnvironmentPropKind.PathPiece)
+                {
+                    Assert.Less(placement.Position.y, 0.2f, $"{placement.Kind} unexpectedly high.");
+                    continue;
+                }
+
+                Assert.AreEqual(0f, placement.Position.y, 0.001f, $"{placement.Kind} floats at y={placement.Position.y}");
             }
         }
 
@@ -217,7 +243,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BuildPlacements_N4_HasMorePlacementsThanN2()
+        public void BuildPlacements_N2AndN4_HaveDenseNatureWithoutRoadDecor()
         {
             var n2 = MatchArenaEnvironmentRules.BuildPlacements(
                 MatchArenaGenerator.Generate(2),
@@ -226,18 +252,22 @@ namespace Game.Tests
                 MatchArenaGenerator.Generate(4),
                 WalkableSurfaceCache.GetOrCreate(4));
 
-            Assert.Greater(n4.Count, n2.Count);
+            Assert.Greater(n2.Count, 100);
+            Assert.Greater(n4.Count, 100);
+            Assert.AreEqual(0, MatchArenaEnvironmentRules.CountKind(n2, EnvironmentPropKind.PathPiece));
+            Assert.AreEqual(0, MatchArenaEnvironmentRules.CountKind(n4, EnvironmentPropKind.PathPiece));
         }
 
         [Test]
         public void Decorator_PopulateTwice_IsIdempotent()
         {
             var root = new GameObject("EnvDecorTestRoot");
+            MatchArenaEnvironmentPrefabSet prefabs = null;
             try
             {
                 var layout = MatchArenaGenerator.Generate(4);
                 var walkable = WalkableSurfaceCache.GetOrCreate(4);
-                var prefabs = MatchArenaEnvironmentDecorator.CreateTestPrefabSet();
+                prefabs = MatchArenaEnvironmentDecorator.CreateTestPrefabSet();
 
                 MatchArenaEnvironmentDecorator.Populate(root.transform, layout, walkable, prefabs);
                 var first = root.transform.Find(MatchArenaEnvironmentRules.DecorRootName);
@@ -255,7 +285,171 @@ namespace Game.Tests
             finally
             {
                 Object.DestroyImmediate(root);
+                if (prefabs != null)
+                {
+                    MatchArenaEnvironmentDecorator.DestroyTestPrefabSet(prefabs);
+                }
             }
+        }
+
+        [Test]
+        public void EnsureOccaColorMaterial_ReplacesWhiteMaterialButPreservesLight()
+        {
+            var root = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var colorMaterial = new Material(shader) { name = "OccaColor" };
+            var whiteMaterial = new Material(shader) { name = "Default-Material" };
+            var lightMaterial = new Material(shader) { name = "Light" };
+            var renderer = root.GetComponent<Renderer>();
+            renderer.sharedMaterials = new[] { whiteMaterial, lightMaterial };
+
+            try
+            {
+                MatchArenaEnvironmentDecorator.EnsureOccaColorMaterial(root, colorMaterial);
+
+                Assert.AreSame(colorMaterial, renderer.sharedMaterials[0]);
+                Assert.AreSame(lightMaterial, renderer.sharedMaterials[1]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(colorMaterial);
+                Object.DestroyImmediate(whiteMaterial);
+                Object.DestroyImmediate(lightMaterial);
+            }
+        }
+
+        [Test]
+        public void EnsureOccaColorMaterial_ReplacesPaletteColorMaterialWithOccaColor()
+        {
+            var root = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var palette = new Texture2D(4, 4) { name = "Color" };
+            var paletteMaterial = new Material(shader) { name = "Color" };
+            paletteMaterial.SetTexture("_BaseMap", palette);
+            var replacement = new Material(shader) { name = "OccaColor" };
+            var renderer = root.GetComponent<Renderer>();
+            renderer.sharedMaterial = paletteMaterial;
+
+            try
+            {
+                MatchArenaEnvironmentDecorator.EnsureOccaColorMaterial(root, replacement);
+
+                Assert.AreSame(replacement, renderer.sharedMaterial);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(palette);
+                Object.DestroyImmediate(paletteMaterial);
+                Object.DestroyImmediate(replacement);
+            }
+        }
+
+        [Test]
+        public void EnsureOccaColorMaterial_PreservesGeneratedFlowerPalette()
+        {
+            var root = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            var flowerMaterial = new Material(shader) { name = "OccaFlower3" };
+            var replacement = new Material(shader) { name = "OccaColor" };
+            var renderer = root.GetComponent<Renderer>();
+            renderer.sharedMaterial = flowerMaterial;
+
+            try
+            {
+                MatchArenaEnvironmentDecorator.EnsureOccaColorMaterial(root, replacement);
+                Assert.AreSame(flowerMaterial, renderer.sharedMaterial);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(flowerMaterial);
+                Object.DestroyImmediate(replacement);
+            }
+        }
+
+        [TestCase("Flower_1", "OccaFlower1")]
+        [TestCase("Flower_2", "OccaFlower2")]
+        [TestCase("Flower_3", "OccaFlower3")]
+        [TestCase("Flower_4", "OccaFlower4")]
+        [TestCase("Flower_5", "OccaFlower5")]
+        [TestCase("Flower Pot", "OccaFlower6")]
+        public void OccaFlowerPrefab_UsesDedicatedPalette(
+            string prefabName,
+            string materialName)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                $"Assets/OccaSoftware/Low Poly Fantasy Village/Prefabs/{prefabName}.prefab");
+            var material = prefab.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+
+            Assert.IsNotNull(material);
+            Assert.AreEqual(materialName, material.name);
+            Assert.AreEqual(FilterMode.Point, material.mainTexture.filterMode);
+        }
+
+        [TestCaseSource(nameof(OccaTreePrefabPaths))]
+        public void OccaPaletteMeshRepair_RepairPrefab_SeparatesWoodAndGradientFoliage(
+            string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab);
+
+            var source = prefab.GetComponent<MeshFilter>().sharedMesh;
+            Assert.IsTrue(source.isReadable);
+            var wood = OccaPaletteMeshRepair.FindWoodTriangles(
+                source.vertices,
+                source.triangles,
+                source.bounds);
+            Assert.IsTrue(wood.Any(value => value), "A wood component must touch the tree base.");
+            Assert.IsTrue(wood.Any(value => !value), "Foliage must be separate from wood.");
+
+            var repaired = OccaPaletteMeshRepair.RepairMesh(source);
+            try
+            {
+                var uvs = repaired.uv;
+                var triangles = repaired.triangles;
+                var minFoliageUv = float.MaxValue;
+                var maxFoliageUv = float.MinValue;
+                for (var triangle = 0; triangle < wood.Length; triangle++)
+                {
+                    for (var corner = 0; corner < 3; corner++)
+                    {
+                        var uv = uvs[triangles[triangle * 3 + corner]].x;
+                        if (wood[triangle])
+                        {
+                            Assert.Less(uv, 0.25f, "Wood must use the brown palette region.");
+                        }
+                        else
+                        {
+                            Assert.Greater(uv, 0.3f, "Foliage must use only the green palette region.");
+                            minFoliageUv = Mathf.Min(minFoliageUv, uv);
+                            maxFoliageUv = Mathf.Max(maxFoliageUv, uv);
+                        }
+                    }
+                }
+
+                Assert.Greater(
+                    maxFoliageUv - minFoliageUv,
+                    0.25f,
+                    "Foliage must span a visible dark-to-light gradient.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(repaired);
+            }
+        }
+
+        [Test]
+        public void OccaPaletteMeshRepair_TreeMaterial_UsesBilinearGradient()
+        {
+            var template = Resources.Load<Material>("Art/OccaColor");
+            var material = OccaPaletteMeshRepair.GetOrCreateTreeMaterial(template);
+            var palette = material.GetTexture("_BaseMap") as Texture2D;
+
+            Assert.IsNotNull(palette);
+            Assert.AreEqual(FilterMode.Bilinear, palette.filterMode);
+            Assert.AreEqual(TextureWrapMode.Clamp, palette.wrapMode);
         }
     }
 }

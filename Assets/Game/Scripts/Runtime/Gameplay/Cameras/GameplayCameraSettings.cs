@@ -24,9 +24,9 @@ namespace Game.Gameplay.Cameras
         public static readonly Vector3 IsometricFollowOffset =
             IsometricFollowDirection * DefaultZoomDistance;
 
-        public const float DefaultZoomDistance = 102f;
-        public const float DefaultMinZoomDistance = 64f;
-        public const float DefaultMaxZoomDistance = 144f;
+        public const float DefaultZoomDistance = 32f;
+        public const float DefaultMinZoomDistance = 16f;
+        public const float DefaultMaxZoomDistance = 64f;
         public const float DefaultZoomScrollSpeed = 1.5f;
         public const float DefaultZoomSmoothTime = 0.14f;
 

@@ -39,7 +39,6 @@ namespace Game.Gameplay.Match
 
         private void Awake()
         {
-            RenderSettings.fog = false;
             MatchPickLayers.InitializeFromName();
             EnsureSelectionBridge();
 

@@ -431,40 +431,25 @@ namespace Game.Gameplay.Match
             float endExtension = -1f,
             bool localSpace = false)
         {
-            if (endExtension < 0f)
+            if (endExtension > 0.001f)
             {
-                endExtension = RoadWidth * RoadStripCornerOverlap;
+                var delta = to - from;
+                var length = delta.magnitude;
+                if (length > 0.001f)
+                {
+                    var dir = delta / length;
+                    from -= dir * (endExtension * 0.5f);
+                    to += dir * (endExtension * 0.5f);
+                }
             }
-
-            var strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            strip.name = "RoadStrip";
-            strip.transform.SetParent(parent, false);
-
-            var delta = to - from;
-            var length = delta.magnitude;
-            var mid = (from + to) * 0.5f;
-            mid.y = 0f;
 
             if (localSpace)
             {
-                strip.transform.localPosition = mid;
-                strip.transform.localRotation = length > 0.001f
-                    ? Quaternion.LookRotation(delta.normalized, Vector3.up)
-                    : Quaternion.identity;
-            }
-            else
-            {
-                strip.transform.position = mid;
-                strip.transform.rotation = length > 0.001f
-                    ? Quaternion.LookRotation(delta.normalized, Vector3.up)
-                    : Quaternion.identity;
+                RoadStripMesh.CreateLocal(parent, from, to, material);
+                return;
             }
 
-            strip.transform.localScale = new Vector3(RoadWidth, RoadHeight, length + endExtension);
-
-            DestroyCollider(strip.GetComponent<Collider>());
-
-            strip.GetComponent<Renderer>().sharedMaterial = material;
+            RoadStripMesh.CreateWorld(parent, from, to, material);
         }
 
         public static void CreatePerimeterCornerArc(Transform parent, Vector3 corner, Material roadMaterial)

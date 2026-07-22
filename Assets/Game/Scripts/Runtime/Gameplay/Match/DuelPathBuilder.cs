@@ -61,8 +61,8 @@ namespace Game.Gameplay.Match
                 _ => new Vector3(-halfSize, 0f, GetNorthSouthRoadEdge()),
             };
 
-        /// <summary>6 perimeter + 2 E/W spokes + 1 arena + 4 fillets + 4 corners + 2 bases.</summary>
-        public const int SourcePartsCount = 19;
+        /// <summary>Single unioned RoadSurface under _SourceParts.</summary>
+        public const int SourcePartsCount = 1;
     }
 
     public static class DuelPathBuilder

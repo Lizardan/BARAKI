@@ -107,7 +107,15 @@ namespace Game.Gameplay.Match
                     instance.transform.localScale = placement.LocalScale;
                 }
 
-                EnsureOccaColorMaterial(instance, colorMaterial);
+                var instanceMaterial = colorMaterial;
+                if (OccaPaletteMeshRepair.ShouldRepair(placement.Kind) && colorMaterial != null)
+                {
+                    var palette = colorMaterial.GetTexture("_BaseMap") ?? colorMaterial.mainTexture;
+                    OccaPaletteMeshRepair.RepairInstance(instance, palette, placement.Kind);
+                    instanceMaterial = OccaPaletteMeshRepair.GetOrCreateTreeMaterial(colorMaterial);
+                }
+
+                EnsureOccaColorMaterial(instance, instanceMaterial);
                 DisableColliders(instance);
             }
         }
@@ -136,6 +144,28 @@ namespace Game.Gameplay.Match
                 Crates = new[] { CreatePrimitivePrefab("TestCrate", PrimitiveType.Cube) },
                 Benches = new[] { CreatePrimitivePrefab("TestBench", PrimitiveType.Cube) },
             };
+        }
+
+        /// <summary>Destroys objects created by <see cref="CreateTestPrefabSet"/>.</summary>
+        public static void DestroyTestPrefabSet(MatchArenaEnvironmentPrefabSet prefabs)
+        {
+            if (prefabs == null)
+            {
+                return;
+            }
+
+            DestroyTestPrefabPool(prefabs.Trees);
+            DestroyTestPrefabPool(prefabs.Pines);
+            DestroyTestPrefabPool(prefabs.Rocks);
+            DestroyTestPrefabPool(prefabs.Cliffs);
+            DestroyTestPrefabPool(prefabs.Flowers);
+            DestroyTestPrefabPool(prefabs.Mountains);
+            DestroyTestPrefabPool(prefabs.PathPieces);
+            DestroyTestPrefabPool(prefabs.Boats);
+            DestroyTestPrefabPool(prefabs.Bridges);
+            DestroyTestPrefabPool(prefabs.Lanterns);
+            DestroyTestPrefabPool(prefabs.Crates);
+            DestroyTestPrefabPool(prefabs.Benches);
         }
 
         public static void ClearDecor(Transform parent)
@@ -187,11 +217,14 @@ namespace Game.Gameplay.Match
                 var changed = false;
                 for (var m = 0; m < shared.Length; m++)
                 {
-                    if (shared[m] == null)
+                    var material = shared[m];
+                    if (ShouldPreserveEnvironmentMaterial(material))
                     {
-                        shared[m] = colorMaterial;
-                        changed = true;
+                        continue;
                     }
+
+                    shared[m] = colorMaterial;
+                    changed = true;
                 }
 
                 if (changed)
@@ -199,6 +232,18 @@ namespace Game.Gameplay.Match
                     renderer.sharedMaterials = shared;
                 }
             }
+        }
+
+        internal static bool ShouldPreserveEnvironmentMaterial(Material material)
+        {
+            if (material == null)
+            {
+                return false;
+            }
+
+            return string.Equals(material.name, "Light", StringComparison.OrdinalIgnoreCase)
+                   || material.name.StartsWith("OccaFlower", StringComparison.Ordinal)
+                   || material.IsKeywordEnabled("_EMISSION");
         }
 
         static void SpawnRiverSegment(
@@ -229,6 +274,7 @@ namespace Game.Gameplay.Match
             var go = GameObject.CreatePrimitive(type);
             go.name = name;
             go.hideFlags = HideFlags.HideAndDontSave;
+            go.SetActive(false);
             var collider = go.GetComponent<Collider>();
             if (collider != null)
             {
@@ -236,6 +282,32 @@ namespace Game.Gameplay.Match
             }
 
             return go;
+        }
+
+        static void DestroyTestPrefabPool(GameObject[] pool)
+        {
+            if (pool == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < pool.Length; i++)
+            {
+                var prefab = pool[i];
+                if (prefab == null)
+                {
+                    continue;
+                }
+
+                if (Application.isPlaying)
+                {
+                    UnityEngine.Object.Destroy(prefab);
+                }
+                else
+                {
+                    UnityEngine.Object.DestroyImmediate(prefab);
+                }
+            }
         }
 
         static void DisableColliders(GameObject instance)
