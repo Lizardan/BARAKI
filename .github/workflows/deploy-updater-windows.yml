@@ -1,0 +1,237 @@
+name: Deploy Updater Windows
+
+# Push to release/baraki-updater -> updater prerelease + Cloudflare installer.
+# This channel must not become GitHub /releases/latest for the full client.
+
+on:
+  push:
+    branches:
+      - release/baraki-updater
+    paths:
+      - "Assets/**"
+      - "BuildSupport/**"
+      - "Packages/**"
+      - "ProjectSettings/**"
+      - "cloudflare/baraki-landing/**"
+      - ".github/workflows/deploy-updater-windows.yml"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Updater semver bump"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+concurrency:
+  group: deploy-updater-windows
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.5f1-windows-il2cpp-3
+  CLOUDFLARE_PAGES_PROJECT: baraki
+  CLOUDFLARE_R2_BUCKET: baraki-releases
+  CLOUDFLARE_R2_LATEST_KEY: BARAKI-Setup.exe
+
+jobs:
+  build:
+    name: Build updater installer
+    runs-on: windows-latest
+    timeout-minutes: 180
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      installer: ${{ steps.installer.outputs.installer }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          fetch-tags: true
+          lfs: false
+
+      - name: Resolve next updater version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          LATEST="$(git tag -l 'updater-v*' --sort=-v:refname | head -n 1 || true)"
+
+          if [ -z "$LATEST" ]; then
+            V="0.1.0"
+          else
+            RAW="${LATEST#updater-v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$RAW"
+            MAJOR="${MAJOR:-0}"
+            MINOR="${MINOR:-0}"
+            PATCH="${PATCH:-0}"
+            case "$BUMP" in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              *)     PATCH=$((PATCH + 1)) ;;
+            esac
+            V="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+
+          TAG="updater-v${V}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists; aborting."
+            exit 1
+          fi
+
+          echo "version=${V}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved updater release: ${TAG} (previous=${LATEST:-none})"
+
+      - name: Use CI manifest
+        shell: pwsh
+        run: |
+          Copy-Item -Force "Packages/manifest.ci.json" "Packages/manifest.json"
+          Write-Host "Applied Packages/manifest.ci.json."
+
+      - name: Cache Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Library-Updater-Win64-${{ hashFiles('Packages/manifest.ci.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt', 'Assets/**/*.asmdef') }}
+          restore-keys: |
+            Library-Updater-Win64-
+            Library-Win64-
+            Library-
+
+      - name: Build updater Windows x64
+        uses: game-ci/unity-builder@v5
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          BARAKI_UPDATER_VERSION: ${{ steps.ver.outputs.version }}
+        with:
+          targetPlatform: StandaloneWindows64
+          unityVersion: 6000.5.5f1
+          customImage: ${{ env.UNITY_DOCKER_IMAGE }}
+          buildsPath: build
+          buildName: Updater
+          allowDirtyBuild: true
+          buildMethod: Game.Editor.WindowsCiBuild.BuildUpdaterOnly
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        id: installer
+        shell: pwsh
+        env:
+          BARAKI_UPDATER_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist" | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe not found at $iscc"
+          }
+
+          & $iscc "BuildSupport/Installer/BARAKI-Updater.iss"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $installer = "dist/BARAKI-Setup.exe"
+          if (-not (Test-Path $installer)) {
+            throw "Installer was not created: $installer"
+          }
+
+          "installer=BARAKI-Setup.exe" >> $env:GITHUB_OUTPUT
+
+      - name: Upload updater installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: updater-installer-${{ steps.ver.outputs.tag }}
+          path: dist/BARAKI-Setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Create updater prerelease
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v8
+        with:
+          name: updater-installer-${{ needs.build.outputs.tag }}
+          path: dist
+
+      - name: Create GitHub updater prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "dist/BARAKI-Setup.exe"
+
+          gh release create "$TAG" \
+            "dist/BARAKI-Setup.exe" \
+            --repo "${{ github.repository }}" \
+            --title "BARAKI Updater ${TAG}" \
+            --target "$SHA" \
+            --prerelease \
+            --latest=false \
+            --notes "Updater-only installer. Installs BARAKI.exe bootstrap client that updates to the latest full BARAKI release."
+
+  cloudflare:
+    name: Deploy Cloudflare landing
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download installer
+        uses: actions/download-artifact@v8
+        with:
+          name: updater-installer-${{ needs.build.outputs.tag }}
+          path: dist
+
+      - name: Upload installer to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "dist/BARAKI-Setup.exe"
+          npx wrangler r2 bucket create "$CLOUDFLARE_R2_BUCKET" || true
+          npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/$CLOUDFLARE_R2_LATEST_KEY" \
+            --file "dist/BARAKI-Setup.exe" \
+            --content-type "application/vnd.microsoft.portable-executable" \
+            --cache-control "public, max-age=300"
+          npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/releases/${{ needs.build.outputs.tag }}/BARAKI-Setup.exe" \
+            --file "dist/BARAKI-Setup.exe" \
+            --content-type "application/vnd.microsoft.portable-executable" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Deploy Pages landing
+        working-directory: cloudflare/baraki-landing
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" || true
+          npx wrangler pages deploy ./public \
+            --project-name="$CLOUDFLARE_PAGES_PROJECT" \
+            --branch=release/baraki-updater

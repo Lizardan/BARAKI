@@ -31,16 +31,49 @@ namespace Game.Editor
                 .Select(scene => scene.path)
                 .ToArray();
 
+            BuildWindowsPlayer(
+                "WindowsCiBuild",
+                scenes,
+                "build/Windows",
+                UpdaterReleaseRules.InstalledExecutableFileName,
+                null,
+                version);
+        }
+
+        public static void BuildUpdaterOnly()
+        {
+            PlayerSettings.bundleVersion = UpdaterReleaseRules.UpdaterBuildVersion;
+            PlayerSettings.productName = "BARAKI";
+
+            var updaterReleaseVersion = BuildVersionStampRules.Normalize(
+                System.Environment.GetEnvironmentVariable("BARAKI_UPDATER_VERSION"));
+
+            BuildWindowsPlayer(
+                "WindowsCiBuild.UpdaterOnly",
+                UpdaterBuildRules.Scenes,
+                UpdaterBuildRules.OutputDirectory,
+                UpdaterReleaseRules.InstalledExecutableFileName,
+                UpdaterBuildRules.ExtraScriptingDefines,
+                updaterReleaseVersion);
+        }
+
+        private static void BuildWindowsPlayer(
+            string label,
+            string[] scenes,
+            string outDir,
+            string exeName,
+            string[] extraScriptingDefines,
+            string stamp)
+        {
             if (scenes.Length == 0)
             {
-                Debug.LogError("WindowsCiBuild: no enabled scenes in Build Settings.");
+                Debug.LogError($"{label}: no scenes to build.");
                 EditorApplication.Exit(1);
                 return;
             }
 
-            const string outDir = "build/Windows";
             Directory.CreateDirectory(outDir);
-            var exePath = Path.Combine(outDir, "BARAKI.exe");
+            var exePath = Path.Combine(outDir, exeName);
 
             var options = new BuildPlayerOptions
             {
@@ -51,12 +84,17 @@ namespace Game.Editor
                 options = BuildOptions.None,
             };
 
+            if (extraScriptingDefines is { Length: > 0 })
+            {
+                options.extraScriptingDefines = extraScriptingDefines;
+            }
+
             Debug.Log(
-                $"WindowsCiBuild: version={PlayerSettings.bundleVersion} " +
-                $"(stamp={(version ?? "none")}) → {exePath}");
+                $"{label}: version={PlayerSettings.bundleVersion} " +
+                $"(stamp={(stamp ?? "none")}) → {exePath}");
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            Debug.Log($"WindowsCiBuild: result={summary.result} size={summary.totalSize}");
+            Debug.Log($"{label}: result={summary.result} size={summary.totalSize}");
 
             if (summary.result != BuildResult.Succeeded)
             {

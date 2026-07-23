@@ -28,6 +28,11 @@ namespace Game.UI.Controllers
         private const string MutedButtonClass = "ui-btn--muted";
         private const float UgsInitTimeoutSeconds = 8f;
         private const float FriendsInitTimeoutSeconds = 8f;
+#if BARAKI_UPDATER_ONLY
+        private const bool IsUpdaterOnlyBuild = true;
+#else
+        private const bool IsUpdaterOnlyBuild = false;
+#endif
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -422,6 +427,14 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            if (!BootstrapUpdateFlowRules.ShouldOfferEnterGame(
+                    IsUpdaterOnlyBuild,
+                    GameUpdateService.UpdateRequired))
+            {
+                ShowUpdaterOnlyIdle(GameUpdateService.CheckFailed);
+                return;
+            }
+
             if (GameUpdateService.CheckFailed)
             {
                 var detail = string.IsNullOrWhiteSpace(GameUpdateService.LastError)
@@ -574,6 +587,28 @@ namespace Game.UI.Controllers
             SetOverlayHidden(_updateStatusLabel, true);
             SetQuitInteractive(false);
             SetClientStatus("ПОДГОТОВКА", status ?? string.Empty);
+        }
+
+        private void ShowUpdaterOnlyIdle(bool checkFailed)
+        {
+            SetOverlayHidden(_loadingPanel, false);
+            SetOverlayHidden(_updatePanel, true);
+            SetOverlayHidden(_enterGameButton, true);
+            SetUpdateMetaVisible(false);
+            SetButtonDownloadProgress(false);
+            SetOverlayHidden(_updateStatusLabel, true);
+
+            var status = "Последняя версия уже установлена";
+            if (checkFailed)
+            {
+                var detail = string.IsNullOrWhiteSpace(GameUpdateService.LastError)
+                    ? "Попробуйте позже."
+                    : GameUpdateService.LastError;
+                status = $"Не удалось проверить обновления: {detail}";
+            }
+
+            SetClientStatus("АПДЕЙТЕР", status);
+            SetQuitInteractive(true);
         }
 
         private void ShowReadyToEnter()
