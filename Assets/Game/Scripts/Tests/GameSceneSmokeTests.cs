@@ -2,14 +2,12 @@ using Game.Gameplay.Cameras;
 using Game.Gameplay.Match;
 using NUnit.Framework;
 using Unity.Cinemachine;
-using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.VFX;
 
 namespace Game.Tests
 {
-    public sealed class TemplateSceneSmokeTests
+    public sealed class GameSceneSmokeTests
     {
         [Test]
         public void GameScene_HasCinemachineBrain()
@@ -42,23 +40,6 @@ namespace Game.Tests
             EditorSceneManager.OpenScene("Assets/Game/Scenes/Game.unity");
             var panController = Object.FindAnyObjectByType<GameplayCameraPanController>();
             Assert.IsNotNull(panController, "Game scene should include edge-scroll camera pan.");
-        }
-
-        [Test]
-        public void SampleBurstVfxPrefab_HasVisualEffect()
-        {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Game/Prefabs/Effects/SampleBurst.prefab");
-            Assert.IsNotNull(prefab, "SampleBurst VFX prefab should exist.");
-            Assert.IsNotNull(prefab.GetComponent<VisualEffect>(), "Prefab should use VisualEffect.");
-        }
-
-        [Test]
-        public void SampleBurstVfxGraph_Exists()
-        {
-            var graph = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(
-                "Assets/Game/Art/VFX/SampleBurst.vfx");
-            Assert.IsNotNull(graph, "SampleBurst.vfx should exist under Art/VFX.");
         }
     }
 }

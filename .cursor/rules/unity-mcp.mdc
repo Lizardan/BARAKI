@@ -118,7 +118,7 @@ Hub template ships MCP optional dependencies so new projects start with full age
 | VFX Graph | `com.unity.visualeffectgraph` | `manage_vfx` (VFX Graph paths) |
 | glTFast | `com.unity.cloud.gltfast` | GLB/GLTF import for **asset_gen** (`import_model`, `import_model_file`) |
 
-Versions are pinned in `Packages/manifest.json`; see `ProjectBootstrap/manifest.snapshot.json`. Do not remove unless trimming the template on purpose.
+Versions are pinned in `Packages/manifest.json`. Do not remove vendored UniRx/Roslyn without updating MCP workflow.
 
 ## Task → MCP activation
 

@@ -2,60 +2,34 @@
 alwaysApply: true
 ---
 
-# Unity 6.5 Project Rules
+# BARAKI Project Rules
 
 ## Project Overview
 
-Universal Unity 6.5 template: URP, C# 12, **UniRx + UniTask + UI Toolkit** (no uGUI), **Cinemachine 3 + VFX Graph**, Unity feature packs, Cursor + MCP bootstrap on first open.
+BARAKI — Unity 6.5 production game: URP, C# 12, **UniRx + UniTask + UI Toolkit** (no uGUI), **Cinemachine 3**, Netcode + Unity Gaming Services.
 
 C# / MonoBehaviour: `unity-core.mdc`. Layout & asmdefs: `code-organization.mdc`. Agent behavior: `agent-guidelines.mdc`. MCP: `unity-mcp.mdc`.
 
-## Tech Stack (default template)
+## Tech Stack
 
 - **Unity**: 6.5 (6000.5)
 - **C#**: 12.0
 - **Rendering**: URP 17.5 — `Settings/Rendering/RPAsset.asset`
 - **Cameras**: Cinemachine 3.1 — `unity-cinemachine.mdc`
-- **Effects**: VFX Graph 17.5 only — `unity-vfx.mdc` (no ParticleSystem in game content)
 - **UI**: UI Toolkit only — `unity-ui.mdc`
 - **Reactive**: UniRx (vendored, trimmed)
 - **Async**: UniTask (pinned git); `Game.Core` uses `Awaitable` for bootstrap
-- **Feature packs**: 2D, Characters+Animation, ECS (opt-in), Worldbuilding (ProBuilder)
-- **MCP**: Coplay unity-mcp 10+ (stdio); Roslyn, ProBuilder, Cinemachine, VFX Graph, glTFast; optional **asset_gen** (AI 3D/2D, BYO keys)
+- **Multiplayer**: Netcode for GameObjects + UGS (Lobby, Relay, Friends, Cloud Save)
+- **MCP**: Coplay unity-mcp 10+ (stdio); Roslyn for `execute_code`
 - **Testing**: `Game.Tests`; MCP **testing** group when running tests
 
 ## Scenes
 
-Bootstrap (build 0) → `GameManager` + `BootstrapSceneLoader` → **MainMenu** (build 1): Cinemachine rig, cinematic main menu (`MainMenuController`), level backdrop, `GameSession` / `GameplayReveal`. **Game** (build 2): gameplay (e.g. RobotPlayer) with Cinemachine + `GameplayCameraZoom`. VFX sample prefab is reference-only.
+Bootstrap (build 0) → **MainMenu** (build 1) → **Lobby** → **Game** (match scene): Cinemachine rigs, UI Toolkit menus/HUD, `MatchRuntime` + greybox arena.
 
 ## Principles
 
 - Prefer composition over singletons except bootstrap lifecycle (`GameManager`).
 - UI bindings: always `UIBindingScope`.
 - Do not add `com.unity.ugui` or `UnityEngine.UI`.
-- Cameras via Cinemachine; effects via VFX Graph.
-
-## Always-on rules
-
-| Rule | Role |
-|------|------|
-| `index.mdc` | Hub (this file) |
-| `agent-guidelines.mdc` | Agent behavior |
-| `unity-core.mdc` | C# / MonoBehaviour |
-| `code-organization.mdc` | Folders, asmdefs, bootstrap |
-| `unity-mcp.mdc` | Coplay MCP workflows |
-| `unity-docs.mdc` | @Docs routing |
-
-## Scoped rules (auto or on request)
-
-| Rule | When |
-|------|------|
-| `unity-input.mdc` | Input / Gameplay scripts |
-| `unity-ui.mdc` | UI Toolkit assets and scripts |
-| `unity-async.mdc` | Async code under Gameplay / UI |
-| `unity-reactive.mdc` | UniRx usage in Gameplay / UI |
-| `unity-cinemachine.mdc` | Cameras, Cinemachine, scenes |
-| `unity-vfx.mdc` | VFX Graph, shaders/textures (`vfx` group), effects prefabs |
-| `unity-probuilder.mdc` | Greybox / worldbuilding |
-| `unity-2d.mdc` | 2D feature pack |
-| `unity-ecs.mdc` | Entities / ECS (opt-in) |
+- Commit messages: Russian, imperative — see `.cursorrules`.

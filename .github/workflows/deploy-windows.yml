@@ -45,7 +45,7 @@ permissions:
 env:
   # Explicit image so background pre-pull matches game-ci/unity-builder customImage.
   # No windows-mono tag for this version on Windows runners (Docker Hub 2026-07).
-  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.1f1-windows-il2cpp-3
+  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.5f1-windows-il2cpp-3
 
 jobs:
   build:
@@ -233,7 +233,7 @@ jobs:
           BARAKI_BUILD_VERSION: ${{ steps.ver.outputs.version }}
         with:
           targetPlatform: StandaloneWindows64
-          unityVersion: 6000.5.1f1
+          unityVersion: 6000.5.5f1
           customImage: ${{ env.UNITY_DOCKER_IMAGE }}
           buildsPath: build
           buildName: Windows

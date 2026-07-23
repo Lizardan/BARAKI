@@ -93,39 +93,14 @@ Assets/Game/UI/Runtime/Extensions/  # UI Toolkit bridge for UniRx + UniTask
 
 | Package | Brings |
 |---------|--------|
-| `com.unity.feature.2d` | 2D Animation, Tilemap, Sprite, … → `unity-2d.mdc` |
 | `com.unity.feature.characters-animation` | Animation Rigging, Timeline, Cinemachine |
-| `com.unity.feature.ecs` | Entities 6.5 → `unity-ecs.mdc` (opt-in) |
-| `com.unity.feature.worldbuilding` | ProBuilder → `unity-probuilder.mdc` |
 
-Direct pins: `com.unity.cinemachine`, `com.unity.visualeffectgraph`, `com.coplaydev.unity-mcp`.
+Direct pins: `com.unity.cinemachine`, `com.coplaydev.unity-mcp`.
 
-Cameras: `unity-cinemachine.mdc`. Effects: `unity-vfx.mdc` (VFX Graph only).
+Cameras: `unity-cinemachine.mdc`.
 
 After updating UniRx from Asset Store, re-apply trim per `Assets/Plugins/UniRx/TRIM_NOTES.md`.
 
 ## Cursor bootstrap
 
-Hub templates cannot ship `.cursor/` at the project root. Embedded copy lives under `Assets/Game/Settings/ProjectBootstrap/`:
-
-```
-Assets/Game/Settings/ProjectBootstrap/
-├── Cursor/
-│   ├── index.mdc              # hub rules (alwaysApply)
-│   ├── docs-sources.json        # @Docs index mirror
-│   ├── rules/                   # agent .mdc (always-on + scoped)
-│   └── scripts/
-│       └── unity-mcp-hidden.ps1 # Windows MCP stdio launcher → ~/.cursor/scripts/
-├── cursorrules                  # → project root .cursorrules (✨ commits, RU)
-└── gitignore                    # → project root .gitignore (if missing)
-```
-
-**First Editor open** (no `.cursor/rules/unity-mcp.mdc` yet): copies the above to project root, applies Coplay MCP stdio + hidden launcher (Windows), optional Cursor open dialog.
-
-**Maintainers** (edit rules in dev project with root `.cursor/`): sync `.cursor/`, `.cursorrules`, `.gitignore` into `ProjectBootstrap/` (via Cursor agent or `CursorProjectBootstrap.SyncEmbeddedTemplateFromProjectRoot()`). Before **Hub → Create Template**, delete project root `.cursor/` if present so new projects run first-open bootstrap. No Editor menu items — bootstrap is automatic on first open.
-
-| Destination (project root) | Source (embedded) |
-|----------------------------|-------------------|
-| `.cursor/` | `ProjectBootstrap/Cursor/` |
-| `.cursorrules` | `ProjectBootstrap/cursorrules` |
-| `.gitignore` | `ProjectBootstrap/gitignore` |
+Project rules live in `.cursor/` at the repository root. `.cursorrules` controls commit message language. Unity Editor opens Cursor once per session and keeps MCP stdio configured via `Assets/Game/Scripts/Editor/Mcp/`.

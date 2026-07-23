@@ -24,7 +24,6 @@ namespace Game.Editor
         private const string AutoRegisterKey = "MCPForUnity.AutoRegisterEnabled";
         private const string AutoStartOnLoadKey = "MCPForUnity.AutoStartOnLoad";
         private const string LockCursorConfigKey = "MCPForUnity.LockCursorConfig";
-        private const string BootstrapRoot = "Assets/Game/Settings/ProjectBootstrap";
         private const string HiddenLauncherFileName = "unity-mcp-hidden.ps1";
         private const string UnityMcpServerKey = "unityMCP";
         private const string McpPackageName = "com.coplaydev.unity-mcp";
@@ -286,14 +285,13 @@ namespace Game.Editor
 
                 var embeddedScript = Path.Combine(
                     projectRoot,
-                    BootstrapRoot,
-                    "Cursor",
+                    ".cursor",
                     "scripts",
                     HiddenLauncherFileName);
 
                 if (!File.Exists(embeddedScript))
                 {
-                    Debug.LogWarning($"[Template] Hidden MCP launcher script missing: {embeddedScript}");
+                    Debug.LogWarning($"[BARAKI] Hidden MCP launcher script missing: {embeddedScript}");
                     return false;
                 }
 

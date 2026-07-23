@@ -86,3 +86,9 @@ infra/playtest.env
 
 # CI-only version stamp (written by deploy-windows workflow)
 /BuildSupport/ci-version.txt
+
+# Burst / player build artifacts at repo root
+/[Dd]ata/
+
+# Accidental root copies of asset imports
+/*.mdx

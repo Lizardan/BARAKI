@@ -4,7 +4,6 @@ using Game.Gameplay.Cameras;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
-using Game.Gameplay.Vfx;
 using Game.UI.Controllers;
 using Unity.Cinemachine;
 using Unity.Cinemachine.TargetTracking;
@@ -12,19 +11,16 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.VFX;
 
 namespace Game.Editor
 {
     /// <summary>
-    /// Idempotent setup for Game.unity (Cinemachine, level backdrop, VFX sample).
+    /// Idempotent setup for Game.unity (Cinemachine, level backdrop).
     /// Maintainer-only: call <see cref="ConfigureGameScene"/> from Editor code if the scene needs repair — no menu item.
     /// </summary>
     public static class TemplateSceneSetup
     {
         private const string GameScenePath = "Assets/Game/Scenes/Game.unity";
-        private const string VfxGraphPath = "Assets/Game/Art/VFX/SampleBurst.vfx";
-        private const string VfxPrefabPath = "Assets/Game/Prefabs/Effects/SampleBurst.prefab";
         private const string CameraRigPrefabPath = "Assets/Game/Prefabs/Cameras/GameCameraRig.prefab";
         private const string GroundMaterialPath = "Assets/Game/Art/Materials/EnvironmentGround.mat";
         private const string PanelSettingsPath = "Assets/Game/Settings/UI/DefaultPanelSettings.asset";
@@ -60,13 +56,12 @@ namespace Game.Editor
             EnsureMatchHud(ui.transform);
             EnsureRacePickUi(ui.transform);
 
-            EnsureVfxPrefab();
             EnsureCameraRigPrefab(cameras);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Template] Game scene configured: Cinemachine, level backdrop, VFX sample prefab.");
+            Debug.Log("[Template] Game scene configured: Cinemachine and level backdrop.");
         }
 
         private static void EnsureLevelEnvironment(Transform levelParent)
@@ -371,30 +366,6 @@ namespace Game.Editor
             {
                 go.transform.SetParent(parent, true);
             }
-        }
-
-        private static VisualEffect EnsureVfxPrefab()
-        {
-            var existing = AssetDatabase.LoadAssetAtPath<VisualEffect>(VfxPrefabPath);
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            var graph = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(VfxGraphPath);
-            if (graph == null)
-            {
-                Debug.LogWarning($"[Template] VFX graph missing at {VfxGraphPath}");
-                return null;
-            }
-
-            var temp = new GameObject("SampleBurst_Temp");
-            var visualEffect = temp.AddComponent<VisualEffect>();
-            visualEffect.visualEffectAsset = graph;
-
-            var prefab = PrefabUtility.SaveAsPrefabAsset(temp, VfxPrefabPath);
-            Object.DestroyImmediate(temp);
-            return prefab.GetComponent<VisualEffect>();
         }
 
         private static void EnsureMatchRuntime(Transform systemsParent)
