@@ -220,18 +220,21 @@ jobs:
           npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/$CLOUDFLARE_R2_LATEST_KEY" \
             --file "dist/BARAKI-Setup.exe" \
             --content-type "application/vnd.microsoft.portable-executable" \
-            --cache-control "public, max-age=300"
+            --cache-control "public, max-age=300" \
+            --remote
           npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/releases/${{ needs.build.outputs.tag }}/BARAKI-Setup.exe" \
             --file "dist/BARAKI-Setup.exe" \
             --content-type "application/vnd.microsoft.portable-executable" \
-            --cache-control "public, max-age=31536000, immutable"
+            --cache-control "public, max-age=31536000, immutable" \
+            --remote
 
       - name: Deploy Pages landing
         working-directory: cloudflare/baraki-landing
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" || true
+          npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" \
+            --production-branch=release/baraki-updater || true
           npx wrangler pages deploy ./public \
             --project-name="$CLOUDFLARE_PAGES_PROJECT" \
             --branch=release/baraki-updater
