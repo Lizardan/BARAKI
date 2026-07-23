@@ -36,8 +36,6 @@ permissions:
 env:
   UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.5f1-windows-il2cpp-3
   CLOUDFLARE_PAGES_PROJECT: baraki
-  CLOUDFLARE_R2_BUCKET: baraki-releases
-  CLOUDFLARE_R2_LATEST_KEY: BARAKI-Setup.exe
 
 jobs:
   build:
@@ -205,28 +203,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Download installer
-        uses: actions/download-artifact@v8
-        with:
-          name: updater-installer-${{ needs.build.outputs.tag }}
-          path: dist
-
-      - name: Upload installer to R2
+      - name: Configure Pages download redirect
         shell: bash
         run: |
           set -euo pipefail
-          test -f "dist/BARAKI-Setup.exe"
-          npx wrangler r2 bucket create "$CLOUDFLARE_R2_BUCKET" || true
-          npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/$CLOUDFLARE_R2_LATEST_KEY" \
-            --file "dist/BARAKI-Setup.exe" \
-            --content-type "application/vnd.microsoft.portable-executable" \
-            --cache-control "public, max-age=300" \
-            --remote
-          npx wrangler r2 object put "$CLOUDFLARE_R2_BUCKET/releases/${{ needs.build.outputs.tag }}/BARAKI-Setup.exe" \
-            --file "dist/BARAKI-Setup.exe" \
-            --content-type "application/vnd.microsoft.portable-executable" \
-            --cache-control "public, max-age=31536000, immutable" \
-            --remote
+          cat > "cloudflare/baraki-landing/functions/download.js" <<EOF
+          const InstallerUrl =
+            "https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/BARAKI-Setup.exe";
+
+          export function onRequest() {
+            return Response.redirect(InstallerUrl, 302);
+          }
+          EOF
 
       - name: Deploy Pages landing
         working-directory: cloudflare/baraki-landing
