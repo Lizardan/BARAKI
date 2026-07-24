@@ -5,13 +5,13 @@
 }
 
 .match-hud-chrome {
-    background-color: rgba(18, 14, 12, 0.92);
+    background-color: rgba(34, 34, 36, 0.92);
     background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.45);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.45);
     border-radius: 0;
 }
 
@@ -32,7 +32,7 @@
     min-width: 88px;
     font-size: 15px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     letter-spacing: 1px;
 }
 
@@ -41,7 +41,7 @@
     margin-left: 20px;
     font-size: 22px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     -unity-text-align: middle-left;
 }
 
@@ -107,7 +107,7 @@
 .match-hud__migration-label {
     font-size: 22px;
     -unity-font-style: bold;
-    color: rgb(230, 220, 200);
+    color: rgb(224, 211, 185);
     letter-spacing: 1px;
 }
 
@@ -115,7 +115,7 @@
     margin-left: 20px;
     font-size: 14px;
     -unity-font-style: bold;
-    color: rgb(210, 196, 160);
+    color: rgb(184, 169, 130);
     letter-spacing: 0.5px;
 }
 
@@ -156,7 +156,7 @@
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(8, 6, 4, 0.82);
+    background-color: rgba(15, 15, 16, 0.82);
 }
 
 .match-hud__results--hidden {
@@ -199,9 +199,9 @@
     width: 160px;
     flex-direction: column;
     padding: 8px;
-    background-color: rgba(18, 14, 12, 0.92);
-    border-width: 1px;
-    border-color: rgba(201, 163, 90, 0.45);
+    background-color: rgba(34, 34, 36, 0.92);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.45);
 }
 
 .match-hud__debug--hidden {
@@ -211,7 +211,7 @@
 .match-hud__debug-title {
     font-size: 12px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     margin-bottom: 6px;
     -unity-text-align: middle-center;
 }
@@ -227,9 +227,9 @@
     position: absolute;
     max-width: 220px;
     padding: 8px 10px;
-    background-color: rgba(12, 10, 8, 0.96);
-    border-width: 1px;
-    border-color: rgba(201, 163, 90, 0.55);
+    background-color: rgba(9, 9, 10, 0.96);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.55);
     z-index: 1000;
 }
 
@@ -239,7 +239,7 @@
 
 .match-command-tooltip__label {
     font-size: 12px;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     white-space: normal;
     -unity-text-align: middle-left;
 }

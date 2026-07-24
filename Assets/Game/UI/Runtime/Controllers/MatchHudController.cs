@@ -538,7 +538,7 @@ namespace Game.UI.Controllers
             var radius = Mathf.Min(rect.width, rect.height) * 0.45f;
             var painter = ctx.painter2D;
             painter.lineWidth = 4f;
-            painter.strokeColor = new Color(0.25f, 0.22f, 0.18f, 0.85f);
+            painter.strokeColor = new Color(34f / 255f, 34f / 255f, 36f / 255f, 0.85f);
             painter.BeginPath();
             painter.Arc(center, radius, Angle.Degrees(0f), Angle.Degrees(360f));
             painter.Stroke();
@@ -548,7 +548,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            painter.strokeColor = new Color(1f, 0.84f, 0.38f, 1f);
+            painter.strokeColor = new Color(194f / 255f, 119f / 255f, 58f / 255f, 1f);
             painter.BeginPath();
             painter.Arc(
                 center,

@@ -1,6 +1,6 @@
 /* BARAKI — UI Toolkit theme (CSS frames, no sprite kit) */
 
-/* Tokens: cream #F2E6C8 | accent #C9A35A | muted #A89878 | ink #12100E | panel #1C1712 */
+/* Tokens: text #EFE4CF | accent #C2773A | muted #B8A982 | ink #0F0F10 | panel #222224 | rim #7D7568 */
 
 * {
     -unity-font: url("../Fonts/NotoSans.ttf");
@@ -23,7 +23,7 @@
     flex-grow: 1;
     width: 100%;
     height: 100%;
-    background-color: rgb(18, 16, 14);
+    background-color: rgb(15, 15, 16);
 }
 
 .ui-bg {
@@ -32,7 +32,7 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: rgb(22, 18, 14);
+    background-color: rgb(9, 9, 10);
     background-image: none;
 }
 
@@ -42,7 +42,7 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: rgba(8, 6, 4, 0.35);
+    background-color: rgba(15, 15, 16, 0.35);
 }
 
 .ui-vignette {
@@ -62,7 +62,7 @@
     font-size: 72px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 10px;
     text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
 }
@@ -76,7 +76,7 @@
     font-size: 13px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     letter-spacing: 3px;
     margin-top: 4px;
 }
@@ -84,7 +84,7 @@
 .ui-meta {
     font-size: 12px;
     -unity-text-align: middle-center;
-    color: rgba(168, 152, 120, 0.92);
+    color: rgba(184, 169, 130, 0.92);
     letter-spacing: 1px;
     white-space: normal;
 }
@@ -92,14 +92,14 @@
 .ui-label {
     font-size: 13px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 1px;
 }
 
 .ui-rule {
     height: 2px;
     width: 180px;
-    background-color: rgba(201, 163, 90, 0.65);
+    background-color: rgba(125, 117, 104, 0.65);
     margin-top: 10px;
     margin-bottom: 10px;
 }
@@ -107,28 +107,28 @@
 /* ── Thin chrome (Match HUD) ── */
 
 .ui-chrome {
-    background-color: rgba(18, 14, 12, 0.92);
+    background-color: rgba(34, 34, 36, 0.92);
     background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.4);
-    border-radius: 2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.4);
+    border-radius: 0;
 }
 
 /* ── Panels (CSS frames) ── */
 
 .ui-panel {
     padding: 0;
-    background-color: rgba(28, 23, 18, 0.94);
+    background-color: rgba(34, 34, 36, 0.94);
     background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.55);
-    border-radius: 2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.55);
+    border-radius: 0;
 }
 
 .ui-panel--lg {
@@ -136,16 +136,17 @@
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgba(201, 163, 90, 0.7);
+    border-color: rgba(125, 117, 104, 0.7);
+    border-radius: 0;
 }
 
 .ui-panel--sm {
-    border-color: rgba(201, 163, 90, 0.4);
+    border-color: rgba(125, 117, 104, 0.4);
 }
 
 .ui-panel__inner {
     flex-grow: 1;
-    background-color: rgba(14, 11, 9, 0.55);
+    background-color: rgba(15, 15, 16, 0.55);
     border-width: 0;
     padding: 18px 20px;
 }
@@ -157,21 +158,21 @@
     align-items: center;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(201, 163, 90, 0.35);
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(125, 117, 104, 0.35);
 }
 
 .ui-panel__header-text {
     font-size: 12px;
     -unity-font-style: bold;
     letter-spacing: 3px;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     -unity-text-align: middle-left;
 }
 
 .ui-panel__note {
     font-size: 12px;
-    color: rgba(168, 152, 120, 0.9);
+    color: rgba(184, 169, 130, 0.9);
     margin-bottom: 12px;
     white-space: normal;
     -unity-text-align: middle-left;
@@ -181,14 +182,14 @@
     width: 440px;
     max-width: 90%;
     padding: 0;
-    background-color: rgb(28, 23, 18);
+    background-color: rgb(34, 34, 36);
     background-image: none;
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgba(201, 163, 90, 0.75);
-    border-radius: 2px;
+    border-color: rgba(125, 117, 104, 0.75);
+    border-radius: 0;
 }
 
 .ui-dialog__header {
@@ -196,14 +197,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 18px 12px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(201, 163, 90, 0.4);
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(125, 117, 104, 0.4);
 }
 
 .ui-dialog__title {
     font-size: 18px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 3px;
 }
 
@@ -211,27 +212,27 @@
     width: 36px;
     height: 36px;
     background-image: none;
-    background-color: rgb(56, 38, 26);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgb(168, 138, 88);
+    background-color: rgb(52, 52, 56);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(125, 117, 104);
     outline-width: 0;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     font-size: 15px;
     -unity-text-align: middle-center;
 }
 
 .ui-dialog__close:hover {
-    background-color: rgb(78, 52, 34);
-    border-color: rgb(201, 163, 90);
+    background-color: rgb(68, 68, 72);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-dialog__body {
     flex-direction: column;
     padding: 16px 18px 18px;
-    background-color: rgba(14, 11, 9, 0.45);
+    background-color: rgba(15, 15, 16, 0.45);
 }
 
 .ui-dialog__row {
@@ -254,7 +255,7 @@
 
 .ui-dialog__value {
     font-size: 14px;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
 }
 
 /* ── Buttons ── */
@@ -268,29 +269,29 @@
     -unity-font-style: bold;
     letter-spacing: 2px;
     -unity-text-align: middle-center;
-    color: rgb(242, 230, 200);
-    background-color: rgb(62, 42, 28);
+    color: rgb(239, 228, 207);
+    background-color: rgb(52, 52, 56);
     background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgb(158, 128, 78);
-    border-radius: 2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(125, 117, 104);
+    border-radius: 0;
     outline-width: 0;
     transition-duration: 0.1s;
     transition-property: background-color, border-color, scale, color;
 }
 
 .ui-btn:hover {
-    background-color: rgb(86, 56, 34);
-    border-color: rgb(201, 163, 90);
+    background-color: rgb(68, 68, 72);
+    border-color: rgb(125, 117, 104);
     scale: 1.01;
 }
 
 .ui-btn:active {
     scale: 0.99;
-    background-color: rgb(48, 32, 20);
+    background-color: rgb(24, 24, 26);
 }
 
 .ui-btn:disabled {
@@ -302,27 +303,27 @@
     font-size: 17px;
     letter-spacing: 3px;
     margin-bottom: 12px;
-    color: rgb(255, 244, 214);
-    background-color: rgb(118, 72, 34);
+    color: rgb(239, 228, 207);
+    background-color: rgb(86, 103, 122);
     background-image: none;
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgb(201, 163, 90);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-btn--primary:hover {
-    background-color: rgb(140, 88, 40);
-    border-color: rgb(230, 190, 120);
-    color: rgb(255, 250, 230);
+    background-color: rgb(86, 103, 122);
+    border-color: rgb(125, 117, 104);
+    color: rgb(239, 228, 207);
 }
 
 .ui-btn--muted {
-    color: rgba(210, 196, 160, 0.85);
-    background-color: rgb(40, 30, 22);
+    color: rgba(184, 169, 130, 0.85);
+    background-color: rgb(24, 24, 26);
     background-image: none;
-    border-color: rgb(110, 90, 62);
+    border-color: rgb(94, 88, 78);
 }
 
 .ui-btn--square {
@@ -333,21 +334,22 @@
     font-size: 11px;
     letter-spacing: 1px;
     white-space: normal;
-    color: rgb(242, 230, 200);
-    background-color: rgb(62, 42, 28);
+    color: rgb(239, 228, 207);
+    background-color: rgb(52, 52, 56);
     background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgb(158, 128, 78);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(125, 117, 104);
+    border-radius: 0;
     outline-width: 0;
     overflow: visible;
 }
 
 .ui-btn--square:hover {
-    background-color: rgb(86, 56, 34);
-    border-color: rgb(201, 163, 90);
+    background-color: rgb(68, 68, 72);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-btn--square:disabled {
@@ -378,13 +380,13 @@
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(14, 10, 8, 0.78);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.35);
-    border-radius: 2px;
+    background-color: rgba(9, 9, 10, 0.78);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.35);
+    border-radius: 0;
 }
 
 .ui-panel-loading-overlay--hidden {
@@ -400,7 +402,7 @@
 .ui-panel-loading-overlay__text {
     font-size: 16px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 1px;
 }
 
@@ -409,7 +411,7 @@
     min-width: 28px;
     font-size: 16px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     -unity-text-align: upper-left;
     margin-left: 0;
     padding-left: 0;
@@ -435,14 +437,14 @@
 
 .ui-footer__text {
     font-size: 11px;
-    color: rgba(168, 152, 120, 0.55);
+    color: rgba(184, 169, 130, 0.55);
     letter-spacing: 2px;
 }
 
 .ui-footer__dot {
     margin-left: 8px;
     margin-right: 8px;
-    color: rgba(168, 152, 120, 0.35);
+    color: rgba(184, 169, 130, 0.35);
 }
 
 .ui-version {
@@ -451,7 +453,7 @@
     bottom: 18px;
     font-size: 18px;
     -unity-font-style: bold;
-    color: rgb(255, 244, 214);
+    color: rgb(239, 228, 207);
     letter-spacing: 2px;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
@@ -466,12 +468,18 @@
 
 .ui-hints__text {
     font-size: 11px;
-    color: rgba(168, 152, 120, 0.7);
+    color: rgba(184, 169, 130, 0.7);
 }
 
 TextField {
-    color: rgb(242, 230, 200);
-    background-color: rgb(18, 14, 12);
+    color: rgb(239, 228, 207);
+    background-color: rgb(15, 15, 16);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(125, 117, 104);
+    border-radius: 0;
 }
 
 TextField > .unity-base-field__input,
@@ -479,13 +487,13 @@ TextField > .unity-base-text-field__input,
 .unity-text-field > .unity-base-text-field__input,
 .unity-base-text-field__input,
 .unity-text-field__input {
-    background-color: rgb(18, 14, 12);
-    color: rgb(242, 230, 200);
+    background-color: rgb(15, 15, 16);
+    color: rgb(239, 228, 207);
     border-left-width: 0;
     border-right-width: 0;
     border-top-width: 0;
     border-bottom-width: 0;
-    --unity-cursor-color: rgb(201, 163, 90);
+    --unity-cursor-color: rgb(125, 117, 104);
 }
 
 .ui-toggle {
@@ -499,27 +507,27 @@ TextField > .unity-base-text-field__input,
 
 .ui-bar {
     height: 16px;
-    background-color: rgba(20, 14, 10, 0.9);
-    background-image: none;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.45);
-    border-radius: 2px;
-}
-
-.ui-portrait-frame {
-    width: 120px;
-    height: 120px;
-    background-color: rgba(12, 10, 8, 0.95);
+    background-color: rgba(34, 34, 36, 0.9);
     background-image: none;
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgb(201, 163, 90);
-    border-radius: 60px;
+    border-color: rgba(125, 117, 104, 0.45);
+    border-radius: 0;
+}
+
+.ui-portrait-frame {
+    width: 120px;
+    height: 120px;
+    background-color: rgba(9, 9, 10, 0.95);
+    background-image: none;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(125, 117, 104);
+    border-radius: 0;
     padding: 8px;
     overflow: hidden;
 }
@@ -532,27 +540,27 @@ TextField > .unity-base-text-field__input,
 
 .ui-icon--coins {
     background-image: none;
-    background-color: rgb(201, 163, 90);
-    border-radius: 11px;
+    background-color: rgb(86, 103, 122);
+    border-radius: 0;
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgb(242, 230, 200);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-icon--settings,
 .ui-icon--exit,
 .ui-icon--sword {
     background-image: none;
-    background-color: rgba(201, 163, 90, 0.35);
-    border-radius: 2px;
+    background-color: rgba(125, 117, 104, 0.35);
+    border-radius: 0;
 }
 
 .ui-ornament {
     width: 12px;
     height: 12px;
     background-image: none;
-    background-color: rgb(201, 163, 90);
-    border-radius: 1px;
+    background-color: rgb(125, 117, 104);
+    border-radius: 0;
 }

@@ -1,11 +1,11 @@
 /* BARAKI launcher v3 — news column + control stack (1280×720) */
 
 .bl {
-    background-color: rgb(8, 7, 6);
+    background-color: rgb(15, 15, 16);
 }
 
 .bl__bg {
-    background-color: rgb(12, 10, 9);
+    background-color: rgb(9, 9, 10);
 }
 
 .bl__ambient {
@@ -18,16 +18,16 @@
 
 .bl__ambient--fire {
     left: 0;
-    background-color: rgba(180, 62, 18, 0.07);
+    background-color: rgba(125, 117, 104, 0.07);
 }
 
 .bl__ambient--ice {
     right: 0;
-    background-color: rgba(28, 110, 180, 0.06);
+    background-color: rgba(125, 117, 104, 0.06);
 }
 
 .bl__shade {
-    background-color: rgba(4, 3, 2, 0.18);
+    background-color: rgba(9, 9, 10, 0.18);
 }
 
 .bl__vignette {
@@ -67,13 +67,13 @@
     flex-grow: 1;
     justify-content: flex-end;
     padding: 24px;
-    background-color: rgba(12, 10, 8, 0.78);
+    background-color: rgba(9, 9, 10, 0.78);
 }
 
 .bl__news-tag {
     font-size: 11px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     letter-spacing: 3px;
     margin-bottom: 10px;
 }
@@ -81,7 +81,7 @@
 .bl__featured-title {
     font-size: 30px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 1px;
     margin-bottom: 10px;
     white-space: normal;
@@ -90,7 +90,7 @@
 
 .bl__featured-body {
     font-size: 14px;
-    color: rgba(210, 196, 160, 0.92);
+    color: rgba(184, 169, 130, 0.92);
     white-space: normal;
     max-width: 640px;
 }
@@ -106,13 +106,13 @@
     flex-basis: 0;
     margin-right: 12px;
     padding: 14px 16px;
-    background-color: rgba(24, 20, 16, 0.94);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.38);
-    border-radius: 2px;
+    background-color: rgba(34, 34, 36, 0.94);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.38);
+    border-radius: 0;
 }
 
 .bl__news-card--last {
@@ -122,7 +122,7 @@
 .bl__news-card__tag {
     font-size: 10px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     letter-spacing: 2px;
     margin-bottom: 6px;
 }
@@ -130,14 +130,14 @@
 .bl__news-card__title {
     font-size: 15px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     margin-bottom: 6px;
     white-space: normal;
 }
 
 .bl__news-card__body {
     font-size: 11px;
-    color: rgba(168, 152, 120, 0.95);
+    color: rgba(184, 169, 130, 0.95);
     white-space: normal;
 }
 
@@ -165,7 +165,7 @@
 .bl__brand {
     font-size: 28px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 5px;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
 }
@@ -173,7 +173,7 @@
 .bl__version-text {
     font-size: 12px;
     -unity-font-style: bold;
-    color: rgba(255, 244, 214, 0.7);
+    color: rgba(239, 228, 207, 0.7);
     letter-spacing: 2px;
 }
 
@@ -193,32 +193,32 @@
     font-size: 10px;
     -unity-font-style: bold;
     letter-spacing: 1px;
-    color: rgb(201, 163, 90);
-    background-color: rgba(18, 14, 11, 0.9);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgba(201, 163, 90, 0.4);
-    border-radius: 2px;
+    color: rgb(125, 117, 104);
+    background-color: rgba(34, 34, 36, 0.9);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgba(125, 117, 104, 0.4);
+    border-radius: 0;
 }
 
 .bl__chip--muted {
-    color: rgba(168, 152, 120, 0.9);
-    border-color: rgba(168, 152, 120, 0.32);
+    color: rgba(184, 169, 130, 0.9);
+    border-color: rgba(184, 169, 130, 0.32);
 }
 
 .bl__control-divider {
     height: 1px;
     width: 100%;
-    background-color: rgba(201, 163, 90, 0.32);
+    background-color: rgba(125, 117, 104, 0.32);
     margin-bottom: 16px;
 }
 
 .bl__status-tag {
     font-size: 11px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     letter-spacing: 3px;
     margin-bottom: 8px;
 }
@@ -226,7 +226,7 @@
 .bl__status-text {
     font-size: 17px;
     -unity-font-style: bold;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     letter-spacing: 0.5px;
     white-space: normal;
     margin-bottom: 14px;
@@ -255,7 +255,7 @@
 .bl__range-arrow {
     font-size: 24px;
     -unity-font-style: bold;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
 }
 
 .bl__range-part {
@@ -269,7 +269,7 @@
 }
 
 .bl__range-part--remote {
-    color: rgb(90, 180, 255);
+    color: rgb(86, 103, 122);
     -unity-text-align: middle-right;
 }
 
@@ -311,17 +311,25 @@
     margin-bottom: 0;
     font-size: 17px;
     letter-spacing: 3px;
-    background-color: rgb(124, 76, 34);
+    color: rgb(239, 228, 207);
+    background-color: rgb(86, 103, 122);
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgb(220, 180, 110);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-btn.bl__cta:hover {
-    background-color: rgb(150, 92, 40);
-    border-color: rgb(255, 220, 150);
+    background-color: rgb(86, 103, 122);
+    border-color: rgb(125, 117, 104);
+}
+
+.ui-btn.bl__cta.bl__cta--update,
+.ui-btn.bl__cta.bl__cta--update:hover {
+    color: rgb(255, 255, 255);
+    background-color: rgb(88, 204, 104);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-btn.bl__cta.ui-btn--muted,
@@ -329,13 +337,13 @@
     height: 54px;
     font-size: 17px;
     letter-spacing: 3px;
-    color: rgba(210, 196, 160, 0.85);
-    background-color: rgb(40, 30, 22);
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-color: rgb(110, 90, 62);
+    color: rgba(184, 169, 130, 0.85);
+    background-color: rgb(24, 24, 26);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-color: rgb(94, 88, 78);
     scale: 1;
 }
 
@@ -358,12 +366,12 @@
     right: 2px;
     top: 2px;
     bottom: 2px;
-    background-color: rgb(62, 42, 28);
+    background-color: rgb(52, 52, 56);
     border-left-width: 0;
     border-right-width: 0;
     border-top-width: 0;
     border-bottom-width: 0;
-    border-radius: 1px;
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -399,12 +407,12 @@
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
-    border-color: rgb(220, 180, 110);
+    border-color: rgb(125, 117, 104);
 }
 
 .ui-btn.bl__cta.bl__cta--downloading:hover {
     background-color: rgba(0, 0, 0, 0);
-    border-color: rgb(220, 180, 110);
+    border-color: rgb(125, 117, 104);
     scale: 1;
 }
 

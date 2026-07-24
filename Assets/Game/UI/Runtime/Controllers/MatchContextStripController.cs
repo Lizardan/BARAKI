@@ -562,7 +562,7 @@ namespace Game.UI.Controllers
 
             _portrait.style.backgroundImage = new StyleBackground();
 
-            _portrait.style.backgroundColor = new Color(0.2f, 0.2f, 0.25f);
+            _portrait.style.backgroundColor = new Color(34f / 255f, 34f / 255f, 36f / 255f);
 
             _portrait.style.borderTopWidth = 0f;
 

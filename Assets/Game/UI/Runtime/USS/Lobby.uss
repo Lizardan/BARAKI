@@ -19,7 +19,7 @@
     margin-top: 10px;
     font-size: 18px;
     letter-spacing: 4px;
-    color: rgb(201, 163, 90);
+    color: rgb(125, 117, 104);
     -unity-font-style: bold;
 }
 
@@ -40,15 +40,15 @@
     justify-content: space-between;
     padding: 10px 12px;
     margin-bottom: 6px;
-    background-color: rgba(12, 8, 6, 0.55);
-    border-width: 1px;
-    border-color: rgba(201, 163, 90, 0.35);
-    border-radius: 4px;
+    background-color: rgba(9, 9, 10, 0.55);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.35);
+    border-radius: 0;
 }
 
 .lobby__slot-name {
     font-size: 15px;
-    color: rgb(242, 230, 200);
+    color: rgb(239, 228, 207);
     flex-grow: 1;
 }
 
@@ -56,7 +56,7 @@
     font-size: 12px;
     -unity-font-style: bold;
     letter-spacing: 1px;
-    color: rgb(168, 152, 120);
+    color: rgb(184, 169, 130);
     margin-left: 12px;
 }
 
@@ -65,5 +65,5 @@
 }
 
 .lobby__slot-status--empty {
-    color: rgba(168, 152, 120, 0.55);
+    color: rgba(184, 169, 130, 0.55);
 }

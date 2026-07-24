@@ -729,8 +729,8 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var ink = new Color(18f / 255f, 14f / 255f, 12f / 255f, 1f);
-            var cream = new Color(242f / 255f, 230f / 255f, 200f / 255f, 1f);
+            var ink = new Color(15f / 255f, 15f / 255f, 16f / 255f, 1f);
+            var cream = new Color(239f / 255f, 228f / 255f, 207f / 255f, 1f);
             field.style.backgroundColor = ink;
             field.style.color = cream;
 

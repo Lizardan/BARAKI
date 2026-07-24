@@ -7,8 +7,8 @@ namespace Game.UI
     public sealed class MatchCommandRegenFrameElement : VisualElement
     {
         const float LineWidth = 3.5f;
-        static readonly Color TrackColor = new(0.18f, 0.15f, 0.12f, 0.9f);
-        static readonly Color FillColor = new(1f, 0.84f, 0.38f, 1f);
+        static readonly Color TrackColor = new(34f / 255f, 34f / 255f, 36f / 255f, 0.9f);
+        static readonly Color FillColor = new(194f / 255f, 119f / 255f, 58f / 255f, 1f);
 
         float _fill01;
 
