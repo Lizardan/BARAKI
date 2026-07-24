@@ -23,6 +23,7 @@ DefaultGroupName=BARAKI
 DisableProgramGroupPage=yes
 OutputDir={#InstallerOutDir}
 OutputBaseFilename=BARAKI-Setup
+SetupIconFile=BARAKI.ico
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
