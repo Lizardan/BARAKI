@@ -88,14 +88,18 @@ namespace Game.Tests
             var racePick = ReadProjectFile("Assets/Game/UI/Runtime/USS/RacePick.uss");
 
             StringAssert.Contains("background-color: rgb(86, 103, 122)", theme);
+            StringAssert.Contains("background-color: rgb(96, 116, 138)", theme);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", theme);
             StringAssert.Contains("background-color: rgb(86, 103, 122)", bootstrap);
+            StringAssert.Contains("background-color: rgb(96, 116, 138)", bootstrap);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", bootstrap);
             StringAssert.Contains("color: rgb(86, 103, 122)", bootstrap);
             StringAssert.Contains("color: rgb(86, 103, 122)", mainMenu);
             StringAssert.Contains("background-color: rgb(86, 103, 122)", mainMenu);
+            StringAssert.Contains("background-color: rgb(96, 116, 138)", mainMenu);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", mainMenu);
             StringAssert.Contains("background-color: rgb(86, 103, 122)", racePick);
+            StringAssert.Contains("background-color: rgb(96, 116, 138)", racePick);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", racePick);
             StringAssert.Contains("name=\"EnterGameButton\" text=\"ИГРАТЬ\" class=\"ui-btn ui-btn--primary bl__cta ui-overlay--hidden\"", bootstrapUxml);
             StringAssert.Contains("name=\"UpdateButton\" text=\"ОБНОВИТЬ\" class=\"ui-btn ui-btn--primary bl__cta bl__cta--update\"", bootstrapUxml);
