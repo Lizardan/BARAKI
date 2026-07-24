@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -24,6 +25,7 @@ namespace Game.Gameplay.Networking
         private GameObject _authorityPrefab;
         private bool _prefabsRegistered;
         private bool _isInitialized;
+        private readonly Dictionary<ulong, string> _approvedDisplayNames = new();
 
         public NetworkManager NetworkManager => _networkManager;
 
@@ -73,6 +75,14 @@ namespace Game.Gameplay.Networking
 
         public static MatchNetworkEndpoint ParseEndpoint(string value) =>
             MatchNetworkEndpoint.Parse(value);
+
+        public static bool TryGetApprovedDisplayName(ulong clientId, out string displayName)
+        {
+            displayName = string.Empty;
+            return s_instance != null
+                && s_instance._approvedDisplayNames.TryGetValue(clientId, out displayName)
+                && !string.IsNullOrWhiteSpace(displayName);
+        }
 
         public void ConfigureEndpoint(
             string host,
@@ -177,6 +187,8 @@ namespace Game.Gameplay.Networking
             {
                 _networkManager.Shutdown();
             }
+
+            _approvedDisplayNames.Clear();
         }
 
         public void EnsureServerLobby()
@@ -242,6 +254,8 @@ namespace Game.Gameplay.Networking
             _transport.UseWebSockets = true;
             _networkManager.NetworkConfig.NetworkTransport = _transport;
             _networkManager.NetworkConfig.PlayerPrefab = null;
+            _networkManager.NetworkConfig.ConnectionApproval = true;
+            _networkManager.ConnectionApprovalCallback = OnConnectionApproval;
             _networkManager.NetworkConfig.ForceSamePrefabs = false;
             if (!_isInitialized)
             {
@@ -251,6 +265,20 @@ namespace Game.Gameplay.Networking
 
             RegisterRuntimePrefabs();
             return true;
+        }
+
+        private void OnConnectionApproval(
+            NetworkManager.ConnectionApprovalRequest request,
+            NetworkManager.ConnectionApprovalResponse response)
+        {
+            if (MatchConnectionPayloadRules.TryReadDisplayName(request.Payload, out var displayName))
+            {
+                _approvedDisplayNames[request.ClientNetworkId] = displayName;
+            }
+
+            response.Approved = true;
+            response.CreatePlayerObject = false;
+            response.Pending = false;
         }
 
         private void RegisterRuntimePrefabs()

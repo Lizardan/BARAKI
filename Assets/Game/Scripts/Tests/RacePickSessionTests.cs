@@ -80,5 +80,30 @@ namespace Game.Tests
 
             Assert.IsTrue(RacePickNetworkRules.IsComplete(picks));
         }
+
+        [Test]
+        public void NetworkRules_IsComplete_TrueForThreePickedSlots()
+        {
+            var picks = new[]
+            {
+                GameIds.Races.Human,
+                GameIds.Races.Human,
+                GameIds.Races.Human,
+            };
+
+            Assert.IsTrue(RacePickNetworkRules.IsComplete(picks));
+        }
+
+        [Test]
+        public void NetworkRules_FillsLocalStandInPicks()
+        {
+            var picks = new string[3];
+            var localStandInSlots = new[] { false, true, false };
+
+            Assert.IsTrue(RacePickNetworkRules.FillLocalStandInPicks(picks, localStandInSlots));
+            Assert.IsNull(picks[0]);
+            Assert.AreEqual(GameIds.Races.Human, picks[1]);
+            Assert.IsNull(picks[2]);
+        }
     }
 }

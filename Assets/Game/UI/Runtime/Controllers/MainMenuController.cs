@@ -944,14 +944,12 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            OpenMatchEntry();
-            _joinCodeRow?.RemoveFromClassList(OverlayHiddenClass);
-            if (_joinCodeField != null)
-            {
-                _joinCodeField.value = lobbyCode;
-            }
-
-            JoinMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
+            EnsureModeSelectClosed();
+            EnsureMatchEntryClosed();
+            JoinMatchByCodeAsync(
+                lobbyCode,
+                this.GetCancellationTokenOnDestroy(),
+                showJoinUiOnError: true).Forget();
         }
 
         private void OnLobbyInviteReceived(FriendsLobbyInvite invite)
@@ -1385,6 +1383,14 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            await JoinMatchByCodeAsync(code, cancellationToken, showJoinUiOnError: true);
+        }
+
+        private async UniTask JoinMatchByCodeAsync(
+            string code,
+            System.Threading.CancellationToken cancellationToken,
+            bool showJoinUiOnError)
+        {
             _isTransitioning = true;
             try
             {
@@ -1424,6 +1430,16 @@ namespace Game.UI.Controllers
             {
                 Debug.LogWarning($"Join match failed: {ex.Message}");
                 _isTransitioning = false;
+                if (showJoinUiOnError)
+                {
+                    OpenMatchEntry();
+                    _joinCodeRow?.RemoveFromClassList(OverlayHiddenClass);
+                    if (_joinCodeField != null)
+                    {
+                        _joinCodeField.value = code;
+                    }
+                }
+
                 ShowMatchEntryError(FormatMatchSetupError(ex));
             }
         }

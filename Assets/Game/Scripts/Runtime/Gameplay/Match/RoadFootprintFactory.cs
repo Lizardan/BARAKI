@@ -38,6 +38,19 @@ namespace Game.Gameplay.Match
             return footprints;
         }
 
+        public static List<Vector2[]> BuildN3(MatchArenaLayout layout)
+        {
+            var halfSize = layout.ArenaRadius;
+            var width = MatchArenaGreyboxBuilder.RoadWidth;
+            var footprints = new List<Vector2[]>(12);
+
+            AddCircularPerimeterArcs(footprints, halfSize, width, arcCount: 3, samplesPerArc: 32);
+            AddRadialSpokeStrips(footprints, layout, width);
+            footprints.Add(RoadFootprintShapes.Disc(N4RoadReferenceSpec.CenterArenaHalfSize, segments: 64));
+            AddBaseArenas(footprints, layout);
+            return footprints;
+        }
+
         static void AddN4PerimeterStrips(List<Vector2[]> footprints, float halfSize, float width)
         {
             var innerNeg = N4RoadReferenceSpec.PerimeterHalfStripInnerBound;
@@ -88,6 +101,74 @@ namespace Game.Gameplay.Match
             AddStrip(footprints, from, to, width);
             N4RoadReferenceSpec.GetNegativeXSpokeStrip(halfSize, out from, out to);
             AddStrip(footprints, from, to, width);
+        }
+
+        static void AddCircularPerimeterArcs(
+            List<Vector2[]> footprints,
+            float radius,
+            float width,
+            int arcCount,
+            int samplesPerArc)
+        {
+            var arcStep = Mathf.PI * 2f / arcCount;
+            var overlap = arcStep / samplesPerArc;
+            for (var i = 0; i < arcCount; i++)
+            {
+                var startAngle = i * arcStep - overlap;
+                var endAngle = (i + 1) * arcStep + overlap;
+                footprints.Add(ArcStrip(radius, width, startAngle, endAngle, samplesPerArc));
+            }
+        }
+
+        static Vector2[] ArcStrip(
+            float radius,
+            float width,
+            float startAngle,
+            float endAngle,
+            int samples)
+        {
+            var halfWidth = width * 0.5f;
+            var innerRadius = radius - halfWidth;
+            var outerRadius = radius + halfWidth;
+            var points = new Vector2[(samples + 1) * 2];
+
+            for (var i = 0; i <= samples; i++)
+            {
+                var t = i / (float)samples;
+                var angle = Mathf.Lerp(startAngle, endAngle, t);
+                points[i] = new Vector2(
+                    Mathf.Cos(angle) * outerRadius,
+                    Mathf.Sin(angle) * outerRadius);
+            }
+
+            for (var i = 0; i <= samples; i++)
+            {
+                var t = 1f - i / (float)samples;
+                var angle = Mathf.Lerp(startAngle, endAngle, t);
+                points[samples + 1 + i] = new Vector2(
+                    Mathf.Cos(angle) * innerRadius,
+                    Mathf.Sin(angle) * innerRadius);
+            }
+
+            return points;
+        }
+
+        static void AddRadialSpokeStrips(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
+        {
+            foreach (var slot in layout.Slots)
+            {
+                var dir = slot.BasePosition;
+                dir.y = 0f;
+                if (dir.sqrMagnitude < 0.001f)
+                {
+                    continue;
+                }
+
+                dir.Normalize();
+                var inner = dir * (N4RoadReferenceSpec.CenterArenaHalfSize - N4RoadReferenceSpec.SpokeArenaOverlap);
+                var outer = dir * (layout.ArenaRadius + MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
+                AddStrip(footprints, inner, outer, width);
+            }
         }
 
         static void AddCardinalSpokeFillets(List<Vector2[]> footprints, float halfSize, float height, float width)

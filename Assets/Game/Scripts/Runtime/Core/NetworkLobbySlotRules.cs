@@ -33,6 +33,19 @@ namespace Game.Core
 
         public static bool IsHostSlot(int slot) => slot == HostSlot;
 
+        public static ulong GetLocalStandInClientId(int slot)
+        {
+            if (slot < 0 || slot >= MaxSlots)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slot));
+            }
+
+            return ulong.MaxValue - (ulong)slot;
+        }
+
+        public static bool IsLocalStandInClientId(ulong clientId, int slot) =>
+            slot >= 0 && slot < MaxSlots && clientId == GetLocalStandInClientId(slot);
+
         /// <summary>
         /// Listen-server host sits in HostSlot at server init. Dedicated server: first client
         /// occupies HostSlot on connect and may Start when all slots are ready.

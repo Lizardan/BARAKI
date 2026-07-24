@@ -195,6 +195,88 @@ namespace Game.Tests
         }
 
         [Test]
+        public void PopulateN3_SourceParts_UsesSingleRoadSurface()
+        {
+            var layout = MatchArenaGenerator.Generate(3);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN3Test");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N3SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+                Assert.AreEqual(N3SourcePartsBuilder.PartCount, sourceParts.childCount);
+                Assert.AreEqual(1, CountNamedChildren(sourceParts, RoadSurfaceMeshBuilder.ObjectName));
+                Assert.AreEqual(0, CountNamedChildren(sourceParts, "RoadStrip"));
+                Assert.IsNull(root.transform.Find("Roads"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PopulateN3_RoadSurface_ConnectsCenterRingAndBases()
+        {
+            var layout = MatchArenaGenerator.Generate(3);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN3WalkableTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.PopulateRoadPrefabContent(root.transform, layout, graph);
+                var sourceParts = root.transform.Find(N3SourcePartsBuilder.RootName);
+                Assert.NotNull(sourceParts);
+
+                var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
+                Assert.AreEqual(1, walkable.PartCount);
+                Assert.IsTrue(walkable.Contains(Vector3.zero));
+                Assert.IsTrue(walkable.Contains(new Vector3(120f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(60f, 0f, 103.923f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(-120f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(60f, 0f, -103.923f)));
+                foreach (var slot in layout.Slots)
+                {
+                    Assert.IsTrue(walkable.Contains(slot.BasePosition), $"Missing base road for slot {slot.SlotIndex}.");
+                    Assert.IsTrue(
+                        walkable.Contains(slot.BasePosition.normalized * 60f),
+                        $"Missing radial spoke for slot {slot.SlotIndex}.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PopulateN3_PlayerSlots_HaveNoRoadGeometry()
+        {
+            var layout = MatchArenaGenerator.Generate(3);
+            var graph = LaneGraphBuilder.Build(layout);
+            var root = new GameObject("ArenaRoadsN3SlotsTest");
+            try
+            {
+                MatchArenaGreyboxBuilder.Populate(root.transform, layout, graph);
+                for (var slot = 0; slot < layout.PlayerCount; slot++)
+                {
+                    var slotRoot = root.transform.Find($"Bases/Player_{slot}");
+                    Assert.NotNull(slotRoot);
+                    foreach (Transform child in slotRoot)
+                    {
+                        Assert.IsFalse(
+                            child.name is "RoadStrip" or "RoadFilletArc" or "RoadCorner" or "BaseArena",
+                            $"Player_{slot} should not contain road geometry '{child.name}'.");
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void PopulateN4_SourceParts_HasExpectedChildCount()
         {
             var layout = MatchArenaGenerator.Generate(4);

@@ -51,5 +51,14 @@ namespace Game.Tests
         {
             Assert.AreEqual(expected, NetworkLobbySlotRules.ShouldSeatListenHostOnServerInit(isHost));
         }
+
+        [Test]
+        public void LocalStandInClientId_RoundTripsSlot()
+        {
+            var clientId = NetworkLobbySlotRules.GetLocalStandInClientId(2);
+
+            Assert.IsTrue(NetworkLobbySlotRules.IsLocalStandInClientId(clientId, 2));
+            Assert.IsFalse(NetworkLobbySlotRules.IsLocalStandInClientId(clientId, 1));
+        }
     }
 }

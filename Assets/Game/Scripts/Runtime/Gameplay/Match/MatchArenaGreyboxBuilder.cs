@@ -146,6 +146,10 @@ namespace Game.Gameplay.Match
             {
                 N4SourcePartsBuilder.Populate(root, layout, roadMaterial);
             }
+            else if (layout.PlayerCount == 3)
+            {
+                N3SourcePartsBuilder.Populate(root, layout, roadMaterial);
+            }
             else if (layout.PlayerCount == 2)
             {
                 N2SourcePartsBuilder.Populate(root, layout, roadMaterial);
@@ -165,7 +169,7 @@ namespace Game.Gameplay.Match
                 slotRoot.position = slot.BasePosition;
                 slotRoot.rotation = slot.BaseRotation;
 
-                if (layout.PlayerCount is not 2 and not 4)
+                if (layout.PlayerCount is not 2 and not 3 and not 4)
                 {
                     PopulateBaseRoads(slotRoot, slot, roadMaterial);
                 }

@@ -31,6 +31,11 @@ namespace Game.Gameplay.Networking
             _racePicks.OnListChanged += OnRacePicksChanged;
             _matchSimStarted.OnValueChanged += OnMatchSimStartedChanged;
             _playerCount.OnValueChanged += OnPlayerCountChanged;
+            if (IsServer)
+            {
+                EnsureSession(MatchNetworkSession.PlayerCount);
+            }
+
             NotifyChanged();
         }
 
@@ -58,7 +63,14 @@ namespace Game.Gameplay.Networking
 
         public void EnsureSession(int playerCount)
         {
-            if (!IsServer || playerCount < MatchModeRules.MinPlayers || _playerCount.Value > 0)
+            if (!IsServer || !MatchModeRules.IsValidPlayerCount(playerCount))
+            {
+                return;
+            }
+
+            if (_playerCount.Value == playerCount &&
+                _racePicks.Count == playerCount &&
+                !_matchSimStarted.Value)
             {
                 return;
             }
@@ -71,6 +83,7 @@ namespace Game.Gameplay.Networking
                 _racePicks.Add(default);
             }
 
+            FillLocalStandInPicks();
             NotifyChanged();
         }
 
@@ -94,6 +107,8 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
+            EnsureSession(lobby.PlayerCount);
+
             var slot = lobby.FindClientSlot(rpcParams.Receive.SenderClientId);
             ApplyPick(slot, raceId);
         }
@@ -112,11 +127,38 @@ namespace Game.Gameplay.Networking
             }
 
             _racePicks[slot] = new FixedString32Bytes(picks[slot]);
+            FillLocalStandInPicks();
             NotifyChanged();
 
-            if (RacePickNetworkRules.IsComplete(picks))
+            if (RacePickNetworkRules.IsComplete(ToMutablePickArray()))
             {
-                BeginMatchOnServer(picks);
+                BeginMatchOnServer(ToMutablePickArray());
+            }
+        }
+
+        private void FillLocalStandInPicks()
+        {
+            var lobby = NetworkLobbyState.Instance;
+            if (!IsServer || lobby == null || _racePicks.Count == 0)
+            {
+                return;
+            }
+
+            var localStandInSlots = new bool[_racePicks.Count];
+            for (var slot = 0; slot < localStandInSlots.Length; slot++)
+            {
+                localStandInSlots[slot] = lobby.IsLocalStandInSlot(slot);
+            }
+
+            var picks = ToMutablePickArray();
+            if (!RacePickNetworkRules.FillLocalStandInPicks(picks, localStandInSlots))
+            {
+                return;
+            }
+
+            for (var slot = 0; slot < picks.Length; slot++)
+            {
+                _racePicks[slot] = new FixedString32Bytes(picks[slot]);
             }
         }
 

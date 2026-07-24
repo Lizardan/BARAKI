@@ -67,3 +67,115 @@
 .lobby__slot-status--empty {
     color: rgba(184, 169, 130, 0.55);
 }
+
+.mm-friends-invite {
+    width: 520px;
+    max-width: 94%;
+}
+
+.mm-friends-invite__body {
+    flex-direction: column;
+    min-height: 300px;
+}
+
+.mm-friends-invite__hint {
+    margin-bottom: 10px;
+    color: rgba(184, 169, 130, 0.9);
+    font-size: 13px;
+    white-space: normal;
+}
+
+.mm__friends-scroll {
+    flex-grow: 1;
+    min-height: 220px;
+}
+
+.mm__friends-list-container {
+    flex-direction: column;
+}
+
+.mm__friend-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 9px 10px;
+    background-color: rgba(9, 9, 10, 0.55);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.28);
+    border-radius: 0;
+}
+
+.mm__friend-row--invite-mode {
+    min-height: 48px;
+}
+
+.mm__friend-row__text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 12px;
+    color: rgb(239, 228, 207);
+    font-size: 13px;
+    white-space: normal;
+}
+
+.mm__friend-row__actions {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.mm__friend-row__btn {
+    height: 30px;
+    min-width: 92px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+.mm__friend-row__btn--invite,
+.mm__friend-row__btn--join {
+    color: rgb(239, 228, 207);
+    background-color: rgb(86, 103, 122);
+    border-width: 2px;
+    border-color: rgb(125, 117, 104);
+    border-radius: 0;
+}
+
+.mm__friend-row__btn--invite:hover,
+.mm__friend-row__btn--join:hover {
+    background-color: rgb(96, 116, 138);
+}
+
+.mm__friend-row__full {
+    margin-left: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 30px;
+    -unity-text-align: middle-center;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: rgba(210, 140, 140, 0.95);
+    background-color: rgba(90, 30, 30, 0.45);
+    border-width: 2px;
+    border-color: rgba(180, 80, 80, 0.55);
+    border-radius: 0;
+}
+
+.mm__friends-error {
+    min-height: 16px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: rgba(125, 117, 104, 0.95);
+    white-space: normal;
+}
+
+.mm__friends-list {
+    color: rgba(184, 169, 130, 0.9);
+    font-size: 13px;
+    white-space: normal;
+    -unity-text-align: upper-left;
+}

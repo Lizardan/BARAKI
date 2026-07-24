@@ -6,10 +6,10 @@ namespace Game.Tests
     public sealed class MatchModeRulesTests
     {
         [TestCase(2, true)]
+        [TestCase(3, true)]
         [TestCase(4, true)]
-        [TestCase(3, false)]
         [TestCase(8, false)]
-        public void IsModeSelectable_MvpOnlyTwoAndFour(int n, bool expected)
+        public void IsModeSelectable_AllowsOpenedModes(int n, bool expected)
         {
             Assert.AreEqual(expected, MatchModeRules.IsModeSelectable(n));
         }

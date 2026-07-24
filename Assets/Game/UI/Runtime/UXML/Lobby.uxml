@@ -42,6 +42,7 @@
                     <ui:Button name="FriendsInviteCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body mm-friends-invite__body">
+                    <ui:Label text="Онлайн-друзья получат приглашение в текущую комнату." class="mm-friends-invite__hint" />
                     <ui:ScrollView name="LobbyFriendsScroll" class="mm__friends-scroll" mode="Vertical">
                         <ui:VisualElement name="LobbyFriendsListContainer" class="mm__friends-list-container" />
                     </ui:ScrollView>

@@ -115,6 +115,18 @@ namespace Game.Gameplay.Networking
 
         public int FindClientSlot(ulong clientId) => FindSlotByClientId(clientId);
 
+        public bool IsLocalStandInSlot(int slot)
+        {
+            if (slot < 0 || slot >= _slots.Count)
+            {
+                return false;
+            }
+
+            var value = _slots[slot];
+            return value.IsOccupied &&
+                   NetworkLobbySlotRules.IsLocalStandInClientId(value.ClientId, slot);
+        }
+
         public MatchSetup ToMatchSetup(int localSlot) =>
             new(PlayerCount, localSlot);
 
@@ -316,7 +328,10 @@ namespace Game.Gameplay.Networking
                     continue;
                 }
 
-                OccupySlot(slot, ulong.MaxValue - (ulong)slot, $"Player {slot + 1}");
+                OccupySlot(
+                    slot,
+                    NetworkLobbySlotRules.GetLocalStandInClientId(slot),
+                    $"Player {slot + 1}");
                 var value = _slots[slot];
                 value.IsReady = true;
                 _slots[slot] = value;
@@ -527,6 +542,11 @@ namespace Game.Gameplay.Networking
                 && !string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName))
             {
                 return PlayerProfileService.DisplayName;
+            }
+
+            if (MatchNetworkBootstrap.TryGetApprovedDisplayName(clientId, out var approvedDisplayName))
+            {
+                return approvedDisplayName;
             }
 
             return $"Player {clientId}";

@@ -1,7 +1,7 @@
 namespace Game.Core
 {
     /// <summary>
-    /// Which player-count modes are selectable in Match Entry (MVP: 2 and 4).
+    /// Which player-count modes are selectable in Match Entry.
     /// </summary>
     public static class MatchModeRules
     {
@@ -11,14 +11,15 @@ namespace Game.Core
         public static bool IsValidPlayerCount(int playerCount) =>
             playerCount is >= MinPlayers and <= MaxPlayers;
 
-        /// <summary>MVP playable create modes (others shown greyed out).</summary>
+        /// <summary>Playable create modes (others shown greyed out).</summary>
         public static bool IsModeSelectable(int playerCount) =>
-            playerCount is 2 or 4;
+            playerCount is 2 or 3 or 4;
 
         public static string GetModeTitle(int playerCount) =>
             playerCount switch
             {
                 2 => "ДУЭЛЬ",
+                3 => "FFA 3",
                 4 => "FFA 4",
                 _ => $"FFA {playerCount}",
             };

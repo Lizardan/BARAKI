@@ -200,6 +200,35 @@ namespace Game.Tests
         }
 
         [Test]
+        public void N3_WalkablePartCount_MatchesSourcePartsMeshes()
+        {
+            WalkableSurfaceCache.Clear();
+            var surface = WalkableSurfaceCache.GetOrCreate(3);
+            Assert.AreEqual(1, surface.PartCount);
+        }
+
+        [Test]
+        public void N3_AllLanePaths_AreOnWalkableSurface()
+        {
+            WalkableSurfaceCache.Clear();
+            var layout = MatchArenaGenerator.Generate(3);
+            var graph = LaneGraphBuilder.Build(layout);
+            var surface = WalkableSurfaceCache.GetOrCreate(3);
+
+            foreach (var lane in graph.Lanes)
+            {
+                const float spacing = 8f;
+                for (var distance = 0f; distance <= lane.Path.TotalLength; distance += spacing)
+                {
+                    var point = lane.Path.EvaluateDistance(distance);
+                    Assert.IsTrue(
+                        surface.Contains(point),
+                        $"Lane P{lane.OwnerSlot}_{lane.LaneId} off walkable at d={distance:F1} pos={point}");
+                }
+            }
+        }
+
+        [Test]
         public void N4_FlankLanePath_IsOnWalkableSurface()
         {
             WalkableSurfaceCache.Clear();

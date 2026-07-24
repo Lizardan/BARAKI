@@ -301,6 +301,7 @@ namespace Game.UI.Views
         {
             var row = new VisualElement();
             row.AddToClassList("mm__friend-row");
+            row.EnableInClassList("mm__friend-row--invite-mode", _mode == FriendsHubPanelMode.InviteOnly);
 
             var line = FriendsHubRules.FormatFriendLine(
                 friend.Name,
@@ -337,6 +338,7 @@ namespace Game.UI.Views
             {
                 var inviteButton = new Button { text = "ПРИГЛАСИТЬ" };
                 inviteButton.AddToClassList("mm__friend-row__btn");
+                inviteButton.AddToClassList("mm__friend-row__btn--invite");
                 inviteButton.clicked += () => InviteFriendAsync(friend.PlayerId).Forget();
                 actions.Add(inviteButton);
             }

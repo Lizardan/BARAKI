@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Core
 {
@@ -119,6 +120,39 @@ namespace Game.Core
             var copy = new string[picks.Length];
             Array.Copy(picks, copy, picks.Length);
             return copy;
+        }
+
+        public static bool FillLocalStandInPicks(string[] picks, IReadOnlyList<bool> localStandInSlots)
+        {
+            if (picks == null)
+            {
+                throw new ArgumentNullException(nameof(picks));
+            }
+
+            if (localStandInSlots == null)
+            {
+                throw new ArgumentNullException(nameof(localStandInSlots));
+            }
+
+            if (RacePickRules.SelectableRaceIds.Length == 0)
+            {
+                throw new InvalidOperationException("No selectable races.");
+            }
+
+            var changed = false;
+            var count = Math.Min(picks.Length, localStandInSlots.Count);
+            for (var slot = 0; slot < count; slot++)
+            {
+                if (!localStandInSlots[slot] || !string.IsNullOrEmpty(picks[slot]))
+                {
+                    continue;
+                }
+
+                picks[slot] = RacePickRules.SelectableRaceIds[slot % RacePickRules.SelectableRaceIds.Length];
+                changed = true;
+            }
+
+            return changed;
         }
     }
 }

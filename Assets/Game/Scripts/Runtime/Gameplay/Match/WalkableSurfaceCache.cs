@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2/N=4.
+    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2/N=3/N=4.
     /// </summary>
     public static class WalkableSurfaceCache
     {
@@ -68,7 +68,7 @@ namespace Game.Gameplay.Match
 
         static Transform FindSourcePartsRoot(Transform root)
         {
-            // N=2 and N=4 both emit a flat "_SourceParts" child (see N2/N4 SourcePartsBuilder).
+            // N=2/N=3/N=4 emit a flat "_SourceParts" child (see N2/N3/N4 SourcePartsBuilder).
             var sourceParts = root.Find(N2SourcePartsBuilder.RootName);
             return sourceParts != null ? sourceParts : root.Find(N4SourcePartsBuilder.RootName);
         }

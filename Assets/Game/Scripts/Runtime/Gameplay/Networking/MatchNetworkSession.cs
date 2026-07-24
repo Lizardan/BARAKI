@@ -302,14 +302,16 @@ namespace Game.Gameplay.Networking
                 && LocalSlot >= 0
                 && (MatchStarted || HostMigrationSession.IsRebinding))
             {
-                return $"reconnect:{PlayerReconnectRules.BuildSessionToken(room, LocalSlot)}";
+                return MatchConnectionPayloadRules.BuildReconnect(
+                    PlayerReconnectRules.BuildSessionToken(room, LocalSlot));
             }
 
-            return isHost
-                   || (HostMigrationSession.IsRebinding
-                       && LocalSlot == HostMigrationSession.DesignatedHostSlot)
-                ? "Host"
-                : "Guest";
+            var isDesignatedHost = isHost
+                || (HostMigrationSession.IsRebinding
+                    && LocalSlot == HostMigrationSession.DesignatedHostSlot);
+            return MatchConnectionPayloadRules.BuildInitial(
+                isDesignatedHost,
+                PlayerProfileService.DisplayName);
         }
 
         private static async UniTask<bool> StartRelayTransportAsync(
