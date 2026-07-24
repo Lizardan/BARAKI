@@ -1,19 +1,9 @@
 name: Deploy Updater Windows
 
-# Push to release/baraki-updater -> updater prerelease + Cloudflare installer.
+# Manual run -> updater prerelease + Cloudflare installer.
 # This channel must not become GitHub /releases/latest for the full client.
 
 on:
-  push:
-    branches:
-      - release/baraki-updater
-    paths:
-      - "Assets/**"
-      - "BuildSupport/**"
-      - "Packages/**"
-      - "ProjectSettings/**"
-      - "cloudflare/baraki-landing/**"
-      - ".github/workflows/deploy-updater-windows.yml"
   workflow_dispatch:
     inputs:
       bump:
@@ -222,7 +212,7 @@ jobs:
         run: |
           set -euo pipefail
           npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" \
-            --production-branch=release/baraki-updater || true
+            --production-branch=main || true
           npx wrangler pages deploy ./public \
             --project-name="$CLOUDFLARE_PAGES_PROJECT" \
-            --branch=release/baraki-updater
+            --branch=main
