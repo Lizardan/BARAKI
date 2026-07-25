@@ -105,5 +105,28 @@ namespace Game.Tests
             Assert.AreEqual(GameIds.Races.Human, picks[1]);
             Assert.IsNull(picks[2]);
         }
+
+        [Test]
+        public void PendingSubmit_ClaimsBeforeNetworkCall_RestoresOnReject()
+        {
+            string pending = GameIds.Races.Human;
+            var submitted = false;
+
+            Assert.IsTrue(RacePickPendingSubmitRules.TryClaimPending(ref pending, out var raceId));
+            Assert.AreEqual(GameIds.Races.Human, raceId);
+            Assert.IsNull(pending);
+
+            // Reentrant change callback must not reclaim the same pending pick.
+            Assert.IsFalse(RacePickPendingSubmitRules.TryClaimPending(ref pending, out _));
+
+            RacePickPendingSubmitRules.ApplySubmitResult(false, raceId, ref pending, ref submitted);
+            Assert.AreEqual(GameIds.Races.Human, pending);
+            Assert.IsFalse(submitted);
+
+            Assert.IsTrue(RacePickPendingSubmitRules.TryClaimPending(ref pending, out raceId));
+            RacePickPendingSubmitRules.ApplySubmitResult(true, raceId, ref pending, ref submitted);
+            Assert.IsNull(pending);
+            Assert.IsTrue(submitted);
+        }
     }
 }

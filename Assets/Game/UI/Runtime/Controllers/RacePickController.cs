@@ -167,18 +167,18 @@ namespace Game.UI.Controllers
 
         private void TrySubmitPendingNetworkPick()
         {
-            if (_localPickSubmitted || string.IsNullOrEmpty(_pendingNetworkRaceId))
+            if (_localPickSubmitted
+                || !RacePickPendingSubmitRules.TryClaimPending(ref _pendingNetworkRaceId, out var raceId))
             {
                 return;
             }
 
-            if (!MatchNetworkSession.RequestRacePick(_pendingNetworkRaceId))
-            {
-                return;
-            }
-
-            _localPickSubmitted = true;
-            _pendingNetworkRaceId = null;
+            var accepted = MatchNetworkSession.RequestRacePick(raceId);
+            RacePickPendingSubmitRules.ApplySubmitResult(
+                accepted,
+                raceId,
+                ref _pendingNetworkRaceId,
+                ref _localPickSubmitted);
         }
 
         private void RefreshRacePickUi()

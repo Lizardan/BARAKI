@@ -155,4 +155,37 @@ namespace Game.Core
             return changed;
         }
     }
+
+    /// <summary>
+    /// Claims a pending network race pick before submit so reentrant change callbacks cannot loop.
+    /// </summary>
+    public static class RacePickPendingSubmitRules
+    {
+        public static bool TryClaimPending(ref string pendingRaceId, out string raceId)
+        {
+            raceId = pendingRaceId;
+            if (string.IsNullOrEmpty(pendingRaceId))
+            {
+                return false;
+            }
+
+            pendingRaceId = null;
+            return true;
+        }
+
+        public static void ApplySubmitResult(
+            bool accepted,
+            string raceId,
+            ref string pendingRaceId,
+            ref bool localSubmitted)
+        {
+            if (accepted)
+            {
+                localSubmitted = true;
+                return;
+            }
+
+            pendingRaceId = raceId;
+        }
+    }
 }
