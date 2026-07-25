@@ -23,7 +23,12 @@ namespace Game.Core
 
     public sealed class RuntimeDebugConsoleLogBuffer
     {
-        public const int DefaultCapacity = 300;
+        public const int DefaultCapacity = 120;
+        public const int MaxMessageChars = 360;
+        public const int MaxMessageLines = 4;
+        public const int MaxStackTraceLines = 16;
+        private const string TruncatedSuffix = " ... [truncated]";
+        private const string StackTraceTruncatedSuffix = "... [stack trace truncated]";
 
         private readonly object _gate = new();
         private readonly Queue<RuntimeDebugConsoleLogEntry> _entries;
@@ -57,8 +62,8 @@ namespace Game.Core
 
                 _entries.Enqueue(new RuntimeDebugConsoleLogEntry(
                     DateTime.Now,
-                    message,
-                    stackTrace,
+                    CompactText(message, MaxMessageLines, MaxMessageChars, TruncatedSuffix),
+                    CompactStackTrace(stackTrace),
                     type));
             }
         }
@@ -107,6 +112,54 @@ namespace Game.Core
             {
                 _entries.Clear();
             }
+        }
+
+        private static string CompactStackTrace(string stackTrace) =>
+            CompactText(
+                stackTrace,
+                MaxStackTraceLines,
+                MaxMessageChars * 6,
+                StackTraceTruncatedSuffix);
+
+        private static string CompactText(
+            string text,
+            int maxLines,
+            int maxChars,
+            string truncatedSuffix)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
+            var lines = normalized.Split('\n');
+            var builder = new StringBuilder(Math.Min(normalized.Length, maxChars) + truncatedSuffix.Length);
+            var truncated = false;
+            var lineCount = Math.Min(lines.Length, Math.Max(1, maxLines));
+            for (var i = 0; i < lineCount; i++)
+            {
+                if (i > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                builder.Append(lines[i]);
+            }
+
+            truncated = lines.Length > lineCount;
+            if (builder.Length > maxChars)
+            {
+                builder.Length = Math.Max(0, maxChars);
+                truncated = true;
+            }
+
+            if (truncated)
+            {
+                builder.Append(truncatedSuffix);
+            }
+
+            return builder.ToString();
         }
     }
 }
