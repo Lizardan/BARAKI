@@ -87,15 +87,15 @@ namespace Game.Gameplay.Networking
             NotifyChanged();
         }
 
-        public void RequestPick(string raceId)
+        public bool RequestPick(string raceId)
         {
             if (IsServer)
             {
-                ApplyPick(ResolveLocalSlot(), raceId);
-                return;
+                return ApplyPick(ResolveLocalSlot(), raceId);
             }
 
             RequestPickServerRpc(raceId);
+            return true;
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -113,17 +113,17 @@ namespace Game.Gameplay.Networking
             ApplyPick(slot, raceId);
         }
 
-        private void ApplyPick(int slot, string raceId)
+        private bool ApplyPick(int slot, string raceId)
         {
             if (!IsServer || _matchSimStarted.Value || slot < 0 || slot >= _racePicks.Count)
             {
-                return;
+                return false;
             }
 
             var picks = ToMutablePickArray();
             if (!RacePickNetworkRules.TryApplyPick(picks, slot, raceId))
             {
-                return;
+                return false;
             }
 
             _racePicks[slot] = new FixedString32Bytes(picks[slot]);
@@ -134,6 +134,8 @@ namespace Game.Gameplay.Networking
             {
                 BeginMatchOnServer(ToMutablePickArray());
             }
+
+            return true;
         }
 
         private void FillLocalStandInPicks()

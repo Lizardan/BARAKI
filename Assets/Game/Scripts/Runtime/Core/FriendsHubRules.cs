@@ -207,6 +207,17 @@ namespace Game.Core
             return HasLobbyCapacity(occupiedSlots, maxSlots);
         }
 
+        /// <summary>Lobby invite overlay: only friends sitting in the main menu.</summary>
+        public static bool CanInviteFriendToLobby(bool isOnline, string status)
+        {
+            if (!isOnline)
+            {
+                return false;
+            }
+
+            return string.Equals(status, StatusInLauncher, StringComparison.OrdinalIgnoreCase);
+        }
+
         public static string FormatLobbySlots(int occupiedSlots, int maxSlots)
         {
             if (maxSlots <= 0)

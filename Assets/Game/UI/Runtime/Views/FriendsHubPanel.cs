@@ -277,6 +277,21 @@ namespace Game.UI.Views
 
             _friendsListContainer.Clear();
             var friends = FriendsHubService.GetFriendsSnapshot();
+            if (_mode == FriendsHubPanelMode.InviteOnly)
+            {
+                var inviteable = new System.Collections.Generic.List<FriendPresenceInfo>(friends.Count);
+                for (var i = 0; i < friends.Count; i++)
+                {
+                    var friend = friends[i];
+                    if (FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Status))
+                    {
+                        inviteable.Add(friend);
+                    }
+                }
+
+                friends = inviteable;
+            }
+
             if (_friendsCountLabel != null)
             {
                 _friendsCountLabel.text = friends.Count.ToString();
@@ -286,7 +301,7 @@ namespace Game.UI.Views
             {
                 _friendsListContainer.Add(CreateMetaLabel(
                     _mode == FriendsHubPanelMode.InviteOnly
-                        ? "Нет друзей для приглашения."
+                        ? "Нет друзей в главном меню."
                         : "Нет друзей. Добавьте по имени (Ник#1234)."));
                 return;
             }
@@ -334,7 +349,8 @@ namespace Game.UI.Views
                     actions.Add(joinButton);
                 }
             }
-            else if (_mode == FriendsHubPanelMode.InviteOnly && friend.IsOnline)
+            else if (_mode == FriendsHubPanelMode.InviteOnly
+                     && FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Status))
             {
                 var inviteButton = new Button { text = "ПРИГЛАСИТЬ" };
                 inviteButton.AddToClassList("mm__friend-row__btn");

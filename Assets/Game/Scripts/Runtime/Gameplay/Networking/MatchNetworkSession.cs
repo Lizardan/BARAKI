@@ -153,8 +153,9 @@ namespace Game.Gameplay.Networking
         public static void EnsureRacePickSession(int playerCount) =>
             NetworkRacePickState.Instance?.EnsureSession(playerCount);
 
-        public static void RequestRacePick(string raceId) =>
-            NetworkRacePickState.Instance?.RequestPick(raceId);
+        public static bool RequestRacePick(string raceId) =>
+            NetworkRacePickState.Instance != null
+            && NetworkRacePickState.Instance.RequestPick(raceId);
 
         public static bool HasRacePick(int slot) =>
             NetworkRacePickState.Instance?.HasPick(slot) ?? false;

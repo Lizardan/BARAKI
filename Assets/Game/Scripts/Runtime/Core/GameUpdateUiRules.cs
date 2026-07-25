@@ -5,6 +5,8 @@ namespace Game.Core
     /// <summary>Pure helpers for main-menu update strip copy.</summary>
     public static class GameUpdateUiRules
     {
+        public const string DownloadCompleteButtonLabel = "ПЕРЕЗАПУСК БИЛДА";
+
         public static string FormatVersionLabel(string version)
         {
             if (string.IsNullOrWhiteSpace(version))
@@ -38,6 +40,11 @@ namespace Game.Core
 
         public static string FormatProgressLabel(float progress01) =>
             ProgressPercent(progress01) + "%";
+
+        public static string FormatDownloadButtonLabel(float progress01) =>
+            progress01 >= 1f
+                ? DownloadCompleteButtonLabel
+                : FormatProgressLabel(progress01);
 
         /// <summary>Bootstrap version range separator (Noto Sans Symbols — not in Noto Sans).</summary>
         public const string UpdateRangeArrow = "→";

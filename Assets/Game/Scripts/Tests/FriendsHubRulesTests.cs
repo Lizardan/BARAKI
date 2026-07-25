@@ -78,6 +78,19 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CanInviteFriendToLobby_True_OnlyInMainMenu()
+        {
+            Assert.IsTrue(
+                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInLauncher));
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInGame));
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(true, "Online"));
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(false, FriendsHubRules.StatusInLauncher));
+        }
+
+        [Test]
         public void IsLobbyFull_RequiresKnownCapacity()
         {
             Assert.IsFalse(FriendsHubRules.IsLobbyFull(4, 0));

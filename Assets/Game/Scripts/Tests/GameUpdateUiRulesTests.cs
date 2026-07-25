@@ -22,6 +22,16 @@ namespace Game.Tests
         }
 
         [Test]
+        public void FormatDownloadButtonLabel_ShowsRestartWhenComplete()
+        {
+            Assert.AreEqual("37%", GameUpdateUiRules.FormatDownloadButtonLabel(0.374f));
+            Assert.AreEqual(
+                GameUpdateUiRules.DownloadCompleteButtonLabel,
+                GameUpdateUiRules.FormatDownloadButtonLabel(1f));
+            Assert.AreEqual("ПЕРЕЗАПУСК БИЛДА", GameUpdateUiRules.FormatDownloadButtonLabel(1.1f));
+        }
+
+        [Test]
         public void FormatUpdateRange_HighlightsRemoteVersionInBlue()
         {
             Assert.AreEqual(

@@ -384,9 +384,7 @@ namespace Game.UI.Controllers
             }
 
             var isComplete = progress01 >= 1f;
-            var buttonText = isComplete
-                ? "ИГРАТЬ"
-                : GameUpdateUiRules.FormatProgressLabel(progress01);
+            var buttonText = GameUpdateUiRules.FormatDownloadButtonLabel(progress01);
 
             if (_versionProgressLabel != null)
             {

@@ -28,6 +28,7 @@ namespace Game.UI.Controllers
         private Button _confirmButton;
         private RacePickSession _session;
         private string _selectedRaceId;
+        private string _pendingNetworkRaceId;
         private bool _localPickSubmitted;
         private bool _networkPickSubscribed;
 
@@ -88,6 +89,7 @@ namespace Game.UI.Controllers
             GameSession.UpdateActiveSetup(new MatchSetup(setup.PlayerCount, localSlot, setup.RaceIds));
             _session = new RacePickSession(setup.PlayerCount, localSlot);
             _selectedRaceId = null;
+            _pendingNetworkRaceId = null;
             _localPickSubmitted = false;
 
             if (MatchNetworkSession.IsNetworked)
@@ -131,8 +133,8 @@ namespace Game.UI.Controllers
 
             if (MatchNetworkSession.IsNetworked)
             {
-                MatchNetworkSession.RequestRacePick(_selectedRaceId);
-                _localPickSubmitted = true;
+                _pendingNetworkRaceId = _selectedRaceId;
+                TrySubmitPendingNetworkPick();
                 RefreshRacePickUi();
                 return;
             }
@@ -159,7 +161,24 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            TrySubmitPendingNetworkPick();
             RefreshRacePickUi();
+        }
+
+        private void TrySubmitPendingNetworkPick()
+        {
+            if (_localPickSubmitted || string.IsNullOrEmpty(_pendingNetworkRaceId))
+            {
+                return;
+            }
+
+            if (!MatchNetworkSession.RequestRacePick(_pendingNetworkRaceId))
+            {
+                return;
+            }
+
+            _localPickSubmitted = true;
+            _pendingNetworkRaceId = null;
         }
 
         private void RefreshRacePickUi()
@@ -208,7 +227,9 @@ namespace Game.UI.Controllers
 
         private void UpdateRaceButtons()
         {
+            var hasPendingPick = !string.IsNullOrEmpty(_pendingNetworkRaceId);
             var canSelect = !_localPickSubmitted
+                && !hasPendingPick
                 && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
             _humanButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Human));
             _bugButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Bug));
@@ -234,12 +255,18 @@ namespace Game.UI.Controllers
 
         private void UpdateConfirmButton()
         {
+            var hasPendingPick = !string.IsNullOrEmpty(_pendingNetworkRaceId);
             var enabled = !string.IsNullOrEmpty(_selectedRaceId)
+                && !hasPendingPick
                 && !_localPickSubmitted
                 && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
             _confirmButton.SetEnabled(enabled);
             _confirmButton.EnableInClassList(ConfirmDisabledClass, !enabled);
-            if (_localPickSubmitted && MatchNetworkSession.IsNetworked)
+            if (hasPendingPick && MatchNetworkSession.IsNetworked)
+            {
+                _confirmButton.text = "ОТПРАВЛЯЕМ...";
+            }
+            else if (_localPickSubmitted && MatchNetworkSession.IsNetworked)
             {
                 _confirmButton.text = "ЖДЁМ ОСТАЛЬНЫХ";
             }
