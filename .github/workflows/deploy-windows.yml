@@ -112,6 +112,8 @@ jobs:
           Write-Host "Applied Packages/manifest.ci.json (no MCP / Cursor IDE packages)."
 
       # Overlap Docker pull with Library cache restore (biggest fixed cost on hosted runners).
+      # Wait for Docker Engine first: on windows-2022 the daemon pipe is often not ready
+      # yet at job start; a fast Library cache hit then fails the pull immediately.
       - name: Start Docker image pull (background)
         shell: pwsh
         run: |
@@ -126,8 +128,32 @@ jobs:
           @(
             "`$ErrorActionPreference = 'Continue'"
             "`$sw = [System.Diagnostics.Stopwatch]::StartNew()"
-            "docker pull '$img' *>&1 | Tee-Object -FilePath '$outLog'"
-            "`$code = `$LASTEXITCODE"
+            "`$ready = `$false"
+            "`$deadline = (Get-Date).AddMinutes(3)"
+            "while ((Get-Date) -lt `$deadline) {"
+            "  docker info *>&1 | Out-Null"
+            "  if (`$LASTEXITCODE -eq 0) { `$ready = `$true; break }"
+            "  Write-Host 'Docker Engine not ready yet; retrying in 5s...'"
+            "  Start-Sleep -Seconds 5"
+            "}"
+            "if (-not `$ready) {"
+            "  'Docker Engine did not become ready within 3 minutes' | Tee-Object -FilePath '$outLog'"
+            "  Set-Content -Path '$exitFile' -Value 1"
+            "  Set-Content -Path '$doneFile' -Value ([int]`$sw.Elapsed.TotalSeconds)"
+            "  exit 1"
+            "}"
+            "Write-Host ('Docker Engine ready after {0}s' -f ([int]`$sw.Elapsed.TotalSeconds))"
+            "`$code = 1"
+            "for (`$attempt = 1; `$attempt -le 3; `$attempt++) {"
+            "  Write-Host ('docker pull attempt {0}/3...' -f `$attempt)"
+            "  docker pull '$img' *>&1 | Tee-Object -FilePath '$outLog'"
+            "  `$code = `$LASTEXITCODE"
+            "  if (`$code -eq 0) { break }"
+            "  if (`$attempt -lt 3) {"
+            "    Write-Host ('docker pull failed (exit {0}); retrying in 10s...' -f `$code)"
+            "    Start-Sleep -Seconds 10"
+            "  }"
+            "}"
             "`$sw.Stop()"
             "Set-Content -Path '$exitFile' -Value `$code"
             "Set-Content -Path '$doneFile' -Value ([int]`$sw.Elapsed.TotalSeconds)"

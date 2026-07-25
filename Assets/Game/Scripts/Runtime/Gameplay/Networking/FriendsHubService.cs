@@ -114,13 +114,45 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            await FriendsService.Instance.InitializeAsync();
-            s_initialized = true;
-            EnsureEventHooks();
+            var alreadyInitialized = s_initialized;
+            if (!s_initialized)
+            {
+                await FriendsService.Instance.InitializeAsync();
+                s_initialized = true;
+                EnsureEventHooks();
+            }
+
             await EnsureLocalPlayerNameSyncedAsync();
             RefreshAllCaches();
-            // Presence is best-effort — do not block hub UI on another ~10s network round-trip.
+
+            // Only the first hub init publishes default menu presence.
+            // Re-entry from lobby / invite must not overwrite an active InGame / InMatch status.
+            if (FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized))
+            {
+                PublishMenuPresence();
+            }
+        }
+
+        /// <summary>Best-effort: friends see «в меню», Join hidden.</summary>
+        public static void PublishMenuPresence()
+        {
             SetPresenceAsync(FriendsHubRules.StatusInLauncher).Forget();
+        }
+
+        /// <summary>Best-effort: friends see «в матче», Join hidden.</summary>
+        public static void PublishMatchPresence()
+        {
+            SetPresenceAsync(FriendsHubRules.StatusInMatch).Forget();
+        }
+
+        /// <summary>Best-effort: friends see «в лобби» (+ slots) with Join when capacity remains.</summary>
+        public static void PublishLobbyPresence(string lobbyCode, int occupiedSlots, int maxSlots)
+        {
+            SetPresenceAsync(
+                FriendsHubRules.StatusInGame,
+                lobbyCode,
+                occupiedSlots,
+                maxSlots).Forget();
         }
 
         static async UniTask EnsureLocalPlayerNameSyncedAsync()

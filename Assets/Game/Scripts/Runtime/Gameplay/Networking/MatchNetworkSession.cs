@@ -207,6 +207,8 @@ namespace Game.Gameplay.Networking
             LocalSlot = -1;
             ListenHostSlot = NetworkLobbySlotRules.HostSlot;
             HostMigrationSession.Clear();
+            // Leaving a cleared session must not leave stale joinable lobby presence.
+            FriendsHubService.PublishMenuPresence();
         }
 
         /// <summary>Drop NGO/Relay only; keep room/slot for host migration rebind.</summary>

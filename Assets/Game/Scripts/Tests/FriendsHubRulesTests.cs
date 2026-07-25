@@ -6,6 +6,62 @@ namespace Game.Tests
     public sealed class FriendsHubRulesTests
     {
         [Test]
+        public void ShouldPublishLauncherPresenceOnInit_OnlyWhenNotYetInitialized()
+        {
+            Assert.IsTrue(FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized: false));
+            Assert.IsFalse(FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized: true));
+        }
+
+        [Test]
+        public void ShouldPublishMenuPresenceOnMainMenuEnter_OnlyWithoutActiveSession()
+        {
+            Assert.IsTrue(FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession: false));
+            Assert.IsFalse(FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession: true));
+        }
+
+        [Test]
+        public void TryGetJoinableLobbyCode_InMatch_ReturnsFalse()
+        {
+            Assert.IsFalse(
+                FriendsHubRules.TryGetJoinableLobbyCode(FriendsHubRules.StatusInMatch, "abcd", out _));
+        }
+
+        [Test]
+        public void FormatFriendLine_InMatch_ShowsMatchStatus()
+        {
+            var line = FriendsHubRules.FormatFriendLine(
+                "Alpha",
+                FriendsHubRules.StatusInMatch,
+                true,
+                "wxyz",
+                occupiedSlots: 2,
+                maxSlots: 4);
+
+            Assert.AreEqual("Alpha: в матче", line);
+            Assert.That(line, Does.Not.Contain("WXYZ"));
+            Assert.That(line, Does.Not.Contain("2/4"));
+        }
+
+        [Test]
+        public void CanInviteFriendToLobby_False_WhenInMatch()
+        {
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInMatch));
+        }
+
+        [Test]
+        public void CanJoinFriendLobby_False_WhenInMatch()
+        {
+            Assert.IsFalse(
+                FriendsHubRules.CanJoinFriendLobby(
+                    FriendsHubRules.StatusInMatch,
+                    "abcd",
+                    occupiedSlots: 1,
+                    maxSlots: 4,
+                    out _));
+        }
+
+        [Test]
         public void TryGetJoinableLobbyCode_InGameWithCode_ReturnsTrue()
         {
             Assert.IsTrue(

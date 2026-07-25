@@ -242,6 +242,9 @@ namespace Game.UI.Controllers
             try
             {
                 await FriendsHubService.InitializeAsync();
+                // Force re-publish after hub init so a stale InLauncher cannot stick
+                // when RefreshLobbyUi already warmed the presence dedupe cache.
+                InvalidateLobbyPresenceDedupe();
                 SyncLobbyPresence();
                 _friendsHubPanel?.Refresh();
             }
@@ -249,6 +252,13 @@ namespace Game.UI.Controllers
             {
                 Debug.LogWarning($"Lobby friends init skipped: {ex.Message}");
             }
+        }
+
+        private void InvalidateLobbyPresenceDedupe()
+        {
+            _lastPresenceOccupied = -1;
+            _lastPresenceMax = -1;
+            _lastPresenceCode = string.Empty;
         }
 
         private void OnInviteFriendsClicked()
@@ -354,14 +364,9 @@ namespace Game.UI.Controllers
             {
                 MatchNetworkSession.Shutdown();
             }
-
-            try
+            else
             {
-                FriendsHubService.SetPresenceAsync(FriendsHubRules.StatusInLauncher).Forget();
-            }
-            catch (System.Exception)
-            {
-                // Presence optional for LocalDev.
+                FriendsHubService.PublishMenuPresence();
             }
 
             LoadSceneAsync(GameSceneNames.MainMenu, this.GetCancellationTokenOnDestroy()).Forget();
@@ -534,11 +539,7 @@ namespace Game.UI.Controllers
             _lastPresenceOccupied = occupied;
             _lastPresenceMax = maxSlots;
             _lastPresenceCode = code;
-            FriendsHubService.SetPresenceAsync(
-                FriendsHubRules.StatusInGame,
-                code,
-                occupied,
-                maxSlots).Forget();
+            FriendsHubService.PublishLobbyPresence(code, occupied, maxSlots);
         }
 
         private void RebuildSlotList(IReadOnlyLobbySlots lobby)
@@ -596,6 +597,8 @@ namespace Game.UI.Controllers
                     : MatchSetup.Default;
             }
 
+            // Match is not joinable — clear lobby Join for friends.
+            FriendsHubService.PublishMatchPresence();
             GameSession.Begin(setup);
             await SceneManager.LoadSceneAsync(GameSceneNames.Game)
                 .ToUniTask(cancellationToken: cancellationToken);

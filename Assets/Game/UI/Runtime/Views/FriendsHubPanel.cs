@@ -150,7 +150,7 @@ namespace Game.UI.Views
                 _friendsListContainer.Clear();
                 if (_friendsCountLabel != null)
                 {
-                    _friendsCountLabel.text = "5";
+                    _friendsCountLabel.text = "6";
                 }
 
                 // Offline
@@ -194,6 +194,13 @@ namespace Game.UI.Views
                     "FULL",
                     occupiedSlots: 4,
                     maxSlots: 4)));
+                // In match — not joinable
+                _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
+                    "friend-match",
+                    "Delta#4242",
+                    FriendsHubRules.StatusInMatch,
+                    true,
+                    string.Empty)));
             }
 
             if (_incomingList != null)

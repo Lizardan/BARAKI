@@ -13,6 +13,8 @@ namespace Game.Core
     {
         public const string StatusInLauncher = "InLauncher";
         public const string StatusInGame = "InGame";
+        /// <summary>Match in progress — visible to friends, not joinable.</summary>
+        public const string StatusInMatch = "InMatch";
         public const int UgsNameSuffixMinLength = 4;
         public const string FriendsTabLabel = "ДРУЗЬЯ";
         public const string InvitesTabLabel = "ПРИГЛАШЕНИЯ";
@@ -22,6 +24,28 @@ namespace Game.Core
         /// <summary>Accept / decline glyphs (Noto Sans Symbols 2 — not in Noto Sans).</summary>
         public const string AcceptRequestGlyph = "✓";
         public const string DeclineRequestGlyph = "✕";
+
+        /// <summary>
+        /// Default menu presence is published only on the first Friends hub init.
+        /// Re-entry (lobby OnEnable, invite flow) must not overwrite an active InGame presence.
+        /// </summary>
+        public static bool ShouldPublishLauncherPresenceOnInit(bool alreadyInitialized) =>
+            !alreadyInitialized;
+
+        /// <summary>
+        /// Main menu safety net: republish menu presence when no live lobby/match session remains.
+        /// </summary>
+        public static bool ShouldPublishMenuPresenceOnMainMenuEnter(bool hasActiveSession) =>
+            !hasActiveSession;
+
+        public static bool IsMatchPresence(string status) =>
+            string.Equals(status, StatusInMatch, StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsLobbyPresence(string status) =>
+            string.Equals(status, StatusInGame, StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsMenuPresence(string status) =>
+            string.Equals(status, StatusInLauncher, StringComparison.OrdinalIgnoreCase);
 
         public static string NormalizePlayerId(string value)
         {
@@ -258,7 +282,8 @@ namespace Game.Core
 
             return status switch
             {
-                StatusInLauncher => $"{displayName}: в меню",
+                _ when IsMenuPresence(status) => $"{displayName}: в меню",
+                _ when IsMatchPresence(status) => $"{displayName}: в матче",
                 "Online" => $"{displayName}: онлайн",
                 _ => $"{displayName}: {status}",
             };

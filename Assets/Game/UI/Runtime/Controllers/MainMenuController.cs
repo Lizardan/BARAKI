@@ -292,9 +292,23 @@ namespace Game.UI.Controllers
             FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
             _profileBadge?.RegisterCallback<ClickEvent>(OnProfileBadgeClicked);
+            PublishMenuPresenceIfIdle();
             var cancellationToken = this.GetCancellationTokenOnDestroy();
             PlayIntroAsync(cancellationToken).Forget();
             RestoreIntroIfStalledAsync(cancellationToken).Forget();
+        }
+
+        private static void PublishMenuPresenceIfIdle()
+        {
+            var hasActiveSession = MatchNetworkSession.HasHandle
+                || MatchNetworkSession.IsNetworked
+                || LocalMatchRegistry.Active != null;
+            if (!FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession))
+            {
+                return;
+            }
+
+            FriendsHubService.PublishMenuPresence();
         }
 
         private void OnDisable()
@@ -1380,6 +1394,7 @@ namespace Game.UI.Controllers
             }
             catch (System.Exception ex)
             {
+                MatchNetworkSession.Shutdown();
                 Debug.LogWarning($"Create match failed: {ex.Message}");
                 _isTransitioning = false;
                 EnsureLobbyEntryClosed();
@@ -1446,6 +1461,7 @@ namespace Game.UI.Controllers
             }
             catch (System.Exception ex)
             {
+                MatchNetworkSession.Shutdown();
                 Debug.LogWarning($"Join match failed: {ex.Message}");
                 _isTransitioning = false;
                 if (showJoinUiOnError)
