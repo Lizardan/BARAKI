@@ -157,5 +157,17 @@
                 <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
             </ui:VisualElement>
         </ui:VisualElement>
+
+        <ui:VisualElement name="LobbyEntryOverlay" class="ui-overlay ui-panel-loading-overlay--hidden">
+            <ui:VisualElement class="ui-overlay__dim" />
+            <ui:VisualElement class="ui-dialog mm-lobby-entry">
+                <ui:VisualElement class="ui-dialog__body mm-lobby-entry__body">
+                    <ui:VisualElement class="ui-panel-loading-overlay__content mm-lobby-entry__line">
+                        <ui:Label text="Вход в лобби" class="ui-panel-loading-overlay__text mm-lobby-entry__text" />
+                        <ui:Label text="" class="ui-panel-loading-overlay__dots mm-lobby-entry__dots" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

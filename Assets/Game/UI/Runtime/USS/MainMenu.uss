@@ -715,6 +715,27 @@
     min-height: 0;
 }
 
+.mm-lobby-entry {
+    width: 320px;
+    max-width: 86%;
+}
+
+.mm-lobby-entry__body {
+    padding: 24px 28px;
+    align-items: center;
+    justify-content: center;
+}
+
+.mm-lobby-entry__line {
+    align-self: center;
+}
+
+.mm-lobby-entry__text,
+.mm-lobby-entry__dots {
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
 .mm-modes__grid {
     flex-direction: column;
     justify-content: center;

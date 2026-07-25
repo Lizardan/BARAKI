@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
 using Game.Gameplay.Networking;
+using Game.UI;
 using Game.UI.Animations;
 using Game.UI.Bindings;
 using Game.UI.ViewModels;
@@ -50,6 +51,7 @@ namespace Game.UI.Controllers
         private Slider _volumeSlider;
         private Label _volumeValueLabel;
         private VisualElement _matchEntryOverlay;
+        private PanelLoadingOverlay _lobbyEntryOverlay;
         private VisualElement _modeSelectOverlay;
         private VisualElement _joinCodeRow;
         private VisualElement _modeGrid;
@@ -122,6 +124,7 @@ namespace Game.UI.Controllers
             _menuOverlayDim = _root.Q<VisualElement>("MenuOverlayDim");
             _menuDialog = _root.Q<VisualElement>("MenuDialog");
             _matchEntryOverlay = _root.Q<VisualElement>("MatchEntryOverlay");
+            _lobbyEntryOverlay = new PanelLoadingOverlay(_root.Q<VisualElement>("LobbyEntryOverlay"));
             _modeSelectOverlay = _root.Q<VisualElement>("ModeSelectOverlay");
             _joinCodeRow = _root.Q<VisualElement>("JoinCodeRow");
             _modeGrid = _root.Q<VisualElement>("ModeGrid");
@@ -203,6 +206,7 @@ namespace Game.UI.Controllers
             EnsureMatchEntryClosed();
             EnsureModeSelectClosed();
             EnsureProfileEditClosed();
+            EnsureLobbyEntryClosed();
             EnsureVisibleRestState();
             BindHubFromCacheAsync().Forget();
 
@@ -309,12 +313,14 @@ namespace Game.UI.Controllers
             }
 
             _profileBadge?.UnregisterCallback<ClickEvent>(OnProfileBadgeClicked);
+            EnsureLobbyEntryClosed();
         }
 
         private void OnDestroy()
         {
             _bindingScope?.Dispose();
             _friendsHubPanel?.Dispose();
+            _lobbyEntryOverlay?.Dispose();
         }
 
         private async UniTask PlayIntroAsync(System.Threading.CancellationToken cancellationToken)
@@ -1259,6 +1265,16 @@ namespace Game.UI.Controllers
             ClearModeSelectError();
         }
 
+        private void ShowLobbyEntry()
+        {
+            _lobbyEntryOverlay?.SetVisible(true);
+        }
+
+        private void EnsureLobbyEntryClosed()
+        {
+            _lobbyEntryOverlay?.SetVisible(false);
+        }
+
         private void ClearModeSelectError()
         {
             if (_modeSelectErrorLabel != null)
@@ -1326,6 +1342,7 @@ namespace Game.UI.Controllers
 
             _isTransitioning = true;
             ClearModeSelectError();
+            ShowLobbyEntry();
             try
             {
                 var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
@@ -1365,6 +1382,7 @@ namespace Game.UI.Controllers
             {
                 Debug.LogWarning($"Create match failed: {ex.Message}");
                 _isTransitioning = false;
+                EnsureLobbyEntryClosed();
                 OpenModeSelect();
                 ShowModeSelectError(FormatMatchSetupError(ex));
             }

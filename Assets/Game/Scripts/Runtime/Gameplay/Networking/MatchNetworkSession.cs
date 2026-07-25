@@ -153,9 +153,29 @@ namespace Game.Gameplay.Networking
         public static void EnsureRacePickSession(int playerCount) =>
             NetworkRacePickState.Instance?.EnsureSession(playerCount);
 
-        public static bool RequestRacePick(string raceId) =>
-            NetworkRacePickState.Instance != null
-            && NetworkRacePickState.Instance.RequestPick(raceId);
+        public static bool RequestRacePick(string raceId)
+        {
+            var state = NetworkRacePickState.Instance;
+            // #region agent log
+            DebugSessionLog.Write(
+                "MatchNetworkSession.cs:RequestRacePick",
+                "network race pick request routed",
+                "H1,H5",
+                ("raceId", raceId),
+                ("hasRacePickState", state != null),
+                ("isNetworked", IsNetworked),
+                ("localSlot", LocalSlot),
+                ("playerCount", PlayerCount),
+                ("networkManagerIsServer", NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer),
+                ("networkManagerIsClient", NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient));
+            // #endregion
+            if (state == null)
+            {
+                return false;
+            }
+
+            return state.RequestPick(raceId);
+        }
 
         public static bool HasRacePick(int slot) =>
             NetworkRacePickState.Instance?.HasPick(slot) ?? false;
