@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using UnityEngine;
 
 namespace Game.Core
 {
@@ -10,6 +11,7 @@ namespace Game.Core
         private const string SessionId = "509549";
         private const string RunId = "pre-fix";
         private const string LogPath = "f:/Unity Projects/BARAKI/debug-509549.log";
+        private const string FallbackLogFileName = "debug-509549.log";
 
         public static void Write(
             string location,
@@ -46,7 +48,30 @@ namespace Game.Core
                 }
 
                 builder.Append("}}");
-                File.AppendAllText(LogPath, builder + Environment.NewLine);
+                AppendLine(builder.ToString());
+            }
+            catch
+            {
+                // Debug instrumentation must never affect gameplay.
+            }
+        }
+
+        private static void AppendLine(string line)
+        {
+            try
+            {
+                File.AppendAllText(LogPath, line + Environment.NewLine);
+                return;
+            }
+            catch
+            {
+                // Remote test machines may not have the local project path.
+            }
+
+            try
+            {
+                var fallbackPath = Path.Combine(Application.persistentDataPath, FallbackLogFileName);
+                File.AppendAllText(fallbackPath, line + Environment.NewLine);
             }
             catch
             {
