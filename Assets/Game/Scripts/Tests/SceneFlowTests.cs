@@ -1,6 +1,7 @@
 using Game.Core;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
+using Game.Gameplay.Networking;
 using Game.UI;
 using Game.UI.Controllers;
 using NUnit.Framework;
@@ -131,6 +132,24 @@ namespace Game.Tests
             }
 
             Assert.AreEqual(1, lobbyPrefabSources, "Bootstrap should contain exactly one NetworkLobbyState_PrefabSource.");
+        }
+
+        [Test]
+        public void NetworkLobbyPrefab_OwnsRacePickState()
+        {
+            var lobbyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Game/Resources/Networking/NetworkLobbyState.prefab");
+            var authorityPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Game/Resources/Networking/MatchNetworkAuthority.prefab");
+
+            Assert.IsNotNull(lobbyPrefab, "NetworkLobbyState prefab should exist.");
+            Assert.IsNotNull(authorityPrefab, "MatchNetworkAuthority prefab should exist.");
+            Assert.IsNotNull(
+                lobbyPrefab.GetComponent<NetworkRacePickState>(),
+                "Race pick state must replicate with NetworkLobbyState so clients can submit picks.");
+            Assert.IsNull(
+                authorityPrefab.GetComponent<NetworkRacePickState>(),
+                "MatchNetworkAuthority should not own race pick state or clients can miss it during race pick.");
         }
 
         [Test]
