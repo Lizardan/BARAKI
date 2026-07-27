@@ -58,6 +58,10 @@ namespace Game.Gameplay.Networking
         public float FacingZ;
         public float Health;
         public bool IsAlive;
+        /// <summary><see cref="Combat.UnitBehaviorState"/> as byte. 0 on pre-v6 snapshots.</summary>
+        public byte BehaviorState;
+        /// <summary>Increments on each attack swing. 0 on pre-v6 snapshots.</summary>
+        public int AttackSwingSerial;
     }
 
     public struct MatchResearchSnapshot
@@ -82,6 +86,8 @@ namespace Game.Gameplay.Networking
         public int[] CallCurrent;
         public int[] CallMax;
         public float[] CallNextRegen;
+        /// <summary>Wave countdown. 0 on pre-v6 snapshots.</summary>
+        public float TimeUntilNextWaveSeconds;
     }
 
     public struct MatchCenterLaneSnapshot
@@ -92,7 +98,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -150,6 +156,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(u.FacingZ);
                     writer.Write(u.Health);
                     writer.Write(u.IsAlive);
+                    writer.Write(u.BehaviorState);
+                    writer.Write(u.AttackSwingSerial);
                 }
             }
 
@@ -179,6 +187,7 @@ namespace Game.Gameplay.Networking
                     writer.Write(b.IsRuins);
                     writer.Write(b.FrozenSquadLevel);
                     WriteCallCharges(writer, b);
+                    writer.Write(b.TimeUntilNextWaveSeconds);
                 }
             }
 
@@ -207,7 +216,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -279,6 +288,12 @@ namespace Game.Gameplay.Networking
                     unit.IsAlive = reader.ReadBoolean();
                 }
 
+                if (version >= 6)
+                {
+                    unit.BehaviorState = reader.ReadByte();
+                    unit.AttackSwingSerial = reader.ReadInt32();
+                }
+
                 snapshot.Units[i] = unit;
             }
 
@@ -315,6 +330,11 @@ namespace Game.Gameplay.Networking
                     if (version >= 5)
                     {
                         ReadCallCharges(reader, ref barracksSnap);
+                    }
+
+                    if (version >= 6)
+                    {
+                        barracksSnap.TimeUntilNextWaveSeconds = reader.ReadSingle();
                     }
 
                     snapshot.Barracks[i] = barracksSnap;
@@ -388,6 +408,8 @@ namespace Game.Gameplay.Networking
                     FacingZ = u.FacingDirection.z,
                     Health = u.CurrentHp,
                     IsAlive = u.IsAlive,
+                    BehaviorState = (byte)u.BehaviorState,
+                    AttackSwingSerial = u.AttackSwingSerial,
                 });
             }
 
@@ -439,6 +461,7 @@ namespace Game.Gameplay.Networking
                     CallCurrent = callCurrent,
                     CallMax = callMax,
                     CallNextRegen = callNext,
+                    TimeUntilNextWaveSeconds = b.TimeUntilNextWaveSeconds,
                 });
             }
 

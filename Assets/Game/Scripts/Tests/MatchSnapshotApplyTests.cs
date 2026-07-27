@@ -164,6 +164,47 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_UpdatesBarracksWaveTimer()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            host.Tick(4f);
+            var hostBarracks = host.WaveScheduler.GetBarracks(0, GameIds.Buildings.BarracksCenter);
+            Assert.IsNotNull(hostBarracks);
+            var expected = hostBarracks.TimeUntilNextWaveSeconds;
+            Assert.Less(expected, 35f);
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(MatchSnapshotCodec.Capture(host));
+
+            var clientBarracks = client.WaveScheduler.GetBarracks(0, GameIds.Buildings.BarracksCenter);
+            Assert.AreEqual(expected, clientBarracks.TimeUntilNextWaveSeconds, 0.01f);
+        }
+
+        [Test]
+        public void ApplyAuthoritativeSnapshot_UpdatesUnitBehaviorAndAttackSwing()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            var stats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 1f, 1.5f, 4f, 1);
+            var unit = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, 5f);
+            unit.BehaviorState = UnitBehaviorState.Attack;
+            unit.AttackSwingSerial = 6;
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(MatchSnapshotCodec.Capture(host));
+
+            var restored = client.Combat.GetUnit(unit.UnitId);
+            Assert.IsNotNull(restored);
+            Assert.AreEqual(UnitBehaviorState.Attack, restored.BehaviorState);
+            Assert.AreEqual(6, restored.AttackSwingSerial);
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_RetargetsCenterOpponentSlot()
         {
             var host = new MatchController();

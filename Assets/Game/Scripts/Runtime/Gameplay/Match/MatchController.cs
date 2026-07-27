@@ -412,6 +412,7 @@ namespace Game.Gameplay.Match
                 state.FrozenSquadLevel = Math.Max(1, snap.FrozenSquadLevel);
                 state.IsRuins = snap.IsRuins;
                 state.RefreshInterval();
+                state.TimeUntilNextWaveSeconds = snap.TimeUntilNextWaveSeconds;
                 if (snap.CallCurrent != null
                     && snap.CallMax != null
                     && snap.CallNextRegen != null

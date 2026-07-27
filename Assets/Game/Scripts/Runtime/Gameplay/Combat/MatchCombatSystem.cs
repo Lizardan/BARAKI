@@ -745,6 +745,8 @@ namespace Game.Gameplay.Combat
                 existing.CurrentHp = Mathf.Max(0f, snap.Health);
                 existing.WorldPosition = position;
                 existing.FacingDirection = facing;
+                existing.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
+                existing.AttackSwingSerial = snap.AttackSwingSerial;
                 existing.MarchProgressDistance = _routes != null
                     && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
                     ? route.ProjectDistance(position)
@@ -771,6 +773,8 @@ namespace Game.Gameplay.Combat
                 isHero: role == UnitRole.Hero);
             unit.CurrentHp = Mathf.Max(0f, snap.Health);
             unit.FacingDirection = facing;
+            unit.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
+            unit.AttackSwingSerial = snap.AttackSwingSerial;
             if (_routes != null && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var spawnRoute))
             {
                 unit.MarchProgressDistance = spawnRoute.ProjectDistance(position);

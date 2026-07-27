@@ -42,12 +42,24 @@ namespace Game.Core
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            ApplyCursorPolicy(scene.name);
+
             if (!GameDisplayRules.ShouldEnterFullscreen(scene.name))
             {
                 return;
             }
 
             ApplyMainMenuFullscreen();
+        }
+
+        /// <summary>
+        /// Pins the OS mouse inside the player window (<see cref="CursorLockMode.Confined"/>).
+        /// This is not camera pan logic — the cursor physically cannot leave the window.
+        /// </summary>
+        static void ApplyCursorPolicy(string sceneName)
+        {
+            Cursor.visible = true;
+            Cursor.lockState = GameDisplayRules.ResolveCursorLockMode(sceneName);
         }
 
         /// <summary>1280×720 windowed, centered — used during Bootstrap and on quit.</summary>

@@ -32,6 +32,24 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ShouldConfineCursor_EverywhereExceptBootstrap()
+        {
+            Assert.IsFalse(GameDisplayRules.ShouldConfineCursor(GameSceneNames.Bootstrap));
+            Assert.IsTrue(GameDisplayRules.ShouldConfineCursor(GameSceneNames.MainMenu));
+            Assert.IsTrue(GameDisplayRules.ShouldConfineCursor(GameSceneNames.Lobby));
+            Assert.IsTrue(GameDisplayRules.ShouldConfineCursor(GameSceneNames.Game));
+        }
+
+        [Test]
+        public void ResolveCursorLockMode_ConfinesOutsideBootstrap()
+        {
+            Assert.AreEqual(CursorLockMode.None, GameDisplayRules.ResolveCursorLockMode(GameSceneNames.Bootstrap));
+            Assert.AreEqual(CursorLockMode.Confined, GameDisplayRules.ResolveCursorLockMode(GameSceneNames.MainMenu));
+            Assert.AreEqual(CursorLockMode.Confined, GameDisplayRules.ResolveCursorLockMode(GameSceneNames.Lobby));
+            Assert.AreEqual(CursorLockMode.Confined, GameDisplayRules.ResolveCursorLockMode(GameSceneNames.Game));
+        }
+
+        [Test]
         public void RunInBackground_IsRequired()
         {
             Assert.IsTrue(GameDisplayRules.RunInBackground);

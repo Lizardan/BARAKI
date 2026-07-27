@@ -35,6 +35,16 @@ namespace Game.Core
         public static bool ShouldEnterFullscreen(string sceneName) =>
             sceneName == GameSceneNames.MainMenu;
 
+        public static bool ShouldConfineCursor(string sceneName) =>
+            sceneName != GameSceneNames.Bootstrap;
+
+        /// <summary>
+        /// Hard OS confine to the game window (not camera edge logic).
+        /// Bootstrap keeps free cursor for OS window chrome.
+        /// </summary>
+        public static CursorLockMode ResolveCursorLockMode(string sceneName) =>
+            ShouldConfineCursor(sceneName) ? CursorLockMode.Confined : CursorLockMode.None;
+
         /// <summary>
         /// Centers a window of the given size inside the display work area (taskbar-aware).
         /// </summary>

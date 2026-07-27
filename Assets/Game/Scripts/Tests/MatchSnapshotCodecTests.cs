@@ -1,4 +1,6 @@
+using System.IO;
 using Game.Core;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Gameplay.Networking;
@@ -52,6 +54,8 @@ namespace Game.Tests
                         FacingZ = 0f,
                         Health = 40f,
                         IsAlive = true,
+                        BehaviorState = (byte)UnitBehaviorState.Attack,
+                        AttackSwingSerial = 4,
                     },
                 },
                 Research = new[]
@@ -76,6 +80,7 @@ namespace Game.Tests
                         Level = 2,
                         IsRuins = false,
                         FrozenSquadLevel = 1,
+                        TimeUntilNextWaveSeconds = 18.25f,
                     },
                 },
                 CenterLanes = new[]
@@ -100,9 +105,72 @@ namespace Game.Tests
             Assert.AreEqual(3.5f, restored.Units[0].PosX);
             Assert.AreEqual(GameIds.Lanes.Left, restored.Units[0].LaneId);
             Assert.AreEqual(1f, restored.Units[0].FacingX);
+            Assert.AreEqual((byte)UnitBehaviorState.Attack, restored.Units[0].BehaviorState);
+            Assert.AreEqual(4, restored.Units[0].AttackSwingSerial);
             Assert.AreEqual(12f, restored.Research[0].RemainingSeconds);
             Assert.AreEqual(2, restored.Barracks[0].Level);
+            Assert.AreEqual(18.25f, restored.Barracks[0].TimeUntilNextWaveSeconds, 0.01f);
             Assert.AreEqual(1, restored.CenterLanes[0].OpponentSlot);
+        }
+
+        [Test]
+        public void Capture_RoundTrip_PreservesBarracksTimerAndUnitAttackAnim()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+            controller.Tick(3.5f);
+
+            var barracks = controller.WaveScheduler.GetBarracks(0, GameIds.Buildings.BarracksCenter);
+            Assert.IsNotNull(barracks);
+            var expectedTimer = barracks.TimeUntilNextWaveSeconds;
+
+            var stats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 1f, 1.5f, 4f, 1);
+            var unit = controller.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, 5f);
+            unit.BehaviorState = UnitBehaviorState.Attack;
+            unit.AttackSwingSerial = 9;
+
+            var restored = MatchSnapshotCodec.Deserialize(
+                MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(controller)));
+
+            MatchBarracksSnapshot barracksSnap = default;
+            for (var i = 0; i < restored.Barracks.Length; i++)
+            {
+                if (restored.Barracks[i].OwnerSlot == 0
+                    && restored.Barracks[i].BarracksId == GameIds.Buildings.BarracksCenter)
+                {
+                    barracksSnap = restored.Barracks[i];
+                    break;
+                }
+            }
+
+            Assert.AreEqual(expectedTimer, barracksSnap.TimeUntilNextWaveSeconds, 0.01f);
+
+            MatchUnitSnapshot unitSnap = default;
+            for (var i = 0; i < restored.Units.Length; i++)
+            {
+                if (restored.Units[i].UnitId == unit.UnitId)
+                {
+                    unitSnap = restored.Units[i];
+                    break;
+                }
+            }
+
+            Assert.AreEqual((byte)UnitBehaviorState.Attack, unitSnap.BehaviorState);
+            Assert.AreEqual(9, unitSnap.AttackSwingSerial);
+        }
+
+        [Test]
+        public void Deserialize_V5_DefaultsMissingAnimAndTimerFields()
+        {
+            var bytes = BuildMinimalV5SnapshotBytes();
+            var restored = MatchSnapshotCodec.Deserialize(bytes);
+
+            Assert.AreEqual(1, restored.Units.Length);
+            Assert.AreEqual(0, restored.Units[0].BehaviorState);
+            Assert.AreEqual(0, restored.Units[0].AttackSwingSerial);
+            Assert.AreEqual(1, restored.Barracks.Length);
+            Assert.AreEqual(0f, restored.Barracks[0].TimeUntilNextWaveSeconds, 0.01f);
         }
 
         [Test]
@@ -168,6 +236,47 @@ namespace Game.Tests
             Assert.IsTrue(MatchTickAuthority.ShouldTickSimulation(MatchTickMode.Offline));
             Assert.IsTrue(MatchTickAuthority.ShouldTickSimulation(MatchTickMode.Server));
             Assert.IsFalse(MatchTickAuthority.ShouldTickSimulation(MatchTickMode.Client));
+        }
+
+        /// <summary>Hand-built v5 payload (no BehaviorState / AttackSwingSerial / wave timer).</summary>
+        static byte[] BuildMinimalV5SnapshotBytes()
+        {
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+            writer.Write(5);
+            writer.Write(2);
+            writer.Write(1);
+            writer.Write(10f);
+            writer.Write(-1);
+
+            writer.Write(0);
+            writer.Write(0);
+
+            writer.Write(1);
+            writer.Write(1);
+            writer.Write(0);
+            writer.Write("Melee");
+            writer.Write(GameIds.Lanes.Center);
+            writer.Write(1f);
+            writer.Write(2f);
+            writer.Write(0f);
+            writer.Write(1f);
+            writer.Write(50f);
+            writer.Write(true);
+
+            writer.Write(0);
+
+            writer.Write(1);
+            writer.Write(0);
+            writer.Write(GameIds.Buildings.BarracksCenter);
+            writer.Write(1);
+            writer.Write(false);
+            writer.Write(1);
+            writer.Write(false);
+
+            writer.Write(0);
+            writer.Write(0u);
+            return stream.ToArray();
         }
     }
 }
