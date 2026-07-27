@@ -114,6 +114,8 @@ jobs:
       # Overlap Docker pull with Library cache restore (biggest fixed cost on hosted runners).
       # Wait for Docker Engine first: on windows-2022 the daemon pipe is often not ready
       # yet at job start; a fast Library cache hit then fails the pull immediately.
+      # Hosted runners sometimes need 5–10+ min before docker_engine pipe appears —
+      # keep a long readiness window and recover with a foreground retry if needed.
       - name: Start Docker image pull (background)
         shell: pwsh
         run: |
@@ -128,16 +130,25 @@ jobs:
           @(
             "`$ErrorActionPreference = 'Continue'"
             "`$sw = [System.Diagnostics.Stopwatch]::StartNew()"
+            "foreach (`$svc in @('docker', 'com.docker.service')) {"
+            "  try {"
+            "    `$s = Get-Service -Name `$svc -ErrorAction Stop"
+            "    if (`$s.Status -ne 'Running') {"
+            "      Write-Host ('Starting service {0} (was {1})...' -f `$svc, `$s.Status)"
+            "      Start-Service -Name `$svc -ErrorAction SilentlyContinue"
+            "    }"
+            "  } catch {}"
+            "}"
             "`$ready = `$false"
-            "`$deadline = (Get-Date).AddMinutes(3)"
+            "`$deadline = (Get-Date).AddMinutes(15)"
             "while ((Get-Date) -lt `$deadline) {"
             "  docker info *>&1 | Out-Null"
             "  if (`$LASTEXITCODE -eq 0) { `$ready = `$true; break }"
-            "  Write-Host 'Docker Engine not ready yet; retrying in 5s...'"
-            "  Start-Sleep -Seconds 5"
+            "  Write-Host 'Docker Engine not ready yet; retrying in 10s...'"
+            "  Start-Sleep -Seconds 10"
             "}"
             "if (-not `$ready) {"
-            "  'Docker Engine did not become ready within 3 minutes' | Tee-Object -FilePath '$outLog'"
+            "  'Docker Engine did not become ready within 15 minutes' | Tee-Object -FilePath '$outLog'"
             "  Set-Content -Path '$exitFile' -Value 1"
             "  Set-Content -Path '$doneFile' -Value ([int]`$sw.Elapsed.TotalSeconds)"
             "  exit 1"
@@ -150,8 +161,8 @@ jobs:
             "  `$code = `$LASTEXITCODE"
             "  if (`$code -eq 0) { break }"
             "  if (`$attempt -lt 3) {"
-            "    Write-Host ('docker pull failed (exit {0}); retrying in 10s...' -f `$code)"
-            "    Start-Sleep -Seconds 10"
+            "    Write-Host ('docker pull failed (exit {0}); retrying in 15s...' -f `$code)"
+            "    Start-Sleep -Seconds 15"
             "  }"
             "}"
             "`$sw.Stop()"
@@ -210,6 +221,7 @@ jobs:
         id: docker-pull
         shell: pwsh
         run: |
+          $img = $env:UNITY_DOCKER_IMAGE
           $stateDir = Join-Path $env:RUNNER_TEMP "docker-pull"
           $pidFile = Join-Path $stateDir "pid.txt"
           if (-not (Test-Path $pidFile)) { throw "Missing docker-pull pid file" }
@@ -220,18 +232,63 @@ jobs:
           $sw.Stop()
           $exitFile = Join-Path $stateDir "exitcode.txt"
           $doneFile = Join-Path $stateDir "done.txt"
+          $outLog = Join-Path $stateDir "out.log"
           if (-not (Test-Path $exitFile)) {
             throw "Docker pull process exited without writing exit code (waited $([int]$sw.Elapsed.TotalSeconds)s)"
           }
           $code = [int](Get-Content $exitFile)
           $pullSec = if (Test-Path $doneFile) { [int](Get-Content $doneFile) } else { [int]$sw.Elapsed.TotalSeconds }
-          "pull_seconds=$pullSec" >> $env:GITHUB_OUTPUT
-          $outLog = Join-Path $stateDir "out.log"
           if (Test-Path $outLog) {
-            Write-Host "---- docker pull log (tail) ----"
-            Get-Content $outLog -Tail 30
+            Write-Host "---- background docker pull log (tail) ----"
+            Get-Content $outLog -Tail 40
           }
-          if ($code -ne 0) { throw "docker pull failed with exit code $code" }
+
+          # Fast Library cache hits often finish before Docker is up; recover with a foreground pull.
+          if ($code -ne 0) {
+            Write-Warning "Background docker pull failed (exit $code). Retrying in foreground..."
+            foreach ($svc in @('docker', 'com.docker.service')) {
+              try {
+                $s = Get-Service -Name $svc -ErrorAction Stop
+                if ($s.Status -ne 'Running') {
+                  Write-Host "Starting service $svc (was $($s.Status))..."
+                  Start-Service -Name $svc -ErrorAction SilentlyContinue
+                }
+              } catch {}
+            }
+
+            $ready = $false
+            $deadline = (Get-Date).AddMinutes(15)
+            $retrySw = [System.Diagnostics.Stopwatch]::StartNew()
+            while ((Get-Date) -lt $deadline) {
+              docker info *>&1 | Out-Null
+              if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+              Write-Host "Docker Engine not ready yet; retrying in 10s..."
+              Start-Sleep -Seconds 10
+            }
+            if (-not $ready) {
+              throw "Docker Engine did not become ready within 15 minutes (foreground retry)"
+            }
+            Write-Host ("Docker Engine ready after {0}s (foreground retry)" -f [int]$retrySw.Elapsed.TotalSeconds)
+
+            $code = 1
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              Write-Host ("Foreground docker pull attempt {0}/3..." -f $attempt)
+              docker pull $img *>&1 | Tee-Object -FilePath $outLog
+              $code = $LASTEXITCODE
+              if ($code -eq 0) { break }
+              if ($attempt -lt 3) {
+                Write-Host ("docker pull failed (exit {0}); retrying in 15s..." -f $code)
+                Start-Sleep -Seconds 15
+              }
+            }
+            $retrySw.Stop()
+            $pullSec = [int]$retrySw.Elapsed.TotalSeconds
+            if ($code -ne 0) {
+              throw "docker pull failed with exit code $code after foreground retry"
+            }
+          }
+
+          "pull_seconds=$pullSec" >> $env:GITHUB_OUTPUT
           Write-Host "Docker pull finished in ${pullSec}s (exit 0)."
 
       # game-ci on Windows often does not forward custom env into Unity — stamp via file + ProjectSettings.
