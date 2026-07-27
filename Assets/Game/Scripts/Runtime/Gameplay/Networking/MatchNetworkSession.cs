@@ -156,6 +156,10 @@ namespace Game.Gameplay.Networking
         public static bool RequestRacePick(string raceId)
         {
             var state = NetworkRacePickState.Instance;
+            var lobby = NetworkLobbyState.Instance;
+            var lobbyRacePickState = lobby != null
+                ? lobby.GetComponent<NetworkRacePickState>()
+                : null;
             // #region agent log
             DebugSessionLog.Write(
                 "MatchNetworkSession.cs:RequestRacePick",
@@ -166,6 +170,9 @@ namespace Game.Gameplay.Networking
                 ("isNetworked", IsNetworked),
                 ("localSlot", LocalSlot),
                 ("playerCount", PlayerCount),
+                ("hasLobbyState", lobby != null),
+                ("lobbyHasRacePickComponent", lobbyRacePickState != null),
+                ("lobbyRacePickIsSpawned", lobbyRacePickState != null && lobbyRacePickState.IsSpawned),
                 ("networkManagerIsServer", NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer),
                 ("networkManagerIsClient", NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient));
             // #endregion
