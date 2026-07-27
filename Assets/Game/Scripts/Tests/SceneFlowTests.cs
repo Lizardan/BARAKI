@@ -117,21 +117,22 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BootstrapScene_HasSingleNetworkLobbyPrefabSource()
+        public void BootstrapScene_HasNoNetworkPrefabSources()
         {
             EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
-            var lobbySources = Object.FindObjectsByType<Unity.Netcode.NetworkObject>(
+            var networkObjects = Object.FindObjectsByType<Unity.Netcode.NetworkObject>(
                 FindObjectsInactive.Include);
-            var lobbyPrefabSources = 0;
-            foreach (var networkObject in lobbySources)
+            foreach (var networkObject in networkObjects)
             {
-                if (networkObject.name == "NetworkLobbyState_PrefabSource")
-                {
-                    lobbyPrefabSources++;
-                }
+                Assert.AreNotEqual(
+                    "NetworkLobbyState_PrefabSource",
+                    networkObject.name,
+                    "Bootstrap should not include unspawned NetworkLobbyState scene sources.");
+                Assert.AreNotEqual(
+                    "MatchNetworkAuthority_PrefabSource",
+                    networkObject.name,
+                    "Bootstrap should not include unspawned MatchNetworkAuthority scene sources.");
             }
-
-            Assert.AreEqual(1, lobbyPrefabSources, "Bootstrap should contain exactly one NetworkLobbyState_PrefabSource.");
         }
 
         [Test]

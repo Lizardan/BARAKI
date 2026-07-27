@@ -9,7 +9,7 @@ namespace Game.Core
     public static class DebugSessionLog
     {
         private const string SessionId = "509549";
-        private const string RunId = "pre-fix";
+        private const string RunId = "cleanup-verify";
         private const string LogPath = "f:/Unity Projects/BARAKI/debug-509549.log";
         private const string FallbackLogFileName = "debug-509549.log";
 

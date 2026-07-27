@@ -31,6 +31,20 @@ namespace Game.Gameplay.Networking
             _racePicks.OnListChanged += OnRacePicksChanged;
             _matchSimStarted.OnValueChanged += OnMatchSimStartedChanged;
             _playerCount.OnValueChanged += OnPlayerCountChanged;
+            // #region agent log
+            DebugSessionLog.Write(
+                "NetworkRacePickState.cs:OnNetworkSpawn",
+                "race pick state spawned",
+                "H6",
+                ("isServer", IsServer),
+                ("isClient", IsClient),
+                ("isSpawned", IsSpawned),
+                ("localClientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L),
+                ("playerCount", _playerCount.Value),
+                ("pickCount", _racePicks.Count),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name),
+                ("dontDestroy", gameObject.scene.name == "DontDestroyOnLoad"));
+            // #endregion
             if (IsServer)
             {
                 EnsureSession(MatchNetworkSession.PlayerCount);
@@ -41,6 +55,16 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkDespawn()
         {
+            // #region agent log
+            DebugSessionLog.Write(
+                "NetworkRacePickState.cs:OnNetworkDespawn",
+                "race pick state despawned",
+                "H6",
+                ("isServer", IsServer),
+                ("isClient", IsClient),
+                ("wasInstance", Instance == this),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
+            // #endregion
             _racePicks.OnListChanged -= OnRacePicksChanged;
             _matchSimStarted.OnValueChanged -= OnMatchSimStartedChanged;
             _playerCount.OnValueChanged -= OnPlayerCountChanged;
@@ -264,6 +288,17 @@ namespace Game.Gameplay.Networking
 
             var raceIds = DecodeRaceIds(payload);
             var localSlot = ResolveLocalSlot();
+            // #region agent log
+            DebugSessionLog.Write(
+                "NetworkRacePickState.cs:BeginMatchClientRpc",
+                "client received begin match rpc",
+                "H4,H7",
+                ("localSlot", localSlot),
+                ("playerCount", _playerCount.Value),
+                ("raceIds", string.Join(",", raceIds)),
+                ("hasMatchRuntime", FindAnyObjectByType<MatchRuntime>() != null),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
+            // #endregion
             var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
             GameSession.UpdateActiveSetup(setup);
 

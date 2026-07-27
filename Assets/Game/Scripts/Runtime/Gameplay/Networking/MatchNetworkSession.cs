@@ -157,31 +157,41 @@ namespace Game.Gameplay.Networking
         {
             var state = NetworkRacePickState.Instance;
             var lobby = NetworkLobbyState.Instance;
-            var lobbyRacePickState = lobby != null
-                ? lobby.GetComponent<NetworkRacePickState>()
-                : null;
+            var nm = NetworkManager.Singleton;
+            var lobbyRacePick = lobby != null ? lobby.GetComponent<NetworkRacePickState>() : null;
             // #region agent log
             DebugSessionLog.Write(
                 "MatchNetworkSession.cs:RequestRacePick",
-                "network race pick request routed",
-                "H1,H5",
+                "routing race pick request",
+                "H1,H6",
                 ("raceId", raceId),
                 ("hasRacePickState", state != null),
+                ("hasLobbyState", lobby != null),
+                ("lobbyHasRacePickComponent", lobbyRacePick != null),
+                ("lobbyRacePickIsSpawned", lobbyRacePick != null && lobbyRacePick.IsSpawned),
                 ("isNetworked", IsNetworked),
                 ("localSlot", LocalSlot),
-                ("playerCount", PlayerCount),
-                ("hasLobbyState", lobby != null),
-                ("lobbyHasRacePickComponent", lobbyRacePickState != null),
-                ("lobbyRacePickIsSpawned", lobbyRacePickState != null && lobbyRacePickState.IsSpawned),
-                ("networkManagerIsServer", NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer),
-                ("networkManagerIsClient", NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient));
+                ("isServer", nm != null && nm.IsServer),
+                ("isClient", nm != null && nm.IsClient),
+                ("localClientId", nm != null ? (long)nm.LocalClientId : -1L),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
             // #endregion
             if (state == null)
             {
                 return false;
             }
 
-            return state.RequestPick(raceId);
+            var accepted = state.RequestPick(raceId);
+            // #region agent log
+            DebugSessionLog.Write(
+                "MatchNetworkSession.cs:RequestRacePick",
+                "race pick request routed",
+                "H1,H6",
+                ("raceId", raceId),
+                ("accepted", accepted),
+                ("localSlot", LocalSlot));
+            // #endregion
+            return accepted;
         }
 
         public static bool HasRacePick(int slot) =>

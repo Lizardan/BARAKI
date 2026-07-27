@@ -204,7 +204,7 @@ namespace Game.Gameplay.Networking
         public void EnsureMatchAuthority()
         {
             if (_networkManager == null || !_networkManager.IsServer
-                || FindAnyObjectByType<MatchNetworkAuthority>() != null)
+                || MatchNetworkAuthority.Instance != null)
             {
                 return;
             }
@@ -325,12 +325,29 @@ namespace Game.Gameplay.Networking
                 instance = new GameObject(fallbackName);
                 instance.AddComponent<NetworkObject>();
                 instance.AddComponent(behaviourType);
+                // Lobby prefab normally co-hosts race pick; keep parity on fallback.
+                if (behaviourType == typeof(NetworkLobbyState))
+                {
+                    instance.AddComponent<NetworkRacePickState>();
+                }
             }
 
             var networkObject = instance.GetComponent<NetworkObject>();
             networkObject.DestroyWithScene = false;
             DontDestroyOnLoad(instance);
             networkObject.Spawn();
+            // #region agent log
+            DebugSessionLog.Write(
+                "MatchNetworkBootstrap.cs:SpawnNetworkPrefab",
+                "server spawned network prefab",
+                "H6",
+                ("name", instance.name),
+                ("behaviourType", behaviourType.Name),
+                ("hasRacePick", instance.GetComponent<NetworkRacePickState>() != null),
+                ("isSpawned", networkObject.IsSpawned),
+                ("destroyWithScene", networkObject.DestroyWithScene),
+                ("dontDestroy", instance.scene.name == "DontDestroyOnLoad"));
+            // #endregion
         }
     }
 }

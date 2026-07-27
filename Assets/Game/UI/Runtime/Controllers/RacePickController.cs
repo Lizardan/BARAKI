@@ -167,11 +167,33 @@ namespace Game.UI.Controllers
             if (_matchRuntime != null
                 && (_matchRuntime.IsMatchStarted || MatchNetworkSession.NetworkMatchSimStarted))
             {
+                // #region agent log
+                DebugSessionLog.Write(
+                    "RacePickController.cs:OnNetworkPickChanged",
+                    "hide race pick because match already started",
+                    "H4,H7",
+                    ("localSlot", _session?.LocalPlayerSlot ?? -1),
+                    ("matchRuntimeStarted", _matchRuntime != null && _matchRuntime.IsMatchStarted),
+                    ("networkMatchSimStarted", MatchNetworkSession.NetworkMatchSimStarted));
+                // #endregion
                 SetPanInputLocked(false);
                 Hide();
                 return;
             }
 
+            // #region agent log
+            DebugSessionLog.Write(
+                "RacePickController.cs:OnNetworkPickChanged",
+                "network race picks changed",
+                "H3,H7",
+                ("localSlot", _session?.LocalPlayerSlot ?? -1),
+                ("playerCount", _session?.PlayerCount ?? -1),
+                ("pending", _pendingNetworkRaceId),
+                ("localSubmitted", _localPickSubmitted),
+                ("isNetworkPickActive", MatchNetworkSession.IsNetworkRacePickActive),
+                ("slot0HasPick", MatchNetworkSession.HasRacePick(0)),
+                ("slot1HasPick", MatchNetworkSession.HasRacePick(1)));
+            // #endregion
             TrySubmitPendingNetworkPick();
             RefreshRacePickUi();
         }

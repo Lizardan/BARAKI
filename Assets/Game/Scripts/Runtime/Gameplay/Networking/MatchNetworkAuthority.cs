@@ -11,6 +11,7 @@ namespace Game.Gameplay.Networking
     /// Offline: MatchRuntime ticks. Networked server: this ticks + publishes snapshots.
     /// Clients send validated commands via ServerRpc.
     /// </summary>
+    [RequireComponent(typeof(NetworkObject))]
     public sealed class MatchNetworkAuthority : NetworkBehaviour
     {
         const float SnapshotHz = 15f;
@@ -29,6 +30,11 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkSpawn()
         {
+            if (transform.parent == null)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
+
             Instance = this;
             _tickMode = IsServer ? MatchTickMode.Server : MatchTickMode.Client;
             EnsureRuntime();

@@ -55,8 +55,8 @@ namespace Game.Gameplay.Networking
         public string RoomCodeValue => _roomCode.Value.ToString();
         public bool MatchStartedValue => _matchStarted.Value;
         /// <summary>
-        /// Designated host is lobby slot 0 (listen-server host). NGO host
-        /// does not occupy a player slot, so Start is client-side via ServerRpc.
+        /// Designated host is lobby slot 0 (listen-server host), seated via
+        /// <see cref="SeatListenHost"/>. Non-host peers request Start via ServerRpc.
         /// </summary>
         public bool CanLocalStart =>
             NetworkLobbySlotRules.CanDesignatedHostStart(
@@ -66,6 +66,11 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkSpawn()
         {
+            if (transform.parent == null)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
+
             Instance = this;
             SubscribeToChanges();
 
@@ -77,6 +82,21 @@ namespace Game.Gameplay.Networking
             }
 
             ResolveLocalSlot();
+            // #region agent log
+            DebugSessionLog.Write(
+                "NetworkLobbyState.cs:OnNetworkSpawn",
+                "lobby state spawned",
+                "H6",
+                ("isServer", IsServer),
+                ("isClient", IsClient),
+                ("isSpawned", IsSpawned),
+                ("localClientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L),
+                ("localSlot", MatchNetworkSession.LocalSlot),
+                ("playerCount", _playerCount.Value),
+                ("hasRacePickComponent", GetComponent<NetworkRacePickState>() != null),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name),
+                ("dontDestroy", gameObject.scene.name == "DontDestroyOnLoad"));
+            // #endregion
             if (IsClient && _matchStarted.Value)
             {
                 MatchNetworkSession.ClaimReconnectIfNeeded();
@@ -87,6 +107,16 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkDespawn()
         {
+            // #region agent log
+            DebugSessionLog.Write(
+                "NetworkLobbyState.cs:OnNetworkDespawn",
+                "lobby state despawned",
+                "H6",
+                ("isServer", IsServer),
+                ("isClient", IsClient),
+                ("wasInstance", Instance == this),
+                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
+            // #endregion
             UnsubscribeFromChanges();
             if (NetworkManager != null && IsServer)
             {
