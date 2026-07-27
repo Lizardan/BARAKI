@@ -158,39 +158,26 @@ namespace Game.Gameplay.Networking
             var state = NetworkRacePickState.Instance;
             var lobby = NetworkLobbyState.Instance;
             var nm = NetworkManager.Singleton;
-            var lobbyRacePick = lobby != null ? lobby.GetComponent<NetworkRacePickState>() : null;
-            // #region agent log
-            DebugSessionLog.Write(
-                "MatchNetworkSession.cs:RequestRacePick",
-                "routing race pick request",
-                "H1,H6",
-                ("raceId", raceId),
-                ("hasRacePickState", state != null),
-                ("hasLobbyState", lobby != null),
-                ("lobbyHasRacePickComponent", lobbyRacePick != null),
-                ("lobbyRacePickIsSpawned", lobbyRacePick != null && lobbyRacePick.IsSpawned),
-                ("isNetworked", IsNetworked),
-                ("localSlot", LocalSlot),
-                ("isServer", nm != null && nm.IsServer),
-                ("isClient", nm != null && nm.IsClient),
-                ("localClientId", nm != null ? (long)nm.LocalClientId : -1L),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
-            // #endregion
             if (state == null)
             {
+                PlaytestLog.Warn(
+                    "RacePick",
+                    "RequestMissingState",
+                    ("race", raceId),
+                    ("slot", LocalSlot),
+                    ("hasLobby", lobby != null));
                 return false;
             }
 
             var accepted = state.RequestPick(raceId);
-            // #region agent log
-            DebugSessionLog.Write(
-                "MatchNetworkSession.cs:RequestRacePick",
-                "race pick request routed",
-                "H1,H6",
-                ("raceId", raceId),
+            PlaytestLog.Info(
+                "RacePick",
+                "Request",
+                ("race", raceId),
+                ("slot", LocalSlot),
                 ("accepted", accepted),
-                ("localSlot", LocalSlot));
-            // #endregion
+                ("server", nm != null && nm.IsServer),
+                ("client", nm != null && nm.IsClient));
             return accepted;
         }
 

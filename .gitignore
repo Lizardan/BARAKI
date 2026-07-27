@@ -92,3 +92,7 @@ infra/playtest.env
 
 # Accidental root copies of asset imports
 /*.mdx
+
+# Playtest Discord webhook (secret — keep local only)
+/Assets/Game/Resources/Debug/DiscordWebhookSettings.asset
+/Assets/Game/Resources/Debug/DiscordWebhookSettings.asset.meta

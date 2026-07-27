@@ -31,20 +31,13 @@ namespace Game.Gameplay.Networking
             _racePicks.OnListChanged += OnRacePicksChanged;
             _matchSimStarted.OnValueChanged += OnMatchSimStartedChanged;
             _playerCount.OnValueChanged += OnPlayerCountChanged;
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:OnNetworkSpawn",
-                "race pick state spawned",
-                "H6",
-                ("isServer", IsServer),
-                ("isClient", IsClient),
-                ("isSpawned", IsSpawned),
-                ("localClientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L),
-                ("playerCount", _playerCount.Value),
-                ("pickCount", _racePicks.Count),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name),
-                ("dontDestroy", gameObject.scene.name == "DontDestroyOnLoad"));
-            // #endregion
+            PlaytestLog.Info(
+                "RacePick",
+                "Spawned",
+                ("server", IsServer),
+                ("client", IsClient),
+                ("players", _playerCount.Value),
+                ("clientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L));
             if (IsServer)
             {
                 EnsureSession(MatchNetworkSession.PlayerCount);
@@ -55,16 +48,11 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkDespawn()
         {
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:OnNetworkDespawn",
-                "race pick state despawned",
-                "H6",
-                ("isServer", IsServer),
-                ("isClient", IsClient),
-                ("wasInstance", Instance == this),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
-            // #endregion
+            PlaytestLog.Info(
+                "RacePick",
+                "Despawned",
+                ("server", IsServer),
+                ("client", IsClient));
             _racePicks.OnListChanged -= OnRacePicksChanged;
             _matchSimStarted.OnValueChanged -= OnMatchSimStartedChanged;
             _playerCount.OnValueChanged -= OnPlayerCountChanged;
@@ -128,32 +116,23 @@ namespace Game.Gameplay.Networking
             var lobby = NetworkLobbyState.Instance;
             if (lobby == null)
             {
-                // #region agent log
-                DebugSessionLog.Write(
-                    "NetworkRacePickState.cs:RequestPickServerRpc",
-                    "server rpc rejected because lobby state is missing",
-                    "H2",
-                    ("raceId", raceId),
-                    ("senderClientId", (long)rpcParams.Receive.SenderClientId));
-                // #endregion
+                PlaytestLog.Warn(
+                    "RacePick",
+                    "RpcNoLobby",
+                    ("race", raceId),
+                    ("sender", (long)rpcParams.Receive.SenderClientId));
                 return;
             }
 
             EnsureSession(lobby.PlayerCount);
 
             var slot = lobby.FindClientSlot(rpcParams.Receive.SenderClientId);
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:RequestPickServerRpc",
-                "server rpc resolved sender slot",
-                "H2,H3",
-                ("raceId", raceId),
-                ("senderClientId", (long)rpcParams.Receive.SenderClientId),
-                ("resolvedSlot", slot),
-                ("lobbyPlayerCount", lobby.PlayerCount),
-                ("pickCountAfterEnsure", _racePicks.Count),
-                ("currentPicks", PicksDebugString()));
-            // #endregion
+            PlaytestLog.Info(
+                "RacePick",
+                "Rpc",
+                ("race", raceId),
+                ("sender", (long)rpcParams.Receive.SenderClientId),
+                ("slot", slot));
             ApplyPick(slot, raceId);
         }
 
@@ -167,33 +146,23 @@ namespace Game.Gameplay.Networking
                     : _matchSimStarted.Value
                         ? "match-started"
                         : "slot-out-of-range";
-                // #region agent log
-                DebugSessionLog.Write(
-                    "NetworkRacePickState.cs:ApplyPick",
-                    "server race pick rejected before rules",
-                    "H2,H3,H4",
+                PlaytestLog.Warn(
+                    "RacePick",
+                    "Reject",
                     ("slot", slot),
-                    ("raceId", raceId),
-                    ("rejectReason", rejectReason),
-                    ("pickCount", _racePicks.Count),
-                    ("currentPicks", PicksDebugString()));
-                // #endregion
+                    ("race", raceId),
+                    ("reason", rejectReason));
                 return false;
             }
 
             var picks = ToMutablePickArray();
             if (!RacePickNetworkRules.TryApplyPick(picks, slot, raceId))
             {
-                // #region agent log
-                DebugSessionLog.Write(
-                    "NetworkRacePickState.cs:ApplyPick",
-                    "server race pick rejected by rules",
-                    "H4",
+                PlaytestLog.Warn(
+                    "RacePick",
+                    "RejectRules",
                     ("slot", slot),
-                    ("raceId", raceId),
-                    ("pickCount", _racePicks.Count),
-                    ("currentPicks", string.Join(",", picks)));
-                // #endregion
+                    ("race", raceId));
                 return false;
             }
 
@@ -203,17 +172,13 @@ namespace Game.Gameplay.Networking
 
             var picksAfterApply = ToMutablePickArray();
             var isComplete = RacePickNetworkRules.IsComplete(picksAfterApply);
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:ApplyPick",
-                "server race pick applied",
-                "H3,H4",
+            PlaytestLog.Info(
+                "RacePick",
+                "Applied",
                 ("slot", slot),
-                ("raceId", raceId),
-                ("pickCount", _racePicks.Count),
-                ("picksAfterApply", string.Join(",", picksAfterApply)),
-                ("isComplete", isComplete));
-            // #endregion
+                ("race", raceId),
+                ("complete", isComplete),
+                ("picks", string.Join(",", picksAfterApply)));
 
             if (isComplete)
             {
@@ -261,15 +226,12 @@ namespace Game.Gameplay.Networking
             var localSlot = ResolveLocalSlot();
             var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
             GameSession.UpdateActiveSetup(setup);
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:BeginMatchOnServer",
-                "server begins match after complete race picks",
-                "H4",
-                ("playerCount", _playerCount.Value),
-                ("localSlot", localSlot),
-                ("raceIds", string.Join(",", raceIds)));
-            // #endregion
+            PlaytestLog.Info(
+                "Match",
+                "BeginServer",
+                ("players", _playerCount.Value),
+                ("slot", localSlot),
+                ("races", string.Join(",", raceIds)));
 
             var runtime = FindAnyObjectByType<MatchRuntime>();
             runtime?.StartMatch(raceIds, localSlot);
@@ -288,17 +250,12 @@ namespace Game.Gameplay.Networking
 
             var raceIds = DecodeRaceIds(payload);
             var localSlot = ResolveLocalSlot();
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkRacePickState.cs:BeginMatchClientRpc",
-                "client received begin match rpc",
-                "H4,H7",
-                ("localSlot", localSlot),
-                ("playerCount", _playerCount.Value),
-                ("raceIds", string.Join(",", raceIds)),
-                ("hasMatchRuntime", FindAnyObjectByType<MatchRuntime>() != null),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
-            // #endregion
+            PlaytestLog.Info(
+                "Match",
+                "BeginClient",
+                ("slot", localSlot),
+                ("players", _playerCount.Value),
+                ("races", string.Join(",", raceIds)));
             var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
             GameSession.UpdateActiveSetup(setup);
 
@@ -323,9 +280,6 @@ namespace Game.Gameplay.Networking
 
             return picks;
         }
-
-        private string PicksDebugString() =>
-            string.Join(",", ToMutablePickArray());
 
         private static byte[] EncodeRaceIds(string[] raceIds)
         {

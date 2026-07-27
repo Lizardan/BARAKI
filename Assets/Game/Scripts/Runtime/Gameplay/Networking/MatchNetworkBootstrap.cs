@@ -336,18 +336,12 @@ namespace Game.Gameplay.Networking
             networkObject.DestroyWithScene = false;
             DontDestroyOnLoad(instance);
             networkObject.Spawn();
-            // #region agent log
-            DebugSessionLog.Write(
-                "MatchNetworkBootstrap.cs:SpawnNetworkPrefab",
-                "server spawned network prefab",
-                "H6",
+            PlaytestLog.Info(
+                "Net",
+                "SpawnPrefab",
                 ("name", instance.name),
-                ("behaviourType", behaviourType.Name),
-                ("hasRacePick", instance.GetComponent<NetworkRacePickState>() != null),
-                ("isSpawned", networkObject.IsSpawned),
-                ("destroyWithScene", networkObject.DestroyWithScene),
-                ("dontDestroy", instance.scene.name == "DontDestroyOnLoad"));
-            // #endregion
+                ("type", behaviourType.Name),
+                ("spawned", networkObject.IsSpawned));
         }
     }
 }

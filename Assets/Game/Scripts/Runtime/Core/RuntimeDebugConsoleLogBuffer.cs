@@ -7,18 +7,25 @@ namespace Game.Core
 {
     public readonly struct RuntimeDebugConsoleLogEntry
     {
-        public RuntimeDebugConsoleLogEntry(DateTime timestamp, string message, string stackTrace, LogType type)
+        public RuntimeDebugConsoleLogEntry(
+            DateTime timestamp,
+            string message,
+            string stackTrace,
+            LogType type,
+            int repeatCount = 1)
         {
             Timestamp = timestamp;
             Message = message ?? string.Empty;
             StackTrace = stackTrace ?? string.Empty;
             Type = type;
+            RepeatCount = Math.Max(1, repeatCount);
         }
 
         public DateTime Timestamp { get; }
         public string Message { get; }
         public string StackTrace { get; }
         public LogType Type { get; }
+        public int RepeatCount { get; }
     }
 
     public sealed class RuntimeDebugConsoleLogBuffer
@@ -55,6 +62,26 @@ namespace Game.Core
         {
             lock (_gate)
             {
+                var compactedMessage = CompactText(message, MaxMessageLines, MaxMessageChars, TruncatedSuffix);
+                var compactedStack = CompactStackTrace(stackTrace);
+
+                if (_entries.Count > 0)
+                {
+                    var last = PeekLastUnlocked();
+                    if (last.Message == compactedMessage
+                        && last.StackTrace == compactedStack
+                        && last.Type == type)
+                    {
+                        ReplaceLastUnlocked(new RuntimeDebugConsoleLogEntry(
+                            last.Timestamp,
+                            last.Message,
+                            last.StackTrace,
+                            last.Type,
+                            last.RepeatCount + 1));
+                        return;
+                    }
+                }
+
                 while (_entries.Count >= _capacity)
                 {
                     _entries.Dequeue();
@@ -62,8 +89,8 @@ namespace Game.Core
 
                 _entries.Enqueue(new RuntimeDebugConsoleLogEntry(
                     DateTime.Now,
-                    CompactText(message, MaxMessageLines, MaxMessageChars, TruncatedSuffix),
-                    CompactStackTrace(stackTrace),
+                    compactedMessage,
+                    compactedStack,
                     type));
             }
         }
@@ -87,20 +114,7 @@ namespace Game.Core
             var builder = new StringBuilder(snapshot.Count * 96);
             for (var i = 0; i < snapshot.Count; i++)
             {
-                var entry = snapshot[i];
-                builder
-                    .Append('[')
-                    .Append(entry.Timestamp.ToString("HH:mm:ss"))
-                    .Append("] [")
-                    .Append(entry.Type)
-                    .Append("] ")
-                    .AppendLine(entry.Message);
-
-                if (!string.IsNullOrWhiteSpace(entry.StackTrace)
-                    && entry.Type is LogType.Error or LogType.Exception or LogType.Assert)
-                {
-                    builder.AppendLine(entry.StackTrace);
-                }
+                AppendEntry(builder, snapshot[i]);
             }
 
             return builder.ToString().TrimEnd();
@@ -111,6 +125,47 @@ namespace Game.Core
             lock (_gate)
             {
                 _entries.Clear();
+            }
+        }
+
+        private RuntimeDebugConsoleLogEntry PeekLastUnlocked()
+        {
+            var array = _entries.ToArray();
+            return array[array.Length - 1];
+        }
+
+        private void ReplaceLastUnlocked(RuntimeDebugConsoleLogEntry entry)
+        {
+            var array = _entries.ToArray();
+            _entries.Clear();
+            for (var i = 0; i < array.Length - 1; i++)
+            {
+                _entries.Enqueue(array[i]);
+            }
+
+            _entries.Enqueue(entry);
+        }
+
+        private static void AppendEntry(StringBuilder builder, RuntimeDebugConsoleLogEntry entry)
+        {
+            builder
+                .Append('[')
+                .Append(entry.Timestamp.ToString("HH:mm:ss"))
+                .Append("] [")
+                .Append(entry.Type)
+                .Append("] ")
+                .Append(entry.Message);
+            if (entry.RepeatCount > 1)
+            {
+                builder.Append(" x").Append(entry.RepeatCount);
+            }
+
+            builder.AppendLine();
+
+            if (!string.IsNullOrWhiteSpace(entry.StackTrace)
+                && entry.Type is LogType.Error or LogType.Exception or LogType.Assert)
+            {
+                builder.AppendLine(entry.StackTrace);
             }
         }
 
@@ -135,7 +190,6 @@ namespace Game.Core
             var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
             var lines = normalized.Split('\n');
             var builder = new StringBuilder(Math.Min(normalized.Length, maxChars) + truncatedSuffix.Length);
-            var truncated = false;
             var lineCount = Math.Min(lines.Length, Math.Max(1, maxLines));
             for (var i = 0; i < lineCount; i++)
             {
@@ -147,7 +201,7 @@ namespace Game.Core
                 builder.Append(lines[i]);
             }
 
-            truncated = lines.Length > lineCount;
+            var truncated = lines.Length > lineCount;
             if (builder.Length > maxChars)
             {
                 builder.Length = Math.Max(0, maxChars);

@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,15 +13,20 @@ namespace Game.Core
         private const float Margin = 12f;
         private const float MinWindowWidth = 360f;
         private const float MinWindowHeight = 220f;
+        private const string LastReportFileName = "last-playtest-report.txt";
 
         private static RuntimeDebugConsole s_instance;
 
         private readonly RuntimeDebugConsoleLogBuffer _buffer = new();
-        private Rect _windowRect = new(Margin, Margin, 620f, 360f);
+        private readonly DebugReportSendGate _sendGate = new();
+        private Rect _windowRect = new(Margin, Margin, 720f, 360f);
         private Vector2 _scroll;
         private bool _isOpen;
+        private bool _isSending;
+        private string _status = string.Empty;
         private GUIStyle _logStyle;
         private GUIStyle _toolbarButtonStyle;
+        private GUIStyle _statusStyle;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -79,13 +87,22 @@ namespace Game.Core
             if (GUILayout.Button("Копировать", _toolbarButtonStyle, GUILayout.Width(110f)))
             {
                 GUIUtility.systemCopyBuffer = _buffer.BuildCopyText();
+                _status = "Скопировано";
             }
 
             if (GUILayout.Button("Очистить", _toolbarButtonStyle, GUILayout.Width(90f)))
             {
                 _buffer.Clear();
+                _status = "Очищено";
             }
 
+            GUI.enabled = !_isSending;
+            if (GUILayout.Button("Отправить лог", _toolbarButtonStyle, GUILayout.Width(130f)))
+            {
+                SendLogAsync();
+            }
+
+            GUI.enabled = true;
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Закрыть", _toolbarButtonStyle, GUILayout.Width(80f)))
             {
@@ -93,6 +110,11 @@ namespace Game.Core
             }
 
             GUILayout.EndHorizontal();
+
+            if (!string.IsNullOrEmpty(_status))
+            {
+                GUILayout.Label(_status, _statusStyle);
+            }
 
             var entries = _buffer.GetSnapshot();
             _scroll = GUILayout.BeginScrollView(_scroll, GUI.skin.box);
@@ -117,8 +139,9 @@ namespace Game.Core
                 var entry = entries[i];
                 var previousColor = GUI.contentColor;
                 GUI.contentColor = GetColor(entry.Type);
+                var suffix = entry.RepeatCount > 1 ? $" x{entry.RepeatCount}" : string.Empty;
                 GUILayout.Label(
-                    $"[{entry.Timestamp:HH:mm:ss}] [{entry.Type}] {entry.Message}",
+                    $"[{entry.Timestamp:HH:mm:ss}] [{entry.Type}] {entry.Message}{suffix}",
                     _logStyle);
 
                 if (!string.IsNullOrWhiteSpace(entry.StackTrace)
@@ -128,6 +151,76 @@ namespace Game.Core
                 }
 
                 GUI.contentColor = previousColor;
+            }
+        }
+
+        private async void SendLogAsync()
+        {
+            if (_isSending)
+            {
+                return;
+            }
+
+            var eventsText = _buffer.BuildCopyText();
+            if (string.IsNullOrWhiteSpace(eventsText))
+            {
+                _status = "Нет логов";
+                return;
+            }
+
+            var utcNow = DateTime.UtcNow;
+            if (!_sendGate.TryBeginSend(utcNow, out var blockReason))
+            {
+                _status = blockReason;
+                return;
+            }
+
+            var settings = DiscordWebhookSettings.Load();
+            var webhookUrl = settings != null ? settings.WebhookUrl : string.Empty;
+            if (string.IsNullOrWhiteSpace(webhookUrl))
+            {
+                _status = "Webhook не настроен";
+                return;
+            }
+
+            _isSending = true;
+            _status = "Отправка…";
+
+            var netSection = DebugReportContext.TryBuildNetSection();
+            var label = DebugPlaytestReportBuilder.BuildDiscordLabel(netSection, utcNow);
+            var report = DebugPlaytestReportBuilder.BuildReport(eventsText, netSection, utcNow);
+            TryWriteLocalCopy(report);
+
+            var fileName = $"baraki-log-{utcNow:yyyyMMdd-HHmmss}.txt";
+            var (ok, error) = await DiscordWebhookSender.SendReportAsync(
+                webhookUrl,
+                label,
+                fileName,
+                report);
+
+            _isSending = false;
+            if (ok)
+            {
+                _sendGate.MarkSuccess(DateTime.UtcNow);
+                _status = "Отправлено";
+            }
+            else
+            {
+                _sendGate.MarkFailure(DateTime.UtcNow);
+                _status = string.IsNullOrEmpty(error) ? "Ошибка отправки" : $"Ошибка: {error}";
+            }
+        }
+
+        private static void TryWriteLocalCopy(string report)
+        {
+            try
+            {
+                var path = Path.Combine(Application.persistentDataPath, LastReportFileName);
+                File.WriteAllText(path, report, Encoding.UTF8);
+            }
+            catch
+            {
+                // Local copy is best-effort for Cursor handoff.
             }
         }
 
@@ -153,10 +246,20 @@ namespace Game.Core
             {
                 fontSize = 13,
             };
+            _statusStyle ??= new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 12,
+                wordWrap = false,
+            };
         }
 
         private void OnLogMessageReceived(string condition, string stackTrace, LogType type)
         {
+            if (!RuntimeDebugConsoleLogFilter.ShouldAccept(condition, type))
+            {
+                return;
+            }
+
             _buffer.Add(condition, stackTrace, type);
         }
 

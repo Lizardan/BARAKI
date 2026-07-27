@@ -82,21 +82,14 @@ namespace Game.Gameplay.Networking
             }
 
             ResolveLocalSlot();
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkLobbyState.cs:OnNetworkSpawn",
-                "lobby state spawned",
-                "H6",
-                ("isServer", IsServer),
-                ("isClient", IsClient),
-                ("isSpawned", IsSpawned),
-                ("localClientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L),
-                ("localSlot", MatchNetworkSession.LocalSlot),
-                ("playerCount", _playerCount.Value),
-                ("hasRacePickComponent", GetComponent<NetworkRacePickState>() != null),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name),
-                ("dontDestroy", gameObject.scene.name == "DontDestroyOnLoad"));
-            // #endregion
+            PlaytestLog.Info(
+                "Lobby",
+                "Spawned",
+                ("server", IsServer),
+                ("client", IsClient),
+                ("slot", MatchNetworkSession.LocalSlot),
+                ("players", _playerCount.Value),
+                ("clientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L));
             if (IsClient && _matchStarted.Value)
             {
                 MatchNetworkSession.ClaimReconnectIfNeeded();
@@ -107,16 +100,11 @@ namespace Game.Gameplay.Networking
 
         public override void OnNetworkDespawn()
         {
-            // #region agent log
-            DebugSessionLog.Write(
-                "NetworkLobbyState.cs:OnNetworkDespawn",
-                "lobby state despawned",
-                "H6",
-                ("isServer", IsServer),
-                ("isClient", IsClient),
-                ("wasInstance", Instance == this),
-                ("activeScene", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
-            // #endregion
+            PlaytestLog.Info(
+                "Lobby",
+                "Despawned",
+                ("server", IsServer),
+                ("client", IsClient));
             UnsubscribeFromChanges();
             if (NetworkManager != null && IsServer)
             {

@@ -134,17 +134,11 @@ namespace Game.UI.Controllers
             if (MatchNetworkSession.IsNetworked)
             {
                 _pendingNetworkRaceId = _selectedRaceId;
-                // #region agent log
-                DebugSessionLog.Write(
-                    "RacePickController.cs:OnConfirm",
-                    "race pick confirm pressed",
-                    "H1,H5",
-                    ("localSlot", _session.LocalPlayerSlot),
-                    ("selectedRaceId", _selectedRaceId),
-                    ("isNetworkPickActive", MatchNetworkSession.IsNetworkRacePickActive),
-                    ("pendingBeforeSubmit", _pendingNetworkRaceId),
-                    ("localSubmitted", _localPickSubmitted));
-                // #endregion
+                PlaytestLog.Info(
+                    "RacePick",
+                    "Confirm",
+                    ("slot", _session.LocalPlayerSlot),
+                    ("race", _selectedRaceId));
                 TrySubmitPendingNetworkPick();
                 RefreshRacePickUi();
                 return;
@@ -167,33 +161,15 @@ namespace Game.UI.Controllers
             if (_matchRuntime != null
                 && (_matchRuntime.IsMatchStarted || MatchNetworkSession.NetworkMatchSimStarted))
             {
-                // #region agent log
-                DebugSessionLog.Write(
-                    "RacePickController.cs:OnNetworkPickChanged",
-                    "hide race pick because match already started",
-                    "H4,H7",
-                    ("localSlot", _session?.LocalPlayerSlot ?? -1),
-                    ("matchRuntimeStarted", _matchRuntime != null && _matchRuntime.IsMatchStarted),
-                    ("networkMatchSimStarted", MatchNetworkSession.NetworkMatchSimStarted));
-                // #endregion
+                PlaytestLog.Info(
+                    "RacePick",
+                    "HideMatchStarted",
+                    ("slot", _session?.LocalPlayerSlot ?? -1));
                 SetPanInputLocked(false);
                 Hide();
                 return;
             }
 
-            // #region agent log
-            DebugSessionLog.Write(
-                "RacePickController.cs:OnNetworkPickChanged",
-                "network race picks changed",
-                "H3,H7",
-                ("localSlot", _session?.LocalPlayerSlot ?? -1),
-                ("playerCount", _session?.PlayerCount ?? -1),
-                ("pending", _pendingNetworkRaceId),
-                ("localSubmitted", _localPickSubmitted),
-                ("isNetworkPickActive", MatchNetworkSession.IsNetworkRacePickActive),
-                ("slot0HasPick", MatchNetworkSession.HasRacePick(0)),
-                ("slot1HasPick", MatchNetworkSession.HasRacePick(1)));
-            // #endregion
             TrySubmitPendingNetworkPick();
             RefreshRacePickUi();
         }
@@ -206,33 +182,18 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            // #region agent log
-            DebugSessionLog.Write(
-                "RacePickController.cs:TrySubmitPendingNetworkPick",
-                "submitting pending race pick",
-                "H1,H5",
-                ("localSlot", _session?.LocalPlayerSlot ?? -1),
-                ("raceId", raceId),
-                ("isNetworkPickActive", MatchNetworkSession.IsNetworkRacePickActive),
-                ("localSubmittedBeforeRequest", _localPickSubmitted));
-            // #endregion
             var accepted = MatchNetworkSession.RequestRacePick(raceId);
             RacePickPendingSubmitRules.ApplySubmitResult(
                 accepted,
                 raceId,
                 ref _pendingNetworkRaceId,
                 ref _localPickSubmitted);
-            // #region agent log
-            DebugSessionLog.Write(
-                "RacePickController.cs:TrySubmitPendingNetworkPick",
-                "pending race pick submit result",
-                "H1,H5",
-                ("localSlot", _session?.LocalPlayerSlot ?? -1),
-                ("raceId", raceId),
-                ("accepted", accepted),
-                ("pendingAfterRequest", _pendingNetworkRaceId),
-                ("localSubmittedAfterRequest", _localPickSubmitted));
-            // #endregion
+            PlaytestLog.Info(
+                "RacePick",
+                "Submit",
+                ("slot", _session?.LocalPlayerSlot ?? -1),
+                ("race", raceId),
+                ("accepted", accepted));
         }
 
         private void RefreshRacePickUi()
