@@ -25,6 +25,7 @@ namespace Game.Editor
             }
 
             PlayerSettings.productName = "BARAKI";
+            WarnIfDiscordWebhookMissing();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene.enabled)
@@ -38,6 +39,28 @@ namespace Game.Editor
                 UpdaterReleaseRules.InstalledExecutableFileName,
                 null,
                 version);
+        }
+
+        private static void WarnIfDiscordWebhookMissing()
+        {
+            if (DiscordWebhookSettings.TryResolveWebhookUrl(out _, out var source) && source == "Embedded")
+            {
+                Debug.Log("WindowsCiBuild: Discord webhook embedded OK.");
+                return;
+            }
+
+            if (DiscordWebhookSettings.TryResolveWebhookUrl(out _, out source))
+            {
+                Debug.LogWarning(
+                    $"WindowsCiBuild: Discord webhook resolved via {source} (Editor/Resources). " +
+                    "CI player builds should use XOR embed from Stamp-DiscordWebhookEmbedded.ps1.");
+                return;
+            }
+
+            Debug.LogWarning(
+                "WindowsCiBuild: Discord webhook not embedded. " +
+                "CI must run BuildSupport/Stamp-DiscordWebhookEmbedded.ps1 before Unity. " +
+                "Playtest «Отправить лог» will report webhook not configured.");
         }
 
         public static void BuildUpdaterOnly()

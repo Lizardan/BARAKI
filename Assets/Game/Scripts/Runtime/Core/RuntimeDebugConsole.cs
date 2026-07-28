@@ -175,11 +175,14 @@ namespace Game.Core
                 return;
             }
 
-            var settings = DiscordWebhookSettings.Load();
-            var webhookUrl = settings != null ? settings.WebhookUrl : string.Empty;
-            if (string.IsNullOrWhiteSpace(webhookUrl))
+            if (!DiscordWebhookSettings.TryResolveWebhookUrl(out var webhookUrl, out var source))
             {
-                _status = "Webhook не настроен";
+                _status = source switch
+                {
+                    "missing-embedded-and-resources" => "Webhook: нет embed/Settings",
+                    "empty-url" => "Webhook: URL пустой в Settings",
+                    _ => "Webhook не настроен",
+                };
                 return;
             }
 

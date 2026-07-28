@@ -305,6 +305,13 @@ jobs:
           [System.IO.File]::WriteAllText((Resolve-Path $ps), $updated)
           Write-Host "Stamped bundleVersion=$ver"
 
+      - name: Stamp Discord playtest webhook (XOR embed)
+        shell: pwsh
+        env:
+          DISCORD_PLAYTEST_WEBHOOK_URL: ${{ secrets.DISCORD_PLAYTEST_WEBHOOK_URL }}
+        run: |
+          pwsh -File "BuildSupport/Stamp-DiscordWebhookEmbedded.ps1"
+
       - name: Build Windows x64
         id: unity-build
         uses: game-ci/unity-builder@v5
