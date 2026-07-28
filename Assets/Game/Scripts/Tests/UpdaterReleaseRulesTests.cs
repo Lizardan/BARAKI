@@ -69,5 +69,22 @@ namespace Game.Tests
                 isUpdaterOnlyBuild: false,
                 updateRequired: true));
         }
+
+        [Test]
+        public void BootstrapFlow_IdleCtaStaysSynchronizingForSocialWarmupStatuses()
+        {
+            Assert.AreEqual(
+                "СИНХРОНИЗАЦИЯ",
+                BootstrapUpdateFlowRules.FormatIdleCtaLabel("Проверка версии"));
+            Assert.AreEqual(
+                "СИНХРОНИЗАЦИЯ",
+                BootstrapUpdateFlowRules.FormatIdleCtaLabel("Авторизация"));
+            Assert.AreEqual(
+                "СИНХРОНИЗАЦИЯ",
+                BootstrapUpdateFlowRules.FormatIdleCtaLabel("Профиль"));
+            Assert.AreEqual(
+                "СИНХРОНИЗАЦИЯ",
+                BootstrapUpdateFlowRules.FormatIdleCtaLabel("Друзья"));
+        }
     }
 }

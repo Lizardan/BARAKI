@@ -15,7 +15,7 @@ namespace Game.Tests
 
             var featured = LauncherNewsRules.GetFeatured(feed);
             Assert.IsTrue(LauncherNewsRules.IsValidItem(featured));
-            Assert.AreEqual(LauncherNewsRules.TagNews, featured.Tag);
+            Assert.AreEqual(LauncherNewsRules.TagPatch, featured.Tag);
 
             var secondary = LauncherNewsRules.GetSecondaryItems(feed);
             Assert.AreEqual(feed.Length - 1, secondary.Count);

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using Cysharp.Threading.Tasks;
@@ -65,12 +66,15 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        public static async UniTask DownloadAndApplyAsync(IProgress<float> progress = null)
+        public static async UniTask DownloadAndPrepareAsync(
+            IProgress<GameUpdateApplyProgress> progress = null)
         {
             if (RemoteManifest == null || string.IsNullOrWhiteSpace(RemoteManifest.url))
             {
                 throw new InvalidOperationException("No remote manifest/url.");
             }
+
+            ClearPendingRestart();
 
             var stagingRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -78,6 +82,9 @@ namespace Game.Gameplay.Networking
                 "staging");
             Directory.CreateDirectory(stagingRoot);
             var zipPath = Path.Combine(stagingRoot, "baraki-windows.zip");
+            var payloadDir = Path.Combine(stagingRoot, "payload");
+
+            Report(progress, GameUpdateApplyPhase.Downloading, 0f);
 
             using (var req = UnityWebRequest.Get(RemoteManifest.url))
             {
@@ -87,11 +94,11 @@ namespace Game.Gameplay.Networking
                 var operation = req.SendWebRequest();
                 while (!operation.isDone)
                 {
-                    progress?.Report(Mathf.Clamp01(req.downloadProgress));
+                    Report(progress, GameUpdateApplyPhase.Downloading, Mathf.Clamp01(req.downloadProgress));
                     await UniTask.Yield();
                 }
 
-                progress?.Report(1f);
+                Report(progress, GameUpdateApplyPhase.Downloading, 1f);
                 if (req.result != UnityWebRequest.Result.Success)
                 {
                     throw new InvalidOperationException("Download failed: " + req.error);
@@ -107,6 +114,40 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            if (Directory.Exists(payloadDir))
+            {
+                Directory.Delete(payloadDir, recursive: true);
+            }
+
+            Directory.CreateDirectory(payloadDir);
+            Report(progress, GameUpdateApplyPhase.Installing, 0f);
+
+            // Progress<T> captures Unity sync context when created on the main thread.
+            await UniTask.RunOnThreadPool(() => ExtractZipToDirectory(zipPath, payloadDir, progress));
+            Report(progress, GameUpdateApplyPhase.Installing, 1f);
+
+            try
+            {
+                File.Delete(zipPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"GameUpdateService: could not delete zip: {ex.Message}");
+            }
+
+            s_pendingPayloadDir = payloadDir;
+            Report(progress, GameUpdateApplyPhase.ReadyToRestart, 1f);
+        }
+
+        /// <summary>Starts the hidden swap helper and quits. Requires a successful DownloadAndPrepareAsync.</summary>
+        public static void ApplyPendingRestartAndQuit()
+        {
+            if (!HasPendingRestart)
+            {
+                throw new InvalidOperationException("No prepared update to apply.");
+            }
+
+            var payloadDir = s_pendingPayloadDir;
             var installDir = Path.GetDirectoryName(Application.dataPath);
             var exeName = Path.GetFileName(Environment.GetCommandLineArgs()[0]);
             var helperPath = Path.Combine(installDir ?? ".", "ApplyUpdate.bat");
@@ -117,17 +158,80 @@ namespace Game.Gameplay.Networking
 
             var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
             var args =
-                $"\"{zipPath}\" \"{installDir}\" \"{exeName}\" {pid}";
+                $"/c \"\"{helperPath}\" \"{payloadDir}\" \"{installDir}\" \"{exeName}\" {pid}\"";
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = helperPath,
+                FileName = "cmd.exe",
                 Arguments = args,
-                UseShellExecute = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
                 WorkingDirectory = installDir,
             });
 
             Application.Quit();
-            await UniTask.CompletedTask;
+        }
+
+        public static bool HasPendingRestart => !string.IsNullOrWhiteSpace(s_pendingPayloadDir);
+
+        static string s_pendingPayloadDir;
+
+        static void ClearPendingRestart()
+        {
+            s_pendingPayloadDir = null;
+        }
+
+        static void ExtractZipToDirectory(
+            string zipPath,
+            string destinationDir,
+            IProgress<GameUpdateApplyProgress> progress)
+        {
+            using var archive = ZipFile.OpenRead(zipPath);
+            long totalBytes = 0;
+            foreach (var entry in archive.Entries)
+            {
+                totalBytes += Math.Max(0L, entry.Length);
+            }
+
+            long doneBytes = 0;
+            foreach (var entry in archive.Entries)
+            {
+                if (!GameUpdateZipExtractRules.TryResolveSafeExtractPath(
+                        destinationDir,
+                        entry.FullName,
+                        out var fullPath,
+                        out var error))
+                {
+                    throw new InvalidOperationException(error);
+                }
+
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    Directory.CreateDirectory(fullPath);
+                    continue;
+                }
+
+                var parent = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(parent))
+                {
+                    Directory.CreateDirectory(parent);
+                }
+
+                entry.ExtractToFile(fullPath, overwrite: true);
+                doneBytes += Math.Max(0L, entry.Length);
+                Report(
+                    progress,
+                    GameUpdateApplyPhase.Installing,
+                    GameUpdateZipExtractRules.ProgressForBytes(doneBytes, totalBytes));
+            }
+        }
+
+        static void Report(
+            IProgress<GameUpdateApplyProgress> progress,
+            GameUpdateApplyPhase phase,
+            float phase01)
+        {
+            progress?.Report(GameUpdateApplyProgress.FromPhase(phase, phase01));
         }
 
         static async UniTask RefreshFromLatestTagAsync()

@@ -181,7 +181,12 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<Label>("UpdateStatusLabel"), "BootstrapLoading.uxml should include UpdateStatusLabel.");
 
             Assert.IsNotNull(root.Q<VisualElement>("TopChrome"), "BootstrapLoading.uxml should include TopChrome.");
-            Assert.IsNotNull(root.Q<VisualElement>("SideRail"), "BootstrapLoading.uxml should include SideRail.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatPanel"), "BootstrapLoading.uxml should include ChatPanel.");
+            Assert.IsNotNull(root.Q<VisualElement>("SideRail"), "BootstrapLoading.uxml should include SideRail news rail.");
+            Assert.IsNotNull(root.Q<VisualElement>("LauncherBar"), "BootstrapLoading.uxml should include horizontal LauncherBar.");
+            Assert.IsNotNull(root.Q<VisualElement>("ActionDock"), "BootstrapLoading.uxml should include ActionDock.");
+            Assert.IsNotNull(root.Q<VisualElement>("IdleCtaPanel"), "BootstrapLoading.uxml should include IdleCtaPanel placeholder.");
+            Assert.IsNotNull(root.Q<VisualElement>("StatusDock"), "BootstrapLoading.uxml should include StatusDock.");
             Assert.IsNotNull(root.Q<VisualElement>("NewsFeed"), "BootstrapLoading.uxml should include NewsFeed.");
             Assert.IsNotNull(root.Q<VisualElement>("NewsFeatured"), "BootstrapLoading.uxml should include NewsFeatured.");
             Assert.IsNotNull(root.Q<VisualElement>("NewsListContainer"), "BootstrapLoading.uxml should include NewsListContainer.");
@@ -190,6 +195,7 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<Label>("SideStatusTitle"), "BootstrapLoading.uxml should include SideStatusTitle.");
             Assert.IsNotNull(root.Q<Label>("SideStatusLabel"), "BootstrapLoading.uxml should include SideStatusLabel.");
             Assert.IsNull(root.Q<VisualElement>("BrandLogo"), "Bootstrap launcher should not include BrandLogo.");
+            Assert.IsNull(root.Q<Label>("BrandWordmark"), "Bootstrap launcher bar should not include BrandWordmark.");
             Assert.IsNull(root.Q<VisualElement>("Hero"), "Bootstrap launcher should not include centered Hero.");
         }
 

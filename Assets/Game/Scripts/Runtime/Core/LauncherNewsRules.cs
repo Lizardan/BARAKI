@@ -2,29 +2,33 @@ using System;
 
 namespace Game.Core
 {
-    /// <summary>Pure helpers for Bootstrap launcher news placeholders and validation.</summary>
+    /// <summary>Pure helpers for Bootstrap launcher news/patch feed placeholders and validation.</summary>
     public static class LauncherNewsRules
     {
         public const string TagNews = "НОВОСТИ";
         public const string TagPatch = "ПАТЧ";
         public const string TagTip = "СОВЕТ";
 
-        /// <summary>Default feed: first item is featured, the rest fill the secondary list.</summary>
+        /// <summary>Default feed: first item is featured, the rest fill the secondary vertical list.</summary>
         public static LauncherNewsItem[] CreateDefaultFeed() =>
             new[]
             {
                 new LauncherNewsItem(
+                    TagPatch,
+                    "Новый лаунчер и быстрый вход в игру",
+                    "Bootstrap теперь показывает обновления, новости команды и будущий чат в едином стартовом окне."),
+                new LauncherNewsItem(
                     TagNews,
-                    "Добро пожаловать в BARAKI",
-                    "Три пути, одна победа. Собирайте армию, контролируйте карту и не дайте соперникам опомниться."),
+                    "Обновления ставятся в несколько шагов",
+                    "Сначала скачивание, затем подготовка файлов, после чего игрок сам подтверждает перезапуск клиента."),
                 new LauncherNewsItem(
                     TagPatch,
-                    "Клиент обновляется автоматически",
-                    "Перед входом лаунчер проверяет версию и скачивает обязательные обновления."),
+                    "Сетевой матч стал стабильнее",
+                    "Улучшена синхронизация юнитов и восстановление после кратких потерь соединения."),
                 new LauncherNewsItem(
-                    TagTip,
-                    "Друзья и лобби — в главном меню",
-                    "После запуска откройте хаб друзей, чтобы пригласить игроков в матч."),
+                    TagNews,
+                    "Лента заменит старые подсказки",
+                    "В правой колонке будут публиковаться патчи, анонсы матчей и короткие заметки команды."),
             };
 
         public static bool IsValidItem(LauncherNewsItem item) =>

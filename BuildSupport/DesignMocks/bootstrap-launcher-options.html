@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BARAKI Launcher Design Options</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #090b10;
+            --panel: rgba(15, 18, 24, 0.86);
+            --panel-soft: rgba(20, 24, 32, 0.72);
+            --line: rgba(200, 177, 123, 0.18);
+            --text: #f3eadb;
+            --muted: #b6a789;
+            --accent: #d4a75c;
+            --accent-2: #67b7ff;
+            --ok: #57d07a;
+            --danger: #dc7864;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, Segoe UI, Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(212, 167, 92, 0.12), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(103, 183, 255, 0.1), transparent 30%),
+                linear-gradient(180deg, #090b10 0%, #0d1118 100%);
+            color: var(--text);
+        }
+
+        .page {
+            width: min(1600px, calc(100vw - 48px));
+            margin: 0 auto;
+            padding: 28px 0 64px;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding: 14px 18px;
+            backdrop-filter: blur(18px);
+            background: rgba(7, 9, 13, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .topbar p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .option {
+            margin-bottom: 34px;
+            padding: 22px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .option-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+            align-items: flex-end;
+        }
+
+        .option-title {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .option-subtitle {
+            margin: 8px 0 0;
+            color: var(--muted);
+            max-width: 720px;
+            line-height: 1.5;
+        }
+
+        .option-badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: rgba(212, 167, 92, 0.12);
+            color: #f4cf96;
+            border: 1px solid rgba(212, 167, 92, 0.18);
+            white-space: nowrap;
+        }
+
+        .frame {
+            position: relative;
+            min-height: 760px;
+            overflow: hidden;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background:
+                radial-gradient(circle at 15% 20%, rgba(212, 167, 92, 0.11), transparent 22%),
+                radial-gradient(circle at 85% 18%, rgba(103, 183, 255, 0.12), transparent 22%),
+                linear-gradient(180deg, #0d1017 0%, #111724 100%);
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .eyebrow {
+            color: var(--muted);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .button-primary,
+        .button-secondary {
+            border: 0;
+            border-radius: 16px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #d4a75c 0%, #f1cd86 100%);
+            color: #17120b;
+        }
+
+        .button-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .news-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .news-card {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: var(--panel-soft);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .news-card h4,
+        .news-card p {
+            margin: 0;
+        }
+
+        .news-card h4 {
+            margin-top: 8px;
+            font-size: 16px;
+        }
+
+        .news-card p {
+            margin-top: 8px;
+            color: var(--muted);
+            line-height: 1.45;
+            font-size: 13px;
+        }
+
+        .status-line {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .progress {
+            position: relative;
+            height: 16px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .progress > span {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 68%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #57d07a 0%, #8bf4ae 100%);
+        }
+
+        .layout-1 {
+            display: grid;
+            grid-template-columns: 1.1fr 0.72fr;
+            gap: 18px;
+            padding: 22px;
+            height: 100%;
+        }
+
+        .layout-1 .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 34px;
+            min-height: 716px;
+        }
+
+        .layout-1 .hero h3 {
+            margin: 12px 0 14px;
+            font-size: 56px;
+            line-height: 1.02;
+            max-width: 620px;
+        }
+
+        .layout-1 .hero p {
+            margin: 0 0 22px;
+            max-width: 520px;
+            color: var(--muted);
+            line-height: 1.55;
+            font-size: 16px;
+        }
+
+        .layout-1 .cta-box {
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .layout-1 .cta-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .layout-1 .cta-grid .button-primary {
+            height: 60px;
+            font-size: 18px;
+        }
+
+        .layout-1 .cta-grid .button-secondary {
+            height: 60px;
+            padding: 0 22px;
+        }
+
+        .layout-1 .side {
+            display: grid;
+            grid-template-rows: 1fr 230px;
+            gap: 18px;
+            min-height: 716px;
+        }
+
+        .layout-1 .news,
+        .layout-1 .chat {
+            padding: 22px;
+        }
+
+        .layout-2 {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-2 .column,
+        .layout-2 .center {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-2 .status-card,
+        .layout-2 .ops-card,
+        .layout-2 .feed-card,
+        .layout-2 .chat-card,
+        .layout-2 .stage-card,
+        .layout-2 .launch-card {
+            padding: 22px;
+        }
+
+        .layout-2 .stage-card {
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .layout-2 .stage-card h3 {
+            margin: 12px 0;
+            font-size: 46px;
+            max-width: 560px;
+            line-height: 1.04;
+        }
+
+        .layout-2 .launch-card {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 18px;
+            align-items: center;
+        }
+
+        .layout-2 .launch-actions {
+            display: grid;
+            gap: 12px;
+        }
+
+        .layout-2 .launch-actions .button-primary,
+        .layout-2 .launch-actions .button-secondary {
+            height: 56px;
+        }
+
+        .layout-3 {
+            position: relative;
+            min-height: 760px;
+            padding: 28px;
+        }
+
+        .layout-3 .backdrop-plate {
+            position: absolute;
+            inset: 28px 28px auto 28px;
+            height: 210px;
+            border-radius: 26px;
+            background: linear-gradient(135deg, rgba(212, 167, 92, 0.18), rgba(103, 183, 255, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .layout-3 .floating-center {
+            position: relative;
+            width: min(720px, calc(100% - 280px));
+            margin: 120px auto 0;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .layout-3 .floating-center h3 {
+            margin: 14px 0 12px;
+            font-size: 52px;
+            line-height: 1.05;
+        }
+
+        .layout-3 .floating-center p {
+            margin: 0 auto 24px;
+            max-width: 540px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .layout-3 .floating-actions {
+            display: grid;
+            grid-template-columns: 1fr 180px;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        .layout-3 .floating-actions .button-primary,
+        .layout-3 .floating-actions .button-secondary {
+            height: 58px;
+        }
+
+        .layout-3 .lower-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 320px;
+            gap: 18px;
+            margin-top: 22px;
+        }
+
+        .layout-3 .mini-card,
+        .layout-3 .news-tower,
+        .layout-3 .update-stack {
+            padding: 18px;
+        }
+
+        .layout-4 {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-4 .main {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 18px;
+        }
+
+        .layout-4 .headline,
+        .layout-4 .battlefield,
+        .layout-4 .dock,
+        .layout-4 .rail,
+        .layout-4 .rail-bottom {
+            padding: 22px;
+        }
+
+        .layout-4 .headline h3 {
+            margin: 10px 0 0;
+            font-size: 42px;
+            line-height: 1.08;
+            max-width: 680px;
+        }
+
+        .layout-4 .battlefield {
+            display: flex;
+            align-items: flex-end;
+            min-height: 360px;
+        }
+
+        .layout-4 .battlefield .overlay {
+            width: 100%;
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(0, 0, 0, 0.24);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .layout-4 .dock {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 18px;
+            align-items: center;
+        }
+
+        .layout-4 .dock .button-primary,
+        .layout-4 .dock .button-secondary {
+            height: 56px;
+        }
+
+        .layout-4 .rail-wrap {
+            display: grid;
+            grid-template-rows: 1fr 220px;
+            gap: 18px;
+        }
+
+        .layout-5 {
+            display: grid;
+            grid-template-columns: minmax(0, 1.34fr) 290px;
+            gap: 14px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-5 .chat-focus,
+        .layout-5 .feed-stack {
+            display: grid;
+            gap: 14px;
+        }
+
+        .layout-5 .chat-focus .chat-room,
+        .layout-5 .chat-focus .controls,
+        .layout-5 .feed-stack .feed {
+            padding: 22px;
+        }
+
+        .layout-5 .chat-room {
+            min-height: 470px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 18px;
+        }
+
+        .mock-messages {
+            display: grid;
+            gap: 12px;
+        }
+
+        .mock-message {
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            line-height: 1.45;
+            font-size: 13px;
+        }
+
+        .mock-message.self {
+            margin-left: 60px;
+            background: rgba(103, 183, 255, 0.12);
+            color: #d8ebff;
+        }
+
+        .layout-5 .controls {
+            display: grid;
+            grid-template-columns: 1fr 170px;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .layout-5 .controls .button-primary,
+        .layout-5 .controls .button-secondary {
+            height: 56px;
+        }
+
+        .layout-5 .feed-stack .feed {
+            min-height: 100%;
+        }
+
+        .layout-6 {
+            display: grid;
+            grid-template-columns: 360px 1fr 280px;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-6 .feed-column,
+        .layout-6 .center-column,
+        .layout-6 .control-column {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-6 .feed-hero,
+        .layout-6 .feed-list,
+        .layout-6 .hero-stage,
+        .layout-6 .chat-strip,
+        .layout-6 .control-hero,
+        .layout-6 .control-secondary {
+            padding: 22px;
+        }
+
+        .layout-6 .hero-stage {
+            min-height: 430px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .layout-6 .hero-stage h3 {
+            margin: 12px 0;
+            font-size: 44px;
+            max-width: 520px;
+            line-height: 1.05;
+        }
+
+        .layout-6 .chat-strip {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .layout-6 .control-hero .button-primary,
+        .layout-6 .control-secondary .button-secondary {
+            width: 100%;
+            height: 56px;
+        }
+
+        .layout-7 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-7 .tri-card {
+            padding: 22px;
+            display: grid;
+            gap: 16px;
+            align-content: start;
+        }
+
+        .layout-7 .tri-card h3 {
+            margin: 10px 0 0;
+            font-size: 30px;
+            line-height: 1.08;
+        }
+
+        .layout-7 .control-stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .layout-7 .control-stack .button-primary,
+        .layout-7 .control-stack .button-secondary {
+            height: 54px;
+        }
+
+        .layout-8 {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-8 .command-column,
+        .layout-8 .social-column {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-8 .command-column {
+            grid-template-rows: auto auto 1fr;
+        }
+
+        .layout-8 .control-main,
+        .layout-8 .status-card,
+        .layout-8 .news-ribbon,
+        .layout-8 .chat-main,
+        .layout-8 .chat-footer {
+            padding: 22px;
+        }
+
+        .layout-8 .control-main .button-primary,
+        .layout-8 .control-main .button-secondary {
+            width: 100%;
+            height: 56px;
+        }
+
+        .layout-8 .control-actions {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .layout-8 .social-column {
+            grid-template-rows: 240px 1fr 200px;
+        }
+
+        .layout-9 {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-9 .main-stack,
+        .layout-9 .side-stack {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-9 .main-stack {
+            grid-template-rows: auto 1fr;
+        }
+
+        .layout-9 .top-dock,
+        .layout-9 .chat-hall,
+        .layout-9 .feed-compact,
+        .layout-9 .meta-box {
+            padding: 22px;
+        }
+
+        .layout-9 .top-dock {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .layout-9 .top-dock .button-primary,
+        .layout-9 .top-dock .button-secondary {
+            height: 54px;
+        }
+
+        .layout-9 .chat-hall {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 18px;
+        }
+
+        .layout-10 {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-10 .stack {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-10 .central-chat,
+        .layout-10 .left-feed,
+        .layout-10 .left-feed-secondary,
+        .layout-10 .right-control,
+        .layout-10 .right-status {
+            padding: 22px;
+        }
+
+        .layout-10 .central-chat {
+            min-height: 716px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 18px;
+        }
+
+        .layout-10 .right-control .button-primary,
+        .layout-10 .right-control .button-secondary {
+            width: 100%;
+            height: 54px;
+        }
+
+        .layout-11 {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 18px;
+            padding: 22px;
+            min-height: 760px;
+        }
+
+        .layout-11 .headline-strip,
+        .layout-11 .center-band,
+        .layout-11 .footer-band {
+            display: grid;
+            gap: 18px;
+        }
+
+        .layout-11 .headline-strip {
+            grid-template-columns: 1fr 260px;
+        }
+
+        .layout-11 .center-band {
+            grid-template-columns: 1.05fr 0.95fr;
+        }
+
+        .layout-11 .footer-band {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .layout-11 .headline-card,
+        .layout-11 .status-card-wide,
+        .layout-11 .chat-stage,
+        .layout-11 .feed-stage,
+        .layout-11 .control-band,
+        .layout-11 .social-band {
+            padding: 22px;
+        }
+
+        .layout-11 .chat-stage,
+        .layout-11 .feed-stage {
+            min-height: 420px;
+        }
+
+        .layout-11 .control-band {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .layout-11 .control-band .button-primary,
+        .layout-11 .control-band .button-secondary {
+            height: 54px;
+        }
+
+        .legend {
+            margin-top: 14px;
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 1280px) {
+            .layout-1,
+            .layout-2,
+            .layout-4,
+            .layout-5,
+            .layout-6,
+            .layout-7,
+            .layout-8,
+            .layout-9,
+            .layout-10,
+            .layout-11 {
+                grid-template-columns: 1fr;
+            }
+
+            .layout-3 .lower-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .layout-3 .floating-center {
+                width: 100%;
+                margin-top: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div>
+                <h1>Варианты дизайна Bootstrap Launcher</h1>
+                <p>Оставлен один доработанный вариант с упором на чат, ленту и control-блок.</p>
+            </div>
+            <div class="nav">
+                <a href="#option-5">Вариант 5</a>
+            </div>
+        </div>
+
+        <section class="option" id="option-5">
+            <div class="option-head">
+                <div>
+                    <h2 class="option-title">Вариант 5: Chat First Hub</h2>
+                    <p class="option-subtitle">Главным остаётся чат, справа более узкая и длинная лента, а control-блок собран компактно и не шумит. Всё максимально информативно без лишних декоративных хвостов.</p>
+                </div>
+                <div class="option-badge">Chat-first</div>
+            </div>
+            <div class="frame layout-5">
+                <div class="chat-focus">
+                    <div class="chat-room panel">
+                        <div class="eyebrow">Общий канал</div>
+                        <h3 style="margin: 0; font-size: 34px;">Подготовка группы к матчу</h3>
+                        <div class="mock-messages">
+                            <div class="mock-message">`Aegis`: Кто идёт в следующий ранкед?</div>
+                            <div class="mock-message self">`Lizardan`: Сначала обновлюсь и залечу через минуту.</div>
+                            <div class="mock-message">`Mira`: Я уже в лобби, ждём ещё одного.</div>
+                            <div class="mock-message self">`Ghost`: Забираю саппорта, кидайте инвайт.</div>
+                        </div>
+                        <div class="status-line">
+                            <span>14 игроков онлайн</span>
+                            <span>3 активных лобби</span>
+                        </div>
+                    </div>
+                    <div class="controls panel">
+                        <div>
+                            <div class="eyebrow">Запуск и обновление</div>
+                            <div class="progress" style="margin: 14px 0 12px;"><span style="width: 86%;"></span></div>
+                            <div class="status-line">
+                                <span>Загрузка 86%</span>
+                                <span>Дальше установка</span>
+                            </div>
+                        </div>
+                        <div style="display: grid; gap: 12px;">
+                            <button class="button-primary">Обновить</button>
+                            <button class="button-secondary">Выход</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="feed-stack">
+                    <div class="feed panel">
+                        <div class="eyebrow">Лента</div>
+                        <div class="news-list" style="margin-top: 16px;">
+                            <div class="news-card">
+                                <div class="eyebrow">Patch</div>
+                                <h4>Чат как главный якорь</h4>
+                                <p>Подходит, если сообщество и поиск матча важнее атмосферного backdrop.</p>
+                            </div>
+                            <div class="news-card">
+                                <div class="eyebrow">News</div>
+                                <h4>Быстрые анонсы справа</h4>
+                                <p>Патчи и новости остаются рядом, но не спорят с общением.</p>
+                            </div>
+                            <div class="news-card">
+                                <div class="eyebrow">Lobby</div>
+                                <h4>Поиск матча и social flow</h4>
+                                <p>Правую колонку можно удерживать как короткую ленту событий и полезных напоминаний.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="legend">
+                <div>Плюс: очень ясный приоритет на чат, при этом control и новости остаются рядом и хорошо считываются.</div>
+                <div>Минус: если потом чат станет вторичным, центр композиции придётся смещать.</div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

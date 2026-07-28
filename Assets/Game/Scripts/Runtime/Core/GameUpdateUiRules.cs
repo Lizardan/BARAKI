@@ -5,7 +5,10 @@ namespace Game.Core
     /// <summary>Pure helpers for main-menu update strip copy.</summary>
     public static class GameUpdateUiRules
     {
-        public const string DownloadCompleteButtonLabel = "ПЕРЕЗАПУСК БИЛДА";
+        public const string RestartButtonLabel = "ПЕРЕЗАПУСТИТЬ";
+
+        /// <summary>Legacy alias used by older progress helpers.</summary>
+        public const string DownloadCompleteButtonLabel = RestartButtonLabel;
 
         public static string FormatVersionLabel(string version)
         {

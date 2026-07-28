@@ -28,7 +28,7 @@ namespace Game.Tests
             Assert.AreEqual(
                 GameUpdateUiRules.DownloadCompleteButtonLabel,
                 GameUpdateUiRules.FormatDownloadButtonLabel(1f));
-            Assert.AreEqual("ПЕРЕЗАПУСК БИЛДА", GameUpdateUiRules.FormatDownloadButtonLabel(1.1f));
+            Assert.AreEqual("ПЕРЕЗАПУСТИТЬ", GameUpdateUiRules.FormatDownloadButtonLabel(1.1f));
         }
 
         [Test]

@@ -1,0 +1,33 @@
+---
+description: "UI Toolkit layout and styling rules for UXML, USS, and UI controllers"
+globs: ["**/*.uxml", "**/*.uss", "**/UI*.cs", "**/UI/Runtime/**/*.cs"]
+alwaysApply: false
+---
+
+# Unity UI Toolkit Layout
+
+- Разделяй структуру (`.uxml`), стили (`.uss`) и логику (`.cs`). Не размещай стили внутри C#-кода.
+- Для адаптивной верстки используй Flexbox. Избегай фиксированных размеров в `px`, если это не строго необходимо; предпочитай `%`, `auto`, `flex-grow`, `flex-shrink`.
+- Для отступов и размеров используй относительные единицы, USS custom properties и общие константы, чтобы интерфейс выглядел стабильно на разных экранах.
+- CSS-классы в USS называй только в `kebab-case`: `.main-button`, `.card-container`, `.unit-panel-header`.
+- Для интерактивных кнопок всегда задавай плавные переходы через `transition-property` и `transition-duration` как минимум для hover и active состояний.
+- Связывание UI выполняй чистым C# через `UIDocument` и `rootVisualElement.Q<T>()` / `Query<T>()`; не смешивай data binding со стилями.
+
+## Предпочтительные паттерны
+
+```csharp
+var root = _uiDocument.rootVisualElement;
+var playButton = root.Q<Button>("play-button");
+var cards = root.Query<VisualElement>(className: "card-container");
+```
+
+```uss
+:root {
+    --panel-gap: 2%;
+}
+
+.main-button {
+    transition-property: background-color, scale;
+    transition-duration: 0.15s;
+}
+```

@@ -14,6 +14,8 @@ namespace Game.UI.Controllers
         UpdateAvailable = 1,
         Downloading = 2,
         ReadyToEnter = 3,
+        Installing = 4,
+        ReadyToRestart = 5,
     }
 
     /// <summary>
@@ -23,6 +25,7 @@ namespace Game.UI.Controllers
     public sealed class BootstrapLoadingController : MonoBehaviour
     {
         private const string OverlayHiddenClass = "ui-overlay--hidden";
+        private const string SlotInactiveClass = "bl__slot--inactive";
         private const string CtaDownloadingClass = "bl__cta--downloading";
         private const string PrimaryButtonClass = "ui-btn--primary";
         private const string MutedButtonClass = "ui-btn--muted";
@@ -43,11 +46,14 @@ namespace Game.UI.Controllers
         [SerializeField] private string _previewLocalVersion = "0.1.2";
         [SerializeField] private string _previewRemoteVersion = "0.1.4";
         [SerializeField] [Range(0f, 1f)] private float _previewDownloadProgress = 0.37f;
+        [SerializeField] [Range(0f, 1f)] private float _previewInstallProgress = 0.55f;
 #endif
 
         private VisualElement _root;
         private VisualElement _loadingPanel;
         private VisualElement _updatePanel;
+        private VisualElement _idleCtaPanel;
+        private Label _idleCtaLabel;
         private Label _loadingTitleLabel;
         private Label _statusLabel;
         private Label _versionLabel;
@@ -69,7 +75,10 @@ namespace Game.UI.Controllers
         private Label _versionProgressLabel;
         private string _appliedRangeLocal;
         private string _appliedRangeRemote;
+        private string _applyRemoteVersion;
+        private GameUpdateApplyPhase _applyPhase = GameUpdateApplyPhase.Downloading;
         private bool _isUpdating;
+        private bool _isReadyToRestart;
         private bool _isEnteringGame;
         private bool _pipelineStarted;
 
@@ -166,7 +175,21 @@ namespace Game.UI.Controllers
                     ShowUpdateAvailable(_previewLocalVersion, _previewRemoteVersion);
                     break;
                 case BootstrapPreviewMode.Downloading:
-                    ShowDownloading(_previewLocalVersion, _previewRemoteVersion, _previewDownloadProgress);
+                    ShowApplying(
+                        _previewLocalVersion,
+                        _previewRemoteVersion,
+                        GameUpdateApplyPhase.Downloading,
+                        _previewDownloadProgress);
+                    break;
+                case BootstrapPreviewMode.Installing:
+                    ShowApplying(
+                        _previewLocalVersion,
+                        _previewRemoteVersion,
+                        GameUpdateApplyPhase.Installing,
+                        _previewInstallProgress);
+                    break;
+                case BootstrapPreviewMode.ReadyToRestart:
+                    ShowReadyToRestart(_previewLocalVersion, _previewRemoteVersion);
                     break;
                 case BootstrapPreviewMode.ReadyToEnter:
                     ShowReadyToEnter();
@@ -190,6 +213,8 @@ namespace Game.UI.Controllers
 
             _loadingPanel = _root.Q<VisualElement>("LoadingPanel");
             _updatePanel = _root.Q<VisualElement>("UpdatePanel");
+            _idleCtaPanel = _root.Q<VisualElement>("IdleCtaPanel");
+            _idleCtaLabel = _root.Q<Label>("IdleCtaLabel");
             _loadingTitleLabel = _root.Q<Label>("LoadingTitleLabel");
             _statusLabel = _root.Q<Label>("StatusLabel");
             _versionLabel = _root.Q<Label>("VersionLabel");
@@ -217,13 +242,14 @@ namespace Game.UI.Controllers
 
             BindNewsFeed(LauncherNewsRules.CreateDefaultFeed());
             SetButtonDownloadProgress(false);
+            SetCtaMode(CtaMode.Idle, "ПОДГОТОВКА…");
 
             // Quit stays visible; interactivity is toggled by pipeline state.
             SetOverlayHidden(_quitButton, false);
             SetQuitInteractive(false);
         }
 
-        /// <summary>Fills featured + secondary news cards. Safe to call again with a remote feed later.</summary>
+        /// <summary>Fills featured patch + secondary patch cards. Safe to call again with a remote feed later.</summary>
         public void BindNewsFeed(LauncherNewsItem[] feed)
         {
             if (_root == null)
@@ -305,10 +331,7 @@ namespace Game.UI.Controllers
             var safeTitle = title ?? string.Empty;
             var safeStatus = status ?? string.Empty;
 
-            if (_sideStatusTitle != null)
-            {
-                _sideStatusTitle.text = safeTitle;
-            }
+            SetStatusHeader(safeTitle);
 
             if (_sideStatusLabel != null)
             {
@@ -327,9 +350,31 @@ namespace Game.UI.Controllers
             }
         }
 
+        private void SetStatusHeader(string title, string versionText = null)
+        {
+            if (_sideStatusTitle != null)
+            {
+                _sideStatusTitle.text = title ?? string.Empty;
+            }
+
+            if (_versionLabel != null)
+            {
+                _versionLabel.text = string.IsNullOrWhiteSpace(versionText)
+                    ? GameUpdateUiRules.FormatVersionLabel(GameLocalVersion.Current)
+                    : versionText;
+            }
+        }
+
+        private void SetStatusHeaderRange(string localVersion, string remoteVersion)
+        {
+            SetStatusHeader(
+                GameUpdateUiRules.FormatVersionLabel(localVersion),
+                "-> " + GameUpdateUiRules.FormatVersionLabel(remoteVersion));
+        }
+
         private void SetUpdateMetaVisible(bool visible)
         {
-            SetOverlayHidden(_updateMeta, !visible);
+            SetSlotInactive(_updateMeta, !visible);
 
             if (!visible)
             {
@@ -350,7 +395,10 @@ namespace Game.UI.Controllers
             ApplyUpdateRange(localVersion, remoteVersion);
         }
 
-        private void SetButtonDownloadProgress(bool active, float progress01 = 0f)
+        private void SetButtonDownloadProgress(
+            bool active,
+            float progress01 = 0f,
+            GameUpdateApplyPhase phase = GameUpdateApplyPhase.Downloading)
         {
             if (_updateButton != null)
             {
@@ -359,8 +407,6 @@ namespace Game.UI.Controllers
 
             if (!active)
             {
-                SetOverlayHidden(_versionProgress, true);
-
                 if (_versionProgressFill != null)
                 {
                     _versionProgressFill.style.width = Length.Percent(0);
@@ -377,14 +423,14 @@ namespace Game.UI.Controllers
 
             SetOverlayHidden(_versionProgress, false);
 
+            var bar01 = GameUpdateApplyProgressRules.MapBarProgress(phase, progress01);
             if (_versionProgressFill != null)
             {
                 _versionProgressFill.style.width =
-                    Length.Percent(GameUpdateUiRules.ProgressPercent(progress01));
+                    Length.Percent(GameUpdateUiRules.ProgressPercent(bar01));
             }
 
-            var isComplete = progress01 >= 1f;
-            var buttonText = GameUpdateUiRules.FormatDownloadButtonLabel(progress01);
+            var buttonText = GameUpdateApplyProgressRules.FormatProgressLabel(phase, progress01);
 
             if (_versionProgressLabel != null)
             {
@@ -394,15 +440,39 @@ namespace Game.UI.Controllers
 
             if (_updateButton != null)
             {
-                _updateButton.text = string.Empty;
-                _updateButton.AddToClassList(CtaDownloadingClass);
-                _updateButton.SetEnabled(!isComplete);
+                _updateButton.text = phase == GameUpdateApplyPhase.Installing
+                    ? "УСТАНОВКА"
+                    : "ЗАГРУЗКА";
+                _updateButton.SetEnabled(false);
             }
         }
 
-        private void SetDownloadProgress(float progress01)
+        private void ReserveUpdateProgressSlot()
         {
-            SetButtonDownloadProgress(true, progress01);
+            if (_versionProgress == null)
+            {
+                return;
+            }
+
+            SetOverlayHidden(_versionProgress, false);
+            if (_versionProgressFill != null)
+            {
+                _versionProgressFill.style.width = Length.Percent(0);
+            }
+        }
+
+        private void OnApplyProgress(GameUpdateApplyProgress progress)
+        {
+            _applyPhase = progress.Phase;
+            if (progress.Phase == GameUpdateApplyPhase.ReadyToRestart)
+            {
+                return;
+            }
+
+            SetButtonDownloadProgress(true, progress.Phase01, progress.Phase);
+            SetClientStatus(
+                "ОБНОВЛЕНИЕ",
+                GameUpdateApplyProgressRules.FormatSideStatus(progress.Phase, _applyRemoteVersion));
         }
 
         private async UniTaskVoid RunBootstrapPipelineAsync()
@@ -510,6 +580,12 @@ namespace Game.UI.Controllers
 
         private void OnUpdateClicked()
         {
+            if (_isReadyToRestart)
+            {
+                RestartPreparedUpdate();
+                return;
+            }
+
             ApplyUpdateAsync().Forget();
         }
 
@@ -545,57 +621,95 @@ namespace Game.UI.Controllers
 
         private async UniTaskVoid ApplyUpdateAsync()
         {
-            if (_isUpdating || !GameUpdateService.UpdateRequired)
+            if (_isUpdating || _isReadyToRestart || !GameUpdateService.UpdateRequired)
             {
                 return;
             }
 
             _isUpdating = true;
             var remote = GameUpdateService.RemoteManifest?.version;
-            ShowDownloading(GameLocalVersion.Current, remote, 0f);
+            _applyRemoteVersion = remote;
+            ShowApplying(GameLocalVersion.Current, remote, GameUpdateApplyPhase.Downloading, 0f);
             if (_updateStatusLabel != null)
             {
                 _updateStatusLabel.text = string.Empty;
             }
 
+            SetSlotInactive(_updateStatusLabel, true);
+
             try
             {
-                var progress = new Progress<float>(SetDownloadProgress);
-                await GameUpdateService.DownloadAndApplyAsync(progress);
+                var progress = new Progress<GameUpdateApplyProgress>(OnApplyProgress);
+                await GameUpdateService.DownloadAndPrepareAsync(progress);
+                if (this == null)
+                {
+                    return;
+                }
+
+                _isUpdating = false;
+                _isReadyToRestart = true;
+                ShowReadyToRestart(GameLocalVersion.Current, remote);
             }
             catch (Exception ex)
             {
                 _isUpdating = false;
+                _isReadyToRestart = false;
                 if (_updateStatusLabel != null)
                 {
                     _updateStatusLabel.text = "Ошибка обновления: " + ex.Message;
                 }
 
+                SetSlotInactive(_updateStatusLabel, false);
                 ShowUpdateAvailable(GameLocalVersion.Current, remote);
+            }
+        }
+
+        private void RestartPreparedUpdate()
+        {
+            if (!_isReadyToRestart || !GameUpdateService.HasPendingRestart)
+            {
+                return;
+            }
+
+            try
+            {
+                SetQuitInteractive(false);
+                if (_updateButton != null)
+                {
+                    _updateButton.SetEnabled(false);
+                }
+
+                SetClientStatus("ОБНОВЛЕНИЕ", "Перезапуск клиента");
+                GameUpdateService.ApplyPendingRestartAndQuit();
+            }
+            catch (Exception ex)
+            {
+                if (_updateStatusLabel != null)
+                {
+                    _updateStatusLabel.text = "Ошибка перезапуска: " + ex.Message;
+                }
+
+                SetSlotInactive(_updateStatusLabel, false);
+                SetQuitInteractive(true);
+                if (_updateButton != null)
+                {
+                    _updateButton.SetEnabled(true);
+                }
             }
         }
 
         private void ShowLoading(string status)
         {
-            SetOverlayHidden(_loadingPanel, false);
-            SetOverlayHidden(_updatePanel, true);
-            SetOverlayHidden(_enterGameButton, true);
+            SetCtaMode(CtaMode.Idle, BootstrapUpdateFlowRules.FormatIdleCtaLabel(status));
             SetUpdateMetaVisible(false);
             SetButtonDownloadProgress(false);
-            SetOverlayHidden(_updateStatusLabel, true);
+            SetSlotInactive(_updateStatusLabel, true);
             SetQuitInteractive(false);
             SetClientStatus("ПОДГОТОВКА", status ?? string.Empty);
         }
 
         private void ShowUpdaterOnlyIdle(bool checkFailed)
         {
-            SetOverlayHidden(_loadingPanel, false);
-            SetOverlayHidden(_updatePanel, true);
-            SetOverlayHidden(_enterGameButton, true);
-            SetUpdateMetaVisible(false);
-            SetButtonDownloadProgress(false);
-            SetOverlayHidden(_updateStatusLabel, true);
-
             var status = "Последняя версия уже установлена";
             if (checkFailed)
             {
@@ -605,18 +719,20 @@ namespace Game.UI.Controllers
                 status = $"Не удалось проверить обновления: {detail}";
             }
 
+            SetCtaMode(CtaMode.Idle, "ГОТОВО");
+            SetUpdateMetaVisible(false);
+            SetButtonDownloadProgress(false);
+            SetSlotInactive(_updateStatusLabel, true);
             SetClientStatus("АПДЕЙТЕР", status);
             SetQuitInteractive(true);
         }
 
         private void ShowReadyToEnter()
         {
-            SetOverlayHidden(_loadingPanel, false);
-            SetOverlayHidden(_updatePanel, true);
-            SetOverlayHidden(_enterGameButton, false);
+            SetCtaMode(CtaMode.EnterGame);
             SetUpdateMetaVisible(false);
             SetButtonDownloadProgress(false);
-            SetOverlayHidden(_updateStatusLabel, true);
+            SetSlotInactive(_updateStatusLabel, true);
             SetClientStatus("ГОТОВО", "Клиент готов к запуску");
 
             if (_enterGameButton != null)
@@ -629,13 +745,11 @@ namespace Game.UI.Controllers
 
         private void ShowEnteringGame()
         {
-            SetOverlayHidden(_loadingPanel, false);
-            SetOverlayHidden(_updatePanel, true);
-            SetOverlayHidden(_enterGameButton, false);
+            SetCtaMode(CtaMode.EnterGame);
             SetEnterGameInteractive(false);
             SetUpdateMetaVisible(false);
             SetButtonDownloadProgress(false);
-            SetOverlayHidden(_updateStatusLabel, true);
+            SetSlotInactive(_updateStatusLabel, true);
             SetQuitInteractive(false);
             SetClientStatus("ЗАПУСК", "Вход в игру…");
         }
@@ -643,11 +757,11 @@ namespace Game.UI.Controllers
         private void ShowUpdateAvailable(string localVersion, string remoteVersion)
         {
             _isUpdating = false;
-            SetOverlayHidden(_loadingPanel, true);
-            SetOverlayHidden(_updatePanel, false);
-            SetOverlayHidden(_enterGameButton, true);
-            SetUpdateMetaVisible(true);
+            _isReadyToRestart = false;
+            SetCtaMode(CtaMode.Update);
+            SetUpdateMetaVisible(false);
             SetButtonDownloadProgress(false);
+            ReserveUpdateProgressSlot();
             if (_updateButton != null)
             {
                 _updateButton.text = "ОБНОВИТЬ";
@@ -660,44 +774,106 @@ namespace Game.UI.Controllers
                 _updateTitleLabel.text = "ДОСТУПНО ОБНОВЛЕНИЕ";
             }
 
-            ApplyUpdateRangeIfNeeded(localVersion, remoteVersion);
             SetClientStatus("ОБНОВЛЕНИЕ", "Доступна новая версия клиента");
+            SetStatusHeaderRange(localVersion, remoteVersion);
             SetQuitInteractive(true);
 
             if (_updateStatusLabel != null)
             {
-                if (string.IsNullOrEmpty(_updateStatusLabel.text))
-                {
-                    SetOverlayHidden(_updateStatusLabel, true);
-                }
-                else
-                {
-                    SetOverlayHidden(_updateStatusLabel, false);
-                }
+                SetSlotInactive(_updateStatusLabel, string.IsNullOrEmpty(_updateStatusLabel.text));
             }
         }
 
-        private void ShowDownloading(string localVersion, string remoteVersion, float progress01)
+        private void ShowReadyToRestart(string localVersion, string remoteVersion)
         {
-            SetOverlayHidden(_loadingPanel, true);
-            SetOverlayHidden(_updatePanel, false);
-            SetOverlayHidden(_enterGameButton, true);
-            SetUpdateMetaVisible(true);
-            SetOverlayHidden(_updateButton, false);
-            SetOverlayHidden(_updateStatusLabel, true);
-            SetQuitInteractive(false);
-            SetButtonDownloadProgress(true, progress01);
+            _isUpdating = false;
+            _isReadyToRestart = true;
+            _applyPhase = GameUpdateApplyPhase.ReadyToRestart;
+            _applyRemoteVersion = remoteVersion;
+
+            SetCtaMode(CtaMode.Update);
+            SetUpdateMetaVisible(false);
+            SetButtonDownloadProgress(false);
+            ReserveUpdateProgressSlot();
+            SetSlotInactive(_updateStatusLabel, true);
+            SetQuitInteractive(true);
+
+            if (_updateButton != null)
+            {
+                _updateButton.text = GameUpdateUiRules.RestartButtonLabel;
+                _updateButton.RemoveFromClassList(CtaDownloadingClass);
+                _updateButton.SetEnabled(true);
+                SetOverlayHidden(_updateButton, false);
+            }
 
             if (_updateTitleLabel != null)
             {
                 _updateTitleLabel.text = "ОБНОВЛЕНИЕ";
             }
 
-            ApplyUpdateRangeIfNeeded(localVersion, remoteVersion);
             SetClientStatus(
                 "ОБНОВЛЕНИЕ",
-                "Загрузка "
-                + GameUpdateUiRules.FormatVersionLabel(remoteVersion));
+                GameUpdateApplyProgressRules.FormatSideStatus(
+                    GameUpdateApplyPhase.ReadyToRestart,
+                    remoteVersion));
+            SetStatusHeaderRange(localVersion, remoteVersion);
+        }
+
+        private void ShowApplying(
+            string localVersion,
+            string remoteVersion,
+            GameUpdateApplyPhase phase,
+            float phase01)
+        {
+            _applyRemoteVersion = remoteVersion;
+            _applyPhase = phase;
+            _isReadyToRestart = false;
+
+            SetCtaMode(CtaMode.Update);
+            SetUpdateMetaVisible(false);
+            SetSlotInactive(_updateStatusLabel, true);
+            SetQuitInteractive(false);
+            SetButtonDownloadProgress(true, phase01, phase);
+
+            if (_updateTitleLabel != null)
+            {
+                _updateTitleLabel.text = "ОБНОВЛЕНИЕ";
+            }
+
+            SetClientStatus(
+                "ОБНОВЛЕНИЕ",
+                GameUpdateApplyProgressRules.FormatSideStatus(phase, remoteVersion));
+            SetStatusHeaderRange(localVersion, remoteVersion);
+        }
+
+        private enum CtaMode
+        {
+            Idle = 0,
+            EnterGame = 1,
+            Update = 2,
+        }
+
+        private void SetCtaMode(CtaMode mode, string idleLabel = null)
+        {
+            var showIdle = mode == CtaMode.Idle;
+            var showEnter = mode == CtaMode.EnterGame;
+            var showUpdate = mode == CtaMode.Update;
+
+            SetOverlayHidden(_idleCtaPanel, !showIdle);
+            SetOverlayHidden(_loadingPanel, !showEnter);
+            SetOverlayHidden(_updatePanel, !showUpdate);
+
+            if (showIdle && _idleCtaLabel != null)
+            {
+                _idleCtaLabel.text = string.IsNullOrWhiteSpace(idleLabel)
+                    ? "ПОДГОТОВКА…"
+                    : idleLabel.Trim().ToUpperInvariant();
+            }
+
+            if (showEnter && _enterGameButton != null)
+            {
+                SetOverlayHidden(_enterGameButton, false);
+            }
         }
 
         private void ApplyUpdateRange(string localVersion, string remoteVersion)
@@ -776,6 +952,24 @@ namespace Game.UI.Controllers
             else
             {
                 element.RemoveFromClassList(OverlayHiddenClass);
+            }
+        }
+
+        private static void SetSlotInactive(VisualElement element, bool inactive)
+        {
+            if (element == null)
+            {
+                return;
+            }
+
+            // Keeps layout height so status / range / error do not jump when toggling.
+            if (inactive)
+            {
+                element.AddToClassList(SlotInactiveClass);
+            }
+            else
+            {
+                element.RemoveFromClassList(SlotInactiveClass);
             }
         }
     }
