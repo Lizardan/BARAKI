@@ -2,6 +2,7 @@ using System.Text;
 using Game.Core;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Gameplay.Networking
 {
@@ -29,11 +30,21 @@ namespace Game.Gameplay.Networking
                             ? "Client"
                             : "Offline";
 
-            var phase = ResolvePhase();
+            var phase = SessionFlowRules.ToFlowId(ResolveFlow());
             var clients = nm != null && nm.IsListening
                 ? nm.ConnectedClientsIds.Count
                 : 0;
-            var builder = new StringBuilder(192);
+            ResolveFilledReady(out var filled, out var capacity, out var ready);
+            var matchSim = MatchNetworkSession.NetworkMatchSimStarted;
+            var matchElapsed = string.Empty;
+            if (phase == nameof(SessionFlowState.Match))
+            {
+                var runtime = Object.FindAnyObjectByType<Match.MatchRuntime>();
+                var seconds = runtime?.Controller?.MatchTimeSeconds ?? 0f;
+                matchElapsed = SessionFlowRules.ResolveElapsedBucket(seconds);
+            }
+
+            var builder = new StringBuilder(256);
             var displayName = SanitizeName(PlayerProfileService.DisplayName);
             var modePlayers = ResolveModePlayerCount();
             builder
@@ -47,10 +58,12 @@ namespace Game.Gameplay.Networking
             builder
                 .Append("mode=").Append(modePlayers > 0 ? modePlayers + "p" : "-")
                 .Append(" room=").Append(string.IsNullOrEmpty(MatchNetworkSession.RoomCode) ? "-" : MatchNetworkSession.RoomCode)
-                .Append(" players=").Append(MatchNetworkSession.PlayerCount)
-                .Append(" lobbySlots=").Append(MatchNetworkSession.LobbySlotCount)
+                .Append(" filled=").Append(filled).Append('/').Append(capacity > 0 ? capacity : 0)
+                .Append(" ready=").Append(ready).Append('/').Append(capacity > 0 ? capacity : 0)
                 .Append(" phase=").Append(phase)
                 .Append(" matchStarted=").Append(MatchNetworkSession.MatchStarted ? "1" : "0")
+                .Append(" matchSim=").Append(matchSim ? "1" : "0")
+                .Append(" matchElapsed=").Append(string.IsNullOrEmpty(matchElapsed) ? "-" : matchElapsed)
                 .AppendLine();
             builder
                 .Append("transport=")
@@ -66,6 +79,54 @@ namespace Game.Gameplay.Networking
                 .Append(" prevHost=").Append(HostMigrationSession.PreviousHostSlot)
                 .Append(" nextHost=").Append(HostMigrationSession.DesignatedHostSlot);
             return builder.ToString();
+        }
+
+        private static SessionFlowState ResolveFlow() =>
+            SessionFlowRules.Resolve(
+                SceneManager.GetActiveScene().name,
+                MatchNetworkSession.IsNetworked,
+                MatchNetworkSession.HasNetworkLobby,
+                MatchNetworkSession.MatchStarted,
+                MatchNetworkSession.NetworkMatchSimStarted);
+
+        private static void ResolveFilledReady(out int filled, out int capacity, out int ready)
+        {
+            filled = 0;
+            capacity = 0;
+            ready = 0;
+
+            if (MatchNetworkSession.HasNetworkLobby)
+            {
+                capacity = MatchNetworkSession.LobbySlotCount;
+                for (var i = 0; i < capacity; i++)
+                {
+                    var slot = MatchNetworkSession.GetLobbySlot(i);
+                    if (!slot.IsOccupied)
+                    {
+                        continue;
+                    }
+
+                    filled++;
+                    if (slot.IsReady)
+                    {
+                        ready++;
+                    }
+                }
+
+                return;
+            }
+
+            var local = LocalMatchRegistry.Active;
+            if (local == null)
+            {
+                capacity = MatchNetworkSession.PlayerCount;
+                filled = capacity > 0 ? 1 : 0;
+                return;
+            }
+
+            capacity = local.SlotCount;
+            filled = LobbyReadyRules.CountOccupied(local);
+            ready = LobbyReadyRules.CountReady(local);
         }
 
         private static int ResolveModePlayerCount()
@@ -85,32 +146,7 @@ namespace Game.Gameplay.Networking
                 return "-";
             }
 
-            return value.Trim().Replace('\r', ' ').Replace('\n', ' ').Replace(' ', '_');
-        }
-
-        private static string ResolvePhase()
-        {
-            if (!MatchNetworkSession.IsNetworked)
-            {
-                return "Offline";
-            }
-
-            if (MatchNetworkSession.MatchStarted || MatchNetworkSession.NetworkMatchSimStarted)
-            {
-                return "Match";
-            }
-
-            if (MatchNetworkSession.IsNetworkRacePickActive)
-            {
-                return "RacePick";
-            }
-
-            if (MatchNetworkSession.HasNetworkLobby)
-            {
-                return "Lobby";
-            }
-
-            return "Connecting";
+            return value.Trim().Replace('\r', ' ').Replace(' ', '_').Replace('\n', ' ');
         }
     }
 }

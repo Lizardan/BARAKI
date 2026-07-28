@@ -11,23 +11,10 @@ namespace Game.Tests
         public void Filter_AcceptsErrorsAndTaggedInfo_Only()
         {
             Assert.IsTrue(RuntimeDebugConsoleLogFilter.ShouldAccept("boom", LogType.Error));
-            Assert.IsTrue(RuntimeDebugConsoleLogFilter.ShouldAccept("careful", LogType.Warning));
+            Assert.IsFalse(RuntimeDebugConsoleLogFilter.ShouldAccept("careful", LogType.Warning));
+            Assert.IsTrue(RuntimeDebugConsoleLogFilter.ShouldAccept("[P] Net.Warn", LogType.Warning));
             Assert.IsTrue(RuntimeDebugConsoleLogFilter.ShouldAccept("[P] Net.Connected role=Host", LogType.Log));
             Assert.IsFalse(RuntimeDebugConsoleLogFilter.ShouldAccept("UnityServices signed in", LogType.Log));
-        }
-
-        [Test]
-        public void Buffer_DedupsConsecutiveIdenticalEntries()
-        {
-            var buffer = new RuntimeDebugConsoleLogBuffer(capacity: 8);
-            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
-            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
-            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
-
-            var entries = buffer.GetSnapshot();
-            Assert.AreEqual(1, entries.Count);
-            Assert.AreEqual(3, entries[0].RepeatCount);
-            StringAssert.Contains("x3", buffer.BuildCopyText());
         }
 
         [Test]
@@ -54,7 +41,7 @@ namespace Game.Tests
         public void ReportBuilder_ContainsSectionsAndLabel()
         {
             var utc = new DateTime(2026, 7, 28, 1, 12, 44, DateTimeKind.Utc);
-            var net = "name=Vasya role=Client slot=1\nmode=4p room=ABCD phase=RacePick";
+            var net = "name=Vasya role=Client slot=1\nmode=4p room=ABCD filled=2/4 phase=RacePick matchElapsed=-";
             var report = DebugPlaytestReportBuilder.BuildReport(
                 "[01:12:01] [Log] [P] Net.Connected role=Client",
                 net,
@@ -75,7 +62,19 @@ namespace Game.Tests
             StringAssert.Contains("mode=4p", label);
             StringAssert.Contains("role=Client", label);
             StringAssert.Contains("phase=RacePick", label);
+            StringAssert.Contains("filled=2/4", label);
             StringAssert.Contains("playtest |", label);
+        }
+
+        [Test]
+        public void BuildIssueTitle_Match_IncludesElapsed()
+        {
+            var utc = new DateTime(2026, 7, 28, 1, 12, 44, DateTimeKind.Utc);
+            var net = "name=Vasya role=Host slot=0 mode=2p room=ABCD filled=2/2 phase=Match matchElapsed=10+";
+            var label = DebugPlaytestReportBuilder.BuildIssueTitle(net, utc);
+            StringAssert.Contains("phase=Match", label);
+            StringAssert.Contains("filled=2/2", label);
+            StringAssert.Contains("elapsed=10+", label);
         }
 
         [Test]

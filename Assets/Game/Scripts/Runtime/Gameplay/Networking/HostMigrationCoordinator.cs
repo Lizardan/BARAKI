@@ -107,8 +107,12 @@ namespace Game.Gameplay.Networking
             Phase = HostMigrationRules.NextPhase(HostMigrationRules.MigrationPhase.Playing, true);
             Time.timeScale = 0f;
             ReconnectMatchId = MatchNetworkSession.RoomCode;
-            Debug.Log(
-                $"HostMigration: paused, elect slot={DesignatedHostSlot} match={ReconnectMatchId}");
+            PlaytestLog.Info(
+                "Migration",
+                "Paused",
+                ("prevHost", previousHostSlot),
+                ("nextHost", DesignatedHostSlot),
+                ("match", ReconnectMatchId));
         }
 
         public void BeginStateTransferFromMatch()
@@ -176,6 +180,11 @@ namespace Game.Gameplay.Networking
             {
                 Time.timeScale = 1f;
                 HostMigrationSession.Clear();
+                PlaytestLog.Warn("Migration", "Abort", ("phase", "transfer"));
+            }
+            else
+            {
+                PlaytestLog.Info("Migration", "Transfer", ("ok", success));
             }
         }
 
@@ -215,7 +224,12 @@ namespace Game.Gameplay.Networking
             Time.timeScale = 1f;
             MatchNetworkSession.ListenHostSlot = DesignatedHostSlot;
             HostMigrationSession.Clear();
-            Debug.Log("HostMigration: resumed");
+            PlaytestLog.Info(
+                "Migration",
+                "Resume",
+                ("host", DesignatedHostSlot),
+                ("prevHost", PreviousHostSlot));
+            SessionFlowTracker.NotifyChanged();
         }
 
         public bool TryBuildReconnectToken(int slot, out string token)

@@ -13,7 +13,8 @@ namespace Game.Gameplay.Networking
     [Serializable]
     public sealed class BarakiPresenceActivity
     {
-        public string status = FriendsHubRules.StatusInLauncher;
+        public string flow = nameof(SessionFlowState.MainMenu);
+        public string elapsedBucket = string.Empty;
         public string lobbyCode = string.Empty;
         public int occupiedSlots;
         public int maxSlots;
@@ -31,28 +32,32 @@ namespace Game.Gameplay.Networking
         public FriendPresenceInfo(
             string playerId,
             string name,
-            string status,
+            string flow,
             bool isOnline,
             string lobbyCode,
             int occupiedSlots = 0,
-            int maxSlots = 0)
+            int maxSlots = 0,
+            string elapsedBucket = null)
         {
             PlayerId = playerId ?? string.Empty;
             Name = name ?? string.Empty;
-            Status = status ?? "Offline";
+            Flow = flow ?? "Offline";
             IsOnline = isOnline;
             LobbyCode = lobbyCode ?? string.Empty;
             OccupiedSlots = occupiedSlots < 0 ? 0 : occupiedSlots;
             MaxSlots = maxSlots < 0 ? 0 : maxSlots;
+            ElapsedBucket = elapsedBucket ?? string.Empty;
         }
 
         public string PlayerId { get; }
         public string Name { get; }
-        public string Status { get; }
+        /// <summary>Machine-readable <see cref="SessionFlowState"/> id (or Offline/Online).</summary>
+        public string Flow { get; }
         public bool IsOnline { get; }
         public string LobbyCode { get; }
         public int OccupiedSlots { get; }
         public int MaxSlots { get; }
+        public string ElapsedBucket { get; }
     }
 
     public readonly struct FriendRequestInfo
@@ -125,34 +130,27 @@ namespace Game.Gameplay.Networking
             await EnsureLocalPlayerNameSyncedAsync();
             RefreshAllCaches();
 
-            // Only the first hub init publishes default menu presence.
-            // Re-entry from lobby / invite must not overwrite an active InGame / InMatch status.
-            if (FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized))
+            // Presence is owned by SessionFlowTracker (Bootstrap → «в лаунчере»).
+            if (!alreadyInitialized)
             {
-                PublishMenuPresence();
+                SessionFlowTracker.NotifyFriendsReadyOnBootstrap();
             }
         }
 
-        /// <summary>Best-effort: friends see «в меню», Join hidden.</summary>
-        public static void PublishMenuPresence()
-        {
-            SetPresenceAsync(FriendsHubRules.StatusInLauncher).Forget();
-        }
-
-        /// <summary>Best-effort: friends see «в матче», Join hidden.</summary>
-        public static void PublishMatchPresence()
-        {
-            SetPresenceAsync(FriendsHubRules.StatusInMatch).Forget();
-        }
-
-        /// <summary>Best-effort: friends see «в лобби» (+ slots) with Join when capacity remains.</summary>
-        public static void PublishLobbyPresence(string lobbyCode, int occupiedSlots, int maxSlots)
+        /// <summary>UGS activity from SessionFlowTracker only.</summary>
+        public static void PublishFlowPresence(
+            SessionFlowState flow,
+            string lobbyCode,
+            int occupiedSlots,
+            int maxSlots,
+            string elapsedBucket)
         {
             SetPresenceAsync(
-                FriendsHubRules.StatusInGame,
+                SessionFlowRules.ToFlowId(flow),
                 lobbyCode,
                 occupiedSlots,
-                maxSlots).Forget();
+                maxSlots,
+                elapsedBucket).Forget();
         }
 
         static async UniTask EnsureLocalPlayerNameSyncedAsync()
@@ -176,11 +174,12 @@ namespace Game.Gameplay.Networking
             await UnityServicesBootstrap.TrySyncPlayerNameFromDisplayNameAsync(PlayerProfileService.DisplayName);
         }
 
-        public static async UniTask SetPresenceAsync(
-            string status,
+        static async UniTask SetPresenceAsync(
+            string flow,
             string lobbyCode = null,
             int occupiedSlots = 0,
-            int maxSlots = 0)
+            int maxSlots = 0,
+            string elapsedBucket = null)
         {
             try
             {
@@ -200,7 +199,8 @@ namespace Game.Gameplay.Networking
 
                 var activity = new BarakiPresenceActivity
                 {
-                    status = status ?? FriendsHubRules.StatusInLauncher,
+                    flow = flow ?? nameof(SessionFlowState.MainMenu),
+                    elapsedBucket = elapsedBucket ?? string.Empty,
                     lobbyCode = lobbyCode ?? string.Empty,
                     occupiedSlots = occupiedSlots < 0 ? 0 : occupiedSlots,
                     maxSlots = maxSlots < 0 ? 0 : maxSlots,
@@ -286,30 +286,7 @@ namespace Game.Gameplay.Networking
             }
 
             await InitializeAsync();
-            var occupied = 0;
-            var maxSlots = 0;
-            if (MatchNetworkSession.HasNetworkLobby)
-            {
-                maxSlots = MatchNetworkSession.LobbySlotCount;
-                for (var i = 0; i < maxSlots; i++)
-                {
-                    if (MatchNetworkSession.GetLobbySlot(i).IsOccupied)
-                    {
-                        occupied++;
-                    }
-                }
-            }
-            else if (MatchNetworkSession.PlayerCount > 0)
-            {
-                occupied = 1;
-                maxSlots = MatchNetworkSession.PlayerCount;
-            }
-
-            await SetPresenceAsync(
-                FriendsHubRules.StatusInGame,
-                normalizedLobbyCode,
-                occupied,
-                maxSlots);
+            SessionFlowTracker.NotifyChanged();
 
             var senderName = UnityServicesBootstrap.PlayerName;
             if (string.IsNullOrWhiteSpace(senderName))
@@ -499,20 +476,22 @@ namespace Game.Gameplay.Networking
             var occupiedSlots = 0;
             var maxSlots = 0;
 
+            var elapsedBucket = string.Empty;
             if (online)
             {
                 status = "Online";
                 var activity = member.Presence?.GetActivity<BarakiPresenceActivity>();
                 if (activity != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(activity.status))
+                    if (!string.IsNullOrWhiteSpace(activity.flow))
                     {
-                        status = activity.status;
+                        status = activity.flow;
                     }
 
                     lobbyCode = activity.lobbyCode ?? string.Empty;
                     occupiedSlots = activity.occupiedSlots;
                     maxSlots = activity.maxSlots;
+                    elapsedBucket = activity.elapsedBucket ?? string.Empty;
                 }
             }
 
@@ -523,7 +502,8 @@ namespace Game.Gameplay.Networking
                 online,
                 lobbyCode,
                 occupiedSlots,
-                maxSlots);
+                maxSlots,
+                elapsedBucket);
         }
     }
 }

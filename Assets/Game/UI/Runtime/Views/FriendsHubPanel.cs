@@ -160,18 +160,18 @@ namespace Game.UI.Views
                     "Offline",
                     false,
                     string.Empty)));
-                // In menu
+                // Launcher
                 _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
-                    "friend-menu",
+                    "friend-launcher",
                     "Alpha#1234",
-                    FriendsHubRules.StatusInLauncher,
+                    nameof(SessionFlowState.Bootstrap),
                     true,
                     string.Empty)));
                 // Lobby with free slots + green join
                 _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
                     "friend-lobby-open",
                     "Beta#5678",
-                    FriendsHubRules.StatusInGame,
+                    nameof(SessionFlowState.Lobby),
                     true,
                     "WXYZ",
                     occupiedSlots: 2,
@@ -180,7 +180,7 @@ namespace Game.UI.Views
                 _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
                     "friend-lobby-one",
                     "Sigma#7777",
-                    FriendsHubRules.StatusInGame,
+                    nameof(SessionFlowState.Lobby),
                     true,
                     "ABCD",
                     occupiedSlots: 3,
@@ -189,7 +189,7 @@ namespace Game.UI.Views
                 _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
                     "friend-lobby-full",
                     "Theta#9999",
-                    FriendsHubRules.StatusInGame,
+                    nameof(SessionFlowState.Lobby),
                     true,
                     "FULL",
                     occupiedSlots: 4,
@@ -198,9 +198,10 @@ namespace Game.UI.Views
                 _friendsListContainer.Add(BuildFriendRow(new FriendPresenceInfo(
                     "friend-match",
                     "Delta#4242",
-                    FriendsHubRules.StatusInMatch,
+                    nameof(SessionFlowState.Match),
                     true,
-                    string.Empty)));
+                    string.Empty,
+                    elapsedBucket: SessionFlowRules.ElapsedLt5)));
             }
 
             if (_incomingList != null)
@@ -290,7 +291,7 @@ namespace Game.UI.Views
                 for (var i = 0; i < friends.Count; i++)
                 {
                     var friend = friends[i];
-                    if (FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Status))
+                    if (FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Flow))
                     {
                         inviteable.Add(friend);
                     }
@@ -327,11 +328,12 @@ namespace Game.UI.Views
 
             var line = FriendsHubRules.FormatFriendLine(
                 friend.Name,
-                friend.Status,
+                friend.Flow,
                 friend.IsOnline,
                 friend.LobbyCode,
                 friend.OccupiedSlots,
-                friend.MaxSlots);
+                friend.MaxSlots,
+                friend.ElapsedBucket);
             var label = new Label(line);
             label.AddToClassList("mm__friend-row__text");
             row.Add(label);
@@ -339,7 +341,7 @@ namespace Game.UI.Views
             var actions = new VisualElement();
             actions.AddToClassList("mm__friend-row__actions");
 
-            if (FriendsHubRules.TryGetJoinableLobbyCode(friend.Status, friend.LobbyCode, out var joinCode))
+            if (FriendsHubRules.TryGetJoinableLobbyCode(friend.Flow, friend.LobbyCode, out var joinCode))
             {
                 if (FriendsHubRules.IsLobbyFull(friend.OccupiedSlots, friend.MaxSlots))
                 {
@@ -357,7 +359,7 @@ namespace Game.UI.Views
                 }
             }
             else if (_mode == FriendsHubPanelMode.InviteOnly
-                     && FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Status))
+                     && FriendsHubRules.CanInviteFriendToLobby(friend.IsOnline, friend.Flow))
             {
                 var inviteButton = new Button { text = "ПРИГЛАСИТЬ" };
                 inviteButton.AddToClassList("mm__friend-row__btn");

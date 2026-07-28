@@ -11,10 +11,6 @@ namespace Game.Core
 
     public static class FriendsHubRules
     {
-        public const string StatusInLauncher = "InLauncher";
-        public const string StatusInGame = "InGame";
-        /// <summary>Match in progress — visible to friends, not joinable.</summary>
-        public const string StatusInMatch = "InMatch";
         public const int UgsNameSuffixMinLength = 4;
         public const string FriendsTabLabel = "ДРУЗЬЯ";
         public const string InvitesTabLabel = "ПРИГЛАШЕНИЯ";
@@ -25,27 +21,8 @@ namespace Game.Core
         public const string AcceptRequestGlyph = "✓";
         public const string DeclineRequestGlyph = "✕";
 
-        /// <summary>
-        /// Default menu presence is published only on the first Friends hub init.
-        /// Re-entry (lobby OnEnable, invite flow) must not overwrite an active InGame presence.
-        /// </summary>
-        public static bool ShouldPublishLauncherPresenceOnInit(bool alreadyInitialized) =>
-            !alreadyInitialized;
-
-        /// <summary>
-        /// Main menu safety net: republish menu presence when no live lobby/match session remains.
-        /// </summary>
-        public static bool ShouldPublishMenuPresenceOnMainMenuEnter(bool hasActiveSession) =>
-            !hasActiveSession;
-
-        public static bool IsMatchPresence(string status) =>
-            string.Equals(status, StatusInMatch, StringComparison.OrdinalIgnoreCase);
-
-        public static bool IsLobbyPresence(string status) =>
-            string.Equals(status, StatusInGame, StringComparison.OrdinalIgnoreCase);
-
-        public static bool IsMenuPresence(string status) =>
-            string.Equals(status, StatusInLauncher, StringComparison.OrdinalIgnoreCase);
+        public static bool IsLobbyFlow(string flow) =>
+            SessionFlowRules.TryParseFlowId(flow, out var state) && state == SessionFlowState.Lobby;
 
         public static string NormalizePlayerId(string value)
         {
@@ -185,10 +162,10 @@ namespace Game.Core
             return true;
         }
 
-        public static bool TryGetJoinableLobbyCode(string status, string lobbyCode, out string joinCode)
+        public static bool TryGetJoinableLobbyCode(string flow, string lobbyCode, out string joinCode)
         {
             joinCode = string.Empty;
-            if (!string.Equals(status, StatusInGame, StringComparison.OrdinalIgnoreCase))
+            if (!IsLobbyFlow(flow))
             {
                 return false;
             }
@@ -217,13 +194,13 @@ namespace Game.Core
             maxSlots > 0 && occupiedSlots >= maxSlots;
 
         public static bool CanJoinFriendLobby(
-            string status,
+            string flow,
             string lobbyCode,
             int occupiedSlots,
             int maxSlots,
             out string joinCode)
         {
-            if (!TryGetJoinableLobbyCode(status, lobbyCode, out joinCode))
+            if (!TryGetJoinableLobbyCode(flow, lobbyCode, out joinCode))
             {
                 return false;
             }
@@ -231,15 +208,16 @@ namespace Game.Core
             return HasLobbyCapacity(occupiedSlots, maxSlots);
         }
 
-        /// <summary>Lobby invite overlay: only friends sitting in the main menu.</summary>
-        public static bool CanInviteFriendToLobby(bool isOnline, string status)
+        /// <summary>Lobby invite overlay: only friends in main menu (not bootstrap/connecting/lobby/match).</summary>
+        public static bool CanInviteFriendToLobby(bool isOnline, string flow)
         {
             if (!isOnline)
             {
                 return false;
             }
 
-            return string.Equals(status, StatusInLauncher, StringComparison.OrdinalIgnoreCase);
+            return SessionFlowRules.TryParseFlowId(flow, out var state)
+                   && state == SessionFlowState.MainMenu;
         }
 
         public static string FormatLobbySlots(int occupiedSlots, int maxSlots)
@@ -260,11 +238,12 @@ namespace Game.Core
 
         public static string FormatFriendLine(
             string name,
-            string status,
+            string flow,
             bool isOnline,
             string lobbyCode,
             int occupiedSlots = 0,
-            int maxSlots = 0)
+            int maxSlots = 0,
+            string elapsedBucket = null)
         {
             var displayName = string.IsNullOrWhiteSpace(name) ? "Игрок" : name.Trim();
             if (!isOnline)
@@ -272,21 +251,33 @@ namespace Game.Core
                 return $"{displayName}: офлайн";
             }
 
-            if (TryGetJoinableLobbyCode(status, lobbyCode, out _))
+            if (!SessionFlowRules.TryParseFlowId(flow, out var state))
             {
-                var slots = FormatLobbySlots(occupiedSlots, maxSlots);
-                return string.IsNullOrEmpty(slots)
-                    ? $"{displayName}: в лобби"
-                    : $"{displayName}: в лобби · {slots}";
+                return $"{displayName}: онлайн";
             }
 
-            return status switch
+            switch (state)
             {
-                _ when IsMenuPresence(status) => $"{displayName}: в меню",
-                _ when IsMatchPresence(status) => $"{displayName}: в матче",
-                "Online" => $"{displayName}: онлайн",
-                _ => $"{displayName}: {status}",
-            };
+                case SessionFlowState.Bootstrap:
+                    return $"{displayName}: в лаунчере";
+                case SessionFlowState.MainMenu:
+                    return $"{displayName}: в главном меню";
+                case SessionFlowState.Connecting:
+                    return $"{displayName}: вход в лобби";
+                case SessionFlowState.Lobby:
+                {
+                    var slots = FormatLobbySlots(occupiedSlots, maxSlots);
+                    return string.IsNullOrEmpty(slots)
+                        ? $"{displayName}: в лобби"
+                        : $"{displayName}: в лобби · {slots}";
+                }
+                case SessionFlowState.RacePick:
+                    return $"{displayName}: выбирает расу";
+                case SessionFlowState.Match:
+                    return $"{displayName}: в игре · {SessionFlowRules.FormatElapsedBucketForUi(elapsedBucket)}";
+                default:
+                    return $"{displayName}: онлайн";
+            }
         }
 
         public static string FormatIncomingRequestLine(string name, string playerId)

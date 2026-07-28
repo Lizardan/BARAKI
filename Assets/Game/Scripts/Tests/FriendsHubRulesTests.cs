@@ -6,91 +6,66 @@ namespace Game.Tests
     public sealed class FriendsHubRulesTests
     {
         [Test]
-        public void ShouldPublishLauncherPresenceOnInit_OnlyWhenNotYetInitialized()
-        {
-            Assert.IsTrue(FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized: false));
-            Assert.IsFalse(FriendsHubRules.ShouldPublishLauncherPresenceOnInit(alreadyInitialized: true));
-        }
-
-        [Test]
-        public void ShouldPublishMenuPresenceOnMainMenuEnter_OnlyWithoutActiveSession()
-        {
-            Assert.IsTrue(FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession: false));
-            Assert.IsFalse(FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession: true));
-        }
-
-        [Test]
-        public void TryGetJoinableLobbyCode_InMatch_ReturnsFalse()
-        {
-            Assert.IsFalse(
-                FriendsHubRules.TryGetJoinableLobbyCode(FriendsHubRules.StatusInMatch, "abcd", out _));
-        }
-
-        [Test]
-        public void FormatFriendLine_InMatch_ShowsMatchStatus()
-        {
-            var line = FriendsHubRules.FormatFriendLine(
-                "Alpha",
-                FriendsHubRules.StatusInMatch,
-                true,
-                "wxyz",
-                occupiedSlots: 2,
-                maxSlots: 4);
-
-            Assert.AreEqual("Alpha: в матче", line);
-            Assert.That(line, Does.Not.Contain("WXYZ"));
-            Assert.That(line, Does.Not.Contain("2/4"));
-        }
-
-        [Test]
-        public void CanInviteFriendToLobby_False_WhenInMatch()
-        {
-            Assert.IsFalse(
-                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInMatch));
-        }
-
-        [Test]
-        public void CanJoinFriendLobby_False_WhenInMatch()
+        public void CanJoinFriendLobby_False_WhenMatchEvenWithCodeAndSlots()
         {
             Assert.IsFalse(
                 FriendsHubRules.CanJoinFriendLobby(
-                    FriendsHubRules.StatusInMatch,
+                    nameof(SessionFlowState.Match),
                     "abcd",
                     occupiedSlots: 1,
                     maxSlots: 4,
                     out _));
+            Assert.IsFalse(
+                FriendsHubRules.TryGetJoinableLobbyCode(nameof(SessionFlowState.Match), "abcd", out _));
         }
 
         [Test]
-        public void TryGetJoinableLobbyCode_InGameWithCode_ReturnsTrue()
+        public void FormatFriendLine_Match_ShowsElapsedBucket()
+        {
+            var line = FriendsHubRules.FormatFriendLine(
+                "Alpha",
+                nameof(SessionFlowState.Match),
+                true,
+                string.Empty,
+                elapsedBucket: "10+");
+
+            Assert.AreEqual("Alpha: в игре · 10+ мин", line);
+        }
+
+        [Test]
+        public void TryGetJoinableLobbyCode_True_WhenLobby()
         {
             Assert.IsTrue(
-                FriendsHubRules.TryGetJoinableLobbyCode(FriendsHubRules.StatusInGame, "abcd", out var code));
+                FriendsHubRules.TryGetJoinableLobbyCode(nameof(SessionFlowState.Lobby), "abcd", out var code));
             Assert.AreEqual("ABCD", code);
         }
 
         [Test]
-        public void TryGetJoinableLobbyCode_InLauncher_ReturnsFalse()
+        public void TryGetJoinableLobbyCode_False_WhenMenu()
         {
             Assert.IsFalse(
-                FriendsHubRules.TryGetJoinableLobbyCode(FriendsHubRules.StatusInLauncher, "abcd", out _));
+                FriendsHubRules.TryGetJoinableLobbyCode(nameof(SessionFlowState.MainMenu), "abcd", out _));
         }
 
         [Test]
-        public void FormatFriendLine_InGame_OmitsLobbyCode()
+        public void FormatFriendLine_Lobby_OmitsLobbyCode()
         {
-            var line = FriendsHubRules.FormatFriendLine("Alpha", FriendsHubRules.StatusInGame, true, "wxyz");
+            var line = FriendsHubRules.FormatFriendLine(
+                "Alpha",
+                nameof(SessionFlowState.Lobby),
+                true,
+                "wxyz");
 
             Assert.AreEqual("Alpha: в лобби", line);
             Assert.That(line, Does.Not.Contain("WXYZ"));
         }
 
         [Test]
-        public void FormatFriendLine_InGame_ShowsOccupiedSlots()
+        public void FormatFriendLine_Lobby_ShowsOccupiedSlots()
         {
             var line = FriendsHubRules.FormatFriendLine(
                 "Alpha",
-                FriendsHubRules.StatusInGame,
+                nameof(SessionFlowState.Lobby),
                 true,
                 "wxyz",
                 occupiedSlots: 2,
@@ -98,6 +73,23 @@ namespace Game.Tests
 
             Assert.AreEqual("Alpha: в лобби · 2/4", line);
             Assert.That(line, Does.Not.Contain("WXYZ"));
+        }
+
+        [Test]
+        public void FormatFriendLine_Bootstrap_AndMenu()
+        {
+            Assert.AreEqual(
+                "Alpha: в лаунчере",
+                FriendsHubRules.FormatFriendLine("Alpha", nameof(SessionFlowState.Bootstrap), true, null));
+            Assert.AreEqual(
+                "Alpha: в главном меню",
+                FriendsHubRules.FormatFriendLine("Alpha", nameof(SessionFlowState.MainMenu), true, null));
+            Assert.AreEqual(
+                "Alpha: вход в лобби",
+                FriendsHubRules.FormatFriendLine("Alpha", nameof(SessionFlowState.Connecting), true, null));
+            Assert.AreEqual(
+                "Alpha: выбирает расу",
+                FriendsHubRules.FormatFriendLine("Alpha", nameof(SessionFlowState.RacePick), true, null));
         }
 
         [TestCase(2, 4, "2/4")]
@@ -113,7 +105,7 @@ namespace Game.Tests
         {
             Assert.IsFalse(
                 FriendsHubRules.CanJoinFriendLobby(
-                    FriendsHubRules.StatusInGame,
+                    nameof(SessionFlowState.Lobby),
                     "abcd",
                     occupiedSlots: 4,
                     maxSlots: 4,
@@ -125,7 +117,7 @@ namespace Game.Tests
         {
             Assert.IsTrue(
                 FriendsHubRules.CanJoinFriendLobby(
-                    FriendsHubRules.StatusInGame,
+                    nameof(SessionFlowState.Lobby),
                     "abcd",
                     occupiedSlots: 2,
                     maxSlots: 4,
@@ -137,13 +129,17 @@ namespace Game.Tests
         public void CanInviteFriendToLobby_True_OnlyInMainMenu()
         {
             Assert.IsTrue(
-                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInLauncher));
+                FriendsHubRules.CanInviteFriendToLobby(true, nameof(SessionFlowState.MainMenu)));
             Assert.IsFalse(
-                FriendsHubRules.CanInviteFriendToLobby(true, FriendsHubRules.StatusInGame));
+                FriendsHubRules.CanInviteFriendToLobby(true, nameof(SessionFlowState.Lobby)));
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(true, nameof(SessionFlowState.Match)));
             Assert.IsFalse(
                 FriendsHubRules.CanInviteFriendToLobby(true, "Online"));
             Assert.IsFalse(
-                FriendsHubRules.CanInviteFriendToLobby(false, FriendsHubRules.StatusInLauncher));
+                FriendsHubRules.CanInviteFriendToLobby(false, nameof(SessionFlowState.MainMenu)));
+            Assert.IsFalse(
+                FriendsHubRules.CanInviteFriendToLobby(true, nameof(SessionFlowState.Bootstrap)));
         }
 
         [Test]

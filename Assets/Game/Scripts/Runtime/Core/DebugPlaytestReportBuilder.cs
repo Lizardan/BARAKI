@@ -16,7 +16,18 @@ namespace Game.Core
             var slot = ExtractField(netSection, "slot") ?? "-";
             var mode = ExtractField(netSection, "mode") ?? "-";
             var phase = ExtractField(netSection, "phase") ?? "Offline";
-            return $"playtest | {name} | room={room} | mode={mode} | role={role} | slot={slot} | phase={phase} | {utcNow:yyyy-MM-dd HH:mm}Z";
+            var filled = ExtractField(netSection, "filled") ?? "-";
+            var elapsed = ExtractField(netSection, "matchElapsed");
+            var title =
+                $"playtest | {name} | room={room} | mode={mode} | role={role} | slot={slot} | phase={phase} | filled={filled}";
+            if (string.Equals(phase, "Match", StringComparison.Ordinal)
+                && !string.IsNullOrEmpty(elapsed)
+                && elapsed != "-")
+            {
+                title += $" | elapsed={elapsed}";
+            }
+
+            return title + $" | {utcNow:yyyy-MM-dd HH:mm}Z";
         }
 
         public static string BuildReport(string eventsText, string netSection, DateTime utcNow)

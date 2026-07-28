@@ -48,9 +48,6 @@ namespace Game.UI.Controllers
         private bool _localReady;
         private int _lastLobbyRevision = -1;
         private float _networkConnectWaitStarted = -1f;
-        private int _lastPresenceOccupied = -1;
-        private int _lastPresenceMax = -1;
-        private string _lastPresenceCode = string.Empty;
         private readonly NetworkLobbySlotsView _networkLobbySlots = new();
 
         private void Awake()
@@ -242,23 +239,13 @@ namespace Game.UI.Controllers
             try
             {
                 await FriendsHubService.InitializeAsync();
-                // Force re-publish after hub init so a stale InLauncher cannot stick
-                // when RefreshLobbyUi already warmed the presence dedupe cache.
-                InvalidateLobbyPresenceDedupe();
-                SyncLobbyPresence();
+                SessionFlowTracker.NotifyChanged();
                 _friendsHubPanel?.Refresh();
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"Lobby friends init skipped: {ex.Message}");
             }
-        }
-
-        private void InvalidateLobbyPresenceDedupe()
-        {
-            _lastPresenceOccupied = -1;
-            _lastPresenceMax = -1;
-            _lastPresenceCode = string.Empty;
         }
 
         private void OnInviteFriendsClicked()
@@ -364,11 +351,8 @@ namespace Game.UI.Controllers
             {
                 MatchNetworkSession.Shutdown();
             }
-            else
-            {
-                FriendsHubService.PublishMenuPresence();
-            }
 
+            SessionFlowTracker.NotifyChanged();
             LoadSceneAsync(GameSceneNames.MainMenu, this.GetCancellationTokenOnDestroy()).Forget();
         }
 
@@ -425,7 +409,7 @@ namespace Game.UI.Controllers
             _inviteFriendsButton?.SetEnabled(!lobby.MatchStarted);
 
             RebuildSlotList(lobby);
-            SyncLobbyPresence(lobby, lobby.RoomCode);
+            SessionFlowTracker.NotifyChanged();
         }
 
         private void RefreshNetworkLobbyUi()
@@ -491,55 +475,7 @@ namespace Game.UI.Controllers
             _startButton?.SetEnabled(MatchNetworkSession.CanLocalStart);
             _inviteFriendsButton?.SetEnabled(!matchStarted);
             RebuildSlotList(_networkLobbySlots);
-            SyncLobbyPresence(_networkLobbySlots, MatchNetworkSession.RoomCode);
-        }
-
-        private void SyncLobbyPresence()
-        {
-            if (MatchNetworkSession.IsNetworked)
-            {
-                if (MatchNetworkSession.HasNetworkLobby)
-                {
-                    SyncLobbyPresence(_networkLobbySlots, MatchNetworkSession.RoomCode);
-                }
-
-                return;
-            }
-
-            var lobby = LocalMatchRegistry.Active;
-            if (lobby != null)
-            {
-                SyncLobbyPresence(lobby, lobby.RoomCode);
-            }
-        }
-
-        private void SyncLobbyPresence(IReadOnlyLobbySlots lobby, string roomCode)
-        {
-            if (lobby == null || string.IsNullOrWhiteSpace(roomCode))
-            {
-                return;
-            }
-
-            // Editor LocalDev often has no UGS — skip until bootstrap is ready.
-            if (!UnityServicesBootstrap.IsReady)
-            {
-                return;
-            }
-
-            var occupied = LobbyReadyRules.CountOccupied(lobby);
-            var maxSlots = lobby.SlotCount;
-            var code = FriendsHubRules.NormalizeLobbyCode(roomCode);
-            if (occupied == _lastPresenceOccupied
-                && maxSlots == _lastPresenceMax
-                && string.Equals(code, _lastPresenceCode, System.StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _lastPresenceOccupied = occupied;
-            _lastPresenceMax = maxSlots;
-            _lastPresenceCode = code;
-            FriendsHubService.PublishLobbyPresence(code, occupied, maxSlots);
+            SessionFlowTracker.NotifyChanged();
         }
 
         private void RebuildSlotList(IReadOnlyLobbySlots lobby)
@@ -597,8 +533,8 @@ namespace Game.UI.Controllers
                     : MatchSetup.Default;
             }
 
-            // Match is not joinable — clear lobby Join for friends.
-            FriendsHubService.PublishMatchPresence();
+            // Match is not joinable — Tracker publishes RacePick/Match from network flags.
+            SessionFlowTracker.NotifyChanged();
             GameSession.Begin(setup);
             await SceneManager.LoadSceneAsync(GameSceneNames.Game)
                 .ToUniTask(cancellationToken: cancellationToken);

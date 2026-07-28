@@ -7,7 +7,7 @@ namespace Game.Core
     {
         public static bool ShouldAccept(string message, LogType type)
         {
-            if (type is LogType.Warning or LogType.Error or LogType.Exception or LogType.Assert)
+            if (type is LogType.Error or LogType.Exception or LogType.Assert)
             {
                 return true;
             }

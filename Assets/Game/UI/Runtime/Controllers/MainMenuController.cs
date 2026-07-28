@@ -292,23 +292,23 @@ namespace Game.UI.Controllers
             FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
             _profileBadge?.RegisterCallback<ClickEvent>(OnProfileBadgeClicked);
-            PublishMenuPresenceIfIdle();
+            NotifySessionFlowIfIdle();
             var cancellationToken = this.GetCancellationTokenOnDestroy();
             PlayIntroAsync(cancellationToken).Forget();
             RestoreIntroIfStalledAsync(cancellationToken).Forget();
         }
 
-        private static void PublishMenuPresenceIfIdle()
+        private static void NotifySessionFlowIfIdle()
         {
             var hasActiveSession = MatchNetworkSession.HasHandle
                 || MatchNetworkSession.IsNetworked
                 || LocalMatchRegistry.Active != null;
-            if (!FriendsHubRules.ShouldPublishMenuPresenceOnMainMenuEnter(hasActiveSession))
+            if (hasActiveSession)
             {
                 return;
             }
 
-            FriendsHubService.PublishMenuPresence();
+            SessionFlowTracker.NotifyChanged();
         }
 
         private void OnDisable()
@@ -1371,18 +1371,7 @@ namespace Game.UI.Controllers
                         MatchNetworkSession.TransportConnectFailedMessage);
                 }
 
-                try
-                {
-                    await FriendsHubService.SetPresenceAsync(
-                        FriendsHubRules.StatusInGame,
-                        handle.RoomCode,
-                        occupiedSlots: 1,
-                        maxSlots: playerCount);
-                }
-                catch (System.Exception)
-                {
-                    // Presence optional for LocalDev.
-                }
+                SessionFlowTracker.NotifyChanged();
 
                 EnsureModeSelectClosed();
                 EnsureMatchEntryClosed();
@@ -1439,18 +1428,7 @@ namespace Game.UI.Controllers
                         MatchNetworkSession.TransportConnectFailedMessage);
                 }
 
-                try
-                {
-                    await FriendsHubService.SetPresenceAsync(
-                        FriendsHubRules.StatusInGame,
-                        handle.RoomCode,
-                        occupiedSlots: 1,
-                        maxSlots: handle.PlayerCount);
-                }
-                catch (System.Exception)
-                {
-                    // Presence optional for LocalDev.
-                }
+                SessionFlowTracker.NotifyChanged();
 
                 EnsureMatchEntryClosed();
                 await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);

@@ -49,16 +49,6 @@ namespace Game.Core
             public const string SetBug = "BUILDING_SET_BUG";
         }
 
-        public static class UnitTypes
-        {
-            public const string Melee = "UNIT_TYPE_MELEE";
-            public const string Ranged = "UNIT_TYPE_RANGED";
-            public const string Caster = "UNIT_TYPE_CASTER";
-            public const string Siege = "UNIT_TYPE_SIEGE";
-            public const string Flying = "UNIT_TYPE_FLYING";
-            public const string Super = "UNIT_TYPE_SUPER";
-        }
-
         public static class Units
         {
             public const string HumanMelee = "UNIT_HUMAN_MELEE";

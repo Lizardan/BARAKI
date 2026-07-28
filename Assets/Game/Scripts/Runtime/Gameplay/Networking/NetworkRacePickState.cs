@@ -31,6 +31,11 @@ namespace Game.Gameplay.Networking
             _racePicks.OnListChanged += OnRacePicksChanged;
             _matchSimStarted.OnValueChanged += OnMatchSimStartedChanged;
             _playerCount.OnValueChanged += OnPlayerCountChanged;
+            if (IsServer)
+            {
+                EnsureSession(MatchNetworkSession.PlayerCount);
+            }
+
             PlaytestLog.Info(
                 "RacePick",
                 "Spawned",
@@ -38,12 +43,8 @@ namespace Game.Gameplay.Networking
                 ("client", IsClient),
                 ("players", _playerCount.Value),
                 ("clientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L));
-            if (IsServer)
-            {
-                EnsureSession(MatchNetworkSession.PlayerCount);
-            }
-
             NotifyChanged();
+            SessionFlowTracker.NotifyChanged();
         }
 
         public override void OnNetworkDespawn()
@@ -129,7 +130,7 @@ namespace Game.Gameplay.Networking
             var slot = lobby.FindClientSlot(rpcParams.Receive.SenderClientId);
             PlaytestLog.Info(
                 "RacePick",
-                "Rpc",
+                "Submit",
                 ("race", raceId),
                 ("sender", (long)rpcParams.Receive.SenderClientId),
                 ("slot", slot));
@@ -228,7 +229,7 @@ namespace Game.Gameplay.Networking
             GameSession.UpdateActiveSetup(setup);
             PlaytestLog.Info(
                 "Match",
-                "BeginServer",
+                "Begin",
                 ("players", _playerCount.Value),
                 ("slot", localSlot),
                 ("races", string.Join(",", raceIds)));
@@ -238,6 +239,7 @@ namespace Game.Gameplay.Networking
 
             BeginMatchClientRpc(EncodeRaceIds(raceIds));
             NotifyChanged();
+            SessionFlowTracker.NotifyChanged();
         }
 
         [ClientRpc]
@@ -252,7 +254,7 @@ namespace Game.Gameplay.Networking
             var localSlot = ResolveLocalSlot();
             PlaytestLog.Info(
                 "Match",
-                "BeginClient",
+                "Begin",
                 ("slot", localSlot),
                 ("players", _playerCount.Value),
                 ("races", string.Join(",", raceIds)));
@@ -262,6 +264,7 @@ namespace Game.Gameplay.Networking
             var runtime = FindAnyObjectByType<MatchRuntime>();
             runtime?.StartMatch(raceIds, localSlot);
             NotifyChanged();
+            SessionFlowTracker.NotifyChanged();
         }
 
         private static int ResolveLocalSlot()

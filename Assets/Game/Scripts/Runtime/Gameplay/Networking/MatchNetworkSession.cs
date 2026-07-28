@@ -144,8 +144,6 @@ namespace Game.Gameplay.Networking
         public static void RequestStart() =>
             NetworkLobbyState.Instance?.RequestStart();
 
-        public static bool IsNetworkRacePickActive => IsNetworked && NetworkRacePickState.Instance != null;
-
         public static event Action NetworkRacePickChanged;
 
         internal static void NotifyRacePickChanged() => NetworkRacePickChanged?.Invoke();
@@ -212,7 +210,7 @@ namespace Game.Gameplay.Networking
             ListenHostSlot = NetworkLobbySlotRules.HostSlot;
             HostMigrationSession.Clear();
             // Leaving a cleared session must not leave stale joinable lobby presence.
-            FriendsHubService.PublishMenuPresence();
+            SessionFlowTracker.NotifyChanged();
         }
 
         /// <summary>Drop NGO/Relay only; keep room/slot for host migration rebind.</summary>

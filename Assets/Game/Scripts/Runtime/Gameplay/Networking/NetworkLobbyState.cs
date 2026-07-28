@@ -96,6 +96,7 @@ namespace Game.Gameplay.Networking
             }
 
             NotifyChanged();
+            SessionFlowTracker.NotifyChanged();
         }
 
         public override void OnNetworkDespawn()
@@ -293,10 +294,18 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
+            PlaytestLog.Info(
+                "Net",
+                "Disconnect",
+                ("slot", slot),
+                ("clientId", (long)clientId),
+                ("match", _matchStarted.Value));
+
             if (DisconnectGraceRules.ShouldClearSlotImmediately(_matchStarted.Value))
             {
                 ClearSlot(slot);
                 BumpRevision();
+                SessionFlowTracker.NotifyChanged();
                 return;
             }
 
@@ -307,6 +316,7 @@ namespace Game.Gameplay.Networking
             }
 
             BumpRevision();
+            SessionFlowTracker.NotifyChanged();
         }
 
         private void Update()
@@ -329,6 +339,11 @@ namespace Game.Gameplay.Networking
             var value = _slots[slot];
             value.IsReady = isReady;
             _slots[slot] = value;
+            PlaytestLog.Info(
+                "Lobby",
+                "Ready",
+                ("slot", slot),
+                ("ready", isReady));
             BumpRevision();
         }
 
@@ -368,8 +383,14 @@ namespace Game.Gameplay.Networking
             }
 
             _matchStarted.Value = true;
+            PlaytestLog.Info(
+                "Lobby",
+                "Start",
+                ("slot", senderSlot),
+                ("players", PlayerCount));
             BumpRevision();
             MatchNetworkBootstrap.Ensure().EnsureMatchAuthority();
+            SessionFlowTracker.NotifyChanged();
         }
 
         private void SeatListenHost()
@@ -415,7 +436,7 @@ namespace Game.Gameplay.Networking
             MatchNetworkSession.ListenHostSlot = slot;
         }
 
-        private void OccupySlot(int slot, ulong clientId, string displayName)
+            private void OccupySlot(int slot, ulong clientId, string displayName)
         {
             _slots[slot] = new NetworkLobbySlot
             {
@@ -427,6 +448,12 @@ namespace Game.Gameplay.Networking
             };
             _hasDisconnectTimer[slot] = false;
             _disconnectAtRealtime[slot] = 0f;
+            PlaytestLog.Info(
+                "Lobby",
+                "Seated",
+                ("slot", slot),
+                ("clientId", (long)clientId),
+                ("name", displayName));
         }
 
         void ClearSlot(int slot)

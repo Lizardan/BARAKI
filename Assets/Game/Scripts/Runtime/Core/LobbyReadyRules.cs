@@ -55,6 +55,26 @@ namespace Game.Core
 
             return occupied;
         }
+
+        public static int CountReady(IReadOnlyLobbySlots lobby)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            var ready = 0;
+            for (var i = 0; i < lobby.SlotCount; i++)
+            {
+                var slot = lobby.GetSlot(i);
+                if (slot.IsOccupied && slot.IsReady)
+                {
+                    ready++;
+                }
+            }
+
+            return ready;
+        }
     }
 
     public interface IReadOnlyLobbySlots

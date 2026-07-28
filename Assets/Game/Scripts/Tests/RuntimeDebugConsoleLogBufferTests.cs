@@ -71,6 +71,20 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Add_DedupsConsecutiveIdenticalEntries()
+        {
+            var buffer = new RuntimeDebugConsoleLogBuffer(capacity: 8);
+            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
+            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
+            buffer.Add("[P] Net.Tick", string.Empty, LogType.Log);
+
+            var entries = buffer.GetSnapshot();
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual(3, entries[0].RepeatCount);
+            StringAssert.Contains("x3", buffer.BuildCopyText());
+        }
+
+        [Test]
         public void Clear_RemovesEntries()
         {
             var buffer = new RuntimeDebugConsoleLogBuffer(capacity: 4);
