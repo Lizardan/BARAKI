@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Networking
 {
-    /// <summary>Registers NET snapshot for playtest Discord reports.</summary>
+    /// <summary>Registers NET snapshot for playtest GitHub Issue reports.</summary>
     public static class DebugReportContextRegistrar
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

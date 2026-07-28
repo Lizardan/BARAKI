@@ -69,12 +69,13 @@ namespace Game.Tests
             StringAssert.Contains("mode=4p", report);
             StringAssert.Contains("Net.Connected", report);
 
-            var label = DebugPlaytestReportBuilder.BuildDiscordLabel(net, utc);
+            var label = DebugPlaytestReportBuilder.BuildIssueTitle(net, utc);
             StringAssert.Contains("Vasya", label);
             StringAssert.Contains("room=ABCD", label);
             StringAssert.Contains("mode=4p", label);
             StringAssert.Contains("role=Client", label);
             StringAssert.Contains("phase=RacePick", label);
+            StringAssert.Contains("playtest |", label);
         }
 
         [Test]

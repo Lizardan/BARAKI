@@ -7,16 +7,17 @@ using System.Text;
 namespace Game.Core
 {
     /// <summary>
-    /// CI stamps Discord webhook into BuildSupport, then a script embeds XOR'd bytes into
-    /// <c>DiscordWebhookEmbedded.Data.cs</c> before Unity compiles the player.
+    /// CI stamps a fine-grained PAT (Issues:write) into GitHubPlaytestEmbedded.Data.cs as XOR bytes.
     /// </summary>
-    public static class DiscordWebhookStampRules
+    public static class GitHubPlaytestStampRules
     {
-        public const string CiWebhookFileRelativePath = "BuildSupport/discord-webhook.url";
+        public const string CiTokenFileRelativePath = "BuildSupport/github-playtest-token.txt";
         public const string EmbeddedDataRelativePath =
-            "Assets/Game/Scripts/Runtime/Core/DiscordWebhookEmbedded.Data.cs";
+            "Assets/Game/Scripts/Runtime/Core/GitHubPlaytestEmbedded.Data.cs";
+        public const string DefaultRepository = "Lizardan/BARAKI";
+        public const string IssueLabel = "playtest-log";
 
-        public static string Normalize(string raw)
+        public static string NormalizeToken(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -24,7 +25,14 @@ namespace Game.Core
             }
 
             var trimmed = raw.Trim().Split('\n', '\r')[0].Trim();
-            if (!trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            if (trimmed.Length < 20)
+            {
+                return null;
+            }
+
+            if (!(trimmed.StartsWith("ghp_", StringComparison.Ordinal)
+                  || trimmed.StartsWith("github_pat_", StringComparison.Ordinal)
+                  || trimmed.StartsWith("gho_", StringComparison.Ordinal)))
             {
                 return null;
             }
@@ -32,14 +40,14 @@ namespace Game.Core
             return trimmed;
         }
 
-        public static string ResolveFromFileThenEnv(string projectRoot, string envValue)
+        public static string ResolveTokenFromFileThenEnv(string projectRoot, string envValue)
         {
             if (!string.IsNullOrWhiteSpace(projectRoot))
             {
-                var path = Path.Combine(projectRoot, CiWebhookFileRelativePath);
+                var path = Path.Combine(projectRoot, CiTokenFileRelativePath);
                 if (File.Exists(path))
                 {
-                    var fromFile = Normalize(File.ReadAllText(path));
+                    var fromFile = NormalizeToken(File.ReadAllText(path));
                     if (fromFile != null)
                     {
                         return fromFile;
@@ -47,7 +55,7 @@ namespace Game.Core
                 }
             }
 
-            return Normalize(envValue);
+            return NormalizeToken(envValue);
         }
 
         public static byte[] CreateKey(int length = 32)
@@ -79,10 +87,10 @@ namespace Game.Core
             return result;
         }
 
-        public static string BuildEmbeddedDataSource(string webhookUrl, byte[] key)
+        public static string BuildEmbeddedDataSource(string token, byte[] key)
         {
-            var normalized = Normalize(webhookUrl)
-                             ?? throw new ArgumentException("Invalid webhook URL.", nameof(webhookUrl));
+            var normalized = NormalizeToken(token)
+                             ?? throw new ArgumentException("Invalid GitHub token.", nameof(token));
             if (key == null || key.Length == 0)
             {
                 throw new ArgumentException("Key required.", nameof(key));
@@ -96,7 +104,7 @@ namespace Game.Core
                 .AppendLine()
                 .AppendLine("namespace Game.Core")
                 .AppendLine("{")
-                .AppendLine("    internal static partial class DiscordWebhookEmbedded")
+                .AppendLine("    internal static partial class GitHubPlaytestEmbedded")
                 .AppendLine("    {")
                 .Append("        private static readonly byte[] Payload = { ")
                 .Append(FormatBytes(payload))
@@ -116,7 +124,7 @@ namespace Game.Core
 
 namespace Game.Core
 {
-    internal static partial class DiscordWebhookEmbedded
+    internal static partial class GitHubPlaytestEmbedded
     {
         private static readonly byte[] Payload = System.Array.Empty<byte>();
         private static readonly byte[] Key = System.Array.Empty<byte>();
@@ -124,12 +132,12 @@ namespace Game.Core
 }
 ";
 
-        public static void WriteEmbeddedDataFile(string projectRoot, string webhookUrl)
+        public static void WriteEmbeddedDataFile(string projectRoot, string token)
         {
             var path = Path.Combine(projectRoot, EmbeddedDataRelativePath.Replace('/', Path.DirectorySeparatorChar));
-            var source = string.IsNullOrEmpty(webhookUrl)
+            var source = string.IsNullOrEmpty(token)
                 ? BuildEmptyEmbeddedDataSource()
-                : BuildEmbeddedDataSource(webhookUrl, CreateKey());
+                : BuildEmbeddedDataSource(token, CreateKey());
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? projectRoot);
             File.WriteAllText(path, source, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }

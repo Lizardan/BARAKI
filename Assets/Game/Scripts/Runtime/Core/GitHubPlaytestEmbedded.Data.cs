@@ -4,7 +4,7 @@
 
 namespace Game.Core
 {
-    internal static partial class DiscordWebhookEmbedded
+    internal static partial class GitHubPlaytestEmbedded
     {
         private static readonly byte[] Payload = System.Array.Empty<byte>();
         private static readonly byte[] Key = System.Array.Empty<byte>();

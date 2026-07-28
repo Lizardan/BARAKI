@@ -1,12 +1,12 @@
-# Stamps XOR-obfuscated Discord webhook into DiscordWebhookEmbedded.Data.cs
-# Usage (CI): DISCORD_PLAYTEST_WEBHOOK_URL=... pwsh BuildSupport/Stamp-DiscordWebhookEmbedded.ps1
+# Stamps XOR-obfuscated GitHub PAT into GitHubPlaytestEmbedded.Data.cs
+# Usage (CI): PLAYTEST_LOGS_TOKEN=... pwsh BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1
 param(
-    [string] $WebhookUrl = $env:DISCORD_PLAYTEST_WEBHOOK_URL,
+    [string] $Token = $env:PLAYTEST_LOGS_TOKEN,
     [string] $ProjectRoot = (Get-Location).Path
 )
 
 $ErrorActionPreference = "Stop"
-$dataPath = Join-Path $ProjectRoot "Assets/Game/Scripts/Runtime/Core/DiscordWebhookEmbedded.Data.cs"
+$dataPath = Join-Path $ProjectRoot "Assets/Game/Scripts/Runtime/Core/GitHubPlaytestEmbedded.Data.cs"
 $supportDir = Join-Path $ProjectRoot "BuildSupport"
 New-Item -ItemType Directory -Force -Path $supportDir | Out-Null
 
@@ -18,7 +18,7 @@ function Write-EmptyStub {
 
 namespace Game.Core
 {
-    internal static partial class DiscordWebhookEmbedded
+    internal static partial class GitHubPlaytestEmbedded
     {
         private static readonly byte[] Payload = System.Array.Empty<byte>();
         private static readonly byte[] Key = System.Array.Empty<byte>();
@@ -28,27 +28,27 @@ namespace Game.Core
     [System.IO.File]::WriteAllText($dataPath, $stub)
 }
 
-$url = if ($null -eq $WebhookUrl) { "" } else { "$WebhookUrl".Trim() }
-if ([string]::IsNullOrWhiteSpace($url)) {
-    Write-Warning "DISCORD_PLAYTEST_WEBHOOK_URL is empty — writing empty embedded stub."
+$value = if ($null -eq $Token) { "" } else { "$Token".Trim() }
+if ([string]::IsNullOrWhiteSpace($value)) {
+    Write-Warning "PLAYTEST_LOGS_TOKEN is empty — writing empty embedded stub."
     Write-EmptyStub
-    if (Test-Path (Join-Path $supportDir "discord-webhook.url")) {
-        Remove-Item (Join-Path $supportDir "discord-webhook.url") -Force
+    if (Test-Path (Join-Path $supportDir "github-playtest-token.txt")) {
+        Remove-Item (Join-Path $supportDir "github-playtest-token.txt") -Force
     }
     exit 0
 }
 
-if (-not $url.StartsWith("https://")) {
-    throw "DISCORD_PLAYTEST_WEBHOOK_URL must start with https://"
+if (-not ($value.StartsWith("ghp_") -or $value.StartsWith("github_pat_") -or $value.StartsWith("gho_"))) {
+    throw "PLAYTEST_LOGS_TOKEN must start with ghp_ / github_pat_ / gho_"
 }
 
-Set-Content -Path (Join-Path $supportDir "discord-webhook.url") -Value $url -NoNewline -Encoding utf8
+Set-Content -Path (Join-Path $supportDir "github-playtest-token.txt") -Value $value -NoNewline -Encoding utf8
 
 $key = New-Object byte[] 32
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 try { $rng.GetBytes($key) } finally { $rng.Dispose() }
 
-$plain = [System.Text.Encoding]::UTF8.GetBytes($url)
+$plain = [System.Text.Encoding]::UTF8.GetBytes($value)
 $payload = New-Object byte[] $plain.Length
 for ($i = 0; $i -lt $plain.Length; $i++) {
     $payload[$i] = $plain[$i] -bxor $key[$i % $key.Length]
@@ -68,7 +68,7 @@ $source = @"
 
 namespace Game.Core
 {
-    internal static partial class DiscordWebhookEmbedded
+    internal static partial class GitHubPlaytestEmbedded
     {
         private static readonly byte[] Payload = { $payloadFormatted };
         private static readonly byte[] Key = { $keyFormatted };
@@ -77,4 +77,4 @@ namespace Game.Core
 "@
 
 [System.IO.File]::WriteAllText($dataPath, $source)
-Write-Host "Stamped XOR-embedded Discord webhook → $dataPath (payloadLen=$($payload.Length))"
+Write-Host "Stamped XOR-embedded GitHub playtest token → $dataPath (payloadLen=$($payload.Length))"

@@ -305,12 +305,12 @@ jobs:
           [System.IO.File]::WriteAllText((Resolve-Path $ps), $updated)
           Write-Host "Stamped bundleVersion=$ver"
 
-      - name: Stamp Discord playtest webhook (XOR embed)
+      - name: Stamp GitHub playtest token (XOR embed)
         shell: pwsh
         env:
-          DISCORD_PLAYTEST_WEBHOOK_URL: ${{ secrets.DISCORD_PLAYTEST_WEBHOOK_URL }}
+          PLAYTEST_LOGS_TOKEN: ${{ secrets.PLAYTEST_LOGS_TOKEN }}
         run: |
-          pwsh -File "BuildSupport/Stamp-DiscordWebhookEmbedded.ps1"
+          pwsh -File "BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1"
 
       - name: Build Windows x64
         id: unity-build

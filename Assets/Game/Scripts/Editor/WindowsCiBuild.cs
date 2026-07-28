@@ -25,7 +25,7 @@ namespace Game.Editor
             }
 
             PlayerSettings.productName = "BARAKI";
-            WarnIfDiscordWebhookMissing();
+            WarnIfGitHubPlaytestMissing();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene.enabled)
@@ -41,26 +41,26 @@ namespace Game.Editor
                 version);
         }
 
-        private static void WarnIfDiscordWebhookMissing()
+        private static void WarnIfGitHubPlaytestMissing()
         {
-            if (DiscordWebhookSettings.TryResolveWebhookUrl(out _, out var source) && source == "Embedded")
+            if (GitHubPlaytestSettings.TryResolveCredentials(out _, out _, out var source) && source == "Embedded")
             {
-                Debug.Log("WindowsCiBuild: Discord webhook embedded OK.");
+                Debug.Log("WindowsCiBuild: GitHub playtest token embedded OK.");
                 return;
             }
 
-            if (DiscordWebhookSettings.TryResolveWebhookUrl(out _, out source))
+            if (GitHubPlaytestSettings.TryResolveCredentials(out _, out _, out source))
             {
                 Debug.LogWarning(
-                    $"WindowsCiBuild: Discord webhook resolved via {source} (Editor/Resources). " +
-                    "CI player builds should use XOR embed from Stamp-DiscordWebhookEmbedded.ps1.");
+                    $"WindowsCiBuild: GitHub playtest resolved via {source} (Editor/Resources). " +
+                    "CI player builds should use XOR embed from Stamp-GitHubPlaytestEmbedded.ps1.");
                 return;
             }
 
             Debug.LogWarning(
-                "WindowsCiBuild: Discord webhook not embedded. " +
-                "CI must run BuildSupport/Stamp-DiscordWebhookEmbedded.ps1 before Unity. " +
-                "Playtest «Отправить лог» will report webhook not configured.");
+                "WindowsCiBuild: GitHub playtest token not embedded. " +
+                "CI must run BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1 before Unity. " +
+                "Playtest «Отправить лог» will report GitHub not configured.");
         }
 
         public static void BuildUpdaterOnly()

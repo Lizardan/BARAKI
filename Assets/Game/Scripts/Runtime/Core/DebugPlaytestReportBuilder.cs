@@ -8,7 +8,7 @@ namespace Game.Core
     {
         public const int MaxReportChars = 400 * 1024;
 
-        public static string BuildDiscordLabel(string netSection, DateTime utcNow)
+        public static string BuildIssueTitle(string netSection, DateTime utcNow)
         {
             var name = ExtractField(netSection, "name") ?? "-";
             var role = ExtractField(netSection, "role") ?? "Offline";
@@ -16,7 +16,7 @@ namespace Game.Core
             var slot = ExtractField(netSection, "slot") ?? "-";
             var mode = ExtractField(netSection, "mode") ?? "-";
             var phase = ExtractField(netSection, "phase") ?? "Offline";
-            return $"BARAKI log | {name} | room={room} | mode={mode} | role={role} | slot={slot} | phase={phase} | {utcNow:HH:mm:ss}Z";
+            return $"playtest | {name} | room={room} | mode={mode} | role={role} | slot={slot} | phase={phase} | {utcNow:yyyy-MM-dd HH:mm}Z";
         }
 
         public static string BuildReport(string eventsText, string netSection, DateTime utcNow)

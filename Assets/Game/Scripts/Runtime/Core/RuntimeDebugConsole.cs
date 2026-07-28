@@ -175,13 +175,13 @@ namespace Game.Core
                 return;
             }
 
-            if (!DiscordWebhookSettings.TryResolveWebhookUrl(out var webhookUrl, out var source))
+            if (!GitHubPlaytestSettings.TryResolveCredentials(out var token, out var repository, out var source))
             {
                 _status = source switch
                 {
-                    "missing-embedded-and-resources" => "Webhook: нет embed/Settings",
-                    "empty-url" => "Webhook: URL пустой в Settings",
-                    _ => "Webhook не настроен",
+                    "missing-embedded-and-resources" => "GitHub: нет token embed/Settings",
+                    "empty-token" => "GitHub: token пустой в Settings",
+                    _ => "GitHub не настроен",
                 };
                 return;
             }
@@ -190,22 +190,21 @@ namespace Game.Core
             _status = "Отправка…";
 
             var netSection = DebugReportContext.TryBuildNetSection();
-            var label = DebugPlaytestReportBuilder.BuildDiscordLabel(netSection, utcNow);
+            var title = DebugPlaytestReportBuilder.BuildIssueTitle(netSection, utcNow);
             var report = DebugPlaytestReportBuilder.BuildReport(eventsText, netSection, utcNow);
             TryWriteLocalCopy(report);
 
-            var fileName = $"baraki-log-{utcNow:yyyyMMdd-HHmmss}.txt";
-            var (ok, error) = await DiscordWebhookSender.SendReportAsync(
-                webhookUrl,
-                label,
-                fileName,
+            var (ok, error, htmlUrl) = await GitHubPlaytestIssueSender.CreateIssueAsync(
+                token,
+                repository,
+                title,
                 report);
 
             _isSending = false;
             if (ok)
             {
                 _sendGate.MarkSuccess(DateTime.UtcNow);
-                _status = "Отправлено";
+                _status = string.IsNullOrEmpty(htmlUrl) ? "Отправлено (Issue)" : "Отправлено";
             }
             else
             {

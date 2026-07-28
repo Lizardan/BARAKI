@@ -86,7 +86,7 @@ infra/playtest.env
 
 # CI-only stamps (written by deploy-windows workflow)
 /BuildSupport/ci-version.txt
-/BuildSupport/discord-webhook.url
+/BuildSupport/github-playtest-token.txt
 
 # Burst / player build artifacts at repo root
 /[Dd]ata/
@@ -94,8 +94,6 @@ infra/playtest.env
 # Accidental root copies of asset imports
 /*.mdx
 
-# Playtest Discord webhook (secret — keep local only; CI injects via GitHub secret)
-/Assets/Game/Resources/Debug/DiscordWebhookSettings.asset
-/Assets/Game/Resources/Debug/DiscordWebhookSettings.asset.meta
-/Assets/StreamingAssets/discord-webhook.url
-/Assets/Game/StreamingAssets/discord-webhook.url
+# Playtest GitHub PAT (secret — keep local only; CI injects via GitHub secret)
+/Assets/Game/Resources/Debug/GitHubPlaytestSettings.asset
+/Assets/Game/Resources/Debug/GitHubPlaytestSettings.asset.meta
