@@ -1,4 +1,5 @@
 using Game.Core;
+using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using UnityEngine;
@@ -13,6 +14,7 @@ namespace Game.Gameplay.Match
 
         MatchSelectionInput _input;
         MatchRuntime _runtime;
+        MatchFogOfWar _fogOfWar;
         int _localPlayerSlot;
 
         public MatchPickRegistry Registry => _registry;
@@ -23,6 +25,7 @@ namespace Game.Gameplay.Match
             _registry.Clear();
             _selection.Clear();
             _runtime = GetComponent<MatchRuntime>() ?? FindAnyObjectByType<MatchRuntime>();
+            _fogOfWar = GetComponent<MatchFogOfWar>() ?? FindAnyObjectByType<MatchFogOfWar>();
             _localPlayerSlot = MatchNetworkSession.LocalSlot >= 0
                 ? MatchNetworkSession.LocalSlot
                 : (GameSession.ActiveSetup?.LocalPlayerSlot ?? 0);
@@ -56,7 +59,71 @@ namespace Game.Gameplay.Match
                 }
             }
 
-            _input.Initialize(_registry, _selection, onRightClickTarget: OnRightClickTarget);
+            _input.Initialize(
+                _registry,
+                _selection,
+                onRightClickTarget: OnRightClickTarget,
+                canSelectTarget: CanSelectTarget);
+        }
+
+        bool CanSelectTarget(MatchPickTarget target)
+        {
+            if (!target.HasTarget || _fogOfWar == null || !_fogOfWar.IsInitialized || _fogOfWar.FogDisabled)
+            {
+                return true;
+            }
+
+            var controller = _runtime != null ? _runtime.Controller : null;
+            if (controller == null)
+            {
+                return true;
+            }
+
+            if (target.IsBuilding)
+            {
+                var building = controller.Buildings.GetByInstanceId(target.EntityId);
+                if (building == null)
+                {
+                    return false;
+                }
+
+                return _fogOfWar.CanSelectHostileAt(building.OwnerSlot, building.WorldPosition);
+            }
+
+            if (target.IsUnit)
+            {
+                foreach (var unit in controller.Combat.Units)
+                {
+                    if (unit.UnitId != target.EntityId)
+                    {
+                        continue;
+                    }
+
+                    if (!controller.Combat.TryGetUnitWorldPosition(unit, out var position))
+                    {
+                        return false;
+                    }
+
+                    return _fogOfWar.CanSelectHostileAt(unit.OwnerSlot, position);
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        void Update()
+        {
+            if (_selection == null || !_selection.Current.HasTarget || _fogOfWar == null)
+            {
+                return;
+            }
+
+            if (!CanSelectTarget(_selection.Current))
+            {
+                _selection.Clear();
+            }
         }
 
         void OnRightClickTarget(MatchPickTarget target)

@@ -13,12 +13,14 @@ namespace Game.Gameplay.Match.Selection
         MatchSelection _selection;
         Func<bool> _isPointerOverUi;
         Action<MatchPickTarget> _onRightClickTarget;
+        Func<MatchPickTarget, bool> _canSelectTarget;
 
         public void Initialize(
             MatchPickRegistry registry,
             MatchSelection selection,
             Func<bool> isPointerOverUi = null,
-            Action<MatchPickTarget> onRightClickTarget = null)
+            Action<MatchPickTarget> onRightClickTarget = null,
+            Func<MatchPickTarget, bool> canSelectTarget = null)
         {
             _registry = registry;
             _selection = selection;
@@ -31,7 +33,15 @@ namespace Game.Gameplay.Match.Selection
             {
                 _onRightClickTarget = onRightClickTarget;
             }
+
+            if (canSelectTarget != null)
+            {
+                _canSelectTarget = canSelectTarget;
+            }
         }
+
+        public void SetCanSelectFilter(Func<MatchPickTarget, bool> canSelectTarget) =>
+            _canSelectTarget = canSelectTarget;
 
         public void SetUiBlocker(Func<bool> isPointerOverUi) => _isPointerOverUi = isPointerOverUi;
 
@@ -116,6 +126,11 @@ namespace Game.Gameplay.Match.Selection
             foreach (var hit in hits)
             {
                 if (!_registry.TryResolve(hit.collider, out var candidate) || !candidate.HasTarget)
+                {
+                    continue;
+                }
+
+                if (_canSelectTarget != null && !_canSelectTarget(candidate))
                 {
                     continue;
                 }

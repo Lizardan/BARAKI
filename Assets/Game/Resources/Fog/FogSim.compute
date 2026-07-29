@@ -1,0 +1,49 @@
+#pragma kernel CSMain
+
+Texture2D<float> Source;
+Texture2D<float> PermanentMask;
+RWTexture2D<float> Result;
+
+uint _Resolution;
+float _Regrow;
+float dt;
+
+struct Clearer
+{
+    float2 position;
+    float radius;
+};
+
+StructuredBuffer<Clearer> _Clearers;
+uint _ClearerCount;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Resolution || id.y >= _Resolution)
+    {
+        return;
+    }
+
+    float2 uv = (id.xy + 0.5) / _Resolution;
+    float permanent = PermanentMask.Load(int3(id.xy, 0));
+    if (permanent > 0.5)
+    {
+        Result[id.xy] = 0.0;
+        return;
+    }
+
+    float density = Source.Load(int3(id.xy, 0));
+
+    for (uint i = 0; i < _ClearerCount; i++)
+    {
+        float dist = length(uv - _Clearers[i].position);
+        float r = max(_Clearers[i].radius, 1e-5);
+        // Wide soft falloff — hole fades out smoothly instead of a hard disc.
+        density *= smoothstep(r * 0.2, r * 1.05, dist);
+    }
+
+    // Soft regrow toward full fog.
+    density = lerp(density, 1.0, saturate(_Regrow * dt));
+    Result[id.xy] = saturate(density);
+}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
+using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using UnityEngine;
@@ -23,6 +24,8 @@ namespace Game.Gameplay.Match
             public float GroundRingDiameter;
             public bool HasSpawned;
             public int LastAttackSwingSerial;
+            public bool IsFogHidden;
+            public Renderer[] CachedRenderers;
         }
 
         sealed class DyingVisual
@@ -33,6 +36,7 @@ namespace Game.Gameplay.Match
 
         [SerializeField] private MatchRuntime _runtime;
         [SerializeField] private UnitVisualCatalog _visualCatalog;
+        [SerializeField] private MatchFogOfWar _fogOfWar;
 
         public UnitVisualCatalog VisualCatalog => _visualCatalog;
         [SerializeField] private float _fallbackUnitScale = 2.7f;
@@ -57,6 +61,11 @@ namespace Game.Gameplay.Match
             if (_runtime == null)
             {
                 _runtime = FindAnyObjectByType<MatchRuntime>();
+            }
+
+            if (_fogOfWar == null)
+            {
+                _fogOfWar = GetComponent<MatchFogOfWar>() ?? FindAnyObjectByType<MatchFogOfWar>();
             }
         }
 
@@ -184,6 +193,8 @@ namespace Game.Gameplay.Match
                 {
                     visual.StatusBars.SetMana(unit.CurrentMana / unit.Stats.MaxMana);
                 }
+
+                ApplyFogVisibility(visual, unit, position);
             }
 
             var toRemove = new List<int>();
@@ -203,6 +214,60 @@ namespace Game.Gameplay.Match
                 }
 
                 _visuals.Remove(unitId);
+            }
+        }
+
+        void ApplyFogVisibility(UnitVisual visual, MatchUnitState unit, Vector3 worldPosition)
+        {
+            var shouldHide = false;
+            if (_fogOfWar != null && _fogOfWar.IsInitialized && !_fogOfWar.FogDisabled)
+            {
+                var localSlot = MatchNetworkSession.LocalSlot >= 0
+                    ? MatchNetworkSession.LocalSlot
+                    : (GameSession.ActiveSetup?.LocalPlayerSlot ?? 0);
+                if (unit.OwnerSlot != localSlot && !_fogOfWar.IsRevealed(worldPosition))
+                {
+                    shouldHide = true;
+                }
+            }
+
+            if (visual.IsFogHidden == shouldHide)
+            {
+                return;
+            }
+
+            visual.IsFogHidden = shouldHide;
+            SetUnitVisualHidden(visual, shouldHide);
+        }
+
+        void SetUnitVisualHidden(UnitVisual visual, bool hidden)
+        {
+            if (visual?.Root == null)
+            {
+                return;
+            }
+
+            if (visual.CachedRenderers == null)
+            {
+                visual.CachedRenderers = visual.Root.GetComponentsInChildren<Renderer>(true);
+            }
+
+            foreach (var renderer in visual.CachedRenderers)
+            {
+                if (renderer != null)
+                {
+                    renderer.enabled = !hidden;
+                }
+            }
+
+            if (visual.StatusBars != null)
+            {
+                visual.StatusBars.gameObject.SetActive(!hidden);
+            }
+
+            if (visual.PickCollider != null)
+            {
+                visual.PickCollider.enabled = !hidden;
             }
         }
 

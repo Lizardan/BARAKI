@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
+using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
+using Game.Gameplay.Networking;
 using Game.UI;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -21,6 +23,7 @@ namespace Game.UI.Controllers
         [SerializeField] private UIDocument _uiDocument;
 
         MatchRuntime _matchRuntime;
+        MatchFogOfWar _fogOfWar;
         VisualElement _canvas;
         MatchMinimapGeometryElement _geometryElement;
         MatchMinimapTopology _topology;
@@ -91,6 +94,15 @@ namespace Game.UI.Controllers
 
             UpdateGeometry();
 
+            if (_fogOfWar == null && _matchRuntime != null)
+            {
+                _fogOfWar = _matchRuntime.FogOfWar;
+            }
+
+            var localSlot = MatchNetworkSession.LocalSlot >= 0
+                ? MatchNetworkSession.LocalSlot
+                : (GameSession.ActiveSetup?.LocalPlayerSlot ?? 0);
+
             var arenaRadius = controller.Layout.ArenaRadius;
             var selection = _matchRuntime.Selection;
             var activeKeys = new HashSet<string>();
@@ -131,10 +143,21 @@ namespace Game.UI.Controllers
                     continue;
                 }
 
+                if (!ShouldDrawUnitBlip(unit, localSlot, combat))
+                {
+                    continue;
+                }
+
                 var key = GetUnitKey(unit.UnitId);
                 activeKeys.Add(key);
                 var blip = GetOrCreateBlip(key, string.Empty);
-                PlaceBlip(blip, unit.WorldPosition, arenaRadius, 5f);
+                var unitPos = unit.WorldPosition;
+                if (combat.TryGetUnitWorldPosition(unit, out var livePos))
+                {
+                    unitPos = livePos;
+                }
+
+                PlaceBlip(blip, unitPos, arenaRadius, 5f);
                 blip.style.backgroundColor = MatchPlayerColors.GetSlotColor(unit.OwnerSlot);
                 blip.EnableInClassList(
                     BlipSelectedClass,
@@ -144,6 +167,27 @@ namespace Game.UI.Controllers
             }
 
             RemoveStaleBlips(activeKeys);
+        }
+
+        bool ShouldDrawUnitBlip(MatchUnitState unit, int localSlot, MatchCombatSystem combat)
+        {
+            if (_fogOfWar == null || !_fogOfWar.IsInitialized || _fogOfWar.FogDisabled)
+            {
+                return true;
+            }
+
+            if (unit.OwnerSlot == localSlot)
+            {
+                return true;
+            }
+
+            var position = unit.WorldPosition;
+            if (combat != null && combat.TryGetUnitWorldPosition(unit, out var livePos))
+            {
+                position = livePos;
+            }
+
+            return _fogOfWar.IsRevealed(position);
         }
 
         void UpdateGeometry()

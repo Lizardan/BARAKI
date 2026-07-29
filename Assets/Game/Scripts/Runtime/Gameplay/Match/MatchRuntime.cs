@@ -5,6 +5,7 @@ using Game.Core;
 using Game.Gameplay.Cameras;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using UnityEngine;
@@ -36,6 +37,7 @@ namespace Game.Gameplay.Match
         public byte[] LastNetworkSnapshotBytes => _lastNetworkSnapshotBytes;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
+        public MatchFogOfWar FogOfWar => GetComponent<MatchFogOfWar>();
 
         private void Awake()
         {
@@ -175,6 +177,7 @@ namespace Game.Gameplay.Match
             Controller.StartMatch(config);
             _isMatchStarted = true;
             EnsureSelectionBridge();
+            EnsureFogOfWar(localPlayerSlot);
             _selectionBridge.BeginMatch();
 
             if (_greybox != null)
@@ -191,6 +194,17 @@ namespace Game.Gameplay.Match
 
             FocusCameraOnLocalPlayer(localPlayerSlot);
             TryBeginEarlyPhaseWhenReady();
+        }
+
+        void EnsureFogOfWar(int localPlayerSlot)
+        {
+            var fog = GetComponent<MatchFogOfWar>();
+            if (fog == null)
+            {
+                fog = gameObject.AddComponent<MatchFogOfWar>();
+            }
+
+            fog.Configure(this, localPlayerSlot);
         }
 
         private void FocusCameraOnLocalPlayer(int localPlayerSlot)

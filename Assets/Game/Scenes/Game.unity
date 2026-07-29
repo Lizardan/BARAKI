@@ -888,6 +888,8 @@ GameObject:
   - component: {fileID: 1399539385}
   - component: {fileID: 1399539386}
   - component: {fileID: 1399539387}
+  - component: {fileID: 1399539389}
+  - component: {fileID: 1399539388}
   m_Layer: 0
   m_Name: MatchRuntime
   m_TagString: Untagged
@@ -938,6 +940,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.MatchCombatPresenter
   _runtime: {fileID: 1399539380}
   _visualCatalog: {fileID: 11400000, guid: 873a123bc2806a548907ca9c980638c0, type: 2}
+  _fogOfWar: {fileID: 0}
   _fallbackUnitScale: 2.7
   _fallbackUnitHeight: 3.6
   _statusBarClearance: 0.5
@@ -1030,6 +1033,42 @@ MonoBehaviour:
   _lineColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
   _pointRadius: 0.28
   _yOffset: 0.25
+--- !u!114 &1399539388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 112903e55cac55f48b6049e07674d0a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.Fog.FogSimulation
+  _compute: {fileID: 7200000, guid: 04acb299802cda44a846635fa0b171a3, type: 3}
+  _fogMaterial: {fileID: 2100000, guid: bc7517045c0cfdd4db42b7f079652164, type: 2}
+  _resolution: 256
+  _areaSize: 280
+  _volumeHeight: 18
+  _regrowRate: 1.2
+  _fogColor: {r: 0.02, g: 0.02, b: 0.03, a: 1}
+  _shadowColor: {r: 0.01, g: 0.01, b: 0.015, a: 1}
+  _densityScale: 10
+--- !u!114 &1399539389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82108b9a2d890f04aa497f34693384a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.Fog.MatchFogOfWar
+  _visionRadius: 20
+  _simulation: {fileID: 1399539388}
+  _fogEnabled: 1
 --- !u!1 &1477253634
 GameObject:
   m_ObjectHideFlags: 0
