@@ -76,10 +76,7 @@ namespace Game.Gameplay.Networking
 
             ClearPendingRestart();
 
-            var stagingRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "BARAKI",
-                "staging");
+            var stagingRoot = ResolveStagingRoot();
             Directory.CreateDirectory(stagingRoot);
             var zipPath = Path.Combine(stagingRoot, "baraki-windows.zip");
             var payloadDir = Path.Combine(stagingRoot, "payload");
@@ -122,8 +119,19 @@ namespace Game.Gameplay.Networking
             Directory.CreateDirectory(payloadDir);
             Report(progress, GameUpdateApplyPhase.Installing, 0f);
 
-            // Progress<T> captures Unity sync context when created on the main thread.
-            await UniTask.RunOnThreadPool(() => ExtractZipToDirectory(zipPath, payloadDir, progress));
+            // Do not push Progress from the worker: Progress<T> posts to Unity sync context and
+            // late Installing ticks can arrive after ReadyToRestart and roll the UI back.
+            var extractTask = UniTask.RunOnThreadPool(
+                () => ExtractZipToDirectory(zipPath, payloadDir, progress: null));
+            var fake01 = 0f;
+            while (extractTask.Status == UniTaskStatus.Pending)
+            {
+                fake01 = Mathf.Min(0.95f, fake01 + 0.02f);
+                Report(progress, GameUpdateApplyPhase.Installing, fake01);
+                await UniTask.Delay(100, ignoreTimeScale: true);
+            }
+
+            await extractTask;
             Report(progress, GameUpdateApplyPhase.Installing, 1f);
 
             try
@@ -135,7 +143,7 @@ namespace Game.Gameplay.Networking
                 Debug.LogWarning($"GameUpdateService: could not delete zip: {ex.Message}");
             }
 
-            s_pendingPayloadDir = payloadDir;
+            WritePendingRestart(payloadDir, RemoteManifest?.version);
             Report(progress, GameUpdateApplyPhase.ReadyToRestart, 1f);
         }
 
@@ -172,13 +180,85 @@ namespace Game.Gameplay.Networking
             Application.Quit();
         }
 
-        public static bool HasPendingRestart => !string.IsNullOrWhiteSpace(s_pendingPayloadDir);
+        public static bool HasPendingRestart =>
+            !string.IsNullOrWhiteSpace(s_pendingPayloadDir)
+            && GameUpdatePendingRestartRules.IsPayloadReady(s_pendingPayloadDir);
+
+        public static string PendingRemoteVersion => s_pendingRemoteVersion;
+
+        /// <summary>Loads staging marker written by a previous DownloadAndPrepareAsync.</summary>
+        public static bool TryRestorePendingRestart()
+        {
+            try
+            {
+                var markerPath = GameUpdatePendingRestartRules.ResolveMarkerPath(ResolveStagingRoot());
+                if (!File.Exists(markerPath))
+                {
+                    return false;
+                }
+
+                if (!GameUpdatePendingRestartRules.TryParseMarker(
+                        File.ReadAllText(markerPath),
+                        out var payloadDir,
+                        out var remoteVersion))
+                {
+                    return false;
+                }
+
+                if (!GameUpdatePendingRestartRules.IsPayloadReady(payloadDir))
+                {
+                    ClearPendingRestart();
+                    return false;
+                }
+
+                s_pendingPayloadDir = payloadDir;
+                s_pendingRemoteVersion = remoteVersion;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"GameUpdateService.TryRestorePendingRestart: {ex.Message}");
+                return false;
+            }
+        }
 
         static string s_pendingPayloadDir;
+        static string s_pendingRemoteVersion;
+
+        static string ResolveStagingRoot() =>
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "BARAKI",
+                "staging");
 
         static void ClearPendingRestart()
         {
             s_pendingPayloadDir = null;
+            s_pendingRemoteVersion = null;
+            try
+            {
+                var markerPath = GameUpdatePendingRestartRules.ResolveMarkerPath(ResolveStagingRoot());
+                if (File.Exists(markerPath))
+                {
+                    File.Delete(markerPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"GameUpdateService.ClearPendingRestart: {ex.Message}");
+            }
+        }
+
+        static void WritePendingRestart(string payloadDir, string remoteVersion)
+        {
+            s_pendingPayloadDir = payloadDir;
+            s_pendingRemoteVersion = remoteVersion;
+            var stagingRoot = ResolveStagingRoot();
+            Directory.CreateDirectory(stagingRoot);
+            var markerPath = GameUpdatePendingRestartRules.ResolveMarkerPath(stagingRoot);
+            File.WriteAllText(
+                markerPath,
+                GameUpdatePendingRestartRules.FormatMarker(payloadDir, remoteVersion));
         }
 
         static void ExtractZipToDirectory(

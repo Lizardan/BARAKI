@@ -344,6 +344,16 @@ namespace Game.UI.Controllers
 
             ApplyProgress(LauncherProgressPhase.Checking, 0f);
             SetUpdateRange(null, null);
+
+            if (GameUpdateService.TryRestorePendingRestart() && GameUpdateService.HasPendingRestart)
+            {
+                var pendingRemote = string.IsNullOrWhiteSpace(GameUpdateService.PendingRemoteVersion)
+                    ? GameUpdateService.RemoteManifest?.version
+                    : GameUpdateService.PendingRemoteVersion;
+                ShowReadyToRestart(GameLocalVersion.Current, pendingRemote);
+                return;
+            }
+
             await GameUpdateService.RefreshAsync();
 
             if (this == null)
@@ -507,8 +517,14 @@ namespace Game.UI.Controllers
 
         private void OnApplyProgress(GameUpdateApplyProgress progress)
         {
+            if (!GameUpdatePendingRestartRules.ShouldAcceptApplyProgress(_isReadyToRestart, progress.Phase))
+            {
+                return;
+            }
+
             if (progress.Phase == GameUpdateApplyPhase.ReadyToRestart)
             {
+                ShowReadyToRestart(GameLocalVersion.Current, _applyRemoteVersion);
                 return;
             }
 
@@ -533,6 +549,7 @@ namespace Game.UI.Controllers
             if (_playButton != null)
             {
                 _playButton.SetEnabled(false);
+                _playButton.text = "ОБНОВЛЕНИЕ…";
             }
 
             try
@@ -544,7 +561,6 @@ namespace Game.UI.Controllers
                     return;
                 }
 
-                _isUpdating = false;
                 ShowReadyToRestart(GameLocalVersion.Current, remote);
             }
             catch (Exception ex)
@@ -559,6 +575,10 @@ namespace Game.UI.Controllers
         {
             if (!_isReadyToRestart || !GameUpdateService.HasPendingRestart)
             {
+                ShowUpdateAvailable(
+                    GameLocalVersion.Current,
+                    _applyRemoteVersion,
+                    "Подготовленное обновление не найдено. Скачайте снова.");
                 return;
             }
 

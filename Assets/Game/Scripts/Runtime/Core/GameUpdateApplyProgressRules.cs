@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace Game.Core
 {
@@ -79,5 +80,57 @@ namespace Game.Core
 
             return value;
         }
+    }
+
+    /// <summary>Pure helpers for on-disk pending restart marker after DownloadAndPrepare.</summary>
+    public static class GameUpdatePendingRestartRules
+    {
+        public const string MarkerFileName = "pending-restart.txt";
+
+        public static string ResolveMarkerPath(string stagingRoot) =>
+            Path.Combine(stagingRoot ?? string.Empty, MarkerFileName);
+
+        public static string FormatMarker(string payloadDir, string remoteVersion) =>
+            (payloadDir ?? string.Empty).Trim()
+            + Environment.NewLine
+            + (remoteVersion ?? string.Empty).Trim();
+
+        public static bool TryParseMarker(string content, out string payloadDir, out string remoteVersion)
+        {
+            payloadDir = null;
+            remoteVersion = null;
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return false;
+            }
+
+            using var reader = new StringReader(content);
+            payloadDir = reader.ReadLine()?.Trim();
+            remoteVersion = reader.ReadLine()?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(payloadDir);
+        }
+
+        public static bool IsPayloadReady(string payloadDir)
+        {
+            if (string.IsNullOrWhiteSpace(payloadDir) || !Directory.Exists(payloadDir))
+            {
+                return false;
+            }
+
+            try
+            {
+                return Directory.GetFileSystemEntries(payloadDir).Length > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// After ReadyToRestart, late Downloading/Installing progress ticks must not roll the UI back.
+        /// </summary>
+        public static bool ShouldAcceptApplyProgress(bool isReadyToRestart, GameUpdateApplyPhase incoming) =>
+            !isReadyToRestart || incoming == GameUpdateApplyPhase.ReadyToRestart;
     }
 }
