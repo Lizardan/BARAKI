@@ -25,7 +25,7 @@ namespace Game.Tests
         {
             var files = new[]
             {
-                "Assets/Game/UI/Runtime/USS/BootstrapLoading.uss",
+                "Assets/Game/UI/Runtime/USS/Launcher.uss",
                 "Assets/Game/UI/Runtime/USS/MainMenu.uss",
                 "Assets/Game/UI/Runtime/USS/Lobby.uss",
                 "Assets/Game/UI/Runtime/USS/MatchHud.uss",
@@ -47,7 +47,7 @@ namespace Game.Tests
             var files = new[]
             {
                 "Assets/Game/UI/Runtime/USS/BarakiTheme.uss",
-                "Assets/Game/UI/Runtime/USS/BootstrapLoading.uss",
+                "Assets/Game/UI/Runtime/USS/Launcher.uss",
                 "Assets/Game/UI/Runtime/USS/MainMenu.uss",
                 "Assets/Game/UI/Runtime/USS/Lobby.uss",
                 "Assets/Game/UI/Runtime/USS/MatchHud.uss",
@@ -67,7 +67,7 @@ namespace Game.Tests
             var files = new[]
             {
                 "Assets/Game/UI/Runtime/USS/BarakiTheme.uss",
-                "Assets/Game/UI/Runtime/USS/BootstrapLoading.uss",
+                "Assets/Game/UI/Runtime/USS/Launcher.uss",
                 "Assets/Game/UI/Runtime/USS/MainMenu.uss",
                 "Assets/Game/UI/Runtime/USS/RacePick.uss",
             };
@@ -82,18 +82,19 @@ namespace Game.Tests
         public void RuntimeStyles_UseSteelBlueButtonsWithGreyBorders()
         {
             var theme = ReadProjectFile("Assets/Game/UI/Runtime/USS/BarakiTheme.uss");
-            var bootstrap = ReadProjectFile("Assets/Game/UI/Runtime/USS/BootstrapLoading.uss");
-            var bootstrapUxml = ReadProjectFile("Assets/Game/UI/Runtime/UXML/BootstrapLoading.uxml");
+            var launcher = ReadProjectFile("Assets/Game/UI/Runtime/USS/Launcher.uss");
+            var launcherUxml = ReadProjectFile("Assets/Game/UI/Runtime/UXML/Launcher.uxml");
             var mainMenu = ReadProjectFile("Assets/Game/UI/Runtime/USS/MainMenu.uss");
             var racePick = ReadProjectFile("Assets/Game/UI/Runtime/USS/RacePick.uss");
 
             StringAssert.Contains("background-color: rgb(86, 103, 122)", theme);
             StringAssert.Contains("background-color: rgb(96, 116, 138)", theme);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", theme);
-            StringAssert.Contains("background-color: rgb(86, 103, 122)", bootstrap);
-            StringAssert.Contains("background-color: rgb(96, 116, 138)", bootstrap);
-            StringAssert.Contains("border-color: rgb(125, 117, 104)", bootstrap);
-            StringAssert.Contains("color: rgb(86, 103, 122)", bootstrap);
+            StringAssert.Contains("background-color: rgb(86, 103, 122)", launcher);
+            StringAssert.Contains("background-color: rgb(96, 116, 138)", launcher);
+            StringAssert.Contains("border-color: rgb(125, 117, 104)", launcher);
+            StringAssert.Contains("name=\"PlayButton\"", launcherUxml);
+            StringAssert.Contains("name=\"ProgressBlock\"", launcherUxml);
             StringAssert.Contains("color: rgb(86, 103, 122)", mainMenu);
             StringAssert.Contains("background-color: rgb(86, 103, 122)", mainMenu);
             StringAssert.Contains("background-color: rgb(96, 116, 138)", mainMenu);
@@ -101,26 +102,6 @@ namespace Game.Tests
             StringAssert.Contains("background-color: rgb(86, 103, 122)", racePick);
             StringAssert.Contains("background-color: rgb(96, 116, 138)", racePick);
             StringAssert.Contains("border-color: rgb(125, 117, 104)", racePick);
-            StringAssert.Contains("name=\"EnterGameButton\" text=\"ИГРАТЬ\" class=\"ui-btn ui-btn--primary bl__cta\"", bootstrapUxml);
-            StringAssert.Contains("name=\"UpdateButton\" text=\"ОБНОВИТЬ\" class=\"ui-btn ui-btn--primary bl__cta bl__cta--update\"", bootstrapUxml);
-            StringAssert.Contains(".ui-btn.bl__cta.bl__cta--update", bootstrap);
-            StringAssert.Contains("background-color: rgb(88, 204, 104)", bootstrap);
-        }
-
-        [Test]
-        public void BootstrapCta_LocksFixedSizeSoLongIdleLabelsDoNotResizeSlot()
-        {
-            var bootstrap = ReadProjectFile("Assets/Game/UI/Runtime/USS/BootstrapLoading.uss");
-
-            StringAssert.Contains("overflow: hidden;", ExtractUssBlock(bootstrap, ".bl__cta-slot"));
-            StringAssert.Contains("overflow: hidden;", ExtractUssBlock(bootstrap, ".bl__idle-cta {"));
-            StringAssert.Contains("width: 100%;", ExtractUssBlock(bootstrap, ".bl__idle-cta {"));
-            StringAssert.Contains("max-width: 100%;", ExtractUssBlock(bootstrap, ".bl__idle-cta {"));
-            StringAssert.Contains("overflow: hidden;", ExtractUssBlock(bootstrap, ".bl__idle-cta-label"));
-            StringAssert.Contains("text-overflow: ellipsis;", ExtractUssBlock(bootstrap, ".bl__idle-cta-label"));
-            StringAssert.Contains("min-width: 0;", ExtractUssBlock(bootstrap, ".bl__idle-cta-label"));
-            StringAssert.Contains("margin-bottom: 0;", ExtractUssBlock(bootstrap, ".ui-btn.bl__cta {"));
-            StringAssert.Contains("scale: 1;", ExtractUssBlock(bootstrap, ".ui-btn.bl__cta {"));
         }
 
         private static string ReadProjectFile(string assetPath)
@@ -128,17 +109,6 @@ namespace Game.Tests
             var projectRoot = Directory.GetParent(Application.dataPath)!.FullName;
             var localPath = assetPath.Replace('/', Path.DirectorySeparatorChar);
             return File.ReadAllText(Path.Combine(projectRoot, localPath));
-        }
-
-        private static string ExtractUssBlock(string uss, string selectorPrefix)
-        {
-            var start = uss.IndexOf(selectorPrefix, System.StringComparison.Ordinal);
-            Assert.GreaterOrEqual(start, 0, $"Missing USS selector starting with '{selectorPrefix}'.");
-            var open = uss.IndexOf('{', start);
-            Assert.GreaterOrEqual(open, 0, $"Missing '{{' for '{selectorPrefix}'.");
-            var close = uss.IndexOf('}', open);
-            Assert.GreaterOrEqual(close, 0, $"Missing '}}' for '{selectorPrefix}'.");
-            return uss.Substring(open, close - open + 1);
         }
 
         private static void AssertNoRoundedFrames(string file, string text)

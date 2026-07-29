@@ -12,26 +12,34 @@ namespace Game.Core
     public static class EditorLocalVersionResolver
     {
         static string s_cached;
-        static bool s_resolved;
+        static bool s_resolvedFromGit;
 
         public static string Resolve(string fallbackBundleVersion)
         {
-            if (s_resolved)
+            if (s_resolvedFromGit && !string.IsNullOrEmpty(s_cached))
             {
-                return s_cached ?? fallbackBundleVersion;
+                return s_cached;
             }
 
-            s_resolved = true;
             var latestTag = TryReadLatestVersionTag(ProjectRoot);
-            s_cached = EditorLocalVersionRules.Resolve(latestTag, fallbackBundleVersion);
-            return s_cached;
+            var resolved = EditorLocalVersionRules.Resolve(latestTag, fallbackBundleVersion);
+
+            // Cache only successful git-based bumps so a transient git failure can retry.
+            if (!string.IsNullOrWhiteSpace(latestTag)
+                && EditorLocalVersionRules.TryBumpPatch(latestTag, out _))
+            {
+                s_cached = resolved;
+                s_resolvedFromGit = true;
+            }
+
+            return resolved;
         }
 
         /// <summary>Test / refresh hook.</summary>
         public static void ResetCache()
         {
             s_cached = null;
-            s_resolved = false;
+            s_resolvedFromGit = false;
         }
 
         static string ProjectRoot =>
@@ -39,12 +47,41 @@ namespace Game.Core
 
         static string TryReadLatestVersionTag(string projectRoot)
         {
+            var fromDescribe = RunGit(projectRoot, "describe --tags --abbrev=0");
+            if (!string.IsNullOrWhiteSpace(fromDescribe)
+                && fromDescribe.Trim().StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            {
+                return fromDescribe.Trim();
+            }
+
+            var fromList = RunGit(projectRoot, "tag -l v* --sort=-v:refname");
+            if (string.IsNullOrWhiteSpace(fromList))
+            {
+                return null;
+            }
+
+            using var reader = new StringReader(fromList);
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                line = line.Trim();
+                if (line.Length > 0)
+                {
+                    return line;
+                }
+            }
+
+            return null;
+        }
+
+        static string RunGit(string projectRoot, string arguments)
+        {
             try
             {
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "git",
-                    Arguments = "tag -l \"v*\" --sort=-v:refname",
+                    Arguments = arguments,
                     WorkingDirectory = projectRoot,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -59,29 +96,27 @@ namespace Game.Core
                 }
 
                 var stdout = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(3000);
-                if (process.ExitCode != 0)
+                if (!process.WaitForExit(5000))
                 {
+                    try
+                    {
+                        process.Kill();
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+
                     return null;
                 }
 
-                using var reader = new StringReader(stdout);
-                string line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    line = line.Trim();
-                    if (line.Length > 0)
-                    {
-                        return line;
-                    }
-                }
+                return process.ExitCode == 0 ? stdout : null;
             }
             catch (Exception)
             {
                 // Git missing / not a repo — fall back to PlayerSettings.
+                return null;
             }
-
-            return null;
         }
     }
 }

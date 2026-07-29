@@ -154,49 +154,34 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BootstrapScene_HasBootstrapLoadingController()
+        public void BootstrapScene_HasLauncherControllerAsSoleBootstrapUi()
         {
             EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
-            var controller = Object.FindAnyObjectByType<BootstrapLoadingController>();
-            Assert.IsNotNull(controller, "Bootstrap scene should include BootstrapLoadingController.");
+            var controller = Object.FindAnyObjectByType<LauncherController>();
+            Assert.IsNotNull(controller, "Bootstrap scene should include LauncherController.");
             Assert.IsTrue(
                 controller.enabled,
-                "BootstrapLoadingController must be enabled or bootstrap pipeline never starts.");
+                "LauncherController must be enabled or bootstrap pipeline never starts.");
+
+            Assert.IsNull(
+                GameObject.Find("BootstrapLoading"),
+                "Legacy BootstrapLoading GameObject must be removed from Bootstrap scene.");
 
             var uiDocument = controller.GetComponent<UIDocument>();
-            Assert.IsNotNull(uiDocument, "BootstrapLoading should include UIDocument.");
-            Assert.IsNotNull(uiDocument.visualTreeAsset, "Bootstrap UIDocument should reference BootstrapLoading.uxml.");
+            Assert.IsNotNull(uiDocument, "Launcher should include UIDocument.");
+            Assert.IsNotNull(uiDocument.visualTreeAsset, "Launcher UIDocument should reference Launcher.uxml.");
+            StringAssert.Contains("Launcher", uiDocument.visualTreeAsset.name);
 
             var root = uiDocument.visualTreeAsset.CloneTree();
-            Assert.IsNotNull(root.Q<Label>("StatusLabel"), "BootstrapLoading.uxml should include StatusLabel.");
-            Assert.IsNotNull(root.Q<Label>("UpdateTitleLabel"), "BootstrapLoading.uxml should include UpdateTitleLabel.");
-            Assert.IsNotNull(root.Q<VisualElement>("UpdateRangeLabel"), "BootstrapLoading.uxml should include UpdateRangeLabel.");
-            Assert.IsNotNull(root.Q<Button>("UpdateButton"), "BootstrapLoading.uxml should include UpdateButton.");
-            Assert.IsNotNull(root.Q<Button>("EnterGameButton"), "BootstrapLoading.uxml should include EnterGameButton.");
-            Assert.IsNotNull(root.Q<Button>("QuitButton"), "BootstrapLoading.uxml should include QuitButton.");
-            Assert.IsNotNull(root.Q<Label>("VersionLabel"), "BootstrapLoading.uxml should include VersionLabel.");
-            Assert.IsNotNull(root.Q<VisualElement>("VersionProgress"), "BootstrapLoading.uxml should include VersionProgress.");
-            Assert.IsNotNull(root.Q<VisualElement>("VersionProgressFill"), "BootstrapLoading.uxml should include VersionProgressFill.");
-            Assert.IsNotNull(root.Q<Label>("VersionProgressLabel"), "BootstrapLoading.uxml should include VersionProgressLabel.");
-            Assert.IsNotNull(root.Q<Label>("UpdateStatusLabel"), "BootstrapLoading.uxml should include UpdateStatusLabel.");
-
-            Assert.IsNotNull(root.Q<VisualElement>("TopChrome"), "BootstrapLoading.uxml should include TopChrome.");
-            Assert.IsNotNull(root.Q<VisualElement>("ChatPanel"), "BootstrapLoading.uxml should include ChatPanel.");
-            Assert.IsNotNull(root.Q<VisualElement>("SideRail"), "BootstrapLoading.uxml should include SideRail news rail.");
-            Assert.IsNotNull(root.Q<VisualElement>("LauncherBar"), "BootstrapLoading.uxml should include horizontal LauncherBar.");
-            Assert.IsNotNull(root.Q<VisualElement>("ActionDock"), "BootstrapLoading.uxml should include ActionDock.");
-            Assert.IsNotNull(root.Q<VisualElement>("IdleCtaPanel"), "BootstrapLoading.uxml should include IdleCtaPanel placeholder.");
-            Assert.IsNotNull(root.Q<VisualElement>("StatusDock"), "BootstrapLoading.uxml should include StatusDock.");
-            Assert.IsNotNull(root.Q<VisualElement>("NewsFeed"), "BootstrapLoading.uxml should include NewsFeed.");
-            Assert.IsNotNull(root.Q<VisualElement>("NewsFeatured"), "BootstrapLoading.uxml should include NewsFeatured.");
-            Assert.IsNotNull(root.Q<VisualElement>("NewsListContainer"), "BootstrapLoading.uxml should include NewsListContainer.");
-            Assert.IsNotNull(root.Q<Label>("NewsFeaturedTitle"), "BootstrapLoading.uxml should include NewsFeaturedTitle.");
-            Assert.IsNotNull(root.Q<Label>("NewsFeaturedBody"), "BootstrapLoading.uxml should include NewsFeaturedBody.");
-            Assert.IsNotNull(root.Q<Label>("SideStatusTitle"), "BootstrapLoading.uxml should include SideStatusTitle.");
-            Assert.IsNotNull(root.Q<Label>("SideStatusLabel"), "BootstrapLoading.uxml should include SideStatusLabel.");
-            Assert.IsNull(root.Q<VisualElement>("BrandLogo"), "Bootstrap launcher should not include BrandLogo.");
-            Assert.IsNull(root.Q<Label>("BrandWordmark"), "Bootstrap launcher bar should not include BrandWordmark.");
-            Assert.IsNull(root.Q<VisualElement>("Hero"), "Bootstrap launcher should not include centered Hero.");
+            Assert.IsNotNull(root.Q<Button>("PlayButton"), "Launcher.uxml should include PlayButton CTA.");
+            Assert.IsNotNull(root.Q<Label>("ClientVersionLabel"), "Launcher.uxml should include ClientVersionLabel.");
+            Assert.IsNull(root.Q<VisualElement>("ClientMeta"), "Launcher.uxml should not include ClientMeta.");
+            Assert.IsNotNull(root.Q<VisualElement>("ProgressBlock"), "Launcher.uxml should include ProgressBlock.");
+            Assert.IsNotNull(root.Q<Label>("ProgressStatusLabel"), "Launcher.uxml should include ProgressStatusLabel.");
+            Assert.IsNotNull(root.Q<VisualElement>("ProgressFill"), "Launcher.uxml should include ProgressFill.");
+            Assert.IsNotNull(root.Q<Label>("ProgressErrorLabel"), "Launcher.uxml should include ProgressErrorLabel.");
+            Assert.IsNotNull(root.Q<VisualElement>("NewsList"), "Launcher.uxml should include NewsList.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatMessages"), "Launcher.uxml should include ChatMessages.");
         }
 
         [Test]
