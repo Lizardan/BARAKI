@@ -83,7 +83,7 @@ namespace Game.Tests
         public void N2_FlankRoadSamples_AreWalkable()
         {
             var surface = WalkableSurfaceCache.GetOrCreate(2);
-            var samples = new[]
+            var authoredSamples = new[]
             {
                 new Vector3(120f, 0f, 30f),
                 new Vector3(-120f, 0f, 30f),
@@ -92,9 +92,10 @@ namespace Game.Tests
                 new Vector3(-57.5f, 0f, -65f),
             };
 
-            foreach (var sample in samples)
+            foreach (var authored in authoredSamples)
             {
-                Assert.IsTrue(surface.Contains(sample), $"Expected walkable at {sample}");
+                var sample = MatchArenaGenerator.RotateAuthoredToLayout(authored);
+                Assert.IsTrue(surface.Contains(sample), $"Expected walkable at {sample} (authored {authored})");
             }
         }
 

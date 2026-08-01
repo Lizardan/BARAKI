@@ -33,6 +33,101 @@ namespace Game.Gameplay.Match
             };
         }
 
+        /// <summary>
+        /// Continuous road footprint along a centerline polyline (no inner-radius seams between segments).
+        /// Contour = right edge forward, then left edge reverse — same winding as <see cref="FromRibbonMesh"/>.
+        /// </summary>
+        public static Vector2[] CenteredPolylineStrip(
+            IReadOnlyList<Vector3> centerline,
+            float roadWidth,
+            Vector3? startTangent = null,
+            Vector3? endTangent = null)
+        {
+            if (centerline == null || centerline.Count < 2 || roadWidth <= 0.001f)
+            {
+                return System.Array.Empty<Vector2>();
+            }
+
+            var half = roadWidth * 0.5f;
+            var count = centerline.Count;
+            var rightEdge = new Vector2[count];
+            var leftEdge = new Vector2[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                var point = centerline[i];
+                point.y = 0f;
+                var tangent = ResolvePolylineTangent(centerline, i, startTangent, endTangent);
+                var right = Vector3.Cross(Vector3.up, tangent).normalized;
+                var rightPoint = point + right * half;
+                var leftPoint = point - right * half;
+                rightEdge[i] = new Vector2(rightPoint.x, rightPoint.z);
+                leftEdge[i] = new Vector2(leftPoint.x, leftPoint.z);
+            }
+
+            var points = new Vector2[count * 2];
+            for (var i = 0; i < count; i++)
+            {
+                points[i] = rightEdge[i];
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                points[count + i] = leftEdge[count - 1 - i];
+            }
+
+            return points;
+        }
+
+        static Vector3 ResolvePolylineTangent(
+            IReadOnlyList<Vector3> centerline,
+            int index,
+            Vector3? startTangent,
+            Vector3? endTangent)
+        {
+            if (index == 0 && startTangent.HasValue)
+            {
+                var pinned = startTangent.Value;
+                pinned.y = 0f;
+                if (pinned.sqrMagnitude > 0.0001f)
+                {
+                    return pinned.normalized;
+                }
+            }
+
+            if (index == centerline.Count - 1 && endTangent.HasValue)
+            {
+                var pinned = endTangent.Value;
+                pinned.y = 0f;
+                if (pinned.sqrMagnitude > 0.0001f)
+                {
+                    return pinned.normalized;
+                }
+            }
+
+            var prev = centerline[Mathf.Max(0, index - 1)];
+            var next = centerline[Mathf.Min(centerline.Count - 1, index + 1)];
+            prev.y = 0f;
+            next.y = 0f;
+            var tangent = next - prev;
+            if (tangent.sqrMagnitude < 0.0001f)
+            {
+                if (index > 0)
+                {
+                    var fallback = centerline[index] - centerline[index - 1];
+                    fallback.y = 0f;
+                    if (fallback.sqrMagnitude > 0.0001f)
+                    {
+                        return fallback.normalized;
+                    }
+                }
+
+                return Vector3.right;
+            }
+
+            return tangent.normalized;
+        }
+
         public static Vector2[] Disc(float radius, int segments = 48)
         {
             var points = new Vector2[segments];

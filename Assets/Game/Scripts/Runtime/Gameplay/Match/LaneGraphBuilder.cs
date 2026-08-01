@@ -156,12 +156,23 @@ namespace Game.Gameplay.Match
                 return BuildDuelFlankLoop(owner, opponent, ringRadius, originBarracksId, start, clockwise);
             }
 
-            // N4+ ring is the shared perimeter strip — orient from the strip join,
-            // then prepend barracks → join so spawn distance is measured from the barracks.
+            // Shared perimeter ring — orient from strip join, prepend barracks → join.
             var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(ringRadius, playerCount);
-            var join = N4RoadCenterlineBuilder.GetStripJoinPoint(start, owner.BasePosition, ringRadius);
-            var oriented = OrientClosedLoop(ring, join, reverse: !clockwise);
-            return EnsureN4BarracksStripEntry(oriented, start, owner.BasePosition, ringRadius);
+            if (playerCount == 4)
+            {
+                var join4 = N4RoadCenterlineBuilder.GetStripJoinPoint(start, owner.BasePosition, ringRadius);
+                var oriented4 = OrientClosedLoop(ring, join4, reverse: !clockwise);
+                return EnsureN4BarracksStripEntry(oriented4, start, owner.BasePosition, ringRadius);
+            }
+
+            // Circular ring: short straight out of side barracks, then onto the circle.
+            var oriented = OrientClosedLoop(ring, start, reverse: !clockwise);
+            return EnsureBarracksStraightEntry(
+                oriented,
+                owner,
+                originBarracksId,
+                start,
+                CircularRingRoadGeometry.ExitStraightLength);
         }
 
         /// <summary>Full stadium ring from live barracks positions; Left=CW, Right=CCW.</summary>
@@ -173,7 +184,7 @@ namespace Game.Gameplay.Match
             Vector3 start,
             bool clockwise)
         {
-            var ownerOnEast = owner.BasePosition.x >= 0f;
+            var ownerOnEast = MatchArenaGenerator.RotateLayoutToAuthored(owner.BasePosition).x >= 0f;
             var west = ownerOnEast ? opponent : owner;
             var east = ownerOnEast ? owner : opponent;
 
@@ -214,7 +225,8 @@ namespace Game.Gameplay.Match
             LanePath ring,
             PlayerSlotLayout owner,
             string originBarracksId,
-            Vector3 start)
+            Vector3 start,
+            float exitLength = -1f)
         {
             var open = ExtractOpenRing(ring);
             if (open.Count < 2)
@@ -222,9 +234,14 @@ namespace Game.Gameplay.Match
                 return ring;
             }
 
+            if (exitLength <= 0f)
+            {
+                exitLength = N2RoadReferenceSpec.SideExitStraightLength;
+            }
+
             start = WithLaneHeight(start);
             var outward = DuelPathBuilder.GetBarracksOutwardDir(owner, originBarracksId);
-            var exit = WithLaneHeight(Flat(start) + outward * N2RoadReferenceSpec.SideExitStraightLength);
+            var exit = WithLaneHeight(Flat(start) + outward * exitLength);
 
             var startFlat = Flat(start);
             if (Vector3.Distance(Flat(open[0]), startFlat) <= 0.25f

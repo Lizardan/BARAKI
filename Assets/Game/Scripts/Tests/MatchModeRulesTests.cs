@@ -22,5 +22,11 @@ namespace Game.Tests
             Assert.IsTrue(MatchModeRules.IsValidPlayerCount(8));
             Assert.IsFalse(MatchModeRules.IsValidPlayerCount(9));
         }
+
+        [Test]
+        public void GetModeTitle_N2_IsOneVsOne()
+        {
+            Assert.AreEqual("1 vs 1", MatchModeRules.GetModeTitle(2));
+        }
     }
 }

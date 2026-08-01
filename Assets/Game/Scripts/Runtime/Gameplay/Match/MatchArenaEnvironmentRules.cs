@@ -60,13 +60,30 @@ namespace Game.Gameplay.Match
 
         public static bool AllowsWalkableOverlay(EnvironmentPropKind kind) => false;
 
-        /// <summary>Square map half-extent covering perimeter + corner fillets + thin fringe.</summary>
+        /// <summary>Square map half-extent covering perimeter roads + thin fringe.</summary>
         public static float MapHalfExtent(float arenaRadius) =>
             arenaRadius + MatchArenaGreyboxBuilder.RoadWidth + LandscapeOuterMargin;
+
+        /// <summary>Axis-aligned half-extent for a given player count (circular ring fits in arenaRadius).</summary>
+        public static float MapHalfExtent(float arenaRadius, int playerCount)
+        {
+            if (playerCount == 2 || playerCount == 4)
+            {
+                return arenaRadius * Mathf.Sqrt(2f) + MatchArenaGreyboxBuilder.RoadWidth + LandscapeOuterMargin;
+            }
+
+            return MapHalfExtent(arenaRadius);
+        }
 
         public static bool IsWithinMapBounds(Vector3 position, float arenaRadius)
         {
             var max = MapHalfExtent(arenaRadius);
+            return Mathf.Abs(position.x) <= max + 0.01f && Mathf.Abs(position.z) <= max + 0.01f;
+        }
+
+        public static bool IsWithinMapBounds(Vector3 position, float arenaRadius, int playerCount)
+        {
+            var max = MapHalfExtent(arenaRadius, playerCount);
             return Mathf.Abs(position.x) <= max + 0.01f && Mathf.Abs(position.z) <= max + 0.01f;
         }
 
@@ -333,7 +350,7 @@ namespace Game.Gameplay.Match
             System.Random rng,
             float radius)
         {
-            var half = MapHalfExtent(radius);
+            var half = MapHalfExtent(radius, layout.PlayerCount);
             var cell = NatureCellSize;
             var row = 0;
             for (var z = -half; z <= half; z += cell)

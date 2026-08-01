@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Three-player road mesh: one unioned road surface under <c>_SourceParts</c>.</summary>
+    /// <summary>Ring (N=3,5..8) road mesh: one unioned road surface under <c>_SourceParts</c>.</summary>
     public static class N3SourcePartsBuilder
     {
         public const string RootName = N4SourcePartsBuilder.RootName;
@@ -16,7 +16,9 @@ namespace Game.Gameplay.Match
             root.localRotation = Quaternion.identity;
             root.localScale = Vector3.one;
 
-            var footprints = RoadFootprintFactory.BuildN3(layout);
+            var footprints = layout.PlayerCount == 3
+                ? RoadFootprintFactory.BuildN3(layout)
+                : RoadFootprintFactory.BuildRing(layout);
             RoadSurfaceMeshBuilder.Create(root, footprints, roadMaterial);
             return root;
         }

@@ -27,9 +27,7 @@ namespace Game.Gameplay.Match
             inDir.Normalize();
             outDir.Normalize();
 
-            var entry = corner - inDir * arcRadius;
-            var exit = corner + outDir * arcRadius;
-            var center = entry + outDir * arcRadius;
+            ResolveFillet(corner, inDir, outDir, arcRadius, out var entry, out var exit, out var center);
             var samples = SampleArc(entry, exit, center, arcRadius, PathArcSegments);
             var startIndex = 0;
             if (points.Count > 0 && samples.Count > 0)
@@ -70,9 +68,7 @@ namespace Game.Gameplay.Match
             inDir.Normalize();
             outDir.Normalize();
 
-            var entry = corner - inDir * arcRadius;
-            var exit = corner + outDir * arcRadius;
-            var center = entry + outDir * arcRadius;
+            ResolveFillet(corner, inDir, outDir, arcRadius, out var entry, out var exit, out var center);
             var halfWidth = roadWidth * 0.5f;
             var halfHeight = height * 0.5f;
             var centerline = SampleArc(entry, exit, center, arcRadius, RoadArcSegments);
@@ -177,6 +173,43 @@ namespace Game.Gameplay.Match
             filter.sharedMesh = mesh;
             var renderer = fill.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = material;
+        }
+
+        /// <summary>
+        /// Fillet for any turn angle: tangent length = r·tan(|φ|/2).
+        /// Preserves the legacy 90° result (tan45°=1 → tangent=r).
+        /// </summary>
+        public static void ResolveFillet(
+            Vector3 corner,
+            Vector3 inDir,
+            Vector3 outDir,
+            float arcRadius,
+            out Vector3 entry,
+            out Vector3 exit,
+            out Vector3 center)
+        {
+            inDir = Flatten(inDir).normalized;
+            outDir = Flatten(outDir).normalized;
+            corner = Flatten(corner);
+
+            var crossY = inDir.x * outDir.z - inDir.z * outDir.x;
+            var dot = Vector3.Dot(inDir, outDir);
+            var turn = Mathf.Atan2(crossY, dot);
+            var absTurn = Mathf.Abs(turn);
+            if (absTurn < 0.001f)
+            {
+                entry = corner;
+                exit = corner;
+                center = corner;
+                return;
+            }
+
+            var tangent = arcRadius * Mathf.Tan(absTurn * 0.5f);
+            entry = corner - inDir * tangent;
+            exit = corner + outDir * tangent;
+            var right = Vector3.Cross(Vector3.up, inDir).normalized;
+            var inward = turn < 0f ? right : -right;
+            center = entry + inward * arcRadius;
         }
 
         static List<Vector3> SampleArc(

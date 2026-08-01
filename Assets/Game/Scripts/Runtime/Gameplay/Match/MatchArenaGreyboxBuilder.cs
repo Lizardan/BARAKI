@@ -42,7 +42,7 @@ namespace Game.Gameplay.Match
                 layout.PlayerCount,
                 layout.PlayerCount * BaseLayoutDefinition.BuildingsPerBase,
                 laneLineCount,
-                layout.PlayerCount is 2 or 4 ? 4 : MatchArenaGreyboxSpec.LegacyCenterRingSegments);
+                layout.PlayerCount is 2 or 4 ? 4 : layout.PlayerCount);
         }
 
         /// <summary>Map roads and per-base road geometry (no buildings or lane markers).</summary>
@@ -146,13 +146,13 @@ namespace Game.Gameplay.Match
             {
                 N4SourcePartsBuilder.Populate(root, layout, roadMaterial);
             }
-            else if (layout.PlayerCount == 3)
-            {
-                N3SourcePartsBuilder.Populate(root, layout, roadMaterial);
-            }
             else if (layout.PlayerCount == 2)
             {
                 N2SourcePartsBuilder.Populate(root, layout, roadMaterial);
+            }
+            else if (layout.PlayerCount >= 3)
+            {
+                N3SourcePartsBuilder.Populate(root, layout, roadMaterial);
             }
             else
             {
@@ -168,11 +168,6 @@ namespace Game.Gameplay.Match
                 var slotRoot = CreateChild(basesRoot, $"Player_{slot.SlotIndex}");
                 slotRoot.position = slot.BasePosition;
                 slotRoot.rotation = slot.BaseRotation;
-
-                if (layout.PlayerCount is not 2 and not 3 and not 4)
-                {
-                    PopulateBaseRoads(slotRoot, slot, roadMaterial);
-                }
             }
 
             return basesRoot;

@@ -18,8 +18,8 @@ namespace Game.Tests
             Assert.IsTrue(graph.TryGetLane(0, GameIds.Lanes.Left, out var left));
             Assert.IsTrue(graph.TryGetLane(0, GameIds.Lanes.Right, out var right));
 
-            var leftPeak = GetMaxAbsZ(left.Path);
-            var rightPeak = GetMaxAbsZ(right.Path);
+            var leftPeak = GetMaxAbsAuthoredZ(left.Path);
+            var rightPeak = GetMaxAbsAuthoredZ(right.Path);
             Assert.AreEqual(N2RoadReferenceSpec.FlankStraightAbsZ, leftPeak, 0.5f);
             Assert.AreEqual(N2RoadReferenceSpec.FlankStraightAbsZ, rightPeak, 0.5f);
         }
@@ -69,16 +69,16 @@ namespace Game.Tests
         public void DuelPath_N2_NorthCenterlineLinksNorthernBarracksWithoutJumps()
         {
             var layout = MatchArenaGenerator.Generate(2, arenaRadius: HalfSize);
-            var west = layout.Slots[0].BasePosition.x < 0f ? layout.Slots[0] : layout.Slots[1];
-            var east = layout.Slots[0].BasePosition.x >= 0f ? layout.Slots[0] : layout.Slots[1];
+            var west = AuthoredWest(layout);
+            var east = AuthoredEast(layout);
             var north = DuelPathBuilder.BuildFlankCenterline(west, east, northSide: true, HalfSize, 24);
 
             var westNorth = Flat(west.GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft));
             var eastNorth = Flat(east.GetBuildingWorldPosition(GameIds.Buildings.BarracksRight));
             Assert.Less(Vector3.Distance(Flat(north[0]), westNorth), 0.25f);
             Assert.Less(Vector3.Distance(Flat(north[^1]), eastNorth), 0.25f);
-            Assert.Greater(westNorth.z, 0f);
-            Assert.Greater(eastNorth.z, 0f);
+            Assert.Greater(MatchArenaGenerator.RotateLayoutToAuthored(westNorth).z, 0f);
+            Assert.Greater(MatchArenaGenerator.RotateLayoutToAuthored(eastNorth).z, 0f);
 
             for (var i = 1; i < north.Count; i++)
             {
@@ -94,17 +94,18 @@ namespace Game.Tests
         {
             var layout = MatchArenaGenerator.Generate(2, arenaRadius: HalfSize);
             var graph = LaneGraphBuilder.Build(layout);
-            var westIndex = layout.Slots[0].BasePosition.x < 0f ? 0 : 1;
+            var westIndex = AuthoredWest(layout).SlotIndex;
             Assert.IsTrue(graph.TryGetLane(westIndex, GameIds.Lanes.Left, out var left));
 
-            var maxZ = 0f;
+            var maxAuthZ = 0f;
             for (var i = 0; i < left.Path.WaypointCount; i++)
             {
-                maxZ = Mathf.Max(maxZ, Flat(left.Path.GetWaypoint(i)).z);
+                var authored = MatchArenaGenerator.RotateLayoutToAuthored(Flat(left.Path.GetWaypoint(i)));
+                maxAuthZ = Mathf.Max(maxAuthZ, authored.z);
             }
 
             Assert.Greater(
-                maxZ,
+                maxAuthZ,
                 N2RoadReferenceSpec.FlankStraightAbsZ * 0.9f,
                 "West Left must march on the north stadium strip.");
         }
@@ -113,18 +114,32 @@ namespace Game.Tests
         public void DuelPath_N2_UsesN4CornerArcsOnFlankExits()
         {
             var layout = MatchArenaGenerator.Generate(2, arenaRadius: HalfSize);
-            var west = layout.Slots[0].BasePosition.x < 0f ? layout.Slots[0] : layout.Slots[1];
-            var east = layout.Slots[0].BasePosition.x >= 0f ? layout.Slots[0] : layout.Slots[1];
+            var west = AuthoredWest(layout);
+            var east = AuthoredEast(layout);
             var north = DuelPathBuilder.BuildFlankCenterline(west, east, northSide: true, HalfSize, 12);
 
             var nw = DuelPathBuilder.GetFlankCorner(northSide: true, eastSide: false, HalfSize);
             var ne = DuelPathBuilder.GetFlankCorner(northSide: true, eastSide: true, HalfSize);
-            PerimeterCornerArc.GetClockwiseEndpoints(nw, out _, out var nwExit, N2RoadReferenceSpec.CornerRadius);
-            PerimeterCornerArc.GetClockwiseEndpoints(ne, out var neEntry, out _, N2RoadReferenceSpec.CornerRadius);
+            var nwAuth = MatchArenaGenerator.RotateLayoutToAuthored(nw);
+            var neAuth = MatchArenaGenerator.RotateLayoutToAuthored(ne);
+            PerimeterCornerArc.GetClockwiseEndpoints(nwAuth, out _, out var nwExitAuth, N2RoadReferenceSpec.CornerRadius);
+            PerimeterCornerArc.GetClockwiseEndpoints(neAuth, out var neEntryAuth, out _, N2RoadReferenceSpec.CornerRadius);
+            var nwExit = MatchArenaGenerator.RotateAuthoredToLayout(nwExitAuth);
+            var neEntry = MatchArenaGenerator.RotateAuthoredToLayout(neEntryAuth);
 
             Assert.IsTrue(ContainsNear(north, nwExit), "North flank must pass west N4-style corner exit.");
             Assert.IsTrue(ContainsNear(north, neEntry), "North flank must pass east N4-style corner entry.");
         }
+
+        static PlayerSlotLayout AuthoredWest(MatchArenaLayout layout) =>
+            MatchArenaGenerator.RotateLayoutToAuthored(layout.Slots[0].BasePosition).x < 0f
+                ? layout.Slots[0]
+                : layout.Slots[1];
+
+        static PlayerSlotLayout AuthoredEast(MatchArenaLayout layout) =>
+            MatchArenaGenerator.RotateLayoutToAuthored(layout.Slots[0].BasePosition).x >= 0f
+                ? layout.Slots[0]
+                : layout.Slots[1];
 
         static bool ContainsNear(System.Collections.Generic.List<Vector3> points, Vector3 target)
         {
@@ -158,6 +173,19 @@ namespace Game.Tests
             return max;
         }
 
+        static float GetMaxAbsAuthoredZ(LanePath path)
+        {
+            var max = 0f;
+            var last = Mathf.Max(1, path.WaypointCount - 1);
+            for (var i = 0; i < last; i++)
+            {
+                var authored = MatchArenaGenerator.RotateLayoutToAuthored(Flat(path.GetWaypoint(i)));
+                max = Mathf.Max(max, Mathf.Abs(authored.z));
+            }
+
+            return max;
+        }
+
         [Test]
         public void SquarePath_N4_RightLane_PassesNorthWestCornerArc()
         {
@@ -183,9 +211,20 @@ namespace Game.Tests
         {
             var layout = MatchArenaGenerator.Generate(4, arenaRadius: HalfSize);
             var graph = LaneGraphBuilder.Build(layout);
-            graph.TryGetLane(1, GameIds.Lanes.Left, out var leftLane);
-            graph.TryGetLane(1, GameIds.Lanes.Right, out var rightLane);
-            var slot = layout.Slots[1];
+            // North base (slot with +Z) — joins sit on the north perimeter edge.
+            PlayerSlotLayout slot = null;
+            foreach (var candidate in layout.Slots)
+            {
+                if (candidate.BasePosition.z > HalfSize * 0.5f)
+                {
+                    slot = candidate;
+                    break;
+                }
+            }
+
+            Assert.IsNotNull(slot);
+            graph.TryGetLane(slot.SlotIndex, GameIds.Lanes.Left, out var leftLane);
+            graph.TryGetLane(slot.SlotIndex, GameIds.Lanes.Right, out var rightLane);
             var leftBarracks = slot.GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft);
             var rightBarracks = slot.GetBuildingWorldPosition(GameIds.Buildings.BarracksRight);
             var leftJoin = N4RoadCenterlineBuilder.GetStripJoinPoint(leftBarracks, slot.BasePosition, HalfSize);

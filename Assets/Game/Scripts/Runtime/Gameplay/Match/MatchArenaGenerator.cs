@@ -13,8 +13,24 @@ namespace Game.Gameplay.Match
         public const float DefaultArenaRadius = 120f;
         public const float DefaultMainToTowerDistance = 8f;
 
+        /// <summary>
+        /// World angle of slot 0. −π/2 puts the first player at bottom-center (−Z)
+        /// on the minimap and in the default top-down view.
+        /// </summary>
+        public const float FirstPlayerAngleRadians = -Mathf.PI * 0.5f;
+
         /// <summary>Unity plane is 10×10 at scale 1; +40 world units margin beyond the road square.</summary>
         public static float DefaultGroundPlaneScale => (DefaultArenaRadius * 2f + 40f) / 10f;
+
+        /// <summary>
+        /// N=2 road/path assets are authored with player 0 at +X; rotate into layout space
+        /// where player 0 sits at <see cref="FirstPlayerAngleRadians"/>.
+        /// </summary>
+        public static Vector3 RotateAuthoredToLayout(Vector3 authored) =>
+            RotateYaw(authored, FirstPlayerAngleRadians);
+
+        public static Vector3 RotateLayoutToAuthored(Vector3 layout) =>
+            RotateYaw(layout, -FirstPlayerAngleRadians);
 
         public static MatchArenaLayout Generate(
             int playerCount,
@@ -33,7 +49,7 @@ namespace Game.Gameplay.Match
             var slots = new List<PlayerSlotLayout>(playerCount);
             for (var i = 0; i < playerCount; i++)
             {
-                var angle = 2f * Mathf.PI * i / playerCount;
+                var angle = FirstPlayerAngleRadians + 2f * Mathf.PI * i / playerCount;
                 var position = new Vector3(Mathf.Cos(angle) * arenaRadius, 0f, Mathf.Sin(angle) * arenaRadius);
                 var forward = Vector3.zero - position;
                 forward.y = 0f;
@@ -67,6 +83,16 @@ namespace Game.Gameplay.Match
         }
 
         public static int Mod(int value, int modulus) => (value % modulus + modulus) % modulus;
+
+        static Vector3 RotateYaw(Vector3 point, float yawRadians)
+        {
+            var cos = Mathf.Cos(yawRadians);
+            var sin = Mathf.Sin(yawRadians);
+            return new Vector3(
+                point.x * cos - point.z * sin,
+                point.y,
+                point.x * sin + point.z * cos);
+        }
 
         static List<LaneConnection> BuildLaneConnections(IReadOnlyList<PlayerSlotLayout> slots)
         {

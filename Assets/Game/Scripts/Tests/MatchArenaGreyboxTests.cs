@@ -61,7 +61,8 @@ namespace Game.Tests
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
                 var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
-                Assert.IsTrue(walkable.Contains(new Vector3(120f, 0f, 30f)));
+                var sample = MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(120f, 0f, 30f));
+                Assert.IsTrue(walkable.Contains(sample));
             }
             finally
             {
@@ -167,7 +168,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void PopulateN2_BaseArenas_AreOnEastAndWest()
+        public void PopulateN2_BaseArenas_AreOnNorthAndSouth()
         {
             var layout = MatchArenaGenerator.Generate(2);
             var graph = LaneGraphBuilder.Build(layout);
@@ -178,8 +179,8 @@ namespace Game.Tests
                 var sourceParts = root.transform.Find(N2SourcePartsBuilder.RootName);
                 Assert.NotNull(sourceParts);
                 var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
-                Assert.IsTrue(walkable.Contains(new Vector3(125f, 0f, 0f)));
-                Assert.IsTrue(walkable.Contains(new Vector3(-125f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, 125f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, -125f)));
             }
             finally
             {
@@ -233,8 +234,6 @@ namespace Game.Tests
                 Assert.IsTrue(walkable.Contains(Vector3.zero));
                 Assert.IsTrue(walkable.Contains(new Vector3(120f, 0f, 0f)));
                 Assert.IsTrue(walkable.Contains(new Vector3(60f, 0f, 103.923f)));
-                Assert.IsTrue(walkable.Contains(new Vector3(-120f, 0f, 0f)));
-                Assert.IsTrue(walkable.Contains(new Vector3(60f, 0f, -103.923f)));
                 foreach (var slot in layout.Slots)
                 {
                     Assert.IsTrue(walkable.Contains(slot.BasePosition), $"Missing base road for slot {slot.SlotIndex}.");

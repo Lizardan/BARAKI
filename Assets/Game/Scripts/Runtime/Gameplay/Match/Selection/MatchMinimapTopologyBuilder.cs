@@ -49,7 +49,10 @@ namespace Game.Gameplay.Match.Selection
                     slot.SlotIndex));
             }
 
-            AddSegment(roadSegments, new Vector3(-halfSize, 0f, 0f), new Vector3(halfSize, 0f, 0f));
+            AddSegment(
+                roadSegments,
+                MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(-halfSize, 0f, 0f)),
+                MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(halfSize, 0f, 0f)));
             AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: true, halfSize));
             AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: false, halfSize));
 
@@ -96,29 +99,96 @@ namespace Game.Gameplay.Match.Selection
         {
             var filledRects = new List<MatchMinimapRect>();
             var roadSegments = new List<MatchMinimapSegment>();
-            var radius = layout.ArenaRadius;
-            var centerRadius = graph.CenterArenaRadius;
+            var centerHalf = N4RoadReferenceSpec.CenterArenaHalfSize;
 
-            filledRects.Add(new MatchMinimapRect(
-                Vector2.zero,
-                new Vector2(centerRadius, centerRadius),
-                0f));
+            filledRects.Add(new MatchMinimapRect(Vector2.zero, new Vector2(centerHalf, centerHalf), 0f));
 
             foreach (var slot in layout.Slots)
             {
+                var localOffset = new Vector3(0f, 0f, -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
+                var worldCenter = slot.BasePosition + slot.BaseRotation * localOffset;
                 filledRects.Add(new MatchMinimapRect(
-                    ToXZ(slot.BasePosition),
-                    new Vector2(12f, 12f),
+                    ToXZ(worldCenter),
+                    new Vector2(
+                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
+                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
                     slot.BaseRotation.eulerAngles.y,
                     slot.SlotIndex));
             }
 
-            roadSegments.Add(new MatchMinimapSegment(new Vector2(-radius, -radius), new Vector2(radius, -radius)));
-            roadSegments.Add(new MatchMinimapSegment(new Vector2(radius, -radius), new Vector2(radius, radius)));
-            roadSegments.Add(new MatchMinimapSegment(new Vector2(radius, radius), new Vector2(-radius, radius)));
-            roadSegments.Add(new MatchMinimapSegment(new Vector2(-radius, radius), new Vector2(-radius, -radius)));
+            if (layout.PlayerCount == 3)
+            {
+                AppendN3Perimeter(roadSegments, layout);
+            }
+            else
+            {
+                var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, layout.PlayerCount);
+                AppendPolyline(roadSegments, PathWaypoints(ring));
+                foreach (var slot in layout.Slots)
+                {
+                    CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out var junction, out var radial, out var tangent);
+                    AddSegment(roadSegments, junction, radial * centerHalf);
+                    var exit = CircularRingRoadGeometry.ExitStraightLength;
+                    AddSegment(roadSegments, junction, junction + tangent * exit);
+                    AddSegment(roadSegments, junction, junction - tangent * exit);
+                }
+            }
 
             return new MatchMinimapTopology(filledRects, roadSegments);
+        }
+
+        static void AppendN3Perimeter(List<MatchMinimapSegment> segments, MatchArenaLayout layout)
+        {
+            var radius = layout.ArenaRadius;
+            var centerHalf = N4RoadReferenceSpec.CenterArenaHalfSize;
+            var curve = new List<Vector3>(CircularRingRoadGeometry.ExitCurveSamples + 1);
+            var n = layout.PlayerCount;
+
+            for (var i = 0; i < n; i++)
+            {
+                var slot = layout.Slots[i];
+                var next = layout.Slots[(i + 1) % n];
+
+                curve.Clear();
+                CircularRingRoadGeometry.SampleExitCurve(
+                    slot, Game.Core.GameIds.Buildings.BarracksRight, layout, curve);
+                AppendPolyline(segments, curve);
+
+                var from = CircularRingRoadGeometry.GetExitCurveJoinPoint(
+                    slot, Game.Core.GameIds.Buildings.BarracksRight, radius);
+                var to = CircularRingRoadGeometry.GetExitCurveJoinPoint(
+                    next, Game.Core.GameIds.Buildings.BarracksLeft, radius);
+                AddSegment(segments, from, to);
+
+                curve.Clear();
+                CircularRingRoadGeometry.SampleExitCurve(
+                    next, Game.Core.GameIds.Buildings.BarracksLeft, layout, curve);
+                AppendPolyline(segments, curve);
+            }
+
+            foreach (var slot in layout.Slots)
+            {
+                CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out var junction, out var radial, out _);
+                AddSegment(segments, junction, radial * centerHalf);
+
+                var leftTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksLeft);
+                var rightTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksRight);
+                var leftBarracks = slot.GetBuildingWorldPosition(Game.Core.GameIds.Buildings.BarracksLeft);
+                var rightBarracks = slot.GetBuildingWorldPosition(Game.Core.GameIds.Buildings.BarracksRight);
+                AddSegment(segments, leftBarracks, leftTip);
+                AddSegment(segments, rightBarracks, rightTip);
+            }
+        }
+
+        static List<Vector3> PathWaypoints(LanePath path)
+        {
+            var points = new List<Vector3>(path.WaypointCount);
+            for (var i = 0; i < path.WaypointCount; i++)
+            {
+                points.Add(path.GetWaypoint(i));
+            }
+
+            return points;
         }
 
         static void AppendN4PerimeterStrips(List<MatchMinimapSegment> segments, float halfSize)

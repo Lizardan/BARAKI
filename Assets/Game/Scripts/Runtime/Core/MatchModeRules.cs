@@ -18,7 +18,7 @@ namespace Game.Core
         public static string GetModeTitle(int playerCount) =>
             playerCount switch
             {
-                2 => "ДУЭЛЬ",
+                2 => "1 vs 1",
                 3 => "FFA 3",
                 4 => "FFA 4",
                 _ => $"FFA {playerCount}",

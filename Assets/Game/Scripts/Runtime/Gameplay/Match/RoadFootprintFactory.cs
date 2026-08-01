@@ -34,21 +34,262 @@ namespace Game.Gameplay.Match
             footprints.Add(RoadFootprintShapes.Disc(N4RoadReferenceSpec.CenterArenaHalfSize));
             AddDuelSpokeFillets(footprints, halfSize, height, width);
             AddPerimeterCorners(footprints, halfSize, height, forN2: true);
+            RotateAuthoredFootprintsToLayout(footprints);
             AddBaseArenas(footprints, layout);
+            return footprints;
+        }
+
+        static List<Vector2[]> RotateAuthoredFootprintsToLayout(List<Vector2[]> footprints)
+        {
+            for (var i = 0; i < footprints.Count; i++)
+            {
+                var poly = footprints[i];
+                if (poly == null || poly.Length == 0)
+                {
+                    continue;
+                }
+
+                var rotated = new Vector2[poly.Length];
+                for (var p = 0; p < poly.Length; p++)
+                {
+                    var world = MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(poly[p].x, 0f, poly[p].y));
+                    rotated[p] = new Vector2(world.x, world.z);
+                }
+
+                footprints[i] = rotated;
+            }
+
             return footprints;
         }
 
         public static List<Vector2[]> BuildN3(MatchArenaLayout layout)
         {
-            var halfSize = layout.ArenaRadius;
             var width = MatchArenaGreyboxBuilder.RoadWidth;
-            var footprints = new List<Vector2[]>(12);
+            var height = MatchArenaGreyboxBuilder.RoadHeight;
+            var n = layout.PlayerCount;
+            var footprints = new List<Vector2[]>(n * 8 + 4);
 
-            AddCircularPerimeterArcs(footprints, halfSize, width, arcCount: 3, samplesPerArc: 32);
-            AddRadialSpokeStrips(footprints, layout, width);
+            AddBaseExitStraights(footprints, layout, width);
+            AddExitCurveRamps(footprints, layout, width, alongStraight: true);
+            AddPerimeterStraights(footprints, layout, width);
+            AddCircularSpokeStrips(footprints, layout, width);
             footprints.Add(RoadFootprintShapes.Disc(N4RoadReferenceSpec.CenterArenaHalfSize, segments: 64));
+            AddCircularSpokeFillets(footprints, layout, height, width);
             AddBaseArenas(footprints, layout);
             return footprints;
+        }
+
+        /// <summary>
+        /// Circular ring for N=5..8:
+        /// short straight base exits → curve onto the ring → circular arcs between joins.
+        /// </summary>
+        public static List<Vector2[]> BuildRing(MatchArenaLayout layout)
+        {
+            var width = MatchArenaGreyboxBuilder.RoadWidth;
+            var height = MatchArenaGreyboxBuilder.RoadHeight;
+            var n = layout.PlayerCount;
+            var footprints = new List<Vector2[]>(n * 8 + 4);
+
+            AddBaseExitStraights(footprints, layout, width);
+            AddExitCurveRamps(footprints, layout, width, alongStraight: false);
+            AddCircularPerimeterArcs(footprints, layout, width);
+            AddCircularSpokeStrips(footprints, layout, width);
+            footprints.Add(RoadFootprintShapes.Disc(N4RoadReferenceSpec.CenterArenaHalfSize, segments: 64));
+            AddCircularSpokeFillets(footprints, layout, height, width);
+            AddBaseArenas(footprints, layout);
+            return footprints;
+        }
+
+        static void AddPerimeterStraights(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
+        {
+            var radius = layout.ArenaRadius;
+            var n = layout.PlayerCount;
+            for (var i = 0; i < n; i++)
+            {
+                var current = layout.Slots[i];
+                var next = layout.Slots[(i + 1) % n];
+                var from = CircularRingRoadGeometry.GetExitCurveJoinPoint(
+                    current, Game.Core.GameIds.Buildings.BarracksRight, radius);
+                var to = CircularRingRoadGeometry.GetExitCurveJoinPoint(
+                    next, Game.Core.GameIds.Buildings.BarracksLeft, radius);
+                AddStrip(footprints, from, to, width);
+            }
+        }
+
+        static void AddCircularPerimeterArcs(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
+        {
+            var radius = layout.ArenaRadius;
+            var n = layout.PlayerCount;
+            var overlap = CircularRingRoadGeometry.ArcDockOverlapRadians;
+            var samples = CircularRingRoadGeometry.RingArcSamplesPerSegment;
+
+            for (var i = 0; i < n; i++)
+            {
+                var current = layout.Slots[i];
+                var next = layout.Slots[(i + 1) % n];
+                // Pure circle begins after each exit's curve join (not at the exit tip).
+                var a0 = CircularRingRoadGeometry.GetExitCurveJoinAngle(
+                    current, Game.Core.GameIds.Buildings.BarracksRight, radius) - overlap;
+                var a1 = CircularRingRoadGeometry.GetExitCurveJoinAngle(
+                    next, Game.Core.GameIds.Buildings.BarracksLeft, radius) + overlap;
+                if (a1 <= a0)
+                {
+                    a1 += Mathf.PI * 2f;
+                }
+
+                footprints.Add(ArcStrip(radius, width, a0, a1, samples));
+            }
+        }
+
+        static void AddCircularSpokeStrips(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
+        {
+            var inner = N4RoadReferenceSpec.SpokeStripInnerRadius;
+            var outer = layout.ArenaRadius - CircularRingRoadGeometry.JunctionFilletRadius;
+            if (outer <= inner + 0.01f)
+            {
+                return;
+            }
+
+            foreach (var slot in layout.Slots)
+            {
+                CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out _, out var radial, out _);
+                AddStrip(footprints, radial * inner, radial * outer, width);
+            }
+        }
+
+        static void AddCircularSpokeFillets(
+            List<Vector2[]> footprints,
+            MatchArenaLayout layout,
+            float height,
+            float width)
+        {
+            var radius = CircularRingRoadGeometry.JunctionFilletRadius;
+            foreach (var slot in layout.Slots)
+            {
+                CircularRingRoadGeometry.GetSpokeJunction(
+                    slot.BasePosition,
+                    out var junction,
+                    out var spokeDir,
+                    out var leftDir,
+                    out var rightDir);
+                AddSpokeFillets(footprints, junction, spokeDir, leftDir, rightDir, radius, height, width);
+            }
+        }
+
+        /// <summary>Original short L/R/C straights in base local space.</summary>
+        static void AddBaseExitStraights(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
+        {
+            var exitLen = CircularRingRoadGeometry.ExitStraightLength;
+            foreach (var slot in layout.Slots)
+            {
+                if (!slot.BuildingLocalOffsets.TryGetValue(Game.Core.GameIds.Buildings.BarracksCenter, out var centerLocal)
+                    || !slot.BuildingLocalOffsets.TryGetValue(Game.Core.GameIds.Buildings.BarracksLeft, out var leftLocal)
+                    || !slot.BuildingLocalOffsets.TryGetValue(Game.Core.GameIds.Buildings.BarracksRight, out var rightLocal))
+                {
+                    continue;
+                }
+
+                var centerStart = slot.BasePosition + slot.BaseRotation * centerLocal;
+                var centerEnd = slot.BasePosition + slot.BaseRotation * new Vector3(0f, 0f, centerLocal.z + exitLen);
+                AddStrip(footprints, centerStart, centerEnd, width);
+
+                var leftStart = slot.BasePosition + slot.BaseRotation * leftLocal;
+                var leftEnd = slot.BasePosition + slot.BaseRotation * new Vector3(leftLocal.x - exitLen, 0f, leftLocal.z);
+                AddStrip(footprints, leftStart, leftEnd, width);
+
+                var rightStart = slot.BasePosition + slot.BaseRotation * rightLocal;
+                var rightEnd = slot.BasePosition + slot.BaseRotation * new Vector3(rightLocal.x + exitLen, 0f, rightLocal.z);
+                AddStrip(footprints, rightStart, rightEnd, width);
+
+                AddStrip(footprints, leftStart, rightStart, width);
+            }
+        }
+
+        /// <summary>Easing after each straight exit onto the perimeter.</summary>
+        static void AddExitCurveRamps(
+            List<Vector2[]> footprints,
+            MatchArenaLayout layout,
+            float width,
+            bool alongStraight)
+        {
+            var radius = layout.ArenaRadius;
+            var samples = new List<Vector3>(CircularRingRoadGeometry.ExitCurveSamples + 1);
+            foreach (var slot in layout.Slots)
+            {
+                AddExitCurveRamp(
+                    footprints, slot, Game.Core.GameIds.Buildings.BarracksLeft, layout, radius, width, alongStraight, samples);
+                AddExitCurveRamp(
+                    footprints, slot, Game.Core.GameIds.Buildings.BarracksRight, layout, radius, width, alongStraight, samples);
+            }
+        }
+
+        static void AddExitCurveRamp(
+            List<Vector2[]> footprints,
+            PlayerSlotLayout slot,
+            string barracksId,
+            MatchArenaLayout layout,
+            float ringRadius,
+            float width,
+            bool alongStraight,
+            List<Vector3> samples)
+        {
+            samples.Clear();
+            if (alongStraight)
+            {
+                CircularRingRoadGeometry.SampleExitCurve(slot, barracksId, layout, samples);
+            }
+            else
+            {
+                CircularRingRoadGeometry.SampleExitCurve(slot, barracksId, ringRadius, samples);
+            }
+
+            if (samples.Count < 2)
+            {
+                return;
+            }
+
+            var inDir = CircularRingRoadGeometry.GetSideExitDir(slot, barracksId);
+            var outDir = alongStraight
+                ? CircularRingRoadGeometry.GetExitCurveOutDirAlongStraight(slot, barracksId, layout)
+                : CircularRingRoadGeometry.GetExitCurveOutDir(slot, barracksId, ringRadius);
+            var poly = RoadFootprintShapes.CenteredPolylineStrip(samples, width, inDir, outDir);
+            if (poly.Length >= 3)
+            {
+                footprints.Add(poly);
+            }
+        }
+
+        static Vector2[] ArcStrip(
+            float radius,
+            float width,
+            float startAngle,
+            float endAngle,
+            int samples)
+        {
+            var halfWidth = width * 0.5f;
+            var innerRadius = radius - halfWidth;
+            var outerRadius = radius + halfWidth;
+            var points = new Vector2[(samples + 1) * 2];
+
+            for (var i = 0; i <= samples; i++)
+            {
+                var t = i / (float)samples;
+                var angle = Mathf.Lerp(startAngle, endAngle, t);
+                points[i] = new Vector2(
+                    Mathf.Cos(angle) * outerRadius,
+                    Mathf.Sin(angle) * outerRadius);
+            }
+
+            for (var i = 0; i <= samples; i++)
+            {
+                var t = 1f - i / (float)samples;
+                var angle = Mathf.Lerp(startAngle, endAngle, t);
+                points[samples + 1 + i] = new Vector2(
+                    Mathf.Cos(angle) * innerRadius,
+                    Mathf.Sin(angle) * innerRadius);
+            }
+
+            return points;
         }
 
         static void AddN4PerimeterStrips(List<Vector2[]> footprints, float halfSize, float width)
@@ -101,74 +342,6 @@ namespace Game.Gameplay.Match
             AddStrip(footprints, from, to, width);
             N4RoadReferenceSpec.GetNegativeXSpokeStrip(halfSize, out from, out to);
             AddStrip(footprints, from, to, width);
-        }
-
-        static void AddCircularPerimeterArcs(
-            List<Vector2[]> footprints,
-            float radius,
-            float width,
-            int arcCount,
-            int samplesPerArc)
-        {
-            var arcStep = Mathf.PI * 2f / arcCount;
-            var overlap = arcStep / samplesPerArc;
-            for (var i = 0; i < arcCount; i++)
-            {
-                var startAngle = i * arcStep - overlap;
-                var endAngle = (i + 1) * arcStep + overlap;
-                footprints.Add(ArcStrip(radius, width, startAngle, endAngle, samplesPerArc));
-            }
-        }
-
-        static Vector2[] ArcStrip(
-            float radius,
-            float width,
-            float startAngle,
-            float endAngle,
-            int samples)
-        {
-            var halfWidth = width * 0.5f;
-            var innerRadius = radius - halfWidth;
-            var outerRadius = radius + halfWidth;
-            var points = new Vector2[(samples + 1) * 2];
-
-            for (var i = 0; i <= samples; i++)
-            {
-                var t = i / (float)samples;
-                var angle = Mathf.Lerp(startAngle, endAngle, t);
-                points[i] = new Vector2(
-                    Mathf.Cos(angle) * outerRadius,
-                    Mathf.Sin(angle) * outerRadius);
-            }
-
-            for (var i = 0; i <= samples; i++)
-            {
-                var t = 1f - i / (float)samples;
-                var angle = Mathf.Lerp(startAngle, endAngle, t);
-                points[samples + 1 + i] = new Vector2(
-                    Mathf.Cos(angle) * innerRadius,
-                    Mathf.Sin(angle) * innerRadius);
-            }
-
-            return points;
-        }
-
-        static void AddRadialSpokeStrips(List<Vector2[]> footprints, MatchArenaLayout layout, float width)
-        {
-            foreach (var slot in layout.Slots)
-            {
-                var dir = slot.BasePosition;
-                dir.y = 0f;
-                if (dir.sqrMagnitude < 0.001f)
-                {
-                    continue;
-                }
-
-                dir.Normalize();
-                var inner = dir * (N4RoadReferenceSpec.CenterArenaHalfSize - N4RoadReferenceSpec.SpokeArenaOverlap);
-                var outer = dir * (layout.ArenaRadius + MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
-                AddStrip(footprints, inner, outer, width);
-            }
         }
 
         static void AddCardinalSpokeFillets(List<Vector2[]> footprints, float halfSize, float height, float width)

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2/N=3/N=4.
+    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2..8.
     /// </summary>
     public static class WalkableSurfaceCache
     {

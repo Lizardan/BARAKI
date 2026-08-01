@@ -112,10 +112,10 @@ namespace Game.Tests
         public void GetPlayerBaseFocusPosition_SlotOnRingMatchesArenaAngle()
         {
             var layout = MatchArenaGenerator.Generate(4);
-            var slot2 = layout.Slots[2];
+            var slot3 = layout.Slots[3];
 
-            Assert.AreEqual(-MatchArenaGenerator.DefaultArenaRadius, slot2.BasePosition.x, 0.5f);
-            Assert.AreEqual(0f, slot2.BasePosition.z, 0.5f);
+            Assert.AreEqual(-MatchArenaGenerator.DefaultArenaRadius, slot3.BasePosition.x, 0.5f);
+            Assert.AreEqual(0f, slot3.BasePosition.z, 0.5f);
         }
 
         [Test]

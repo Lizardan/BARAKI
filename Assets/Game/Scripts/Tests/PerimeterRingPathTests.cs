@@ -15,13 +15,14 @@ namespace Game.Tests
             Assert.Greater(path.WaypointCount, 20);
             Assert.Less(Vector3.Distance(path.Start, path.End), 0.25f);
 
-            var maxZ = 0f;
+            var maxAuthZ = 0f;
             for (var i = 0; i < path.WaypointCount; i++)
             {
-                maxZ = Mathf.Max(maxZ, Mathf.Abs(path.GetWaypoint(i).z));
+                var authored = MatchArenaGenerator.RotateLayoutToAuthored(path.GetWaypoint(i));
+                maxAuthZ = Mathf.Max(maxAuthZ, Mathf.Abs(authored.z));
             }
 
-            Assert.AreEqual(N2RoadReferenceSpec.FlankStraightAbsZ, maxZ, 0.5f);
+            Assert.AreEqual(N2RoadReferenceSpec.FlankStraightAbsZ, maxAuthZ, 0.5f);
         }
 
         [Test]
@@ -73,6 +74,16 @@ namespace Game.Tests
             Assert.AreEqual(PerimeterRingPathBuilder.CircularRingSegments + 1, path.WaypointCount);
             Assert.Less(Vector3.Distance(path.Start, path.End), 0.01f);
             Assert.AreEqual(HalfSize, path.Start.magnitude, 0.01f);
+        }
+
+        [Test]
+        public void BuildSharedFlankRing_N3_ReturnsClosedStraightEdgePath()
+        {
+            var path = PerimeterRingPathBuilder.BuildSharedFlankRing(HalfSize, playerCount: 3);
+
+            Assert.GreaterOrEqual(path.WaypointCount, 12);
+            Assert.Less(Vector3.Distance(path.Start, path.End), 0.01f);
+            Assert.IsTrue(path.IsClosedLoop);
         }
     }
 }

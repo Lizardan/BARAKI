@@ -86,10 +86,16 @@ namespace Game.Gameplay.Match
         public static List<Vector3> BuildFlankCenterlineFromBarracks(
             Vector3 westBarracks,
             Vector3 eastBarracks,
-            bool northSide)
+            bool northSide,
+            bool inputsAreLayoutSpace = true)
         {
             westBarracks = Flat(westBarracks);
             eastBarracks = Flat(eastBarracks);
+            if (inputsAreLayoutSpace)
+            {
+                westBarracks = MatchArenaGenerator.RotateLayoutToAuthored(westBarracks);
+                eastBarracks = MatchArenaGenerator.RotateLayoutToAuthored(eastBarracks);
+            }
 
             var halfSize = N2RoadReferenceSpec.SemiMajor;
             var straight = N2RoadReferenceSpec.SideExitStraightLength;
@@ -102,7 +108,18 @@ namespace Game.Gameplay.Match
             AppendSquarePerimeterHalf(points, northSide, halfSize);
             Append(points, eastBarracks + eastOut * straight);
             Append(points, eastBarracks);
-            return points;
+            return MapAuthoredPathToLayout(points);
+        }
+
+        static List<Vector3> MapAuthoredPathToLayout(List<Vector3> authored)
+        {
+            for (var i = 0; i < authored.Count; i++)
+            {
+                var p = MatchArenaGenerator.RotateAuthoredToLayout(Flat(authored[i]));
+                authored[i] = N4PerimeterLaneGeometry.WithHeight(p);
+            }
+
+            return authored;
         }
 
         static void AppendSquarePerimeterHalf(List<Vector3> points, bool northSide, float halfSize)
@@ -157,7 +174,8 @@ namespace Game.Gameplay.Match
             float halfSize,
             bool clockwise)
         {
-            var ownerOnEast = owner.BasePosition.x >= 0f;
+            var ownerAuthored = MatchArenaGenerator.RotateLayoutToAuthored(Flat(owner.BasePosition));
+            var ownerOnEast = ownerAuthored.x >= 0f;
             var useNorth = ownerOnEast ? !clockwise : clockwise;
             var west = ownerOnEast ? opponent : owner;
             var east = ownerOnEast ? owner : opponent;
@@ -190,8 +208,8 @@ namespace Game.Gameplay.Match
             var westBarracksS = new Vector3(-halfSize, 0f, -N2RoadReferenceSpec.BarracksLateralOffset);
             var eastBarracksS = new Vector3(halfSize, 0f, -N2RoadReferenceSpec.BarracksLateralOffset);
 
-            var north = BuildFlankCenterlineFromBarracks(westBarracksN, eastBarracksN, northSide: true);
-            var south = BuildFlankCenterlineFromBarracks(westBarracksS, eastBarracksS, northSide: false);
+            var north = BuildFlankCenterlineFromBarracks(westBarracksN, eastBarracksN, northSide: true, inputsAreLayoutSpace: false);
+            var south = BuildFlankCenterlineFromBarracks(westBarracksS, eastBarracksS, northSide: false, inputsAreLayoutSpace: false);
 
             var closed = new List<Vector3>(north.Count + south.Count);
             closed.AddRange(north);
@@ -217,7 +235,8 @@ namespace Game.Gameplay.Match
             return BuildFlankCenterlineFromBarracks(
                 new Vector3(-halfSize, 0f, z),
                 new Vector3(halfSize, 0f, z),
-                northSide);
+                northSide,
+                inputsAreLayoutSpace: false);
         }
 
         public static Vector3 GetBarracksOutwardDir(PlayerSlotLayout slot, string barracksId)
@@ -235,10 +254,11 @@ namespace Game.Gameplay.Match
         {
             halfSize = halfSize > 0f ? halfSize : N2RoadReferenceSpec.SemiMajor;
             var edge = N2RoadReferenceSpec.GetNorthSouthRoadEdge();
-            return new Vector3(
+            var authored = new Vector3(
                 eastSide ? halfSize : -halfSize,
                 0f,
                 northSide ? edge : -edge);
+            return MatchArenaGenerator.RotateAuthoredToLayout(authored);
         }
 
         static void AppendStraight(List<Vector3> points, Vector3 from, Vector3 to)
