@@ -22,7 +22,6 @@ namespace Game.Editor
 
             EnsureFolder(PortraitFolder);
             BakeRace(catalog, "Human", GameIds.Races.Human, "_human");
-            BakeRace(catalog, "Bug", GameIds.Races.Bug, "_bug");
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

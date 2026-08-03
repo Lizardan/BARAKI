@@ -547,9 +547,9 @@ namespace Game.Editor
         /// </summary>
         static void NormalizePrefabScale(GameObject root, string unit)
         {
-            const float BugMeleeLocalHeight = 1.134f;
+            const float ReferenceMeleeLocalHeight = 1.134f;
             var targetLocalHeight =
-                BugMeleeLocalHeight
+                ReferenceMeleeLocalHeight
                 * UnitGreyboxVisuals.Scale
                 / (UnitGreyboxVisuals.Scale * UnitGreyboxVisuals.AnimatedHumanScaleFactor);
 

@@ -21,17 +21,17 @@ namespace Game.Tests
         }
 
         [Test]
-        public void StartMatch_GrantsStartingGoldPerRace()
+        public void StartMatch_GrantsStartingGold()
         {
             var config = new MatchConfig(
                 2,
-                new[] { GameIds.Races.Human, GameIds.Races.Bug });
+                new[] { GameIds.Races.Human, GameIds.Races.Human });
 
             var controller = new MatchController();
             controller.StartMatch(config);
 
             Assert.AreEqual(250, controller.Players[0].Gold);
-            Assert.AreEqual(500, controller.Players[1].Gold);
+            Assert.AreEqual(250, controller.Players[1].Gold);
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace Game.Tests
             Assert.AreEqual(4, config.PlayerCount);
             Assert.AreEqual(4, config.RaceIds.Count);
             Assert.AreEqual(GameIds.Races.Human, config.RaceIds[0]);
-            Assert.AreEqual(GameIds.Races.Bug, config.RaceIds[1]);
+            Assert.AreEqual(GameIds.Races.Human, config.RaceIds[1]);
         }
 
         [Test]

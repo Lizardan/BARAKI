@@ -11,10 +11,7 @@
                     <ui:VisualElement class="race-pick__body">
                         <ui:Label name="SubtitleLabel" text="Слот 1 · игроков 4" class="race-pick__subtitle" />
                         <ui:Label name="SlotsLabel" text="" class="ui-panel__note race-pick__slots" />
-                        <ui:VisualElement class="race-pick__choices">
-                            <ui:Button name="HumanButton" text="ЛЮДИ" class="ui-btn race-pick__race-btn" />
-                            <ui:Button name="BugButton" text="ЖУКИ" class="ui-btn race-pick__race-btn" />
-                        </ui:VisualElement>
+                        <ui:VisualElement name="RaceChoices" class="race-pick__choices" />
                         <ui:Label name="SelectedLabel" text="Раса не выбрана" class="race-pick__selected" />
                         <ui:Button name="ConfirmButton" text="ГОТОВ" class="ui-btn ui-btn--primary race-pick__confirm" />
                     </ui:VisualElement>

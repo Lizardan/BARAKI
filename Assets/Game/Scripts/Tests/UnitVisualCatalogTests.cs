@@ -60,14 +60,6 @@ namespace Game.Tests
                 AssetDatabase.GetAssetPath(prefab));
         }
 
-        [Test]
-        public void TryGetPrefab_BugCaster_ReturnsNamedPrefab()
-        {
-            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Bug, UnitRole.Caster, out var prefab));
-            Assert.IsNotNull(prefab);
-            Assert.AreEqual("Bug_Caster", prefab.name);
-        }
-
         static readonly UnitRole[] CombatUnitRoles =
         {
             UnitRole.Melee,
@@ -79,33 +71,27 @@ namespace Game.Tests
         };
 
         [Test]
-        public void AllTwelvePrefabs_AreAssigned()
+        public void AllSixPrefabs_AreAssigned()
         {
-            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Bug })
+            foreach (var role in CombatUnitRoles)
             {
-                foreach (var role in CombatUnitRoles)
-                {
-                    Assert.IsTrue(
-                        _catalog.TryGetPrefab(raceId, role, out var prefab),
-                        $"Missing prefab for {raceId} {role}");
-                    Assert.IsNotNull(prefab, $"Null prefab for {raceId} {role}");
-                }
+                Assert.IsTrue(
+                    _catalog.TryGetPrefab(GameIds.Races.Human, role, out var prefab),
+                    $"Missing prefab for {GameIds.Races.Human} {role}");
+                Assert.IsNotNull(prefab, $"Null prefab for {GameIds.Races.Human} {role}");
             }
         }
 
         [Test]
-        public void AllTwelvePortraits_AreAssigned()
+        public void AllSixPortraits_AreAssigned()
         {
             UnitPortraitBaker.BakeIntoCatalog(_catalog);
-            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Bug })
+            foreach (var role in CombatUnitRoles)
             {
-                foreach (var role in CombatUnitRoles)
-                {
-                    Assert.IsTrue(
-                        _catalog.TryGetPortrait(raceId, role, out var portrait),
-                        $"Missing portrait for {raceId} {role}");
-                    Assert.IsNotNull(portrait, $"Null portrait for {raceId} {role}");
-                }
+                Assert.IsTrue(
+                    _catalog.TryGetPortrait(GameIds.Races.Human, role, out var portrait),
+                    $"Missing portrait for {GameIds.Races.Human} {role}");
+                Assert.IsNotNull(portrait, $"Null portrait for {GameIds.Races.Human} {role}");
             }
         }
 
@@ -294,98 +280,65 @@ namespace Game.Tests
         [Test]
         public void HumanAnimatedPrefabs_AreNormalizedNearGreyboxHeight()
         {
-            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Bug, UnitRole.Melee, out var bugPrefab));
-            var bug = Object.Instantiate(bugPrefab);
-            try
+            // Mirrors ReferenceMeleeLocalHeight in HumanAnimatedUnitSetup.NormalizePrefabScale.
+            const float referenceHeight = 1.134f;
+            var baseHeight = referenceHeight * UnitGreyboxVisuals.Scale;
+
+            float minHuman = float.MaxValue;
+            float maxHuman = 0f;
+            foreach (var role in CombatUnitRoles)
             {
-                bug.transform.position = Vector3.zero;
-                bug.transform.rotation = Quaternion.identity;
-                bug.transform.localScale = Vector3.one * UnitGreyboxVisuals.Scale;
-                var bugHeight = MeasureActiveRendererHeight(bug);
-
-                float minHuman = float.MaxValue;
-                float maxHuman = 0f;
-                foreach (var role in CombatUnitRoles)
+                Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, out var humanPrefab));
+                var human = Object.Instantiate(humanPrefab);
+                try
                 {
-                    Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, out var humanPrefab));
-                    var human = Object.Instantiate(humanPrefab);
-                    try
+                    human.transform.position = Vector3.zero;
+                    human.transform.rotation = Quaternion.identity;
+                    human.transform.localScale =
+                        humanPrefab.transform.localScale
+                        * UnitGreyboxVisuals.Scale
+                        * UnitGreyboxVisuals.AnimatedHumanScaleFactor;
+
+                    var humanHeight = MeasureBodyHeight(human);
+                    var expectedHeight = baseHeight * UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role);
+                    Assert.AreEqual(
+                        expectedHeight,
+                        humanHeight,
+                        expectedHeight * 0.08f,
+                        $"{role} body height {humanHeight} should be near {expectedHeight}");
+                    Assert.IsNotNull(
+                        human.GetComponentInChildren<Animator>(),
+                        $"{role} should keep Animator");
+
+                    if (Mathf.Abs(UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role) - 1f) > 0.01f)
                     {
-                        human.transform.position = Vector3.zero;
-                        human.transform.rotation = Quaternion.identity;
-                        human.transform.localScale =
-                            humanPrefab.transform.localScale
-                            * UnitGreyboxVisuals.Scale
-                            * UnitGreyboxVisuals.AnimatedHumanScaleFactor;
-
-                        var humanHeight = MeasureBodyHeight(human);
-                        var expectedHeight = bugHeight * UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role);
-                        Assert.AreEqual(
-                            expectedHeight,
-                            humanHeight,
-                            expectedHeight * 0.08f,
-                            $"{role} body height {humanHeight} should be near {expectedHeight}");
-                        Assert.IsNotNull(
-                            human.GetComponentInChildren<Animator>(),
-                            $"{role} should keep Animator");
-
-                        if (Mathf.Abs(UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role) - 1f) > 0.01f)
-                        {
-                            continue;
-                        }
-
-                        if (humanHeight < minHuman)
-                        {
-                            minHuman = humanHeight;
-                        }
-
-                        if (humanHeight > maxHuman)
-                        {
-                            maxHuman = humanHeight;
-                        }
+                        continue;
                     }
-                    finally
+
+                    if (humanHeight < minHuman)
                     {
-                        Object.DestroyImmediate(human);
+                        minHuman = humanHeight;
+                    }
+
+                    if (humanHeight > maxHuman)
+                    {
+                        maxHuman = humanHeight;
                     }
                 }
+                finally
+                {
+                    Object.DestroyImmediate(human);
+                }
+            }
 
+            if (minHuman < float.MaxValue)
+            {
                 Assert.AreEqual(
                     maxHuman,
                     minHuman,
-                    bugHeight * 0.05f,
+                    baseHeight * 0.05f,
                     $"Baseline Human body height span {minHuman}..{maxHuman} should stay within 5%");
             }
-            finally
-            {
-                Object.DestroyImmediate(bug);
-            }
-        }
-
-        static float MeasureActiveRendererHeight(GameObject root)
-        {
-            var enc = new Bounds();
-            var has = false;
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
-            {
-                if (!renderer.gameObject.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                if (!has)
-                {
-                    enc = renderer.bounds;
-                    has = true;
-                }
-                else
-                {
-                    enc.Encapsulate(renderer.bounds);
-                }
-            }
-
-            Assert.IsTrue(has, "Expected active renderers");
-            return enc.size.y;
         }
 
         /// <summary>Tallest active skinned mesh local height in world units (prefab scale applied).</summary>
@@ -546,11 +499,11 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BugMeleePrefab_HasTeamAccent()
+        public void HumanMeleePrefab_HasTeamAccent()
         {
-            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Bug, UnitRole.Melee, out var prefab));
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
             Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 1,
-                "Bug_Melee should include at least one TeamAccent carapace mesh.");
+                "Human_Melee should include at least one TeamAccent mesh.");
         }
     }
 
@@ -662,7 +615,7 @@ namespace Game.Tests
                 soPresenter.ApplyModifiedPropertiesWithoutUndo();
 
                 runtime.StartMatch(
-                    new[] { GameIds.Races.Human, GameIds.Races.Bug, GameIds.Races.Slot3, GameIds.Races.Slot4 },
+                    new[] { GameIds.Races.Human, GameIds.Races.Human, GameIds.Races.Slot3, GameIds.Races.Slot4 },
                     localPlayerSlot: 0);
 
                 var stats = new UnitCombatStats(

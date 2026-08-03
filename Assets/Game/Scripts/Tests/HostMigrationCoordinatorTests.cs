@@ -26,6 +26,38 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BeginHostLost_NegativePreviousSlot_Aborts()
+        {
+            var go = new GameObject("HostMigrationBadPrev");
+            var coordinator = go.AddComponent<HostMigrationCoordinator>();
+            Time.timeScale = 0f;
+
+            coordinator.BeginHostLost(-1, new[] { true, true }, matchInProgress: true);
+
+            Assert.AreEqual(HostMigrationRules.MigrationPhase.Aborted, coordinator.Phase);
+            Assert.AreEqual(1f, Time.timeScale);
+
+            Time.timeScale = 1f;
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void BeginHostLost_PreviousSlotOutOfRange_Aborts()
+        {
+            var go = new GameObject("HostMigrationBadRange");
+            var coordinator = go.AddComponent<HostMigrationCoordinator>();
+            Time.timeScale = 0f;
+
+            coordinator.BeginHostLost(5, new[] { true, true }, matchInProgress: true);
+
+            Assert.AreEqual(HostMigrationRules.MigrationPhase.Aborted, coordinator.Phase);
+            Assert.AreEqual(1f, Time.timeScale);
+
+            Time.timeScale = 1f;
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
         public void CaptureAndApply_RoundTripsGoldViaSnapshot()
         {
             var controller = new MatchController();

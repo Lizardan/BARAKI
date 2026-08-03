@@ -7,18 +7,12 @@ namespace Game.Gameplay.Match
     {
         public const float BaseIntervalSeconds = 35f;
         public const float SpawnSpeedPerLevel = 0.05f;
-        public const float BugBroodSurgeMultiplier = 1.10f;
 
-        public static float GetWaveIntervalSeconds(int barracksLevel, bool isRuins, string ownerRaceId)
+        public static float GetWaveIntervalSeconds(int barracksLevel, bool isRuins)
         {
             var interval = isRuins
                 ? BaseIntervalSeconds
                 : BaseIntervalSeconds / PowSpawnSpeed(barracksLevel);
-
-            if (ownerRaceId == GameIds.Races.Bug)
-            {
-                interval /= BugBroodSurgeMultiplier;
-            }
 
             return interval;
         }

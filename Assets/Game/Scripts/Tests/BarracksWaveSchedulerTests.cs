@@ -10,29 +10,22 @@ namespace Game.Tests
         [Test]
         public void GetWaveInterval_L1_ReturnsBaseInterval()
         {
-            var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false, GameIds.Races.Human);
+            var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false);
             Assert.AreEqual(35f, interval, 0.01f);
         }
 
         [Test]
         public void GetWaveInterval_L2_ReturnsFasterSpawn()
         {
-            var interval = BarracksWaveRules.GetWaveIntervalSeconds(2, false, GameIds.Races.Human);
+            var interval = BarracksWaveRules.GetWaveIntervalSeconds(2, false);
             Assert.AreEqual(33.33f, interval, 0.05f);
         }
 
         [Test]
         public void GetWaveInterval_Ruins_UsesBaseInterval()
         {
-            var interval = BarracksWaveRules.GetWaveIntervalSeconds(4, true, GameIds.Races.Human);
+            var interval = BarracksWaveRules.GetWaveIntervalSeconds(4, true);
             Assert.AreEqual(35f, interval, 0.01f);
-        }
-
-        [Test]
-        public void GetWaveInterval_BugRace_AppliesBroodSurge()
-        {
-            var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false, GameIds.Races.Bug);
-            Assert.AreEqual(31.82f, interval, 0.05f);
         }
 
         [Test]
@@ -50,18 +43,6 @@ namespace Game.Tests
             {
                 Assert.AreEqual(35f, barracks.TimeUntilNextWaveSeconds, 0.01f);
                 Assert.AreEqual(35f, barracks.WaveIntervalSeconds, 0.01f);
-            }
-        }
-
-        [Test]
-        public void Initialize_BugBarracks_StartWithFasterInterval()
-        {
-            var scheduler = new BarracksWaveScheduler();
-            scheduler.Initialize(new List<MatchPlayerState> { new(0, GameIds.Races.Bug, 500) });
-
-            foreach (var barracks in scheduler.Barracks)
-            {
-                Assert.AreEqual(31.82f, barracks.TimeUntilNextWaveSeconds, 0.05f);
             }
         }
 
@@ -187,8 +168,7 @@ namespace Game.Tests
             var players = new List<MatchPlayerState>(count);
             for (var slot = 0; slot < count; slot++)
             {
-                var raceId = slot % 2 == 0 ? GameIds.Races.Human : GameIds.Races.Bug;
-                players.Add(new MatchPlayerState(slot, raceId, 500));
+                players.Add(new MatchPlayerState(slot, GameIds.Races.Human, 500));
             }
 
             return players;

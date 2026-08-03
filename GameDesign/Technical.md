@@ -117,9 +117,42 @@ MVP / playtest netcode:
 - Windows listen-host + Lobby join code + Relay
 - Host sim: fixed **30 Hz**; snapshots ~15 Hz; clients render-only (+ unit lerp)
 - Command ack/fail ClientRpc for research/hire/deploy/tower
-- Host migration: last-good snapshot → elect → Relay rebind → apply → resume
+- Host migration: host-loss grace → elect new host → state transfer → Relay rebind → apply → resume
+- Reconnect: `room:slot:playerId` reconnect token (UGS PlayerId), slot claim rules, disconnect grace
 - LocalDev offline path retained
 - **Not in scope:** dedicated server, full lockstep / shared RNG peer sim
+
+### Host migration (implemented)
+
+```entity
+id: NET_HOST_MIGRATION
+model: peer_only
+grace_s: 1.5
+client_rejoin_timeout_s: 5
+min_client_rejoin_wait_s: 0.5
+host_loss_detect: ngo_callback
+state_source: last_good_snapshot
+mvp: false
+```
+
+- Потеря хоста детектится NGO-коллбэком + debounce-грейс `HostMigrationRules.HostLossGraceSeconds` (1.5 c) — паника на коротких обрывах исключена.
+- Игра паузится (`Time.timeScale = 0`); слот нового хоста выбирается `HostMigrationRules.ElectNewHostSlot` (первый занятый слот после бывшего хоста).
+- Ожидание клиентов на ребренд: `ClientRejoinTimeoutSeconds` (5 c), минимум `MinClientRejoinWaitSeconds` (0.5 c).
+- Перенос состояния: новый хост применяет **последний good-снапшот** (`MatchRuntime.LastNetworkSnapshotBytes`); live-capture — только fallback для бывшего хоста. Снапшот v7.
+- На старте каждой новой сессии `MatchRuntime` очищает `_lastNetworkSnapshot*`, чтобы снапшот прошлой игры не просочился в миграцию следующей.
+
+```entity
+id: NET_RECONNECT_TOKEN
+format: room:slot:playerId
+player_id: UGS_PlayerId
+slot_claim: CanClaimSlot
+anti_squatting: true
+mvp: false
+```
+
+- Токен `room:slot:playerId`; legacy-форматы без PlayerId парсятся для обратной совместимости.
+- `PlayerReconnectRules.CanClaimSlot` не даёт токену без PlayerId занять слот, у которого владелец известен (защита от сквоттинга).
+- Дефолтный reconnect-грейс — `PlayerReconnectRules.DefaultGraceSeconds` (90 c); слот резервируется, после исчерпания грейса — elimination.
 
 ## Distribution
 

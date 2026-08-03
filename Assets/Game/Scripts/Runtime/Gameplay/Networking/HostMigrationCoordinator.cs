@@ -27,6 +27,8 @@ namespace Game.Gameplay.Networking
         public string ReconnectMatchId { get; private set; } = string.Empty;
         public byte[] CapturedStateBytes { get; private set; }
 
+        float _hostLossDetectedAtRealtime = -1f;
+
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -57,10 +59,24 @@ namespace Game.Gameplay.Networking
             var nm = NetworkManager.Singleton;
             if (nm == null || !nm.IsClient || nm.IsServer || nm.IsConnectedClient)
             {
+                _hostLossDetectedAtRealtime = -1f;
                 return;
             }
 
             if (MatchNetworkSession.LocalSlot < 0 && !MatchNetworkSession.HasHandle)
+            {
+                return;
+            }
+
+            // Debounce: a short network hiccup must not trigger a full migration.
+            if (_hostLossDetectedAtRealtime < 0f)
+            {
+                _hostLossDetectedAtRealtime = Time.realtimeSinceStartup;
+                return;
+            }
+
+            if (!HostMigrationRules.ShouldBeginMigrationAfterGrace(
+                    Time.realtimeSinceStartup - _hostLossDetectedAtRealtime))
             {
                 return;
             }
@@ -88,7 +104,9 @@ namespace Game.Gameplay.Networking
 
         public void BeginHostLost(int previousHostSlot, bool[] occupiedSlots, bool matchInProgress)
         {
-            if (!HostMigrationRules.ShouldPauseMatch(true, matchInProgress))
+            var slotCount = occupiedSlots?.Length ?? 0;
+            if (!HostMigrationRules.ShouldPauseMatch(true, matchInProgress)
+                || !HostMigrationRules.IsValidHostSlot(previousHostSlot, slotCount))
             {
                 Phase = HostMigrationRules.MigrationPhase.Aborted;
                 Time.timeScale = 1f;
@@ -152,7 +170,7 @@ namespace Game.Gameplay.Networking
         void TryBeginRebindDriver()
         {
             // Edit Mode unit tests exercise capture without a live session handle.
-            if (!MatchNetworkSession.HasHandle)
+            if (!Application.isPlaying || !MatchNetworkSession.HasHandle)
             {
                 return;
             }
@@ -220,6 +238,16 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
+            if (MatchNetworkSession.PlayerCount > 0
+                && !HostMigrationRules.IsValidHostSlot(DesignatedHostSlot, MatchNetworkSession.PlayerCount))
+            {
+                Phase = HostMigrationRules.MigrationPhase.Aborted;
+                Time.timeScale = 1f;
+                HostMigrationSession.Clear();
+                PlaytestLog.Warn("Migration", "Abort", ("phase", "resume-slot"));
+                return;
+            }
+
             Phase = HostMigrationRules.MigrationPhase.Playing;
             Time.timeScale = 1f;
             MatchNetworkSession.ListenHostSlot = DesignatedHostSlot;
@@ -240,7 +268,10 @@ namespace Game.Gameplay.Networking
                 return false;
             }
 
-            token = PlayerReconnectRules.BuildSessionToken(ReconnectMatchId, slot);
+            token = PlayerReconnectRules.BuildSessionToken(
+                ReconnectMatchId,
+                slot,
+                UnityServicesBootstrap.PlayerId);
             return true;
         }
     }

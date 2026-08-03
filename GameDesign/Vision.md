@@ -48,7 +48,7 @@ provides: [pillars, audience, scope, non_goals]
 - **Windows Standalone** — основной клиент
 - **2–8** игроков; хост = listen-server (Unity Lobby + Relay)
 - Процедурная топология: `TOPOLOGY_DUEL` + `TOPOLOGY_RING`
-- **2 расы:** Люди + Жуки; barracks **level 1–4**
+- **1 раса (MVP):** Люди (+2 слота TBD); barracks **level 1–4**
 - Core loop: spawn, combat, gold, upgrades, hero, towers
 - Elimination: **все здания** базы уничтожены (не только main)
 - Join code create/join (Friends hub — следующим этапом)

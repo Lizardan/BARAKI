@@ -43,7 +43,7 @@ namespace Game.Gameplay.Match
 
         public void RefreshInterval()
         {
-            WaveIntervalSeconds = BarracksWaveRules.GetWaveIntervalSeconds(Level, IsRuins, OwnerRaceId);
+            WaveIntervalSeconds = BarracksWaveRules.GetWaveIntervalSeconds(Level, IsRuins);
         }
     }
 }

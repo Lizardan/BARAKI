@@ -298,7 +298,10 @@ namespace Game.Gameplay.Networking
                 return string.Empty;
             }
 
-            return PlayerReconnectRules.BuildSessionToken(room, LocalSlot);
+            return PlayerReconnectRules.BuildSessionToken(
+                room,
+                LocalSlot,
+                UnityServicesBootstrap.PlayerId);
         }
 
         public static void ClaimReconnectIfNeeded()
@@ -328,7 +331,10 @@ namespace Game.Gameplay.Networking
                 && (MatchStarted || HostMigrationSession.IsRebinding))
             {
                 return MatchConnectionPayloadRules.BuildReconnect(
-                    PlayerReconnectRules.BuildSessionToken(room, LocalSlot));
+                    PlayerReconnectRules.BuildSessionToken(
+                        room,
+                        LocalSlot,
+                        UnityServicesBootstrap.PlayerId));
             }
 
             var isDesignatedHost = isHost
@@ -336,7 +342,8 @@ namespace Game.Gameplay.Networking
                     && LocalSlot == HostMigrationSession.DesignatedHostSlot);
             return MatchConnectionPayloadRules.BuildInitial(
                 isDesignatedHost,
-                PlayerProfileService.DisplayName);
+                PlayerProfileService.DisplayName,
+                UnityServicesBootstrap.PlayerId);
         }
 
         private static async UniTask<bool> StartRelayTransportAsync(

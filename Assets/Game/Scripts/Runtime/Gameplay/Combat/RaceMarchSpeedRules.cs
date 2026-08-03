@@ -1,4 +1,3 @@
-using Game.Core;
 using Game.Gameplay.Data;
 
 namespace Game.Gameplay.Combat
@@ -10,7 +9,6 @@ namespace Game.Gameplay.Combat
     public static class RaceMarchSpeedRules
     {
         public const float BaseMarchSpeed = 4f;
-        public const float BugFrenzyMoveMultiplier = 1.1f;
 
         public static float GetMarchSpeed(RaceDefinition race, UnitDefinition unit = null)
         {
@@ -19,21 +17,7 @@ namespace Game.Gameplay.Combat
                 return unit.MarchSpeedOverride;
             }
 
-            var speed = BaseMarchSpeed;
-            if (race?.PositivePassiveIds == null)
-            {
-                return speed;
-            }
-
-            foreach (var passiveId in race.PositivePassiveIds)
-            {
-                if (passiveId == GameIds.Passives.BugFrenzy)
-                {
-                    speed *= BugFrenzyMoveMultiplier;
-                }
-            }
-
-            return speed;
+            return BaseMarchSpeed;
         }
     }
 }

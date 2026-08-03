@@ -22,9 +22,7 @@ namespace Game.Editor
             EnsureFolder(RootPath + "/Upgrades");
 
             var humanUnits = CreateHumanUnits();
-            var bugUnits = CreateBugUnits();
-            var humanHeroes = CreateHeroes(GameIds.Races.Human);
-            var bugHeroes = CreateHeroes(GameIds.Races.Bug);
+            var humanHeroes = CreateHeroes();
 
             var human = CreateRace(
                 GameIds.Races.Human,
@@ -33,14 +31,6 @@ namespace Game.Editor
                 humanHeroes,
                 new[] { GameIds.Passives.HumanSteelArms, GameIds.Passives.HumanFortifiedLine },
                 GameIds.Passives.HumanLevyTax);
-
-            var bug = CreateRace(
-                GameIds.Races.Bug,
-                "Жуки",
-                bugUnits,
-                bugHeroes,
-                new[] { GameIds.Passives.BugFrenzy, GameIds.Passives.BugBroodSurge },
-                GameIds.Passives.BugGlassChitin);
 
             var squads = new[]
             {
@@ -66,7 +56,7 @@ namespace Game.Editor
                     new[] { 10f, 12f, 14f, 16f, 18f, 20f, 22f, 24f, 26f }),
             };
 
-            CreateOrUpdateCatalog(human, bug, squads, statTracks);
+            CreateOrUpdateCatalog(human, squads, statTracks);
             AssetDatabase.SaveAssets();
         }
 
@@ -89,39 +79,15 @@ namespace Game.Editor
             };
         }
 
-        private static UnitDefinition[] CreateBugUnits()
+        private static HeroDefinition[] CreateHeroes()
         {
-            return new[]
-            {
-                CreateUnit(GameIds.Units.BugMelee, GameIds.Races.Bug, UnitRole.Melee,
-                    120f, 1f, 8f, 10f, 1f, 1.5f, 4f, 8),
-                CreateUnit(GameIds.Units.BugRanged, GameIds.Races.Bug, UnitRole.Ranged,
-                    70f, 0f, 6f, 8f, 1f, 8f, RaceMarchSpeedRules.BaseMarchSpeed, 6),
-                CreateUnit(GameIds.Units.BugCaster, GameIds.Races.Bug, UnitRole.Caster,
-                    60f, 0f, 4f, 5f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 7),
-                CreateUnit(GameIds.Units.BugSiege, GameIds.Races.Bug, UnitRole.Siege,
-                    200f, 0f, 12f, 16f, 1f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
-                CreateUnit(GameIds.Units.BugFlying, GameIds.Races.Bug, UnitRole.Flying,
-                    90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
-                CreateUnit(GameIds.Units.BugSuper, GameIds.Races.Bug, UnitRole.Super,
-                    500f, 2f, 30f, 40f, 0.5f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
-            };
-        }
-
-        private static HeroDefinition[] CreateHeroes(string raceId)
-        {
-            var morale = raceId == GameIds.Races.Human
-                ? new[] { "HERO_MORALE_SLOT_1", "HERO_MORALE_SLOT_2", "HERO_MORALE_SLOT_3" }
-                : new[] { "HERO_MORALE_SLOT_1", "HERO_MORALE_SLOT_2", "HERO_MORALE_SLOT_3" };
-
-            var ids = raceId == GameIds.Races.Human
-                ? new[] { GameIds.Heroes.Human1, GameIds.Heroes.Human2, GameIds.Heroes.Human3 }
-                : new[] { GameIds.Heroes.Bug1, GameIds.Heroes.Bug2, GameIds.Heroes.Bug3 };
+            var morale = new[] { "HERO_MORALE_SLOT_1", "HERO_MORALE_SLOT_2", "HERO_MORALE_SLOT_3" };
+            var ids = new[] { GameIds.Heroes.Human1, GameIds.Heroes.Human2, GameIds.Heroes.Human3 };
 
             var heroes = new HeroDefinition[3];
             for (var i = 0; i < 3; i++)
             {
-                heroes[i] = CreateHero(ids[i], raceId, i + 1, morale[i]);
+                heroes[i] = CreateHero(ids[i], GameIds.Races.Human, i + 1, morale[i]);
             }
 
             return heroes;
@@ -273,15 +239,13 @@ namespace Game.Editor
 
         private static void CreateOrUpdateCatalog(
             RaceDefinition human,
-            RaceDefinition bug,
             SquadCompositionDefinition[] squads,
             StatUpgradeTrackDefinition[] statTracks)
         {
             var catalog = LoadOrCreate<RaceCatalog>(CatalogPath);
             var so = new SerializedObject(catalog);
-            so.FindProperty("_races").arraySize = 2;
+            so.FindProperty("_races").arraySize = 1;
             so.FindProperty("_races").GetArrayElementAtIndex(0).objectReferenceValue = human;
-            so.FindProperty("_races").GetArrayElementAtIndex(1).objectReferenceValue = bug;
             so.FindProperty("_squadCompositions").arraySize = squads.Length;
             for (var i = 0; i < squads.Length; i++)
             {

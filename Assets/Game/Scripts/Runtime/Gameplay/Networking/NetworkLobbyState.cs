@@ -14,6 +14,7 @@ namespace Game.Gameplay.Networking
         public bool IsReady;
         public bool IsReserved;
         public FixedString64Bytes DisplayName;
+        public FixedString64Bytes PlayerId;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer)
             where T : IReaderWriter
@@ -23,6 +24,7 @@ namespace Game.Gameplay.Networking
             serializer.SerializeValue(ref IsReady);
             serializer.SerializeValue(ref IsReserved);
             serializer.SerializeValue(ref DisplayName);
+            serializer.SerializeValue(ref PlayerId);
         }
 
         public bool Equals(NetworkLobbySlot other) =>
@@ -30,7 +32,8 @@ namespace Game.Gameplay.Networking
             && IsOccupied == other.IsOccupied
             && IsReady == other.IsReady
             && IsReserved == other.IsReserved
-            && DisplayName.Equals(other.DisplayName);
+            && DisplayName.Equals(other.DisplayName)
+            && PlayerId.Equals(other.PlayerId);
     }
 
     /// <summary>Server-authoritative fixed-size lobby replicated through NGO.</summary>
@@ -445,6 +448,7 @@ namespace Game.Gameplay.Networking
                 IsReady = false,
                 IsReserved = false,
                 DisplayName = new FixedString64Bytes(displayName),
+                PlayerId = new FixedString64Bytes(ResolveSlotPlayerId(clientId)),
             };
             _hasDisconnectTimer[slot] = false;
             _disconnectAtRealtime[slot] = 0f;
@@ -477,7 +481,11 @@ namespace Game.Gameplay.Networking
         void TryClaimReconnect(int preferredSlot, ulong clientId, string sessionToken)
         {
             if (!_matchStarted.Value
-                || !PlayerReconnectRules.TryParseSessionToken(sessionToken, out var matchId, out var slot))
+                || !PlayerReconnectRules.TryParseSessionToken(
+                    sessionToken,
+                    out var matchId,
+                    out var slot,
+                    out var tokenPlayerId))
             {
                 return;
             }
@@ -494,6 +502,11 @@ namespace Game.Gameplay.Networking
             }
 
             if (preferredSlot >= 0 && preferredSlot != slot)
+            {
+                return;
+            }
+
+            if (!PlayerReconnectRules.CanClaimSlot(tokenPlayerId, _slots[slot].PlayerId.ToString()))
             {
                 return;
             }
@@ -578,6 +591,18 @@ namespace Game.Gameplay.Networking
             var go = new GameObject(nameof(HostMigrationCoordinator));
             DontDestroyOnLoad(go);
             go.AddComponent<HostMigrationCoordinator>();
+        }
+
+        private static string ResolveSlotPlayerId(ulong clientId)
+        {
+            if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                return UnityServicesBootstrap.PlayerId;
+            }
+
+            return MatchNetworkBootstrap.TryGetApprovedPlayerId(clientId, out var playerId)
+                ? playerId
+                : string.Empty;
         }
 
         private static string ResolveClientDisplayName(ulong clientId)

@@ -22,7 +22,7 @@ namespace Game.Tests
             Assert.AreEqual("RACE_HUMAN", GameIds.Races.Human);
             Assert.AreEqual("BUILDING_BARRACKS_CENTER", GameIds.Buildings.BarracksCenter);
             Assert.AreEqual("LANE_CENTER", GameIds.Lanes.Center);
-            Assert.AreEqual("SPELL_BUG_2", GameIds.Spells.BugEgg);
+            Assert.AreEqual("SPELL_HUMAN_3", GameIds.Spells.HumanResurrect);
         }
 
         static List<string> CollectIds(System.Type root)

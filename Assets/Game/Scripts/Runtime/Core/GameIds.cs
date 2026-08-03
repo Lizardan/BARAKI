@@ -14,7 +14,6 @@ namespace Game.Core
         public static class Races
         {
             public const string Human = "RACE_HUMAN";
-            public const string Bug = "RACE_BUG";
             public const string Slot3 = "RACE_SLOT_3";
             public const string Slot4 = "RACE_SLOT_4";
         }
@@ -46,7 +45,6 @@ namespace Game.Core
             public const string TowerSe = "BUILDING_TOWER_SE";
 
             public const string SetHuman = "BUILDING_SET_HUMAN";
-            public const string SetBug = "BUILDING_SET_BUG";
         }
 
         public static class Units
@@ -57,13 +55,6 @@ namespace Game.Core
             public const string HumanSiege = "UNIT_HUMAN_SIEGE";
             public const string HumanFlying = "UNIT_HUMAN_FLYING";
             public const string HumanSuper = "UNIT_HUMAN_SUPER";
-
-            public const string BugMelee = "UNIT_BUG_MELEE";
-            public const string BugRanged = "UNIT_BUG_RANGED";
-            public const string BugCaster = "UNIT_BUG_CASTER";
-            public const string BugSiege = "UNIT_BUG_SIEGE";
-            public const string BugFlying = "UNIT_BUG_FLYING";
-            public const string BugSuper = "UNIT_BUG_SUPER";
         }
 
         public static class Squads
@@ -79,9 +70,6 @@ namespace Game.Core
             public const string Human1 = "HERO_HUMAN_1";
             public const string Human2 = "HERO_HUMAN_2";
             public const string Human3 = "HERO_HUMAN_3";
-            public const string Bug1 = "HERO_BUG_1";
-            public const string Bug2 = "HERO_BUG_2";
-            public const string Bug3 = "HERO_BUG_3";
         }
 
         public static class Passives
@@ -89,10 +77,6 @@ namespace Game.Core
             public const string HumanSteelArms = "PASSIVE_HUMAN_STEEL_ARMS";
             public const string HumanFortifiedLine = "PASSIVE_HUMAN_FORTIFIED_LINE";
             public const string HumanLevyTax = "PASSIVE_HUMAN_LEVY_TAX";
-
-            public const string BugFrenzy = "PASSIVE_BUG_FRENZY";
-            public const string BugBroodSurge = "PASSIVE_BUG_BROOD_SURGE";
-            public const string BugGlassChitin = "PASSIVE_BUG_GLASS_CHITIN";
         }
 
         public static class Spells
@@ -100,10 +84,6 @@ namespace Game.Core
             public const string HumanHeal = "SPELL_HUMAN_1";
             public const string HumanFrost = "SPELL_HUMAN_2";
             public const string HumanResurrect = "SPELL_HUMAN_3";
-
-            public const string BugInfect = "SPELL_BUG_1";
-            public const string BugEgg = "SPELL_BUG_2";
-            public const string BugMutate = "SPELL_BUG_3";
         }
 
         public static class Upgrades
@@ -125,12 +105,6 @@ namespace Game.Core
             public const string TowerHumanBallistaOverdraw = "UPG_TOWER_HUMAN_BALLISTA_OVERDRAW";
             public const string TowerHumanArcaneRelay = "UPG_TOWER_HUMAN_ARCANE_RELAY";
             public const string TowerHumanLastStand = "UPG_TOWER_HUMAN_LAST_STAND";
-
-            public const string TowerBugAdrenalGland = "UPG_TOWER_BUG_ADRENAL_GLAND";
-            public const string TowerBugCarapaceWeave = "UPG_TOWER_BUG_CARAPACE_WEAVE";
-            public const string TowerBugNeurotoxin = "UPG_TOWER_BUG_NEUROTOXIN";
-            public const string TowerBugHatcheryPulse = "UPG_TOWER_BUG_HATCHERY_PULSE";
-            public const string TowerBugAcidSac = "UPG_TOWER_BUG_ACID_SAC";
         }
 
         public static class Match

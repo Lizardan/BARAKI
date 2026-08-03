@@ -7,15 +7,9 @@ namespace Game.Gameplay.Match
     {
         public const float EarlyEndSeconds = 8f * 60f;
         public const float MidEndSeconds = 18f * 60f;
-        public const int DefaultStartingGold = 500;
-        public const int HumanStartingGoldPenalty = 250;
+        public const int StartingGold = 250;
 
-        public static int GetStartingGold(string raceId)
-        {
-            return raceId == GameIds.Races.Human
-                ? DefaultStartingGold - HumanStartingGoldPenalty
-                : DefaultStartingGold;
-        }
+        public static int GetStartingGold(string raceId) => StartingGold;
 
         public static MatchPhase ResolveTimePhase(float matchTimeSeconds)
         {

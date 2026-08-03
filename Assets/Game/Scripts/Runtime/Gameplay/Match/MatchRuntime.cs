@@ -70,6 +70,8 @@ namespace Game.Gameplay.Match
         {
             _isMatchStarted = false;
             Controller = null;
+            _lastNetworkSnapshot = null;
+            _lastNetworkSnapshotBytes = null;
             PrepareArena();
         }
 

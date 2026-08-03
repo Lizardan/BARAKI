@@ -179,27 +179,27 @@ gold_bounty: 80
 mvp: true
 ```
 
-## Roster — Bug (MVP)
+## Roster — Human (MVP)
 
 ```entity
-id: HERO_BUG_1
+id: HERO_HUMAN_1
 slot: 1
-race_id: RACE_BUG
+race_id: RACE_HUMAN
 idle_morale: HERO_MORALE_SLOT_1
 mvp: true
 
-id: HERO_BUG_2
+id: HERO_HUMAN_2
 slot: 2
 idle_morale: HERO_MORALE_SLOT_2
 mvp: true
 
-id: HERO_BUG_3
+id: HERO_HUMAN_3
 slot: 3
 idle_morale: HERO_MORALE_SLOT_3
 mvp: true
 ```
 
-> MVP: Human/Bug **идентичны** по статам; слоты 2–3 — placeholder до контента.
+> MVP: слоты 2–3 — placeholder до контента.
 
 ## Locked decisions (confirmed)
 

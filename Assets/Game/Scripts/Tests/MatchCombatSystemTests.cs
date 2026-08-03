@@ -222,35 +222,6 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HandleWave_BugSquadL4_AllRolesShareFrenzyMarchSpeed()
-        {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
-
-            var combat = new MatchCombatSystem();
-            combat.Reset(controller.Players, controller.Graph);
-
-            var wave = new BarracksWaveFired(
-                0,
-                GameIds.Buildings.BarracksCenter,
-                GameIds.Lanes.Center,
-                GameIds.Races.Bug,
-                squadLevel: 4,
-                squadId: "test");
-
-            combat.HandleWave(wave, _catalog);
-            CompletePendingWaveSpawns(combat, expectedUnitCount: 14);
-
-            Assert.AreEqual(14, combat.Units.Count);
-            var expected = RaceMarchSpeedRules.BaseMarchSpeed * RaceMarchSpeedRules.BugFrenzyMoveMultiplier;
-            foreach (var unit in combat.Units)
-            {
-                Assert.AreEqual(expected, unit.MarchMoveSpeed, 0.001f,
-                    $"Role {unit.Role} should march at race speed");
-            }
-        }
-
-        [Test]
         public void HandleWave_SpawnsUnitsSequentiallyWithInterval()
         {
             var controller = new MatchController();

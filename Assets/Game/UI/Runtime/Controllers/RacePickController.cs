@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Cameras;
 using Game.Gameplay.Match;
@@ -20,12 +21,12 @@ namespace Game.UI.Controllers
         private MatchRuntime _matchRuntime;
         private GameplayCameraPanController _panController;
         private VisualElement _screen;
+        private VisualElement _choicesContainer;
         private Label _subtitleLabel;
         private Label _slotsLabel;
         private Label _selectedLabel;
-        private Button _humanButton;
-        private Button _bugButton;
         private Button _confirmButton;
+        private readonly List<(Button button, string raceId)> _raceButtons = new();
         private RacePickSession _session;
         private string _selectedRaceId;
         private string _pendingNetworkRaceId;
@@ -44,14 +45,12 @@ namespace Game.UI.Controllers
             _subtitleLabel = root.Q<Label>("SubtitleLabel");
             _slotsLabel = root.Q<Label>("SlotsLabel");
             _selectedLabel = root.Q<Label>("SelectedLabel");
-            _humanButton = root.Q<Button>("HumanButton");
-            _bugButton = root.Q<Button>("BugButton");
+            _choicesContainer = root.Q<VisualElement>("RaceChoices");
             _confirmButton = root.Q<Button>("ConfirmButton");
 
-            _humanButton.clicked += () => SelectRace(GameIds.Races.Human);
-            _bugButton.clicked += () => SelectRace(GameIds.Races.Bug);
             _confirmButton.clicked += OnConfirm;
-            RefreshRaceAvailability();
+            BuildRaceButtons();
+            UpdateRaceButtons();
         }
 
         private void OnEnable()
@@ -246,25 +245,32 @@ namespace Game.UI.Controllers
             var canSelect = !_localPickSubmitted
                 && !hasPendingPick
                 && (_matchRuntime == null || !_matchRuntime.IsMatchStarted);
-            _humanButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Human));
-            _bugButton.SetEnabled(canSelect && RacePickRules.IsSelectable(GameIds.Races.Bug));
-            _humanButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Human);
-            _bugButton.EnableInClassList(SelectedClass, _selectedRaceId == GameIds.Races.Bug);
-            RefreshRaceAvailability();
+
+            foreach (var (button, raceId) in _raceButtons)
+            {
+                var selectable = RacePickRules.IsSelectable(raceId);
+                button.SetEnabled(canSelect && selectable);
+                button.EnableInClassList(SelectedClass, _selectedRaceId == raceId);
+                button.EnableInClassList(LockedClass, !selectable);
+                button.tooltip = selectable ? null : "Раса недоступна в текущем playtest";
+            }
         }
 
-        void RefreshRaceAvailability()
+        private void BuildRaceButtons()
         {
-            if (_bugButton == null || _humanButton == null)
+            var playable = RacePickRules.PlayableRaceIds;
+            for (var i = 0; i < playable.Length; i++)
             {
-                return;
-            }
-
-            _bugButton.EnableInClassList(LockedClass, !RacePickRules.IsSelectable(GameIds.Races.Bug));
-            _humanButton.EnableInClassList(LockedClass, !RacePickRules.IsSelectable(GameIds.Races.Human));
-            if (!RacePickRules.IsSelectable(GameIds.Races.Bug))
-            {
-                _bugButton.tooltip = "Раса недоступна в текущем playtest";
+                var raceId = playable[i];
+                var button = new Button(() => SelectRace(raceId))
+                {
+                    name = $"RaceButton_{i}",
+                    text = RacePickRules.GetDisplayName(raceId),
+                };
+                button.AddToClassList("ui-btn");
+                button.AddToClassList("race-pick__race-btn");
+                _choicesContainer?.Add(button);
+                _raceButtons.Add((button, raceId));
             }
         }
 

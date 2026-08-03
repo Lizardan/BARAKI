@@ -93,6 +93,10 @@ mvp: true
 4. Ручной major/minor: Actions → **Deploy Windows** → bump = minor/major
 5. Пропуск релиза: commit message содержит `[skip release]`
 
+SHA256: релиз публикует ассет `BARAKI-{tag}.zip.sha256` и хеш в notes. Клиент проверяет его, только когда `BARAKI_UPDATE_URL` указывает на манифест `version.json` с полем `sha256` (default `/releases/latest`-флоу хеш не проверяет).
+
+Prune: workflow держит последние 2 полноценных релиза `v*`; релизы апдейтера `updater-v*` (prerelease) prune **не удаляет** — на них ссылается installer-редирект (`download.js`).
+
 ## Non-goals
 
 - Discord Activity / Embedded App SDK

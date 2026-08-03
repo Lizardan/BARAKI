@@ -13,6 +13,7 @@ namespace Game.UI.Controllers
         VisualElement _bottomDock;
         VisualElement _topBar;
         VisualElement _debugHudPanel;
+        MatchSelectionBridge _bridge;
         MatchSelectionInput _boundInput;
 
         void Awake()
@@ -49,13 +50,17 @@ namespace Game.UI.Controllers
 
         void TryBindUiBlocker()
         {
-            var bridge = FindAnyObjectByType<MatchSelectionBridge>();
-            if (bridge == null)
+            if (_bridge == null)
+            {
+                _bridge = FindAnyObjectByType<MatchSelectionBridge>();
+            }
+
+            if (_bridge == null)
             {
                 return;
             }
 
-            var input = bridge.GetComponent<MatchSelectionInput>();
+            var input = _bridge.GetComponent<MatchSelectionInput>();
             if (input == null)
             {
                 return;

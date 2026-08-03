@@ -1,4 +1,3 @@
-using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using UnityEngine;
@@ -8,9 +7,7 @@ namespace Game.Gameplay.Match
     public static class CombatAttackVisualBuilder
     {
         static readonly Color HumanArrowColor = new(0.45f, 0.28f, 0.12f);
-        static readonly Color BugProjectileColor = new(0.3f, 0.85f, 0.25f);
         static readonly Color HumanSpellColor = new(0.9f, 0.15f, 0.1f);
-        static readonly Color BugSpellColor = new(0.35f, 0.9f, 0.3f);
 
         const float ProjectileScale = 2f;
 
@@ -57,31 +54,20 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var isHuman = projectile.AttackerRaceId == GameIds.Races.Human;
             var isRanged = projectile.AttackerRole == UnitRole.Ranged;
             var isCaster = projectile.AttackerRole == UnitRole.Caster;
 
             if (isRanged)
             {
-                if (isHuman)
-                {
-                    primitive = PrimitiveType.Cube;
-                    localScale = new Vector3(0.08f, 0.08f, 0.55f) * ProjectileScale;
-                    color = HumanArrowColor;
-                }
-                else
-                {
-                    primitive = PrimitiveType.Sphere;
-                    localScale = Vector3.one * (0.22f * ProjectileScale);
-                    color = BugProjectileColor;
-                }
-
+                primitive = PrimitiveType.Cube;
+                localScale = new Vector3(0.08f, 0.08f, 0.55f) * ProjectileScale;
+                color = HumanArrowColor;
                 return;
             }
 
             primitive = PrimitiveType.Cube;
             localScale = Vector3.one * ((isCaster ? 0.24f : 0.2f) * ProjectileScale);
-            color = isHuman ? HumanSpellColor : BugSpellColor;
+            color = HumanSpellColor;
         }
 
         public static void UpdateProjectileTransform(Transform visual, CombatProjectileState projectile)

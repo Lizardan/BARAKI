@@ -134,7 +134,7 @@ minutes:
   N8: 25-35
 ```
 
-## Unit combat (Human / Bug baseline)
+## Unit combat (Human baseline)
 
 | id | HP | Dmg | AS | Range | Bounty |
 |----|-----|-----|-----|-------|--------|
@@ -146,7 +146,7 @@ minutes:
 | UNIT_*_SUPER | 500 | 35 | 0.5 | 12.0 | 50 |
 | HERO_*_CHAMPION | 600 | 40 | 0.8 | 1.8 | 80 |
 
-> `*` = `HUMAN` или `BUG`; **одинаковый baseline**; расовые пассивы модифицируют effective stats.
+> `*` = `HUMAN`; **baseline**; расовые пассивы модифицируют effective stats.
 
 ## Caster spells (baseline numbers)
 
@@ -155,9 +155,6 @@ minutes:
 | `SPELL_HUMAN_1` | heal **80**, range **6** | **10s** |
 | `SPELL_HUMAN_2` | AoE r **5**, dmg **40** | **14s** |
 | `SPELL_HUMAN_3` | resurrect, corpse **≤20s** | **30s** |
-| `SPELL_BUG_1` | infect → spawn melee on death | **12s** |
-| `SPELL_BUG_2` | egg **120 HP**, hatch **30s** (0 HP → no hatch) | **18s** |
-| `SPELL_BUG_3` | mutate **+10%** HP/dmg | **16s** |
 
 Cast range (all): **6**. См. `Races.md` для полных entity.
 

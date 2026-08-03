@@ -16,11 +16,6 @@ namespace Game.Editor
         public static Material HumanLeather { get; private set; }
         public static Material HumanCloth { get; private set; }
         public static Material HumanArcane { get; private set; }
-        public static Material BugChitin { get; private set; }
-        public static Material BugChitinDark { get; private set; }
-        public static Material BugUnderbelly { get; private set; }
-        public static Material BugBone { get; private set; }
-        public static Material BugGlow { get; private set; }
         public static Material TeamAccent { get; private set; }
 
         public static void EnsureMaterials()
@@ -34,11 +29,6 @@ namespace Game.Editor
             HumanLeather = GetOrCreate("UnitHumanLeather", new Color(0.38f, 0.26f, 0.18f), 0.2f);
             HumanCloth = GetOrCreate("UnitHumanCloth", new Color(0.28f, 0.3f, 0.38f), 0.12f);
             HumanArcane = GetOrCreate("UnitHumanArcane", new Color(0.35f, 0.55f, 0.95f), 0.7f);
-            BugChitin = GetOrCreate("UnitBugChitin", new Color(0.42f, 0.28f, 0.52f), 0.4f);
-            BugChitinDark = GetOrCreate("UnitBugChitinDark", new Color(0.18f, 0.12f, 0.2f), 0.3f);
-            BugUnderbelly = GetOrCreate("UnitBugUnderbelly", new Color(0.28f, 0.2f, 0.16f), 0.22f);
-            BugBone = GetOrCreate("UnitBugBone", new Color(0.78f, 0.72f, 0.58f), 0.35f);
-            BugGlow = GetOrCreate("UnitBugGlow", new Color(0.35f, 0.95f, 0.4f), 0.75f);
             TeamAccent = GetOrCreate("UnitTeamAccent", Color.white, 0.45f);
 
             AssetDatabase.SaveAssets();

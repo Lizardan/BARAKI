@@ -42,7 +42,7 @@ namespace Game.Gameplay.Match
                     var barracksId = s_barracksIds[i];
                     var laneId = BaseLayoutDefinition.GetLaneForBarracks(barracksId);
                     var laneIndex = BaseLayoutDefinition.GetLaneIndex(barracksId);
-                    var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false, player.RaceId);
+                    var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false);
 
                     _barracks.Add(new BarracksWaveState(
                         slot,

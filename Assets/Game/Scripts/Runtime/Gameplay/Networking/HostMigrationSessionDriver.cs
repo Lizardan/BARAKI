@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using Game.Core;
 using Game.Gameplay.Match;
@@ -130,12 +131,45 @@ namespace Game.Gameplay.Networking
                     stateApplied = true;
                 }
 
-                // Short grace for peers to finish NGO reconnect before unpausing.
-                await UniTask.Delay(500, ignoreTimeScale: true);
+                // Adaptive wait: designated host resumes once peers rejoin (capped by timeout);
+                // clients only need a short grace for the new host to come up.
+                if (isDesignated)
+                {
+                    var nm = MatchNetworkBootstrap.Ensure()?.NetworkManager;
+                    var startedAt = Time.realtimeSinceStartup;
+                    var expectedClients = Mathf.Max(0, MatchNetworkSession.PlayerCount - 1);
+                    while (!HostMigrationRules.HasClientWaitTimedOut(
+                               Time.realtimeSinceStartup - startedAt))
+                    {
+                        if (nm != null
+                            && nm.IsHost
+                            && HostMigrationRules.HasEnoughClientsRejoined(
+                                nm.ConnectedClientsList.Count,
+                                expectedClients))
+                        {
+                            break;
+                        }
+
+                        await UniTask.DelayFrame(1);
+                    }
+                }
+                else
+                {
+                    await UniTask.Delay(
+                        (int)(HostMigrationRules.MinClientRejoinWaitSeconds * 1000f),
+                        ignoreTimeScale: true);
+                }
+
                 coordinator.TryResume(
                     newHostReady: transportOk,
                     allClientsReconnected: true,
                     stateApplied: stateApplied || coordinator.CapturedStateBytes is { Length: > 0 });
+            }
+            catch (Exception ex)
+            {
+                // Never leave the match paused on a rebind failure.
+                Debug.LogError($"HostMigration: rebind failed with exception: {ex}");
+                coordinator.AdvanceAfterStateTransfer(false);
             }
             finally
             {

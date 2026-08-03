@@ -152,11 +152,11 @@ mvp: true
 
 > Заклинания кастуют **маги** в бою. Список: **`Races.md` § Magic**.
 
-| Main magic slot | Human | Bug |
-|-----------------|-------|-----|
-| 1 (main L1) | `SPELL_HUMAN_1` Heal | `SPELL_BUG_1` Infect |
-| 2 (main L2) | `SPELL_HUMAN_2` Frost AoE | `SPELL_BUG_2` Egg |
-| 3 (main L3) | `SPELL_HUMAN_3` Resurrect | `SPELL_BUG_3` Mutate |
+| Main magic slot | Human |
+|-----------------|-------|
+| 1 (main L1) | `SPELL_HUMAN_1` Heal |
+| 2 (main L2) | `SPELL_HUMAN_2` Frost AoE |
+| 3 (main L3) | `SPELL_HUMAN_3` Resurrect |
 
 ## Tower upgrades (race-unique)
 
@@ -180,7 +180,6 @@ mvp: true
 | Race | 5 tracks (L1→L3) |
 |------|-------------------|
 | Human | Steel Temper, Hold the Line, Ballista Overdraw, Arcane Relay, Last Stand |
-| Bug | Adrenal Gland, Carapace Weave, Neurotoxin, Hatchery Pulse, Acid Sac |
 
 ## UI
 

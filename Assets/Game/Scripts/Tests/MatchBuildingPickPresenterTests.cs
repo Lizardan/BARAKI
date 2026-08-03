@@ -24,7 +24,7 @@ namespace Game.Tests
                 var raceIds = new List<string>
                 {
                     GameIds.Races.Human,
-                    GameIds.Races.Bug,
+                    GameIds.Races.Human,
                     GameIds.Races.Slot3,
                     GameIds.Races.Slot4,
                 };

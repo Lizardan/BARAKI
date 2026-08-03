@@ -59,6 +59,7 @@ jobs:
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.ver.outputs.tag }}
       zip: ${{ steps.zip.outputs.zip }}
+      sha256: ${{ steps.sha.outputs.sha256 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -370,6 +371,18 @@ jobs:
           Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip
           echo "zip=$zip" >> $env:GITHUB_OUTPUT
 
+      # Client verifies this hash when BARAKI_UPDATE_URL points at a manifest with sha256.
+      # Published as <zip>.sha256 asset + release notes so it is auditable and usable for
+      # a version.json override without re-downloading the build.
+      - name: Compute SHA256
+        id: sha
+        shell: pwsh
+        run: |
+          $zip = "${{ steps.zip.outputs.zip }}"
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLowerInvariant()
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+          Write-Host "SHA256($zip)=$hash"
+
       - name: Upload release bundle
         uses: actions/upload-artifact@v7
         with:
@@ -424,12 +437,14 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
           VERSION: ${{ needs.build.outputs.version }}
           ZIP: ${{ needs.build.outputs.zip }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
           SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
           cd dist
           test -f "$ZIP"
+          echo "${SHA256}  ${ZIP}" > "${ZIP}.sha256"
 
           attempt=1
           max=8
@@ -438,6 +453,7 @@ jobs:
             echo "Release attempt ${attempt}/${max} for ${TAG}..."
             if gh release create "$TAG" \
               "$ZIP" \
+              "${ZIP}.sha256" \
               --repo "${{ github.repository }}" \
               --title "BARAKI ${TAG}" \
               --target "$SHA" \
@@ -460,6 +476,20 @@ jobs:
             fi
           done
 
+      # Append SHA256 to auto-generated notes (kept audit-friendly alongside the .sha256 asset).
+      - name: Attach SHA256 to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          gh release view "$TAG" --repo "${{ github.repository }}" --json body -q '.body' > "$body_file"
+          printf '\n**SHA256:** %s\n' "$SHA256" >> "$body_file"
+          gh release edit "$TAG" --repo "${{ github.repository }}" --notes-file "$body_file"
+
       # Actions artifacts count toward Actions storage (esp. private). Release zips do not.
       - name: Prune Actions artifacts + old releases
         if: success()
@@ -481,8 +511,10 @@ jobs:
                 gh api -X DELETE "repos/${REPO}/actions/artifacts/${id}" || true
               done
 
-          echo "Keeping last ${KEEP_RELEASES} GitHub Releases; deleting older..."
-          mapfile -t tags < <(gh release list --repo "$REPO" --limit 50 --json tagName -q '.[].tagName')
+          echo "Keeping last ${KEEP_RELEASES} full-client GitHub Releases; deleting older..."
+          # Only prune full-client v* releases. Updater releases (updater-v*) feed the bootstrap
+          # installer redirect and must never be swept here, even if they are old.
+          mapfile -t tags < <(gh release list --repo "$REPO" --limit 50 --json tagName -q '.[].tagName' | grep -E '^v[0-9]')
           if [ "${#tags[@]}" -gt "$KEEP_RELEASES" ]; then
             for ((i=KEEP_RELEASES; i<${#tags[@]}; i++)); do
               old="${tags[$i]}"
@@ -490,5 +522,5 @@ jobs:
               gh release delete "$old" --repo "$REPO" --yes --cleanup-tags || true
             done
           else
-            echo "  nothing to prune (${#tags[@]} release(s))."
+            echo "  nothing to prune (${#tags[@]} full-client release(s))."
           fi

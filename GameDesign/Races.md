@@ -32,7 +32,6 @@ negative_count: 1
 scope: race_wide
 apply: match_start
 examples_human: PASSIVE_HUMAN_* (см. ниже)
-examples_bug: PASSIVE_BUG_* (см. ниже)
 mvp: true
 ```
 
@@ -59,7 +58,7 @@ mvp: true
 
 | Этап | Рас | Примечание |
 |------|-----|------------|
-| **MVP / старт** | **2** | `RACE_HUMAN`, `RACE_BUG` — passives, magic, tower kit **confirmed** |
+| **MVP / старт** | **1** | `RACE_HUMAN` — passives, magic, tower kit **confirmed** |
 | Рост контента | +N | Полный asymmetry kit per race |
 | Early Access (цель) | **4+** | Каждая с уникальным набором passives / tower / magic |
 
@@ -90,7 +89,7 @@ theme_color: Color
 mvp: bool
 ```
 
-## Стартовые пассивы — Human / Bug (confirmed)
+## Стартовые пассивы — Human (confirmed)
 
 ### Люди
 
@@ -108,7 +107,7 @@ mvp: true
 
 id: PASSIVE_HUMAN_LEVY_TAX
 effect: -250 starting gold
-formula: start_gold = ECON_START - 250   # 500 → 250
+formula: start_gold = 250   # playtest baseline
 mvp: true
 ```
 
@@ -116,34 +115,7 @@ mvp: true
 |---|--------|--------|
 | **+** | `PASSIVE_HUMAN_STEEL_ARMS` | **+10% урон** юнитов и **башен** |
 | **+** | `PASSIVE_HUMAN_FORTIFIED_LINE` | **+10% защита** юнитов и **зданий** |
-| **−** | `PASSIVE_HUMAN_LEVY_TAX` | **−250g** к старту (250 вместо 500) |
-
-### Жуки
-
-```entity
-id: PASSIVE_BUG_FRENZY
-effect: +10% attack_speed, +10% move_speed
-applies_to: units
-mvp: true
-
-id: PASSIVE_BUG_BROOD_SURGE
-effect: +10% barracks spawn speed
-formula: wave_interval /= 1.10
-applies_to: all_barracks
-mvp: true
-
-id: PASSIVE_BUG_GLASS_CHITIN
-effect: -10% max_hp
-applies_to: units
-formula: max_hp *= 0.90
-mvp: true
-```
-
-| | Пассив | Эффект |
-|---|--------|--------|
-| **+** | `PASSIVE_BUG_FRENZY` | **+10% скорость атаки** и **бега** юнитов |
-| **+** | `PASSIVE_BUG_BROOD_SURGE` | **+10% скорость spawn** в barracks |
-| **−** | `PASSIVE_BUG_GLASS_CHITIN` | **−10% HP** юнитов |
+| **−** | `PASSIVE_HUMAN_LEVY_TAX` | **−250g** к старту (250) |
 
 ## Magic — заклинания магов (confirmed)
 
@@ -194,60 +166,6 @@ mvp: true
 | 1 | `SPELL_HUMAN_1` | **Хил** 1 союзника | **80 HP**, range **6**, CD **10s** |
 | 2 | `SPELL_HUMAN_2` | **Ледяной взрыв** | radius **5**, **40** dmg, CD **14s** |
 | 3 | `SPELL_HUMAN_3` | **Воскрешение** | corpse **≤20s**, CD **30s** |
-
-### Жуки
-
-```entity
-id: SPELL_BUG_1
-name: Заражение
-unlock: UPG_MAIN_MAGIC slot_1
-target: single_enemy_unit
-effect: on_death_spawn
-spawn_unit: UNIT_BUG_MELEE
-spawn_owner: caster_owner
-debuff: infected_until_death
-cast_range: 6.0
-cooldown: 12.0
-priority: nearest_enemy_in_range
-mvp: true
-
-id: SPELL_BUG_2
-name: Яйцо
-unlock: UPG_MAIN_MAGIC slot_2
-target: ground_point
-effect: spawn_egg
-hatch_delay: 30.0
-hatch_unit: UNIT_BUG_MELEE
-egg: stationary
-egg_hp: 120
-egg_destroyable: true
-hatch_on: timer_or_zero_hp   # 0 HP → no hatch
-cast_range: 6.0
-cooldown: 18.0
-priority: forward_lane_point
-mvp: true
-
-id: SPELL_BUG_3
-name: Мутация
-unlock: UPG_MAIN_MAGIC slot_3
-target: single_ally_bug_nearby
-effect: mutate
-stat_bonus: +10% max_hp, +10% damage
-visual_scale: increased
-duration: until_death
-cast_range: 6.0
-cooldown: 16.0
-priority: nearest_unmutated_ally
-mvp: true
-```
-
-| Slot | ID | Эффект | Числа |
-|------|-----|--------|-------|
-| 1 | `SPELL_BUG_1` | **Заражение** → жук при смерти | CD **12s** |
-| 2 | `SPELL_BUG_2` | **Яйцо** → melee через **30s** | **120 HP**, уничтожимо; CD **18s** |
-| 3 | `SPELL_BUG_3` | **Мутация** +10% HP/урон | CD **16s** |
-
-> **Яйцо:** стоит на месте; через **30s** → `UNIT_BUG_MELEE`. Если **HP = 0** раньше — вылупления **нет**. Юнит из яйца / заражения: **`UNIT_BUG_MELEE`** baseline (playtest может сменить).
 
 ## Tower upgrades — прокачка в башне (confirmed)
 
@@ -329,56 +247,9 @@ scope: race_wide
 mvp: true
 ```
 
-### Жуки — 5 способностей
-
-| # | ID | Тип | L1 | L2 | L3 |
-|---|-----|-----|----|----|-----|
-| 1 | `UPG_TOWER_BUG_ADRENAL_GLAND` | stat | **+4%** attack speed | **+8%** | **+12%** |
-| 2 | `UPG_TOWER_BUG_CARAPACE_WEAVE` | stat | **+4%** HP юнитов | **+8%** | **+12%** |
-| 3 | `UPG_TOWER_BUG_NEUROTOXIN` | tower | Выстрел башни: **−8%** move, 2s | **−12%** | **−16%** |
-| 4 | `UPG_TOWER_BUG_HATCHERY_PULSE` | spell | Яйцо: **27s** hatch; infect **+10%** spawn stats | **24s**; **+20%** | **21s**; **+30%** |
-| 5 | `UPG_TOWER_BUG_ACID_SAC` | stat | **+10%** урон по **зданиям** | **+20%** | **+30%** |
-
-```entity
-id: UPG_TOWER_BUG_ADRENAL_GLAND
-max_level: 3
-effect: unit_attack_speed_percent
-values: [4, 8, 12]
-scope: race_wide
-
-id: UPG_TOWER_BUG_CARAPACE_WEAVE
-max_level: 3
-effect: unit_max_hp_percent
-values: [4, 8, 12]
-scope: race_wide
-
-id: UPG_TOWER_BUG_NEUROTOXIN
-max_level: 3
-effect: tower_on_hit_slow
-move_speed_reduction: [0.08, 0.12, 0.16]
-duration_sec: 2.0
-applies_to: all_BUILDING_TOWER
-
-id: UPG_TOWER_BUG_HATCHERY_PULSE
-max_level: 3
-effect: spell_bug_egg_hatch_seconds
-values: [27, 24, 21]
-bonus: infected_spawn_stat_percent
-bonus_values: [10, 20, 30]
-applies_to: [SPELL_BUG_1, SPELL_BUG_2]
-
-id: UPG_TOWER_BUG_ACID_SAC
-max_level: 3
-effect: building_damage_percent
-values: [10, 20, 30]
-applies_to: all_unit_types_vs_BUILDING
-scope: race_wide
-mvp: true
-```
-
 > **4 башни** — до **4 параллельных** исследований (разные треки). Всего **5** треков → нужен выбор, что качать первым.
 
-## Roster — старт (2 расы)
+## Roster — старт (1 раса)
 
 ```entity
 id: RACE_HUMAN
@@ -402,27 +273,6 @@ buildings: BUILDING_SET_HUMAN
 upgrades: UPGRADE_TREE_HUMAN
 tower_tracks: [UPG_TOWER_HUMAN_STEEL_TEMPER, UPG_TOWER_HUMAN_HOLD_THE_LINE, UPG_TOWER_HUMAN_BALLISTA_OVERDRAW, UPG_TOWER_HUMAN_ARCANE_RELAY, UPG_TOWER_HUMAN_LAST_STAND]
 magic_spells: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
-
-id: RACE_BUG
-display_name: Жуки
-display_name_en: Bugs
-fantasy_hook: Рой, число, биомасса и осадные кислоты
-start_passives:
-  positive: [PASSIVE_BUG_FRENZY, PASSIVE_BUG_BROOD_SURGE]
-  negative: PASSIVE_BUG_GLASS_CHITIN
-mvp: true
-units:
-  melee: UNIT_BUG_MELEE
-  ranged: UNIT_BUG_RANGED
-  caster: UNIT_BUG_CASTER
-  siege: UNIT_BUG_SIEGE
-  flying: UNIT_BUG_FLYING
-  super: UNIT_BUG_SUPER
-heroes: [HERO_BUG_1, HERO_BUG_2, HERO_BUG_3]
-buildings: BUILDING_SET_BUG
-upgrades: UPGRADE_TREE_BUG
-tower_tracks: [UPG_TOWER_BUG_ADRENAL_GLAND, UPG_TOWER_BUG_CARAPACE_WEAVE, UPG_TOWER_BUG_NEUROTOXIN, UPG_TOWER_BUG_HATCHERY_PULSE, UPG_TOWER_BUG_ACID_SAC]
-magic_spells: [SPELL_BUG_1, SPELL_BUG_2, SPELL_BUG_3]
 ```
 
 ## Будущие расы (слоты)
@@ -453,7 +303,7 @@ mvp: false
 
 ## Race select UI
 
-- MVP: **2** расы в контенте (Люди / Жуки); **playtest pick gate:** только Люди (`SelectableRaceIds`), Жуки grey/disabled
+- MVP: **1** раса в контенте (Люди); **playtest pick gate:** только Люди (`SelectableRaceIds`), будущие расы скрыты
 - Показ **passives** (+2/−1) в tooltip при выборе
 - Будущие: `Coming Soon` или скрыты до релиза контента
 - `RaceCatalog` ScriptableObject
@@ -462,7 +312,7 @@ mvp: false
 
 | Решение | Значение |
 |---------|----------|
-| Стартовый roster | **2 расы:** Люди + Жуки |
+| Стартовый roster | **1 раса:** Люди (+2 слота TBD) |
 | Стартовые пассивы | **2+ / 1−** per race; уникальные |
 | Tower upgrades | **5 tracks × L1–3**; **4 башни**; race-wide |
 | Tower upgrade economy | **500/800/1200g**; **45/90/135s** per level |
@@ -470,7 +320,7 @@ mvp: false
 | Маги | **Casters** в волне; **уникальные заклинания** per race |
 | Magic (main) | **1 / 2 / 3** слота = main level; **800/1500/2500g**; **60/90/135s** |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
-| MVP asymmetry Human/Bug | **Passives + magic + tower tracks** |
+| MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
 
 ```entity
 id: UPG_MAIN_MAGIC_ECONOMY
@@ -482,9 +332,9 @@ mvp: true
 
 ## Open
 
-- [x] Passives Human / Bug (+2/−1)
-- [x] Magic spells Human / Bug (×3 each)
-- [x] Tower tracks Human / Bug (**×5**, L1–3)
+- [x] Passives Human (+2/−1)
+- [x] Magic spells Human (×3)
+- [x] Tower tracks Human (**×5**, L1–3)
 - [x] Gold/time за **tower** upgrades — **500/800/1200g**, **45/90/135s**
 - [x] Gold/time за **magic** upgrades — **800/1500/2500g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)

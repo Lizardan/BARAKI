@@ -25,6 +25,11 @@ namespace Game.Core
                 return -1;
             }
 
+            if (!IsValidHostSlot(previousHostSlot, slotOccupied.Length))
+            {
+                return -1;
+            }
+
             for (var offset = 1; offset <= slotOccupied.Length; offset++)
             {
                 var candidate = (previousHostSlot + offset) % slotOccupied.Length;
@@ -42,8 +47,35 @@ namespace Game.Core
             return -1;
         }
 
+        public static bool IsValidHostSlot(int slot, int slotCount) =>
+            slot >= 0 && slotCount > 0 && slot < slotCount;
+
         public static bool ShouldPauseMatch(bool hostDisconnected, bool matchInProgress) =>
             hostDisconnected && matchInProgress;
+
+        public const float HostLossGraceSeconds = 1.5f;
+
+        public const float ClientRejoinTimeoutSeconds = 5f;
+
+        public const float MinClientRejoinWaitSeconds = 0.5f;
+
+        /// <summary>
+        /// Host-loss detection is debounced: only begin migration after the loss
+        /// has persisted past <paramref name="graceSeconds"/> (avoids panic on brief hiccups).
+        /// </summary>
+        public static bool ShouldBeginMigrationAfterGrace(
+            float elapsedSinceLoss,
+            float graceSeconds = HostLossGraceSeconds) =>
+            elapsedSinceLoss >= 0f && elapsedSinceLoss >= graceSeconds;
+
+        /// <summary>New listen-host resumes once enough peers have rejoined.</summary>
+        public static bool HasEnoughClientsRejoined(int connectedClients, int expectedClients) =>
+            connectedClients >= expectedClients;
+
+        public static bool HasClientWaitTimedOut(
+            float elapsedSinceRebind,
+            float timeoutSeconds = ClientRejoinTimeoutSeconds) =>
+            elapsedSinceRebind >= timeoutSeconds;
 
         public static bool CanResume(
             MigrationPhase phase,

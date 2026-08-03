@@ -71,12 +71,12 @@ namespace Game.Tests
 
             controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
             controller.Graph.TryGetLane(1, GameIds.Lanes.Center, out var lane1);
-            // Keep a few meters of separation so the projectile has flight time.
-            var meet0 = lane0.Path.ProjectDistance(new Vector3(-4f, 0f, 0f));
-            var meet1 = lane1.Path.ProjectDistance(new Vector3(4f, 0f, 0f));
-
-            combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Ranged, archerStats, meet0);
-            var victim = combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meet1);
+            // Spawn with a lateral separation so the projectile has real flight time.
+            var meet = lane0.Path.ProjectDistance(Vector3.zero);
+            combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Ranged, archerStats, meet,
+                formationOffset: new Vector3(0f, 0f, -4f));
+            var victim = combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meet,
+                formationOffset: new Vector3(0f, 0f, 4f));
 
             for (var i = 0; i < 40; i++)
             {

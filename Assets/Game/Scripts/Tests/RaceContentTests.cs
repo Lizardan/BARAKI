@@ -21,7 +21,7 @@ namespace Game.Tests
         public void RaceCatalog_Exists()
         {
             Assert.IsNotNull(_catalog);
-            Assert.GreaterOrEqual(_catalog.Races.Count, 2);
+            Assert.GreaterOrEqual(_catalog.Races.Count, 1);
         }
 
         [Test]
@@ -37,15 +37,6 @@ namespace Game.Tests
             Assert.IsNotNull(human.Super);
             Assert.AreEqual(3, human.Heroes.Count);
             Assert.AreEqual(GameIds.Units.HumanMelee, human.Melee.Id);
-        }
-
-        [Test]
-        public void BugRace_HasSixUnitsAndThreeHeroes()
-        {
-            var bug = _catalog.GetRace(GameIds.Races.Bug);
-            Assert.IsNotNull(bug);
-            Assert.AreEqual(GameIds.Units.BugSuper, bug.Super.Id);
-            Assert.AreEqual(3, bug.Heroes.Count);
         }
 
         [Test]
@@ -66,13 +57,6 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BugCaster_HasMaxMana()
-        {
-            var bug = _catalog.GetRace(GameIds.Races.Bug);
-            Assert.AreEqual(200f, bug.Caster.MaxMana, 0.01f);
-        }
-
-        [Test]
         public void StatTracks_HaveNineLevelsAndGddEffect()
         {
             var melee = _catalog.GetStatTrack(GameIds.Upgrades.MeleeDamage);
@@ -85,7 +69,7 @@ namespace Game.Tests
         [Test]
         public void AllUnitDefinitions_ShareBaselineMoveSpeedInAssets()
         {
-            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Bug })
+            foreach (var raceId in new[] { GameIds.Races.Human })
             {
                 var race = _catalog.GetRace(raceId);
                 foreach (var unit in new[] { race.Melee, race.Ranged, race.Caster, race.Siege, race.Flying, race.Super })
@@ -97,13 +81,10 @@ namespace Game.Tests
         }
 
         [Test]
-        public void RaceMarchSpeed_HumanBase_BugFrenzyBoost()
+        public void RaceMarchSpeed_Human_ReturnsBaseSpeed()
         {
             var human = _catalog.GetRace(GameIds.Races.Human);
-            var bug = _catalog.GetRace(GameIds.Races.Bug);
             Assert.AreEqual(RaceMarchSpeedRules.BaseMarchSpeed, RaceMarchSpeedRules.GetMarchSpeed(human), 0.001f);
-            var bugExpected = RaceMarchSpeedRules.BaseMarchSpeed * RaceMarchSpeedRules.BugFrenzyMoveMultiplier;
-            Assert.AreEqual(bugExpected, RaceMarchSpeedRules.GetMarchSpeed(bug), 0.001f);
         }
     }
 }

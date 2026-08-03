@@ -58,7 +58,7 @@ namespace Game.Gameplay.Match
             var races = new string[playerCount];
             for (var i = 0; i < playerCount; i++)
             {
-                races[i] = i % 2 == 0 ? GameIds.Races.Human : GameIds.Races.Bug;
+                races[i] = GameIds.Races.Human;
             }
 
             return races;

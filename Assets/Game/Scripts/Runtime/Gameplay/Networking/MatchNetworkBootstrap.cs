@@ -26,6 +26,7 @@ namespace Game.Gameplay.Networking
         private bool _prefabsRegistered;
         private bool _isInitialized;
         private readonly Dictionary<ulong, string> _approvedDisplayNames = new();
+        private readonly Dictionary<ulong, string> _approvedPlayerIds = new();
 
         public NetworkManager NetworkManager => _networkManager;
 
@@ -82,6 +83,14 @@ namespace Game.Gameplay.Networking
             return s_instance != null
                 && s_instance._approvedDisplayNames.TryGetValue(clientId, out displayName)
                 && !string.IsNullOrWhiteSpace(displayName);
+        }
+
+        public static bool TryGetApprovedPlayerId(ulong clientId, out string playerId)
+        {
+            playerId = string.Empty;
+            return s_instance != null
+                && s_instance._approvedPlayerIds.TryGetValue(clientId, out playerId)
+                && !string.IsNullOrWhiteSpace(playerId);
         }
 
         public void ConfigureEndpoint(
@@ -274,6 +283,11 @@ namespace Game.Gameplay.Networking
             if (MatchConnectionPayloadRules.TryReadDisplayName(request.Payload, out var displayName))
             {
                 _approvedDisplayNames[request.ClientNetworkId] = displayName;
+            }
+
+            if (MatchConnectionPayloadRules.TryReadPlayerId(request.Payload, out var playerId))
+            {
+                _approvedPlayerIds[request.ClientNetworkId] = playerId;
             }
 
             response.Approved = true;

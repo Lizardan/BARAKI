@@ -208,60 +208,6 @@ gold_bounty: 50
 note: Сильный осадный дальний бой; приоритет — здания
 ```
 
-## Bug roster (placeholder stats — symmetric baseline)
-
-```entity
-id: UNIT_BUG_MELEE
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_MELEE
-max_hp: 120
-armor: 1
-damage: 8-10
-gold_bounty: 8
-
-id: UNIT_BUG_RANGED
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_RANGED
-max_hp: 70
-damage: 6-8
-gold_bounty: 6
-
-id: UNIT_BUG_CASTER
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_CASTER
-max_hp: 60
-damage: 4-5
-spells: [SPELL_BUG_1, SPELL_BUG_2, SPELL_BUG_3]
-ability_mvp_placeholder: removed
-gold_bounty: 7
-
-id: UNIT_BUG_SIEGE
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_SIEGE
-max_hp: 200
-damage: 12-16
-gold_bounty: 15
-
-id: UNIT_BUG_FLYING
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_FLYING
-max_hp: 90
-damage: 8-10
-attack_range: 6.0
-gold_bounty: 10
-
-id: UNIT_BUG_SUPER
-race_id: RACE_BUG
-unit_type: UNIT_TYPE_SUPER
-max_hp: 500
-armor: 2
-damage: 30-40
-attack_speed: 0.5
-attack_range: 12.0
-move_speed: 2.0
-gold_bounty: 50
-```
-
 > **MVP baseline:** одинаковые **базовые** статы юнитов; **асимметрия** — passives, magic, tower tracks (`Races.md`).
 
 ## Combat resolution (MVP)
@@ -290,4 +236,4 @@ gold_bounty: 50
 | Flying | **Только ranged/flying/super/towers** могут атаковать flying; melee/siege — нет |
 | Super (MVP) | **Сильный осадный дальний** юнит; приоритет зданий |
 | MVP расы | **Идентичны** по статам и механикам |
-| Стартовые расы | **2:** `RACE_HUMAN`, `RACE_BUG` |
+| Стартовые расы | **1:** `RACE_HUMAN` (+2 слота TBD) |

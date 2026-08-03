@@ -20,6 +20,53 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ElectNewHostSlot_NegativePreviousSlot_ReturnsMinusOne()
+        {
+            Assert.AreEqual(-1, HostMigrationRules.ElectNewHostSlot(-1, new[] { true, true, true }));
+        }
+
+        [Test]
+        public void ElectNewHostSlot_PreviousSlotOutOfRange_ReturnsMinusOne()
+        {
+            Assert.AreEqual(-1, HostMigrationRules.ElectNewHostSlot(7, new[] { true, true }));
+            Assert.AreEqual(-1, HostMigrationRules.ElectNewHostSlot(2, new[] { true, true }));
+        }
+
+        [Test]
+        public void IsValidHostSlot_AcceptsInRangeOnly()
+        {
+            Assert.IsTrue(HostMigrationRules.IsValidHostSlot(0, 4));
+            Assert.IsTrue(HostMigrationRules.IsValidHostSlot(3, 4));
+            Assert.IsFalse(HostMigrationRules.IsValidHostSlot(-1, 4));
+            Assert.IsFalse(HostMigrationRules.IsValidHostSlot(4, 4));
+        }
+
+        [Test]
+        public void ShouldBeginMigrationAfterGrace_RequiresGraceElapsed()
+        {
+            Assert.IsFalse(HostMigrationRules.ShouldBeginMigrationAfterGrace(0.5f, 1.5f));
+            Assert.IsTrue(HostMigrationRules.ShouldBeginMigrationAfterGrace(1.5f, 1.5f));
+            Assert.IsTrue(HostMigrationRules.ShouldBeginMigrationAfterGrace(3f, 1.5f));
+            Assert.IsFalse(HostMigrationRules.ShouldBeginMigrationAfterGrace(-1f, 1.5f));
+        }
+
+        [Test]
+        public void HasEnoughClientsRejoined_WhenAtOrAboveExpected()
+        {
+            Assert.IsFalse(HostMigrationRules.HasEnoughClientsRejoined(0, 2));
+            Assert.IsFalse(HostMigrationRules.HasEnoughClientsRejoined(1, 2));
+            Assert.IsTrue(HostMigrationRules.HasEnoughClientsRejoined(2, 2));
+            Assert.IsTrue(HostMigrationRules.HasEnoughClientsRejoined(3, 2));
+        }
+
+        [Test]
+        public void HasClientWaitTimedOut_AfterTimeout()
+        {
+            Assert.IsFalse(HostMigrationRules.HasClientWaitTimedOut(1f, 5f));
+            Assert.IsTrue(HostMigrationRules.HasClientWaitTimedOut(5f, 5f));
+        }
+
+        [Test]
         public void ShouldPauseMatch_OnlyWhenHostDropsMidMatch()
         {
             Assert.IsTrue(HostMigrationRules.ShouldPauseMatch(true, true));

@@ -30,10 +30,10 @@ namespace Game.Tests
         }
 
         [Test]
-        public void SetLocalPick_Bug_NotSelectable_Throws()
+        public void SetLocalPick_Unselectable_Throws()
         {
             var session = new RacePickSession(2, localPlayerSlot: 0);
-            Assert.Throws<ArgumentException>(() => session.SetLocalPick(GameIds.Races.Bug));
+            Assert.Throws<ArgumentException>(() => session.SetLocalPick(GameIds.Races.Slot3));
         }
 
         [Test]
@@ -54,15 +54,15 @@ namespace Game.Tests
         {
             var raceId = RacePickRules.PickRandomRace(new Random(3));
             Assert.IsTrue(RacePickRules.IsSelectable(raceId));
-            Assert.IsFalse(RacePickRules.IsSelectable(GameIds.Races.Bug));
-            Assert.IsTrue(RacePickRules.IsPlayable(GameIds.Races.Bug));
+            Assert.IsFalse(RacePickRules.IsSelectable(GameIds.Races.Slot3));
+            Assert.IsFalse(RacePickRules.IsPlayable(GameIds.Races.Slot3));
         }
 
         [Test]
-        public void NetworkRules_RejectsBugPick()
+        public void NetworkRules_RejectsUnselectablePick()
         {
             var picks = new string[2];
-            Assert.IsFalse(RacePickNetworkRules.TryApplyPick(picks, 0, GameIds.Races.Bug));
+            Assert.IsFalse(RacePickNetworkRules.TryApplyPick(picks, 0, GameIds.Races.Slot3));
             Assert.IsTrue(RacePickNetworkRules.TryApplyPick(picks, 0, GameIds.Races.Human));
             Assert.IsTrue(RacePickNetworkRules.TryApplyPick(picks, 1, GameIds.Races.Human));
             Assert.IsTrue(RacePickNetworkRules.IsComplete(picks));
