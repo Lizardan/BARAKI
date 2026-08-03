@@ -99,6 +99,8 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-02 | MDX→GLB конвертация 21/21 кастомных моделей через Blender 4.2 + аддон PavelBlend (доработан: keyword-аргументы fcurves, action_group, дедупликация F-Curves для повторяющихся имён костей); результат в `GameDesign\wc3_models_glb\` |
+| 2026-08-02 | WC3 reference extract (Survival Chaos v1.58c): 811 units + 881 abilities + wave/economy JASS analysis; docs `WC3 Reference - Unit Stats.md`, `WC3 Reference - Wave Mechanics.md`; Balance.md сопоставление + кандидаты на правки (#1 быстрая первая волна, #3 bounty базовых) |
 | 2026-07-20 | Playtest UX: barracks manual call (gold+charges), own timers only, building HP bars, idle hero park, defensive building auto-fire + RMB target, tooltips on top; race pick Humans-only (Bugs grey) |
 | 2026-07-20 | Listen-host polish: fixed 30 Hz tick, client unit lerp, command ack/fail UI, host migration end-to-end + last-good snapshot, debug checksum; GDD locks listen-host+migration (no dedicated/lockstep) |
 | 2026-07-20 | MVP online close-out: command RPCs + snapshot gold/HUD, disconnect grace, heroes/towers, results rematch/menu, host-migration/reconnect wiring |

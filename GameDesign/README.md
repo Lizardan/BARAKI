@@ -31,6 +31,8 @@
 | [Technical.md](Technical.md) | Unity, netcode | Реализация |
 | [Platform.md](Platform.md) | Windows hub, UGS, GitHub Releases/Pages | Платформа / дистрибуция |
 | [TODO.md](TODO.md) | Backlog | Планирование |
+| [WC3 Reference - Unit Stats.md](WC3%20Reference%20-%20Unit%20Stats.md) | Статы юнитов из Survival Chaos v1.58c | Референс баланса |
+| [WC3 Reference - Wave Mechanics.md](WC3%20Reference%20-%20Wave%20Mechanics.md) | Механики волн/экономики из WC3 | Референс баланса |
 
 ## MVP
 
