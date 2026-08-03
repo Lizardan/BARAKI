@@ -187,8 +187,10 @@ namespace Game.Tests
             {
                 var p0 = path.GetWaypoint(i);
                 var p1 = path.GetWaypoint(i + 1);
-                if (Vector3.Distance(new Vector3(p0.x, 0f, p0.z), a) < 1f
-                    && Vector3.Distance(new Vector3(p1.x, 0f, p1.z), b) < 1f)
+                var p0Flat = new Vector3(p0.x, 0f, p0.z);
+                var p1Flat = new Vector3(p1.x, 0f, p1.z);
+                if ((Vector3.Distance(p0Flat, a) < 1f && Vector3.Distance(p1Flat, b) < 1f)
+                    || (Vector3.Distance(p0Flat, b) < 1f && Vector3.Distance(p1Flat, a) < 1f))
                 {
                     foundStraight = true;
                     break;
@@ -196,6 +198,53 @@ namespace Game.Tests
             }
 
             Assert.IsTrue(foundStraight, "Shared flank ring must include the straight edge between exit joins.");
+        }
+
+        [Test]
+        public void FlankPath_N3_LeftClockwiseToLeftOpponent_RightCounterClockwiseToRightOpponent()
+        {
+            var layout = MatchArenaGenerator.Generate(3);
+            var graph = LaneGraphBuilder.Build(layout);
+            Assert.IsTrue(graph.TryGetLane(0, GameIds.Lanes.Left, out var leftLane));
+            Assert.IsTrue(graph.TryGetLane(0, GameIds.Lanes.Right, out var rightLane));
+
+            var leftBarracks = layout.Slots[0].GetBuildingWorldPosition(GameIds.Buildings.BarracksLeft);
+            var rightBarracks = layout.Slots[0].GetBuildingWorldPosition(GameIds.Buildings.BarracksRight);
+            var firstFarLeft = FirstWaypointBeyond(leftLane.Path, leftBarracks, 35f);
+            var firstFarRight = FirstWaypointBeyond(rightLane.Path, rightBarracks, 35f);
+
+            var slot1 = layout.Slots[1].BasePosition;
+            var slot2 = layout.Slots[2].BasePosition;
+
+            Assert.Less(
+                FlatDistance(firstFarLeft, slot2),
+                FlatDistance(firstFarLeft, slot1),
+                "Left lane should head clockwise toward the left opponent (slot i-1).");
+            Assert.Less(
+                FlatDistance(firstFarRight, slot1),
+                FlatDistance(firstFarRight, slot2),
+                "Right lane should head counter-clockwise toward the right opponent (slot i+1).");
+        }
+
+        static Vector3 FirstWaypointBeyond(LanePath path, Vector3 origin, float minDistance)
+        {
+            for (var i = 0; i < path.WaypointCount; i++)
+            {
+                var point = path.GetWaypoint(i);
+                if (FlatDistance(point, origin) >= minDistance)
+                {
+                    return point;
+                }
+            }
+
+            return path.GetWaypoint(path.WaypointCount - 1);
+        }
+
+        static float FlatDistance(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
         }
     }
 }

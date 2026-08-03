@@ -33,7 +33,7 @@ namespace Game.Gameplay.Match
 
         /// <summary>
         /// N=3: exit curves + straight edges between joins (not a circular arc).
-        /// Order is CCW around the map.
+        /// Order is CW around the map (matches the N=4 / N=5+ shared ring convention).
         /// </summary>
         static LanePath BuildStraightEdgeRing(float ringRadius, int playerCount)
         {
@@ -70,6 +70,7 @@ namespace Game.Gameplay.Match
 
             if (points.Count > 0)
             {
+                points.Reverse();
                 AppendPoint(points, points[0]);
             }
 
