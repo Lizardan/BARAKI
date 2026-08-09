@@ -12,12 +12,13 @@ namespace Game.Gameplay.Combat
         public const float ProjectileBodyHeight = 1.1f;
 
         public static bool UsesMeleeStrike(UnitRole role) =>
-            role is UnitRole.Melee or UnitRole.Siege or UnitRole.Super;
+            role is UnitRole.Melee or UnitRole.Siege;
 
         public static bool UsesProjectile(UnitRole role) =>
             role is UnitRole.Ranged
                 or UnitRole.Caster
-                or UnitRole.Flying;
+                or UnitRole.Flying
+                or UnitRole.Super;
 
         public static bool UsesParabolicArc(UnitRole role) => role == UnitRole.Ranged;
     }

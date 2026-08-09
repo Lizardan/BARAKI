@@ -240,8 +240,17 @@ namespace Game.Gameplay.Match.Fog
             var filter = _volumeObject.AddComponent<MeshFilter>();
             filter.sharedMesh = CreateFullscreenTriangleMesh();
             _volumeRenderer = _volumeObject.AddComponent<MeshRenderer>();
-            _volumeRenderer.material = _fogMaterial;
-            _fogMaterial = _volumeRenderer.material;
+            if (Application.isPlaying)
+            {
+                // Instance the material so per-match props don't mutate the shared asset.
+                _volumeRenderer.material = _fogMaterial;
+                _fogMaterial = _volumeRenderer.material;
+            }
+            else
+            {
+                // Edit mode (tests) must not instantiate materials.
+                _volumeRenderer.sharedMaterial = _fogMaterial;
+            }
             _volumeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _volumeRenderer.receiveShadows = false;
             _volumeRenderer.allowOcclusionWhenDynamic = false;

@@ -26,7 +26,7 @@ namespace Game.Gameplay.Cameras
 
         public const float DefaultZoomDistance = 32f;
         public const float DefaultMinZoomDistance = 16f;
-        public const float DefaultMaxZoomDistance = 64f;
+        public const float DefaultMaxZoomDistance = 40f;
         public const float DefaultZoomScrollSpeed = 1.5f;
         public const float DefaultZoomSmoothTime = 0.14f;
 

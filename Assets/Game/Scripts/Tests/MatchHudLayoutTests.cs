@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -11,6 +12,23 @@ namespace Game.Tests
 {
     public sealed class MatchHudLayoutTests
     {
+        private string _originalScenePath;
+
+        [OneTimeSetUp]
+        public void CaptureOriginalScene()
+        {
+            _originalScenePath = SceneManager.GetActiveScene().path;
+        }
+
+        [OneTimeTearDown]
+        public void RestoreOriginalScene()
+        {
+            var target = string.IsNullOrEmpty(_originalScenePath)
+                ? "Assets/Game/Scenes/Bootstrap.unity"
+                : _originalScenePath;
+            EditorSceneManager.OpenScene(target);
+        }
+
         [UnityTest]
         public IEnumerator BottomDock_IsAnchoredToLowerHalf_AndHasExpectedHeight()
         {

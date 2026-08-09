@@ -19,5 +19,23 @@ namespace Game.Gameplay.Match
         }
 
         public static int PaletteSize => s_slotColors.Length;
+
+        /// <summary>Returns the index of the palette slot closest to <paramref name="color"/>.</summary>
+        public static int NearestSlotIndex(Color color)
+        {
+            var best = 0;
+            var bestSq = float.MaxValue;
+            for (var i = 0; i < s_slotColors.Length; i++)
+            {
+                var d = s_slotColors[i] - color;
+                var sq = d.r * d.r + d.g * d.g + d.b * d.b;
+                if (sq < bestSq)
+                {
+                    bestSq = sq;
+                    best = i;
+                }
+            }
+            return best;
+        }
     }
 }

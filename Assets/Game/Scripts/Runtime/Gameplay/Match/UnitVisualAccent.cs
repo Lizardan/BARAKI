@@ -16,6 +16,13 @@ namespace Game.Gameplay.Match
                 return;
             }
 
+            var tt = visualRoot.GetComponentInChildren<TtUnitTeamColor>(true);
+            if (tt != null)
+            {
+                tt.ApplyTeamColor(slotColor);
+                return;
+            }
+
             ApplyRecursive(visualRoot, slotColor);
         }
 
@@ -24,6 +31,12 @@ namespace Game.Gameplay.Match
             if (visualRoot == null)
             {
                 return 0;
+            }
+
+            var tt = visualRoot.GetComponentInChildren<TtUnitTeamColor>(true);
+            if (tt != null)
+            {
+                return tt.TeamTextures != null ? tt.TeamTextures.Length : 0;
             }
 
             var count = 0;

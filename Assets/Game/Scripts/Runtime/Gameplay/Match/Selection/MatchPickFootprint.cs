@@ -11,12 +11,12 @@ namespace Game.Gameplay.Match.Selection
 
         public static Vector3 GetBuildingPickSize(string buildingId) => buildingId switch
         {
-            GameIds.Buildings.Main => new Vector3(3.5f, 2f, 3.5f),
+            GameIds.Buildings.Main => new Vector3(8.4f, 9.6f, 8.2f),
             GameIds.Buildings.TowerNw or GameIds.Buildings.TowerNe or GameIds.Buildings.TowerSw or GameIds.Buildings.TowerSe
-                => new Vector3(2f, 4f, 2f),
+                => new Vector3(4f, 8.3f, 4f),
             GameIds.Buildings.BarracksCenter
                 or GameIds.Buildings.BarracksLeft
-                or GameIds.Buildings.BarracksRight => new Vector3(4.5f, 1.8f, 4.5f),
+                or GameIds.Buildings.BarracksRight => new Vector3(6.6f, 5.4f, 6.6f),
             _ => Vector3.one * 2f,
         };
 

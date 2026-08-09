@@ -11,32 +11,139 @@ namespace Game.Gameplay.Match
 
         const float ProjectileScale = 2f;
 
+        static Material _fireMaterial;
+        static Material _arrowShaftMaterial;
+        static Material _arrowHeadMaterial;
+
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
-            ResolveVisualStyle(projectile, out var primitive, out var localScale, out var color);
+            GameObject visual;
+            if (projectile.IsBuildingAttack)
+            {
+                visual = CreateBuildingShot(projectile);
+            }
+            else if (projectile.AttackerRole == UnitRole.Caster)
+            {
+                visual = CreateFireball(projectile);
+            }
+            else if (projectile.AttackerRole == UnitRole.Ranged)
+            {
+                visual = CreateArrow(projectile);
+            }
+            else
+            {
+                visual = CreateRoleCube(projectile, 0.2f * ProjectileScale, HumanSpellColor);
+            }
 
-            var visual = GameObject.CreatePrimitive(primitive);
-            visual.name = projectile.IsBuildingAttack
-                ? $"BuildingShot_{projectile.ProjectileId}"
-                : $"Projectile_{projectile.ProjectileId}";
             visual.transform.SetParent(parent, false);
-            visual.transform.localScale = localScale;
+            return visual;
+        }
 
+        static Material LoadMaterial(string path)
+        {
+            var material = Resources.Load<Material>(path);
+            return material != null ? material : null;
+        }
+
+        static GameObject CreateBuildingShot(CombatProjectileState projectile)
+        {
+            var visual = CreatePrimitiveRoot(PrimitiveType.Cube, $"BuildingShot_{projectile.ProjectileId}");
+            visual.transform.localScale = Vector3.one * TowerCombatRules.ProjectileCubeScale;
+            ApplyColor(visual, MatchPlayerColors.GetSlotColor(projectile.AttackerOwnerSlot));
+            return visual;
+        }
+
+        static GameObject CreateRoleCube(CombatProjectileState projectile, float scale, Color color)
+        {
+            var visual = CreatePrimitiveRoot(PrimitiveType.Cube, $"Projectile_{projectile.ProjectileId}");
+            visual.transform.localScale = Vector3.one * scale;
+            ApplyColor(visual, color);
+            return visual;
+        }
+
+        static GameObject CreateArrow(CombatProjectileState projectile)
+        {
+            var root = new GameObject($"Projectile_{projectile.ProjectileId}");
+            root.transform.localScale = Vector3.one;
+
+            if (_arrowShaftMaterial == null) _arrowShaftMaterial = LoadMaterial("Art/ProjectileArrowShaft");
+            if (_arrowHeadMaterial == null) _arrowHeadMaterial = LoadMaterial("Art/ProjectileArrowHead");
+
+            var shaft = CreatePrimitiveRoot(PrimitiveType.Cube, "Shaft");
+            shaft.transform.SetParent(root.transform, false);
+            shaft.transform.localScale = new Vector3(0.05f, 0.05f, 0.5f);
+            ApplyMaterial(shaft, _arrowShaftMaterial);
+
+            var head = CreatePrimitiveRoot(PrimitiveType.Cube, "Head");
+            head.transform.SetParent(root.transform, false);
+            head.transform.localPosition = new Vector3(0f, 0f, 0.26f);
+            head.transform.localScale = new Vector3(0.12f, 0.12f, 0.14f);
+            ApplyMaterial(head, _arrowHeadMaterial);
+
+            return root;
+        }
+
+        static GameObject CreateFireball(CombatProjectileState projectile)
+        {
+            var root = new GameObject($"Projectile_{projectile.ProjectileId}");
+            root.transform.localScale = Vector3.one;
+
+            if (_fireMaterial == null) _fireMaterial = LoadMaterial("Art/ProjectileFire");
+
+            var core = CreatePrimitiveRoot(PrimitiveType.Sphere, "Core");
+            core.transform.SetParent(root.transform, false);
+            core.transform.localScale = Vector3.one * (0.24f * ProjectileScale);
+            ApplyMaterial(core, _fireMaterial);
+
+            var trail = root.AddComponent<TrailRenderer>();
+            trail.time = 0.25f;
+            trail.startWidth = 0.22f;
+            trail.endWidth = 0f;
+            trail.material = _fireMaterial;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(new Color(1f, 0.7f, 0.2f), 0f), new GradientColorKey(new Color(0.8f, 0.2f, 0.05f), 1f) },
+                new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+
+            return root;
+        }
+
+        static GameObject CreatePrimitiveRoot(PrimitiveType primitive, string name)
+        {
+            var visual = GameObject.CreatePrimitive(primitive);
+            visual.name = name;
             var collider = visual.GetComponent<Collider>();
             if (collider != null)
             {
-                Object.Destroy(collider);
-            }
-
-            var renderer = visual.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                var block = new MaterialPropertyBlock();
-                block.SetColor(Shader.PropertyToID("_BaseColor"), color);
-                renderer.SetPropertyBlock(block);
+                if (Application.isPlaying)
+                {
+                    Object.Destroy(collider);
+                }
+                else
+                {
+                    Object.DestroyImmediate(collider);
+                }
             }
 
             return visual;
+        }
+
+        static void ApplyColor(GameObject visual, Color color)
+        {
+            var renderer = visual.GetComponent<Renderer>();
+            if (renderer == null) return;
+            var block = new MaterialPropertyBlock();
+            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
+            renderer.SetPropertyBlock(block);
+        }
+
+        static void ApplyMaterial(GameObject visual, Material material)
+        {
+            if (material == null) return;
+            var renderer = visual.GetComponent<Renderer>();
+            if (renderer == null) return;
+            renderer.sharedMaterial = material;
         }
 
         /// <summary>Building shots = owner-colored cubes; unit shots keep race/role styling.</summary>

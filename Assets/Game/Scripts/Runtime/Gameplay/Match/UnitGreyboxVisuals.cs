@@ -9,7 +9,7 @@ namespace Game.Gameplay.Match
         public const float Scale = 2f;
 
         /// <summary>Animated Human (WC3-derived) models are authored larger than greybox capsules.</summary>
-        public const float AnimatedHumanScaleFactor = 0.5f;
+        public const float AnimatedHumanScaleFactor = 0.625f;
 
         /// <summary>Melee is slightly under baseline greybox height.</summary>
         public const float AnimatedHumanMeleeScaleFactor = 0.8f;
@@ -27,23 +27,12 @@ namespace Game.Gameplay.Match
         public const float FlyingHoverHeight = 4f;
 
         /// <summary>
-        /// Super Walk resets armature root position; keep a small clearance so feet stay above the road.
-        /// </summary>
-        public const float SuperGroundClearance = 1.5f;
-
-        /// <summary>
         /// WC3 meshes face +X; match locomotion faces +Z. Prefab yaw aligns model forward.
         /// </summary>
         public const float AnimatedHumanModelYawDegrees = 90f;
 
         /// <summary>Flying (airship) uses the same +X→+Z yaw as other Human units.</summary>
         public const float AnimatedHumanFlyingModelYawDegrees = 90f;
-
-        /// <summary>
-        /// GodsPaladin Walk leans the torso back in the facing plane; positive Z roll tips it upright
-        /// when prefab yaw is 90°.
-        /// </summary>
-        public const float AnimatedHumanSuperModelRollDegrees = 8f;
 
         /// <summary>Extra per-role multiplier baked into Human animated prefab scale.</summary>
         public static float GetAnimatedHumanRoleScale(UnitRole role) =>
@@ -62,12 +51,11 @@ namespace Game.Gameplay.Match
                 ? AnimatedHumanFlyingModelYawDegrees
                 : AnimatedHumanModelYawDegrees;
 
-        /// <summary>Prefab root euler for Human animated models (yaw + optional Super roll).</summary>
+        /// <summary>Prefab root euler for Human animated models (yaw only).</summary>
         public static Vector3 GetAnimatedHumanModelEuler(UnitRole role)
         {
             var yaw = GetAnimatedHumanModelYawDegrees(role);
-            var roll = role == UnitRole.Super ? AnimatedHumanSuperModelRollDegrees : 0f;
-            return new Vector3(0f, yaw, roll);
+            return new Vector3(0f, yaw, 0f);
         }
 
         /// <summary>Local model offset applied by the combat presenter.</summary>
@@ -75,7 +63,6 @@ namespace Game.Gameplay.Match
             role switch
             {
                 UnitRole.Flying => Vector3.up * FlyingHoverHeight,
-                UnitRole.Super => Vector3.up * SuperGroundClearance,
                 _ => Vector3.zero,
             };
     }

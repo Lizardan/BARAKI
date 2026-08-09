@@ -716,7 +716,7 @@ MonoBehaviour:
   _boundsRadius: 152
   _cinemachineFollow: {fileID: 2042117577}
   _minZoomDistance: 16
-  _maxZoomDistance: 64
+  _maxZoomDistance: 40
   _zoomScrollSpeed: 2
   _zoomSmoothTime: 0.14
   _focusMoveSpeed: 100
@@ -890,6 +890,7 @@ GameObject:
   - component: {fileID: 1399539387}
   - component: {fileID: 1399539389}
   - component: {fileID: 1399539388}
+  - component: {fileID: 1399539390}
   m_Layer: 0
   m_Name: MatchRuntime
   m_TagString: Untagged
@@ -941,6 +942,7 @@ MonoBehaviour:
   _runtime: {fileID: 1399539380}
   _visualCatalog: {fileID: 11400000, guid: 873a123bc2806a548907ca9c980638c0, type: 2}
   _fogOfWar: {fileID: 0}
+  _fxCatalog: {fileID: 0}
   _fallbackUnitScale: 2.7
   _fallbackUnitHeight: 3.6
   _statusBarClearance: 0.5
@@ -1069,6 +1071,20 @@ MonoBehaviour:
   _visionRadius: 20
   _simulation: {fileID: 1399539388}
   _fogEnabled: 1
+--- !u!114 &1399539390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1399539378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb599a3a11a62e54eae5f774bdaedb75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.MatchBuildingFxPresenter
+  _runtime: {fileID: 0}
+  _fxCatalog: {fileID: 0}
 --- !u!1 &1477253634
 GameObject:
   m_ObjectHideFlags: 0
@@ -1443,7 +1459,7 @@ MonoBehaviour:
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
-  FollowOffset: {x: 0, y: 26.529202, z: -17.894173}
+  FollowOffset: {x: 0, y: 26.5292, z: -17.89417}
 --- !u!4 &2042117578
 Transform:
   m_ObjectHideFlags: 0

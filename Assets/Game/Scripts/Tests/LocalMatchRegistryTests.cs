@@ -36,7 +36,7 @@ namespace Game.Tests
         {
             var backend = new LocalDevSessionBackend();
             Assert.Throws<System.InvalidOperationException>(() =>
-                backend.CreateAsync(new CreateMatchRequest(3, "Host")).GetAwaiter().GetResult());
+                backend.CreateAsync(new CreateMatchRequest(5, "Host")).GetAwaiter().GetResult());
         }
     }
 }

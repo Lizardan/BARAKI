@@ -94,8 +94,9 @@ namespace Game.Tests
 
                 var walkable = WalkableSurfaceBuilder.BuildFromSourceParts(sourceParts);
                 Assert.IsTrue(walkable.Contains(new Vector3(0f, 0f, 0f)));
-                Assert.IsTrue(walkable.Contains(new Vector3(120f, 0f, 30f)));
-                Assert.IsTrue(walkable.Contains(new Vector3(125f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(30f, 0f, 120f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(75f, 0f, 0f)));
+                Assert.IsTrue(walkable.Contains(new Vector3(-75f, 0f, 0f)));
             }
             finally
             {

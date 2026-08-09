@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
+using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
@@ -26,6 +27,7 @@ namespace Game.Gameplay.Match
             public int LastAttackSwingSerial;
             public bool IsFogHidden;
             public Renderer[] CachedRenderers;
+            public UnitRole Role;
         }
 
         sealed class DyingVisual
@@ -37,6 +39,7 @@ namespace Game.Gameplay.Match
         [SerializeField] private MatchRuntime _runtime;
         [SerializeField] private UnitVisualCatalog _visualCatalog;
         [SerializeField] private MatchFogOfWar _fogOfWar;
+        [SerializeField] private MatchFxCatalog _fxCatalog;
 
         public UnitVisualCatalog VisualCatalog => _visualCatalog;
         [SerializeField] private float _fallbackUnitScale = 2.7f;
@@ -48,6 +51,7 @@ namespace Game.Gameplay.Match
         readonly Dictionary<int, UnitVisual> _visuals = new();
         readonly List<DyingVisual> _dyingVisuals = new();
         readonly Dictionary<int, Transform> _projectileVisuals = new();
+        readonly Dictionary<int, bool> _projectileHitsBuilding = new();
         Transform _root;
         Transform _projectileRoot;
 
@@ -66,6 +70,11 @@ namespace Game.Gameplay.Match
             if (_fogOfWar == null)
             {
                 _fogOfWar = GetComponent<MatchFogOfWar>() ?? FindAnyObjectByType<MatchFogOfWar>();
+            }
+
+            if (_fxCatalog == null)
+            {
+                _fxCatalog = Resources.Load<MatchFxCatalog>("Fx/MatchFxCatalog");
             }
         }
 
@@ -291,11 +300,42 @@ namespace Game.Gameplay.Match
                 unit.BehaviorState,
                 fireAttack,
                 fireDeath: false);
+
+            if (fireAttack)
+            {
+                SpawnMeleeImpactFx(unit, combat);
+            }
+        }
+
+        void SpawnMeleeImpactFx(MatchUnitState unit, MatchCombatSystem combat)
+        {
+            if (!CanSpawnFx())
+            {
+                return;
+            }
+
+            if (unit.CurrentTargetBuildingInstanceId.HasValue)
+            {
+                var building = _runtime?.Controller?.Buildings?.GetByInstanceId(unit.CurrentTargetBuildingInstanceId.Value);
+                if (building != null && !building.IsRuins)
+                {
+                    SpawnFx(_fxCatalog.BuildingImpact, building.WorldPosition, ImpactFxLifetimeSeconds);
+                }
+
+                return;
+            }
+
+            if (unit.CurrentTargetId.HasValue
+                && combat.TryGetUnitWorldPosition(unit.CurrentTargetId.Value, out var targetPosition))
+            {
+                SpawnFx(_fxCatalog.Blood, targetPosition, BloodFxLifetimeSeconds);
+            }
         }
 
         void BeginDeath(UnitVisual visual)
         {
             UnregisterUnitPick(visual);
+            SpawnDeathFx(visual);
             if (visual.StatusBars != null)
             {
                 DestroyManaged(visual.StatusBars.gameObject);
@@ -317,6 +357,23 @@ namespace Game.Gameplay.Match
                 Visual = visual,
                 TimeRemaining = Mathf.Max(0.1f, _deathVisualSeconds),
             });
+        }
+
+        void SpawnDeathFx(UnitVisual visual)
+        {
+            if (!CanSpawnFx() || visual?.Root == null)
+            {
+                return;
+            }
+
+            if (visual.Role == UnitRole.Super)
+            {
+                SpawnFx(_fxCatalog.MachineDestroyed, visual.Root.position, MachineFxLifetimeSeconds);
+            }
+            else
+            {
+                SpawnFx(_fxCatalog.Blood, visual.Root.position, BloodFxLifetimeSeconds);
+            }
         }
 
         void TickDyingVisuals(float deltaTime)
@@ -386,6 +443,7 @@ namespace Game.Gameplay.Match
                 Animator = animator,
                 StatusBars = statusBars,
                 GroundRingDiameter = MatchPickFootprint.GetModelFootprintDiameter(model),
+                Role = unit.Role,
             };
             AttachUnitPickCollider(unitVisual, unit);
             return unitVisual;
@@ -395,10 +453,13 @@ namespace Game.Gameplay.Match
         {
             EnsureProjectileRoot();
             var activeIds = new HashSet<int>();
+            _projectileHitsBuilding.Clear();
 
             foreach (var projectile in combat.Projectiles)
             {
                 activeIds.Add(projectile.ProjectileId);
+                _projectileHitsBuilding[projectile.ProjectileId] =
+                    projectile.TargetBuildingInstanceId.HasValue || projectile.IsBuildingAttack;
                 if (!_projectileVisuals.TryGetValue(projectile.ProjectileId, out var visual)
                     || visual == null)
                 {
@@ -423,12 +484,43 @@ namespace Game.Gameplay.Match
             {
                 if (_projectileVisuals.TryGetValue(projectileId, out var visual) && visual != null)
                 {
+                    SpawnProjectileImpactFx(projectileId, visual.position);
                     DestroyManaged(visual.gameObject);
                 }
 
                 _projectileVisuals.Remove(projectileId);
             }
         }
+
+        void SpawnProjectileImpactFx(int projectileId, Vector3 impactPosition)
+        {
+            if (!CanSpawnFx())
+            {
+                return;
+            }
+
+            var hitsBuilding = _projectileHitsBuilding.TryGetValue(projectileId, out var building) && building;
+            SpawnFx(
+                hitsBuilding ? _fxCatalog.BuildingImpact : _fxCatalog.Blood,
+                impactPosition,
+                hitsBuilding ? ImpactFxLifetimeSeconds : BloodFxLifetimeSeconds);
+        }
+
+        void SpawnFx(GameObject prefab, Vector3 position, float lifetimeSeconds)
+        {
+            if (!CanSpawnFx() || prefab == null)
+            {
+                return;
+            }
+
+            var instance = Instantiate(prefab, position, prefab.transform.rotation);
+            if (lifetimeSeconds > 0f)
+            {
+                Destroy(instance, lifetimeSeconds);
+            }
+        }
+
+        bool CanSpawnFx() => Application.isPlaying && _fxCatalog != null;
 
         static string ResolveRaceId(MatchUnitState unit, MatchController controller)
         {
@@ -612,5 +704,9 @@ namespace Game.Gameplay.Match
                 DestroyImmediate(target);
             }
         }
+
+        const float BloodFxLifetimeSeconds = 1.2f;
+        const float MachineFxLifetimeSeconds = 5f;
+        const float ImpactFxLifetimeSeconds = 1.5f;
     }
 }

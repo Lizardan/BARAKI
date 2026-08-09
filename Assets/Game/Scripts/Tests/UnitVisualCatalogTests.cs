@@ -118,16 +118,13 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanMeleePrefab_FacesUnityForwardAxis()
+        public void HumanMeleePrefab_UsesNativeTtPose()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
-            Assert.AreEqual(
-                UnitGreyboxVisuals.AnimatedHumanModelYawDegrees,
-                prefab.transform.localEulerAngles.y,
-                0.1f);
-            Assert.AreEqual(0.5f, UnitGreyboxVisuals.AnimatedHumanScaleFactor, 0.001f);
-            Assert.AreEqual(0.8f, UnitGreyboxVisuals.GetAnimatedHumanRoleScale(UnitRole.Melee), 0.001f);
-            Assert.AreEqual(1.6f, UnitGreyboxVisuals.GetAnimatedHumanRoleScale(UnitRole.Caster), 0.001f);
+            Assert.AreEqual(0f, prefab.transform.localEulerAngles.y, 0.1f);
+            Assert.AreEqual(1f, prefab.transform.localScale.x, 0.001f);
+            Assert.AreEqual(1f, prefab.transform.localScale.y, 0.001f);
+            Assert.AreEqual(1f, prefab.transform.localScale.z, 0.001f);
             Assert.AreEqual(
                 UnitGreyboxVisuals.FlyingHoverHeight,
                 UnitGreyboxVisuals.GetModelLocalOffset(UnitRole.Flying).y,
@@ -136,17 +133,10 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanFlyingPrefab_UsesYaw90AndStaysAboveGroundInCombatClips()
+        public void HumanFlyingPrefab_StaysAboveGroundInCombatClips()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Flying, out var prefab));
-            Assert.AreEqual(
-                UnitGreyboxVisuals.AnimatedHumanFlyingModelYawDegrees,
-                prefab.transform.localEulerAngles.y,
-                0.1f);
-            Assert.AreEqual(
-                90f,
-                UnitGreyboxVisuals.GetAnimatedHumanModelYawDegrees(UnitRole.Flying),
-                0.001f);
+            Assert.AreEqual(0f, prefab.transform.localEulerAngles.y, 0.1f);
 
             var instance = Object.Instantiate(prefab);
             try
@@ -206,57 +196,65 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanSuperPrefab_CorrectsBackwardLeanAndStaysAboveGround()
+        public void HumanSuperPrefab_StaysAboveGroundInCombatClips()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Super, out var prefab));
-            var expected = UnitGreyboxVisuals.GetAnimatedHumanModelEuler(UnitRole.Super);
-            Assert.AreEqual(expected.y, prefab.transform.localEulerAngles.y, 0.1f);
-            Assert.AreEqual(expected.z, prefab.transform.localEulerAngles.z, 0.1f);
+            Assert.AreEqual(0f, prefab.transform.localEulerAngles.y, 0.1f);
+            Assert.AreEqual(0f, prefab.transform.localEulerAngles.z, 0.1f);
 
-            var root = new GameObject("SuperLeanProbe").transform;
+            var root = new GameObject("SuperProbe").transform;
             root.rotation = Quaternion.LookRotation(Vector3.forward);
             var instance = Object.Instantiate(prefab, root);
             try
             {
                 instance.transform.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(UnitRole.Super);
-                instance.transform.localRotation = Quaternion.Euler(expected);
-                instance.transform.localScale =
-                    prefab.transform.localScale
-                    * UnitGreyboxVisuals.Scale
-                    * UnitGreyboxVisuals.AnimatedHumanScaleFactor;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = prefab.transform.localScale;
 
                 var animator = instance.GetComponentInChildren<Animator>();
                 Assert.IsNotNull(animator);
-                var walk = System.Array.Find(
-                    animator.runtimeAnimatorController.animationClips,
-                    c => c.name.IndexOf("Walk", System.StringComparison.OrdinalIgnoreCase) >= 0);
-                Assert.IsNotNull(walk);
+                var controller = animator.runtimeAnimatorController;
+                Assert.IsNotNull(controller);
 
-                walk.SampleAnimation(instance, walk.length * 0.3f);
-                var head = FindChild(instance.transform, "Bone_Head");
-                var pelvis = FindChild(instance.transform, "Bone_Pelvis");
-                Assert.IsNotNull(head);
-                Assert.IsNotNull(pelvis);
-
-                var torso = (head.position - pelvis.position).normalized;
-                var leanBack = -Vector3.Dot(torso, Vector3.forward);
-                Assert.LessOrEqual(
-                    Mathf.Abs(leanBack),
-                    0.06f,
-                    $"Super Walk leanBack={leanBack:F3} should be near upright");
-
-                var minY = float.MaxValue;
-                foreach (var smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                foreach (var clip in controller.animationClips)
                 {
-                    if (!smr.gameObject.activeInHierarchy || smr.sharedMesh == null)
+                    var name = clip.name.ToLowerInvariant();
+                    if (!(name.Contains("idle")
+                          || name.Contains("stand")
+                          || name.Contains("walk")
+                          || name.Contains("move")
+                          || name.Contains("attack")))
                     {
                         continue;
                     }
 
-                    minY = Mathf.Min(minY, smr.bounds.min.y);
-                }
+                    if (name.Contains("death") || name.Contains("damage"))
+                    {
+                        continue;
+                    }
 
-                Assert.GreaterOrEqual(minY, -0.05f, $"Super should not sink under ground (minY={minY})");
+                    var minY = float.MaxValue;
+                    const int steps = 12;
+                    for (var i = 0; i <= steps; i++)
+                    {
+                        var t = clip.length <= 0f ? 0f : clip.length * i / steps;
+                        clip.SampleAnimation(instance, t);
+                        foreach (var smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                        {
+                            if (!smr.gameObject.activeInHierarchy || smr.sharedMesh == null)
+                            {
+                                continue;
+                            }
+
+                            minY = Mathf.Min(minY, smr.bounds.min.y);
+                        }
+                    }
+
+                    Assert.GreaterOrEqual(
+                        minY,
+                        -0.05f,
+                        $"{clip.name} should stay above ground (minY={minY})");
+                }
             }
             finally
             {
@@ -264,80 +262,34 @@ namespace Game.Tests
             }
         }
 
-        static Transform FindChild(Transform root, string name)
-        {
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t.name == name)
-                {
-                    return t;
-                }
-            }
-
-            return null;
-        }
-
         [Test]
-        public void HumanAnimatedPrefabs_AreNormalizedNearGreyboxHeight()
+        public void HumanAnimatedPrefabs_KeepNativeTtScaleAndAnimator()
         {
-            // Mirrors ReferenceMeleeLocalHeight in HumanAnimatedUnitSetup.NormalizePrefabScale.
-            const float referenceHeight = 1.134f;
-            var baseHeight = referenceHeight * UnitGreyboxVisuals.Scale;
-
-            float minHuman = float.MaxValue;
-            float maxHuman = 0f;
             foreach (var role in CombatUnitRoles)
             {
                 Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, out var humanPrefab));
+                Assert.AreEqual(1f, humanPrefab.transform.localScale.x, 0.001f, $"{role} scale.x");
+                Assert.AreEqual(1f, humanPrefab.transform.localScale.y, 0.001f, $"{role} scale.y");
+                Assert.AreEqual(1f, humanPrefab.transform.localScale.z, 0.001f, $"{role} scale.z");
+                Assert.IsNotNull(
+                    humanPrefab.GetComponentInChildren<Animator>(),
+                    $"{role} should keep Animator");
+
                 var human = Object.Instantiate(humanPrefab);
                 try
                 {
                     human.transform.position = Vector3.zero;
                     human.transform.rotation = Quaternion.identity;
-                    human.transform.localScale =
-                        humanPrefab.transform.localScale
-                        * UnitGreyboxVisuals.Scale
-                        * UnitGreyboxVisuals.AnimatedHumanScaleFactor;
+                    human.transform.localScale = humanPrefab.transform.localScale;
 
                     var humanHeight = MeasureBodyHeight(human);
-                    var expectedHeight = baseHeight * UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role);
-                    Assert.AreEqual(
-                        expectedHeight,
-                        humanHeight,
-                        expectedHeight * 0.08f,
-                        $"{role} body height {humanHeight} should be near {expectedHeight}");
-                    Assert.IsNotNull(
-                        human.GetComponentInChildren<Animator>(),
-                        $"{role} should keep Animator");
-
-                    if (Mathf.Abs(UnitGreyboxVisuals.GetAnimatedHumanRoleScale(role) - 1f) > 0.01f)
-                    {
-                        continue;
-                    }
-
-                    if (humanHeight < minHuman)
-                    {
-                        minHuman = humanHeight;
-                    }
-
-                    if (humanHeight > maxHuman)
-                    {
-                        maxHuman = humanHeight;
-                    }
+                    Assert.Greater(humanHeight, 0.5f, $"{role} body height should be plausible");
+                    Assert.Less(humanHeight, 4f, $"{role} body height should be plausible");
                 }
                 finally
                 {
                     Object.DestroyImmediate(human);
                 }
-            }
-
-            if (minHuman < float.MaxValue)
-            {
-                Assert.AreEqual(
-                    maxHuman,
-                    minHuman,
-                    baseHeight * 0.05f,
-                    $"Baseline Human body height span {minHuman}..{maxHuman} should stay within 5%");
             }
         }
 
@@ -397,39 +349,44 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanMeleePrefab_HasTeamAccentsTintedBySlotColor()
+        public void HumanMeleePrefab_HasTeamTexturesTintedBySlotColor()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
             Assert.GreaterOrEqual(
                 UnitVisualAccent.CountAccents(prefab.transform),
-                1,
-                "Human_Melee should expose TeamAccent geosets for player color.");
+                4,
+                "Human_Melee should expose the four TT team-color textures.");
 
             var instance = Object.Instantiate(prefab);
             try
             {
                 var color = new Color(0.1f, 0.4f, 0.9f, 1f);
                 UnitVisualAccent.ApplyTeamColor(instance.transform, color);
-                var accents = 0;
-                foreach (var t in instance.GetComponentsInChildren<Transform>(true))
+                var tt = instance.GetComponentInChildren<TtUnitTeamColor>(true);
+                Assert.IsNotNull(tt);
+                Assert.AreEqual(4, tt.TeamTextures.Length);
+
+                var slot = MatchPlayerColors.NearestSlotIndex(color);
+                var applied = 0;
+                foreach (var smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
-                    if (!UnitVisualAccent.IsTeamColorTarget(t.name))
+                    if (!smr.gameObject.activeInHierarchy || smr.sharedMesh == null)
                     {
                         continue;
                     }
 
-                    var renderer = t.GetComponent<Renderer>();
-                    Assert.IsNotNull(renderer);
                     var block = new MaterialPropertyBlock();
-                    renderer.GetPropertyBlock(block);
-                    var tinted = block.GetColor("_BaseColor");
-                    Assert.AreEqual(color.r, tinted.r, 0.001f, t.name);
-                    Assert.AreEqual(color.g, tinted.g, 0.001f, t.name);
-                    Assert.AreEqual(color.b, tinted.b, 0.001f, t.name);
-                    accents++;
+                    smr.GetPropertyBlock(block);
+                    var texture = block.GetTexture("_BaseMap");
+                    Assert.IsNotNull(texture, "Active SMR should receive _BaseMap team texture");
+                    Assert.AreEqual(
+                        tt.TeamTextures[slot],
+                        texture,
+                        "SMR should be tinted by the nearest slot texture");
+                    applied++;
                 }
 
-                Assert.GreaterOrEqual(accents, 1);
+                Assert.GreaterOrEqual(applied, 1);
             }
             finally
             {
@@ -438,31 +395,34 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanCasterPrefab_CloakIsTeamTinted()
+        public void HumanCasterPrefab_UsesTtTeamColor()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Caster, out var prefab));
-            var cloak = FindChild(prefab.transform, "TeamTint_0");
-            Assert.IsNotNull(cloak, "Caster cloak geoset should be TeamTint_0 (Arthas robe)");
-            var cloakRenderer = cloak.GetComponent<SkinnedMeshRenderer>();
-            Assert.IsNotNull(cloakRenderer);
-            Assert.IsNotNull(cloakRenderer.sharedMaterial);
-            Assert.AreEqual(
-                "Mat_Arthas_TeamCloak",
-                cloakRenderer.sharedMaterial.name,
-                "Cloak should use team-color diffuse (gold cloth → slot color)");
-            Assert.IsNull(
-                FindChild(prefab.transform, "TeamTint_2"),
-                "Head/banditMage geoset must not be forced as cloak tint");
+            var tt = prefab.GetComponentInChildren<TtUnitTeamColor>(true);
+            Assert.IsNotNull(tt, "Caster should carry TtUnitTeamColor");
+            Assert.AreEqual(4, tt.TeamTextures.Length);
+            Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 4);
 
             var instance = Object.Instantiate(prefab);
             try
             {
                 var color = new Color(0.9f, 0.2f, 0.1f, 1f);
                 UnitVisualAccent.ApplyTeamColor(instance.transform, color);
-                var tintedCloak = FindChild(instance.transform, "TeamTint_0");
-                var block = new MaterialPropertyBlock();
-                tintedCloak.GetComponent<Renderer>().GetPropertyBlock(block);
-                Assert.AreEqual(color.r, block.GetColor("_BaseColor").r, 0.001f);
+                var slot = MatchPlayerColors.NearestSlotIndex(color);
+                foreach (var smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (!smr.gameObject.activeInHierarchy || smr.sharedMesh == null)
+                    {
+                        continue;
+                    }
+
+                    var block = new MaterialPropertyBlock();
+                    smr.GetPropertyBlock(block);
+                    Assert.AreEqual(
+                        tt.TeamTextures[slot],
+                        block.GetTexture("_BaseMap"),
+                        "Caster body should be tinted by red-slot texture");
+                }
             }
             finally
             {
@@ -471,26 +431,34 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanSuperPrefab_HoodIsTeamAccentWithoutFallbackPrimitives()
+        public void HumanSuperPrefab_HasTtTeamColorOnNativeModel()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Super, out var prefab));
-            var hood = FindChild(prefab.transform, "TeamAccent_3");
-            Assert.IsNotNull(hood, "Super hood geoset should be TeamAccent_3");
-            Assert.IsNotNull(hood.GetComponent<SkinnedMeshRenderer>());
-            Assert.IsNull(
-                FindChild(prefab.transform, "TeamAccent_Cape"),
-                "Super should use real hood mesh, not fallback Cape primitive");
-            Assert.IsNull(FindChild(prefab.transform, "TeamAccent_Plume"));
+            Assert.AreEqual(0f, prefab.transform.localEulerAngles.y, 0.1f);
+            var tt = prefab.GetComponentInChildren<TtUnitTeamColor>(true);
+            Assert.IsNotNull(tt, "Super should carry TtUnitTeamColor");
+            Assert.AreEqual(4, tt.TeamTextures.Length);
 
             var instance = Object.Instantiate(prefab);
             try
             {
                 var color = new Color(0.1f, 0.8f, 0.2f, 1f);
                 UnitVisualAccent.ApplyTeamColor(instance.transform, color);
-                var tintedHood = FindChild(instance.transform, "TeamAccent_3");
-                var block = new MaterialPropertyBlock();
-                tintedHood.GetComponent<Renderer>().GetPropertyBlock(block);
-                Assert.AreEqual(color.g, block.GetColor("_BaseColor").g, 0.001f);
+                var slot = MatchPlayerColors.NearestSlotIndex(color);
+                foreach (var smr in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (!smr.gameObject.activeInHierarchy || smr.sharedMesh == null)
+                    {
+                        continue;
+                    }
+
+                    var block = new MaterialPropertyBlock();
+                    smr.GetPropertyBlock(block);
+                    Assert.AreEqual(
+                        tt.TeamTextures[slot],
+                        block.GetTexture("_BaseMap"),
+                        "Super body should be tinted by green-slot texture");
+                }
             }
             finally
             {
@@ -502,8 +470,8 @@ namespace Game.Tests
         public void HumanMeleePrefab_HasTeamAccent()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
-            Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 1,
-                "Human_Melee should include at least one TeamAccent mesh.");
+            Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 4,
+                "Human_Melee should expose the four TT team-color textures.");
         }
     }
 

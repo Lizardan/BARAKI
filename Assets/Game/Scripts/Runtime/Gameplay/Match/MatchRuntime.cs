@@ -256,6 +256,11 @@ namespace Game.Gameplay.Match
             {
                 gameObject.AddComponent<MatchBuildingStatusPresenter>();
             }
+
+            if (GetComponent<MatchBuildingFxPresenter>() == null)
+            {
+                gameObject.AddComponent<MatchBuildingFxPresenter>();
+            }
         }
 
         static IEnumerator DeferredBuildingPickRefresh(MatchBuildingPickPresenter presenter)

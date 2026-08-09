@@ -24,7 +24,7 @@ namespace Game.Gameplay.Cameras
         [Header("Focus")]
         [SerializeField] private float _focusMoveSpeed = GameplayCameraSettings.DefaultFocusMoveSpeed;
 
-        private float _zoomDistance;
+        [SerializeField] private float _zoomDistance;
         private float _targetZoomDistance;
         private float _zoomVelocity;
         private bool _hasFocusTarget;

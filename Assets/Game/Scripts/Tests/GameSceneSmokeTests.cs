@@ -4,11 +4,29 @@ using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Tests
 {
     public sealed class GameSceneSmokeTests
     {
+        private string _originalScenePath;
+
+        [OneTimeSetUp]
+        public void CaptureOriginalScene()
+        {
+            _originalScenePath = SceneManager.GetActiveScene().path;
+        }
+
+        [OneTimeTearDown]
+        public void RestoreOriginalScene()
+        {
+            var target = string.IsNullOrEmpty(_originalScenePath)
+                ? "Assets/Game/Scenes/Bootstrap.unity"
+                : _originalScenePath;
+            EditorSceneManager.OpenScene(target);
+        }
+
         [Test]
         public void GameScene_HasCinemachineBrain()
         {

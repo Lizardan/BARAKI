@@ -18,23 +18,23 @@ namespace Game.Tests
         }
 
         [Test]
-        public void UsesMeleeStrike_IncludesSiegeAndSuper()
+        public void UsesMeleeStrike_IncludesSiege_ExcludesSuper()
         {
             Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Melee));
             Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Siege));
-            Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Super));
+            Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Super));
             Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Ranged));
             Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Flying));
         }
 
         [Test]
-        public void UsesProjectile_ExcludesSiegeAndSuper()
+        public void UsesProjectile_ExcludesSiege_IncludesSuper()
         {
             Assert.IsTrue(CombatAttackRules.UsesProjectile(UnitRole.Ranged));
             Assert.IsTrue(CombatAttackRules.UsesProjectile(UnitRole.Caster));
             Assert.IsTrue(CombatAttackRules.UsesProjectile(UnitRole.Flying));
+            Assert.IsTrue(CombatAttackRules.UsesProjectile(UnitRole.Super));
             Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Siege));
-            Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Super));
             Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Melee));
         }
 

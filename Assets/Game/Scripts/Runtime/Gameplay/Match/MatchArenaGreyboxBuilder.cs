@@ -58,6 +58,7 @@ namespace Game.Gameplay.Match
         public static void Populate(Transform root, MatchArenaLayout layout, LaneGraph graph)
         {
             var basesRoot = PopulateRoadNetwork(root, layout, graph);
+            var buildingCatalog = LoadBuildingCatalog();
 
             foreach (var slot in layout.Slots)
             {
@@ -69,7 +70,7 @@ namespace Game.Gameplay.Match
 
                 foreach (var pair in slot.BuildingLocalOffsets)
                 {
-                    CreateBuildingMarker(slotRoot, pair.Key, pair.Value);
+                    CreateBuildingMarker(slotRoot, pair.Key, pair.Value, slot.SlotIndex, buildingCatalog);
                 }
             }
 
@@ -519,8 +520,25 @@ namespace Game.Gameplay.Match
             platform.GetComponent<Renderer>().sharedMaterial = roadMaterial;
         }
 
-        static void CreateBuildingMarker(Transform slotRoot, string buildingId, Vector3 localPosition)
+        static void CreateBuildingMarker(
+            Transform slotRoot,
+            string buildingId,
+            Vector3 localPosition,
+            int ownerSlot,
+            BuildingVisualCatalog buildingCatalog)
         {
+            if (buildingCatalog != null && buildingCatalog.TryGetPrefab(buildingId, out var prefab))
+            {
+                var instance = Object.Instantiate(prefab, slotRoot, false);
+                instance.name = buildingId;
+                instance.transform.localPosition = localPosition;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one;
+
+                UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(ownerSlot));
+                return;
+            }
+
             var marker = GameObject.CreatePrimitive(GetPrimitive(buildingId));
             marker.name = buildingId;
             marker.transform.SetParent(slotRoot, false);
@@ -660,10 +678,16 @@ namespace Game.Gameplay.Match
         }
 
         const string RoadMaterialResourcePath = "Art/RoadGreybox";
+        const string BuildingCatalogResourcePath = "Buildings/BuildingVisualCatalog";
 
         static Material LoadRoadMaterial()
         {
             return Resources.Load<Material>(RoadMaterialResourcePath);
+        }
+
+        static BuildingVisualCatalog LoadBuildingCatalog()
+        {
+            return Resources.Load<BuildingVisualCatalog>(BuildingCatalogResourcePath);
         }
 
         static Material CreateRoadMaterial(Color color)

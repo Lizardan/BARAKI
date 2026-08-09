@@ -66,6 +66,11 @@ namespace Game.Gameplay.Combat
             return true;
         }
 
+        public bool TryGetUnitWorldPosition(int unitId, out Vector3 position)
+        {
+            return TryGetUnitWorldPosition(GetUnitById(unitId), out position);
+        }
+
         public void Reset(IReadOnlyList<MatchPlayerState> players, LaneGraph graph, int randomSeed = 12345)
         {
             if (players == null)

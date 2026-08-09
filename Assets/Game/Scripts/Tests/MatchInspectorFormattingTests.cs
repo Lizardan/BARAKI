@@ -42,9 +42,12 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsResearchBuilding_MainAndTowers_ReturnTrue()
+        public void IsResearchBuilding_MainBarracksAndTowers_ReturnTrue()
         {
             Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.Main));
+            Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksLeft));
+            Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksCenter));
+            Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksRight));
             Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.TowerNw));
             Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.TowerNe));
             Assert.IsTrue(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.TowerSw));
@@ -52,11 +55,8 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsResearchBuilding_BarracksAndUnknown_ReturnFalse()
+        public void IsResearchBuilding_Unknown_ReturnsFalse()
         {
-            Assert.IsFalse(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksLeft));
-            Assert.IsFalse(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksCenter));
-            Assert.IsFalse(MatchInspectorFormatting.IsResearchBuilding(GameIds.Buildings.BarracksRight));
             Assert.IsFalse(MatchInspectorFormatting.IsResearchBuilding(null));
             Assert.IsFalse(MatchInspectorFormatting.IsResearchBuilding(string.Empty));
         }
