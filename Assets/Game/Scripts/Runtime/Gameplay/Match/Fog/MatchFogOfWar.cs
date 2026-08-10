@@ -10,6 +10,8 @@ namespace Game.Gameplay.Match.Fog
     [DefaultExecutionOrder(-40)]
     public sealed class MatchFogOfWar : MonoBehaviour
     {
+        public static MatchFogOfWar Current { get; private set; }
+
         [SerializeField] private float _visionRadius = 25f;
         [SerializeField] private FogSimulation _simulation;
         [SerializeField] private bool _fogEnabled = true;
@@ -28,6 +30,7 @@ namespace Game.Gameplay.Match.Fog
         public void Configure(MatchRuntime runtime, int localPlayerSlot)
         {
             _runtime = runtime;
+            Current = this;
             _localPlayerSlot = localPlayerSlot;
             _initialized = false;
             _visionRadius = 25f;
@@ -142,6 +145,14 @@ namespace Game.Gameplay.Match.Fog
             if (FogDisabled)
             {
                 _simulation?.SetActiveVisual(false);
+            }
+        }
+
+        void OnDisable()
+        {
+            if (Current == this)
+            {
+                Current = null;
             }
         }
 

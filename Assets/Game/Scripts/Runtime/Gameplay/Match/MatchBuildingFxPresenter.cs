@@ -35,7 +35,7 @@ namespace Game.Gameplay.Match
         {
             if (_runtime == null)
             {
-                _runtime = FindAnyObjectByType<MatchRuntime>();
+                _runtime = MatchRuntime.Current;
             }
         }
 
@@ -109,7 +109,7 @@ namespace Game.Gameplay.Match
 
         void HideGreyboxVisual(BuildingState building)
         {
-            var greybox = FindAnyObjectByType<MatchArenaGreybox>();
+            var greybox = MatchArenaGreybox.Current;
             if (greybox == null)
             {
                 return;

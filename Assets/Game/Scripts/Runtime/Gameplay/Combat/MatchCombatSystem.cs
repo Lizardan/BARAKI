@@ -8,13 +8,14 @@ using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    public sealed class MatchCombatSystem
+    public sealed class MatchCombatSystem : IProjectileImpactHandler, IMeleeImpactHandler
     {
         readonly List<MatchUnitState> _units = new();
         readonly Dictionary<int, MatchUnitState> _unitById = new();
         readonly List<MatchPlayerState> _players = new();
-        readonly List<CombatProjectileState> _projectiles = new();
-        readonly List<CombatMeleeStrikeState> _meleeStrikes = new();
+        readonly CombatProjectileSystem _projectiles = new();
+        readonly CombatMeleeStrikeSystem _meleeStrikes = new();
+        readonly CombatSpatialGrid _spatialGrid = new();
 
         LaneGraph _graph;
         LaneRouteRegistry _routes;
@@ -22,19 +23,14 @@ namespace Game.Gameplay.Combat
         WalkableSurface _walkable;
         MatchArenaLayout _layout;
         int _nextUnitId = 1;
-        int _nextProjectileId = 1;
         System.Random _random;
 
         readonly List<MatchUnitState> _tickBuffer = new();
         readonly List<MatchUnitState> _nearbyBuffer = new();
         readonly List<MatchUnitState> _alliesBuffer = new();
         readonly List<MatchUnitState> _nestedBuffer = new();
-        readonly List<CombatProjectileState> _projectileImpactBuffer = new();
-        readonly List<CombatMeleeStrikeState> _meleeImpactBuffer = new();
         readonly List<PendingBarracksSpawn> _pendingSpawns = new();
         readonly Dictionary<int, LaneRoute> _committedRoutes = new();
-        const float SpatialCellSize = 12f;
-        readonly Dictionary<(int, int), List<MatchUnitState>> _spatialGrid = new();
 
         sealed class PendingBarracksSpawn
         {
@@ -51,8 +47,8 @@ namespace Game.Gameplay.Combat
         public event Action<UnitKillEvent> UnitKilled;
 
         public IReadOnlyList<MatchUnitState> Units => _units;
-        public IReadOnlyList<CombatProjectileState> Projectiles => _projectiles;
-        public IReadOnlyList<CombatMeleeStrikeState> MeleeStrikes => _meleeStrikes;
+        public IReadOnlyList<CombatProjectileState> Projectiles => _projectiles.Active;
+        public IReadOnlyList<CombatMeleeStrikeState> MeleeStrikes => _meleeStrikes.Active;
 
         public bool TryGetUnitWorldPosition(MatchUnitState unit, out Vector3 position)
         {
@@ -80,7 +76,7 @@ namespace Game.Gameplay.Combat
 
             _units.Clear();
             _unitById.Clear();
-            ClearSpatialGrid();
+            _spatialGrid.Clear();
             _pendingSpawns.Clear();
             _players.Clear();
             _projectiles.Clear();
@@ -92,7 +88,6 @@ namespace Game.Gameplay.Combat
             _layout = null;
             _committedRoutes.Clear();
             _nextUnitId = 1;
-            _nextProjectileId = 1;
             _random = new System.Random(randomSeed);
         }
 
@@ -548,26 +543,8 @@ namespace Game.Gameplay.Combat
                 }
             }
 
-            for (var i = _projectiles.Count - 1; i >= 0; i--)
-            {
-                if (_projectiles[i].AttackerOwnerSlot == ownerSlot)
-                {
-                    var last = _projectiles.Count - 1;
-                    if (i != last) _projectiles[i] = _projectiles[last];
-                    _projectiles.RemoveAt(last);
-                }
-            }
-
-            for (var i = _meleeStrikes.Count - 1; i >= 0; i--)
-            {
-                var attacker = GetUnitById(_meleeStrikes[i].AttackerUnitId);
-                if (attacker != null && attacker.OwnerSlot == ownerSlot)
-                {
-                    var last = _meleeStrikes.Count - 1;
-                    if (i != last) _meleeStrikes[i] = _meleeStrikes[last];
-                    _meleeStrikes.RemoveAt(last);
-                }
-            }
+            _projectiles.RemoveByOwner(ownerSlot, GetUnitById);
+            _meleeStrikes.RemoveByOwner(ownerSlot, GetUnitById);
         }
 
         public void HandleWave(BarracksWaveFired wave, ICombatUnitCatalog catalog)
@@ -693,7 +670,7 @@ namespace Game.Gameplay.Combat
             MatchUnitSnapshot[] snapshots,
             ICombatUnitCatalog catalog = null)
         {
-            ClearSpatialGrid();
+            _spatialGrid.Clear();
             var keep = new HashSet<int>();
             if (snapshots != null)
             {
@@ -852,20 +829,15 @@ namespace Game.Gameplay.Combat
                 end,
                 TowerCombatRules.ProjectileSpeed);
 
-            _projectiles.Add(new CombatProjectileState(
-                _nextProjectileId++,
-                attackerUnitId: 0,
+            _projectiles.SpawnFromBuilding(
                 targetUnitId,
                 ownerSlot,
-                UnitRole.Ranged,
                 GetPlayerRaceId(ownerSlot),
                 rawDamage,
                 duration,
                 start,
                 end,
-                isParabolic: false,
-                targetBuildingInstanceId: null,
-                sourceBuildingInstanceId: buildingInstanceId));
+                buildingInstanceId);
             return true;
         }
 
@@ -878,12 +850,12 @@ namespace Game.Gameplay.Combat
 
             TickPendingSpawns(deltaTime);
 
-            if (_units.Count == 0 && _projectiles.Count == 0 && _meleeStrikes.Count == 0)
+            if (_units.Count == 0 && _projectiles.Active.Count == 0 && _meleeStrikes.Active.Count == 0)
             {
                 return;
             }
 
-            RebuildSpatialGrid();
+            _spatialGrid.Rebuild(_units);
 
             _tickBuffer.Clear();
             _tickBuffer.AddRange(_units);
@@ -898,6 +870,16 @@ namespace Game.Gameplay.Combat
 
             TickProjectiles(deltaTime);
             TickMeleeStrikes(deltaTime);
+        }
+
+        void TickProjectiles(float deltaTime)
+        {
+            _projectiles.Tick(deltaTime, this);
+        }
+
+        void TickMeleeStrikes(float deltaTime)
+        {
+            _meleeStrikes.Tick(deltaTime, this);
         }
 
         void TickPendingSpawns(float deltaTime)
@@ -1202,7 +1184,7 @@ namespace Game.Gameplay.Combat
             var bestUnitScore = float.MaxValue;
 
             _nearbyBuffer.Clear();
-            QueryNearbyUnits(myPosition, aggroRadius, _nearbyBuffer);
+            _spatialGrid.Query(myPosition, aggroRadius, _nearbyBuffer);
 
             foreach (var other in _nearbyBuffer)
             {
@@ -1472,7 +1454,7 @@ namespace Game.Gameplay.Combat
             if (CombatAttackRules.UsesMeleeStrike(attacker.Role)
                 || !CombatAttackRules.UsesProjectile(attacker.Role))
             {
-                _meleeStrikes.Add(new CombatMeleeStrikeState(
+                _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
                     targetUnitId: -1,
                     rawDamage,
@@ -1487,19 +1469,16 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 CombatAttackRules.ProjectileSpeed);
-            _projectiles.Add(new CombatProjectileState(
-                _nextProjectileId++,
+            _projectiles.SpawnBuildingAttack(
                 attacker.UnitId,
-                targetUnitId: -1,
+                building.InstanceId,
                 attacker.OwnerSlot,
                 attacker.Role,
                 GetPlayerRaceId(attacker.OwnerSlot),
                 rawDamage,
                 duration,
                 start,
-                end,
-                isParabolic: false,
-                targetBuildingInstanceId: building.InstanceId));
+                end);
         }
 
         MatchUnitState GetUnitById(int? unitId)
@@ -1516,7 +1495,7 @@ namespace Game.Gameplay.Combat
         {
             _nearbyBuffer.Clear();
             var queryRadius = UnitLocomotionRules.AvoidanceRadius * 3f;
-            QueryNearbyUnits(unit.WorldPosition, queryRadius, _nearbyBuffer);
+            _spatialGrid.Query(unit.WorldPosition, queryRadius, _nearbyBuffer);
             var allies = _alliesBuffer;
             allies.Clear();
             var myPosition = unit.WorldPosition;
@@ -1569,7 +1548,7 @@ namespace Game.Gameplay.Combat
         {
             _nearbyBuffer.Clear();
             var queryRadius = UnitLocomotionRules.AvoidanceRadius * 3f;
-            QueryNearbyUnits(unit.WorldPosition, queryRadius, _nearbyBuffer);
+            _spatialGrid.Query(unit.WorldPosition, queryRadius, _nearbyBuffer);
             var allies = _alliesBuffer;
             allies.Clear();
             var radiusSq = queryRadius * queryRadius;
@@ -1601,7 +1580,7 @@ namespace Game.Gameplay.Combat
             var aheadGap = CombatFormationRules.MinLaneFollowGap * 0.5f;
 
             _nearbyBuffer.Clear();
-            QueryNearbyUnits(unit.WorldPosition, CombatFormationRules.MinUnitSeparation * 3f, _nearbyBuffer);
+            _spatialGrid.Query(unit.WorldPosition, CombatFormationRules.MinUnitSeparation * 3f, _nearbyBuffer);
 
             foreach (var other in _nearbyBuffer)
             {
@@ -1644,7 +1623,7 @@ namespace Game.Gameplay.Combat
         bool IsEngagedByAlly(MatchUnitState enemy, int ownerSlot)
         {
             _nestedBuffer.Clear();
-            QueryNearbyUnits(enemy.WorldPosition, 16f, _nestedBuffer);
+            _spatialGrid.Query(enemy.WorldPosition, 16f, _nestedBuffer);
 
             foreach (var ally in _nestedBuffer)
             {
@@ -1723,7 +1702,7 @@ namespace Game.Gameplay.Combat
 
             if (CombatAttackRules.UsesMeleeStrike(attacker.Role))
             {
-                _meleeStrikes.Add(new CombatMeleeStrikeState(
+                _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
                     target.UnitId,
                     rawDamage,
@@ -1744,8 +1723,7 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 CombatAttackRules.ProjectileSpeed);
-            _projectiles.Add(new CombatProjectileState(
-                _nextProjectileId++,
+            _projectiles.Spawn(
                 attacker.UnitId,
                 target.UnitId,
                 attacker.OwnerSlot,
@@ -1755,47 +1733,10 @@ namespace Game.Gameplay.Combat
                 duration,
                 start,
                 end,
-                isParabolic));
+                isParabolic);
         }
 
-        void TickProjectiles(float deltaTime)
-        {
-            if (_projectiles.Count == 0)
-            {
-                return;
-            }
-
-            // Collect impacts first — ApplyDamage / building ruin may DespawnUnitsForOwner
-            // and mutate _projectiles (reentrancy). Resolving mid-loop throws IndexOutOfRange.
-            _projectileImpactBuffer.Clear();
-            for (var i = _projectiles.Count - 1; i >= 0; i--)
-            {
-                var projectile = _projectiles[i];
-                projectile.Elapsed += deltaTime;
-                if (projectile.Elapsed < projectile.FlightDuration)
-                {
-                    continue;
-                }
-
-                var last = _projectiles.Count - 1;
-                if (i != last)
-                {
-                    _projectiles[i] = _projectiles[last];
-                }
-
-                _projectiles.RemoveAt(last);
-                _projectileImpactBuffer.Add(projectile);
-            }
-
-            for (var i = 0; i < _projectileImpactBuffer.Count; i++)
-            {
-                ResolveProjectileImpact(_projectileImpactBuffer[i]);
-            }
-
-            _projectileImpactBuffer.Clear();
-        }
-
-        void ResolveProjectileImpact(CombatProjectileState projectile)
+        public void ResolveProjectileImpact(CombatProjectileState projectile)
         {
             if (projectile.TargetBuildingInstanceId.HasValue)
             {
@@ -1814,42 +1755,7 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        void TickMeleeStrikes(float deltaTime)
-        {
-            if (_meleeStrikes.Count == 0)
-            {
-                return;
-            }
-
-            _meleeImpactBuffer.Clear();
-            for (var i = _meleeStrikes.Count - 1; i >= 0; i--)
-            {
-                var strike = _meleeStrikes[i];
-                strike.TimeRemaining -= deltaTime;
-                if (strike.TimeRemaining > 0f)
-                {
-                    continue;
-                }
-
-                var last = _meleeStrikes.Count - 1;
-                if (i != last)
-                {
-                    _meleeStrikes[i] = _meleeStrikes[last];
-                }
-
-                _meleeStrikes.RemoveAt(last);
-                _meleeImpactBuffer.Add(strike);
-            }
-
-            for (var i = 0; i < _meleeImpactBuffer.Count; i++)
-            {
-                ResolveMeleeImpact(_meleeImpactBuffer[i]);
-            }
-
-            _meleeImpactBuffer.Clear();
-        }
-
-        void ResolveMeleeImpact(CombatMeleeStrikeState strike)
+        public void ResolveMeleeImpact(CombatMeleeStrikeState strike)
         {
             var attacker = GetUnitById(strike.AttackerUnitId);
             if (strike.TargetBuildingInstanceId.HasValue)
@@ -1953,57 +1859,6 @@ namespace Game.Gameplay.Combat
             if (index != last) _units[index] = _units[last];
             _units.RemoveAt(last);
             _unitById.Remove(unit.UnitId);
-        }
-
-        void RebuildSpatialGrid()
-        {
-            foreach (var kvp in _spatialGrid)
-                kvp.Value.Clear();
-            _spatialGrid.Clear();
-
-            foreach (var unit in _units)
-            {
-                if (!unit.IsAlive) continue;
-                var key = GetSpatialKey(unit.WorldPosition);
-                if (!_spatialGrid.TryGetValue(key, out var cell))
-                {
-                    cell = new List<MatchUnitState>();
-                    _spatialGrid[key] = cell;
-                }
-                cell.Add(unit);
-            }
-        }
-
-        void ClearSpatialGrid()
-        {
-            foreach (var kvp in _spatialGrid)
-                kvp.Value.Clear();
-            _spatialGrid.Clear();
-        }
-
-        static (int, int) GetSpatialKey(Vector3 position)
-        {
-            return ((int)Math.Floor(position.x / SpatialCellSize),
-                    (int)Math.Floor(position.z / SpatialCellSize));
-        }
-
-        void QueryNearbyUnits(Vector3 position, float radius, List<MatchUnitState> results)
-        {
-            var minCx = (int)Math.Floor((position.x - radius) / SpatialCellSize);
-            var maxCx = (int)Math.Floor((position.x + radius) / SpatialCellSize);
-            var minCz = (int)Math.Floor((position.z - radius) / SpatialCellSize);
-            var maxCz = (int)Math.Floor((position.z + radius) / SpatialCellSize);
-
-            for (var cx = minCx; cx <= maxCx; cx++)
-            {
-                for (var cz = minCz; cz <= maxCz; cz++)
-                {
-                    if (!_spatialGrid.TryGetValue((cx, cz), out var cell))
-                        continue;
-                    foreach (var unit in cell)
-                        results.Add(unit);
-                }
-            }
         }
 
         static float HorizontalDistance(Vector3 a, Vector3 b)

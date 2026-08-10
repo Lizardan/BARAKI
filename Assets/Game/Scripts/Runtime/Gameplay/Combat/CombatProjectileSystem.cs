@@ -1,0 +1,177 @@
+using System.Collections.Generic;
+
+namespace Game.Gameplay.Combat
+{
+    /// <summary>
+    /// Ticks in-flight projectiles, resolves impacts via callback.
+    /// Separated from MatchCombatSystem for clarity.
+    /// </summary>
+    public sealed class CombatProjectileSystem
+    {
+        readonly List<CombatProjectileState> _active = new();
+        readonly List<CombatProjectileState> _impactBuffer = new();
+        int _nextId = 1;
+
+        public IReadOnlyList<CombatProjectileState> Active => _active;
+
+        public void Clear()
+        {
+            _active.Clear();
+            _impactBuffer.Clear();
+        }
+
+        public void RemoveByOwner(int ownerSlot, System.Func<int, MatchUnitState> getUnitById)
+        {
+            for (var i = _active.Count - 1; i >= 0; i--)
+            {
+                if (_active[i].AttackerOwnerSlot == ownerSlot)
+                {
+                    var last = _active.Count - 1;
+                    if (i != last) _active[i] = _active[last];
+                    _active.RemoveAt(last);
+                }
+            }
+        }
+
+        public CombatProjectileState Spawn(
+            int attackerUnitId,
+            int targetUnitId,
+            int attackerOwnerSlot,
+            UnitRole attackerRole,
+            string raceId,
+            float rawDamage,
+            float flightDuration,
+            UnityEngine.Vector3 start,
+            UnityEngine.Vector3 end,
+            bool isParabolic)
+        {
+            var projectile = new CombatProjectileState(
+                _nextId++,
+                attackerUnitId,
+                targetUnitId,
+                attackerOwnerSlot,
+                attackerRole,
+                raceId,
+                rawDamage,
+                flightDuration,
+                start,
+                end,
+                isParabolic);
+            _active.Add(projectile);
+            return projectile;
+        }
+
+        public CombatProjectileState SpawnBuildingProjectile(
+            int attackerUnitId,
+            int targetBuildingInstanceId,
+            int attackerOwnerSlot,
+            UnitRole attackerRole,
+            string raceId,
+            float rawDamage,
+            float flightDuration,
+            UnityEngine.Vector3 start,
+            UnityEngine.Vector3 end,
+            bool isParabolic)
+        {
+            var projectile = new CombatProjectileState(
+                _nextId++,
+                attackerUnitId,
+                targetUnitId: 0,
+                attackerOwnerSlot,
+                attackerRole,
+                raceId,
+                rawDamage,
+                flightDuration,
+                start,
+                end,
+                isParabolic,
+                targetBuildingInstanceId);
+            _active.Add(projectile);
+            return projectile;
+        }
+
+        public CombatProjectileState SpawnBuildingAttack(
+            int attackerUnitId,
+            int targetBuildingInstanceId,
+            int attackerOwnerSlot,
+            UnitRole attackerRole,
+            string raceId,
+            float rawDamage,
+            float flightDuration,
+            UnityEngine.Vector3 start,
+            UnityEngine.Vector3 end)
+        {
+            var projectile = new CombatProjectileState(
+                _nextId++,
+                attackerUnitId,
+                targetUnitId: -1,
+                attackerOwnerSlot,
+                attackerRole,
+                raceId,
+                rawDamage,
+                flightDuration,
+                start,
+                end,
+                isParabolic: false,
+                targetBuildingInstanceId);
+            _active.Add(projectile);
+            return projectile;
+        }
+
+        public CombatProjectileState SpawnFromBuilding(
+            int targetUnitId,
+            int ownerSlot,
+            string raceId,
+            float rawDamage,
+            float flightDuration,
+            UnityEngine.Vector3 start,
+            UnityEngine.Vector3 end,
+            int sourceBuildingInstanceId)
+        {
+            var projectile = new CombatProjectileState(
+                _nextId++,
+                attackerUnitId: 0,
+                targetUnitId,
+                ownerSlot,
+                UnitRole.Ranged,
+                raceId,
+                rawDamage,
+                flightDuration,
+                start,
+                end,
+                isParabolic: false,
+                targetBuildingInstanceId: null,
+                sourceBuildingInstanceId: sourceBuildingInstanceId);
+            _active.Add(projectile);
+            return projectile;
+        }
+
+        public void Tick(float deltaTime, IProjectileImpactHandler handler)
+        {
+            if (_active.Count == 0) return;
+
+            _impactBuffer.Clear();
+            for (var i = _active.Count - 1; i >= 0; i--)
+            {
+                var projectile = _active[i];
+                projectile.Elapsed += deltaTime;
+                if (projectile.Elapsed < projectile.FlightDuration) continue;
+
+                var last = _active.Count - 1;
+                if (i != last) _active[i] = _active[last];
+                _active.RemoveAt(last);
+                _impactBuffer.Add(projectile);
+            }
+
+            for (var i = 0; i < _impactBuffer.Count; i++)
+                handler.ResolveProjectileImpact(_impactBuffer[i]);
+
+            _impactBuffer.Clear();
+        }
+    }
+
+    public interface IProjectileImpactHandler
+    {
+        void ResolveProjectileImpact(CombatProjectileState projectile);
+    }
+}

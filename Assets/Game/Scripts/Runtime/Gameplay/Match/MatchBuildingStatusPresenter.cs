@@ -18,7 +18,7 @@ namespace Game.Gameplay.Match
         {
             if (_runtime == null)
             {
-                _runtime = FindAnyObjectByType<MatchRuntime>();
+                _runtime = MatchRuntime.Current;
             }
         }
 
@@ -26,7 +26,7 @@ namespace Game.Gameplay.Match
         {
             if (_runtime == null)
             {
-                _runtime = FindAnyObjectByType<MatchRuntime>();
+                _runtime = MatchRuntime.Current;
             }
 
             if (_runtime == null || !_runtime.IsMatchStarted || _runtime.Controller?.Buildings == null)

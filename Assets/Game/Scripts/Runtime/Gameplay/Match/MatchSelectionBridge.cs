@@ -24,8 +24,8 @@ namespace Game.Gameplay.Match
         {
             _registry.Clear();
             _selection.Clear();
-            _runtime = GetComponent<MatchRuntime>() ?? FindAnyObjectByType<MatchRuntime>();
-            _fogOfWar = GetComponent<MatchFogOfWar>() ?? FindAnyObjectByType<MatchFogOfWar>();
+            _runtime = GetComponent<MatchRuntime>() ?? MatchRuntime.Current;
+            _fogOfWar = GetComponent<MatchFogOfWar>() ?? MatchFogOfWar.Current;
             _localPlayerSlot = MatchNetworkSession.LocalSlot >= 0
                 ? MatchNetworkSession.LocalSlot
                 : (GameSession.ActiveSetup?.LocalPlayerSlot ?? 0);

@@ -64,12 +64,12 @@ namespace Game.Gameplay.Match
         {
             if (_runtime == null)
             {
-                _runtime = FindAnyObjectByType<MatchRuntime>();
+                _runtime = MatchRuntime.Current;
             }
 
             if (_fogOfWar == null)
             {
-                _fogOfWar = GetComponent<MatchFogOfWar>() ?? FindAnyObjectByType<MatchFogOfWar>();
+                _fogOfWar = GetComponent<MatchFogOfWar>() ?? MatchFogOfWar.Current;
             }
 
             if (_fxCatalog == null)

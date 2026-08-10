@@ -22,7 +22,7 @@
 - `Game.Input` — `Scripts/Runtime/Input/` (генерируется из `Assets/Game/Settings/Input/GameInputActions.inputactions`).
 - `Game.UI` — `Assets/Game/UI/Runtime/`; `Game.Editor` — `Scripts/Editor/` (в т.ч. `Mcp/`); `Game.Tests` — `Scripts/Tests/`.
 - Сцены: `Bootstrap` (build 0) → `MainMenu` (1) → `Lobby` → `Game`. Иерархия: `--- SYSTEMS ---` / `--- CAMERAS ---` / `--- LEVEL ---` / `--- UI ---` / `--- DYNAMIC ---`.
-- Принципы: композиция вместо синглтонов (кроме `GameManager`). Детальные правила — `.cursor/rules/*.mdc`.
+- Принципы: композиция вместо синглтонов. Исключения — `GameManager` (persist) и Netcode `NetworkBehaviour`-синглтоны (`NetworkLobbyState`, `MatchNetworkAuthority`, `NetworkRacePickState`, `HostMigrationCoordinator`): `Instance` устанавливается в `OnNetworkSpawn`, снимается в `OnNetworkDespawn`. Сценарные объекты (`MatchRuntime` и др.) — через static `Current` (set `OnEnable`, clear `OnDisable`), не `FindAnyObjectByType`. Детальные правила — `.cursor/rules/*.mdc`.
 
 ## GameDesign (GDD)
 - AI-ready формат: YAML front matter (`status`, `mvp`), сущности ` ```entity id=SCREAMING_SNAKE `. Индекс — `GameDesign/README.md`.

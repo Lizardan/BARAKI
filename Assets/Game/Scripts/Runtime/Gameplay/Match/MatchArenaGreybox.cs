@@ -6,6 +6,8 @@ namespace Game.Gameplay.Match
     /// <summary>Procedural greybox for bases, lanes, and center arena ring in Game.unity.</summary>
     public sealed class MatchArenaGreybox : MonoBehaviour
     {
+        public static MatchArenaGreybox Current { get; private set; }
+
         [SerializeField] private int _playerCount = 4;
         [SerializeField] private float _arenaRadius = MatchArenaGenerator.DefaultArenaRadius;
         [SerializeField] private float _mainToTowerDistance = MatchArenaGenerator.DefaultMainToTowerDistance;
@@ -27,9 +29,18 @@ namespace Game.Gameplay.Match
 
         private void Awake()
         {
+            Current = this;
             if (_buildOnAwake)
             {
                 Rebuild();
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (Current == this)
+            {
+                Current = null;
             }
         }
 

@@ -18,6 +18,8 @@ namespace Game.Gameplay.Match
     /// </summary>
     public sealed class MatchRuntime : MonoBehaviour
     {
+        public static MatchRuntime Current { get; private set; }
+
         [SerializeField] private MatchArenaGreybox _greybox;
         [SerializeField] private RaceCatalog _raceCatalog;
 
@@ -41,17 +43,19 @@ namespace Game.Gameplay.Match
 
         private void Awake()
         {
+            Current = this;
             MatchPickLayers.InitializeFromName();
             EnsureSelectionBridge();
 
             if (_greybox == null)
             {
-                _greybox = FindAnyObjectByType<MatchArenaGreybox>();
+                _greybox = MatchArenaGreybox.Current;
             }
         }
 
         private void OnEnable()
         {
+            Current = this;
             if (GameSession.IsPlaying)
             {
                 PrepareArena();
@@ -63,6 +67,10 @@ namespace Game.Gameplay.Match
 
         private void OnDisable()
         {
+            if (Current == this)
+            {
+                Current = null;
+            }
             GameSession.Started -= OnSessionStarted;
         }
 
@@ -135,7 +143,7 @@ namespace Game.Gameplay.Match
 
             if (_panController == null)
             {
-                _panController = FindAnyObjectByType<GameplayCameraPanController>();
+                _panController = GameplayCameraPanController.Current;
             }
 
             if (_panController != null && _panController.IsPanLocked)
@@ -216,7 +224,7 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var panController = FindAnyObjectByType<GameplayCameraPanController>();
+            var panController = GameplayCameraPanController.Current;
             if (panController == null)
             {
                 return;

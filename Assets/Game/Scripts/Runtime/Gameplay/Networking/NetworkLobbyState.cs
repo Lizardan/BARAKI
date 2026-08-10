@@ -545,7 +545,7 @@ namespace Game.Gameplay.Networking
                     continue;
                 }
 
-                var runtime = FindAnyObjectByType<MatchRuntime>();
+                var runtime = MatchRuntime.Current;
                 runtime?.Controller?.TryEliminateForDisconnect(slot);
                 ClearSlot(slot);
                 BumpRevision();

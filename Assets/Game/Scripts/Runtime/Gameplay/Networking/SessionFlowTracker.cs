@@ -65,7 +65,7 @@ namespace Game.Gameplay.Networking
             var matchTimeSeconds = 0f;
             if (state == SessionFlowState.Match)
             {
-                var runtime = FindAnyObjectByType<MatchRuntime>();
+                var runtime = MatchRuntime.Current;
                 matchTimeSeconds = runtime?.Controller?.MatchTimeSeconds ?? 0f;
             }
 

@@ -9,6 +9,8 @@ namespace Game.Gameplay.Cameras
     /// </summary>
     public sealed class GameplayCameraPanController : MonoBehaviour
     {
+        public static GameplayCameraPanController Current { get; private set; }
+
         [Header("Pan")]
         [SerializeField] private float _edgeThresholdPixels = GameplayCameraSettings.DefaultEdgeScrollThresholdPixels;
         [SerializeField] private float _panSpeed = GameplayCameraSettings.DefaultPanSpeed;
@@ -40,6 +42,7 @@ namespace Game.Gameplay.Cameras
 
         private void Awake()
         {
+            Current = this;
             if (_cinemachineFollow == null)
             {
                 var virtualCamera = FindAnyObjectByType<CinemachineCamera>();
@@ -180,6 +183,14 @@ namespace Game.Gameplay.Cameras
             }
 
             _cinemachineFollow.FollowOffset = GameplayCameraSettings.FollowOffsetFromZoomDistance(_zoomDistance);
+        }
+
+        private void OnDisable()
+        {
+            if (Current == this)
+            {
+                Current = null;
+            }
         }
 
 #if UNITY_EDITOR

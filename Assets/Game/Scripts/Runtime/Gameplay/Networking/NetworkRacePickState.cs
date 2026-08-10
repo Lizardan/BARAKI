@@ -234,7 +234,7 @@ namespace Game.Gameplay.Networking
                 ("slot", localSlot),
                 ("races", string.Join(",", raceIds)));
 
-            var runtime = FindAnyObjectByType<MatchRuntime>();
+            var runtime = MatchRuntime.Current;
             runtime?.StartMatch(raceIds, localSlot);
 
             BeginMatchClientRpc(EncodeRaceIds(raceIds));
@@ -261,7 +261,7 @@ namespace Game.Gameplay.Networking
             var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
             GameSession.UpdateActiveSetup(setup);
 
-            var runtime = FindAnyObjectByType<MatchRuntime>();
+            var runtime = MatchRuntime.Current;
             runtime?.StartMatch(raceIds, localSlot);
             NotifyChanged();
             SessionFlowTracker.NotifyChanged();

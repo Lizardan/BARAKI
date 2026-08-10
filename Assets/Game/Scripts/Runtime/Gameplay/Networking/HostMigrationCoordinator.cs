@@ -140,7 +140,7 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            var runtime = FindAnyObjectByType<MatchRuntime>();
+            var runtime = MatchRuntime.Current;
             var lastGood = runtime?.LastNetworkSnapshotBytes;
             if (lastGood is { Length: > 0 })
             {

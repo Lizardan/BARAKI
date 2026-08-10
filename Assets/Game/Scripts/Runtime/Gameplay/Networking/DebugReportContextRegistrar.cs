@@ -39,7 +39,7 @@ namespace Game.Gameplay.Networking
             var matchElapsed = string.Empty;
             if (phase == nameof(SessionFlowState.Match))
             {
-                var runtime = Object.FindAnyObjectByType<Match.MatchRuntime>();
+                var runtime = Match.MatchRuntime.Current;
                 var seconds = runtime?.Controller?.MatchTimeSeconds ?? 0f;
                 matchElapsed = SessionFlowRules.ResolveElapsedBucket(seconds);
             }

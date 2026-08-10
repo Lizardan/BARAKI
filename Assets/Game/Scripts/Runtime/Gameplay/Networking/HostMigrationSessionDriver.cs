@@ -115,7 +115,7 @@ namespace Game.Gameplay.Networking
 
                 coordinator.NotifyRelayRebound();
 
-                var runtime = FindAnyObjectByType<MatchRuntime>();
+                var runtime = MatchRuntime.Current;
                 var stateApplied = false;
                 if (isDesignated && runtime?.Controller != null)
                 {
