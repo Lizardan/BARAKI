@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Gameplay.Data;
 
 namespace Game.Gameplay.Combat
 {
