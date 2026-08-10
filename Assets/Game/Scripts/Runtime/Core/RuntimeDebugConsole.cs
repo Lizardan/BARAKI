@@ -159,21 +159,21 @@ namespace Game.Core
         {
             if (_isSending)
             {
-                return default;
+                return;
             }
 
             var eventsText = _buffer.BuildCopyText();
             if (string.IsNullOrWhiteSpace(eventsText))
             {
                 _status = "Нет логов";
-                return default;
+                return;
             }
 
             var utcNow = DateTime.UtcNow;
             if (!_sendGate.TryBeginSend(utcNow, out var blockReason))
             {
                 _status = blockReason;
-                return default;
+                return;
             }
 
             if (!GitHubPlaytestSettings.TryResolveCredentials(out var token, out var repository, out var source))
@@ -184,7 +184,7 @@ namespace Game.Core
                     "empty-token" => "GitHub: token пустой в Settings",
                     _ => "GitHub не настроен",
                 };
-                return default;
+                return;
             }
 
             _isSending = true;
