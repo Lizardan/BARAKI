@@ -56,6 +56,12 @@ namespace Game.Gameplay.Combat
         public float MarchSpawnDistance { get; }
         public float MarchProgressDistance { get; set; }
         public float AttackCooldownRemaining { get; set; }
+        /// <summary>Cooldown until this unit can cast Heal again (Caster role). Transient host state.</summary>
+        public float HealCooldownRemaining { get; set; }
+        /// <summary>Cooldown until this unit can cast Frost again (Caster role). Transient host state.</summary>
+        public float FrostCooldownRemaining { get; set; }
+        /// <summary>Cooldown until this unit can cast Resurrect again (Caster role). Transient host state.</summary>
+        public float ResurrectCooldownRemaining { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>
         public int AttackSwingSerial { get; set; }
         public UnitBehaviorState BehaviorState { get; set; }

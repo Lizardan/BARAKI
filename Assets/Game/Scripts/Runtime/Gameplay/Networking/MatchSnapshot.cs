@@ -35,6 +35,14 @@ namespace Game.Gameplay.Networking
         public bool IsEliminated;
         public int PassiveGoldLevel;
         public int MainLevel;
+        /// <summary>0 on pre-v7 snapshots.</summary>
+        public int MagicLevel;
+        /// <summary>0 on pre-v7 snapshots.</summary>
+        public int MeleeDamageLevel;
+        /// <summary>0 on pre-v7 snapshots.</summary>
+        public int RangedDamageLevel;
+        /// <summary>0 on pre-v7 snapshots.</summary>
+        public int HpArmorLevel;
     }
 
     public struct MatchBuildingSnapshot
@@ -98,7 +106,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -125,6 +133,10 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.IsEliminated);
                     writer.Write(p.PassiveGoldLevel);
                     writer.Write(p.MainLevel);
+                    writer.Write(p.MagicLevel);
+                    writer.Write(p.MeleeDamageLevel);
+                    writer.Write(p.RangedDamageLevel);
+                    writer.Write(p.HpArmorLevel);
                 }
             }
 
@@ -216,7 +228,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -241,6 +253,13 @@ namespace Game.Gameplay.Networking
                     PassiveGoldLevel = version >= 3 ? reader.ReadInt32() : 0,
                     MainLevel = version >= 3 ? reader.ReadInt32() : MatchEconomyRules.DefaultMainLevel,
                 };
+                if (version >= 7)
+                {
+                    snapshot.Players[i].MagicLevel = reader.ReadInt32();
+                    snapshot.Players[i].MeleeDamageLevel = reader.ReadInt32();
+                    snapshot.Players[i].RangedDamageLevel = reader.ReadInt32();
+                    snapshot.Players[i].HpArmorLevel = reader.ReadInt32();
+                }
             }
 
             var buildingCount = reader.ReadInt32();
@@ -377,6 +396,10 @@ namespace Game.Gameplay.Networking
                     IsEliminated = p.IsEliminated,
                     PassiveGoldLevel = p.PassiveGoldLevel,
                     MainLevel = p.MainLevel,
+                    MagicLevel = p.MagicLevel,
+                    MeleeDamageLevel = p.MeleeDamageLevel,
+                    RangedDamageLevel = p.RangedDamageLevel,
+                    HpArmorLevel = p.HpArmorLevel,
                 });
             }
 

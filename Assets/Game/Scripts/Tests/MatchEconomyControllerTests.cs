@@ -99,6 +99,161 @@ namespace Game.Tests
             Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
         }
 
+        [Test]
+        public void TryStartMainLevelResearch_SpendsGoldAndCompletes()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.Gold = 2000;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsTrue(controller.TryStartResearch(
+                0,
+                main.InstanceId,
+                GameIds.Upgrades.MainBuildingLevel));
+            Assert.AreEqual(0, player.Gold);
+
+            controller.Tick(120f);
+
+            Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
+            Assert.AreEqual(2, player.MainLevel);
+        }
+
+        [Test]
+        public void TryStartMainLevelResearch_RejectsInsufficientGold()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].Gold = 1999;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsFalse(controller.TryStartResearch(
+                0,
+                main.InstanceId,
+                GameIds.Upgrades.MainBuildingLevel));
+            Assert.AreEqual(1999, controller.Players[0].Gold);
+        }
+
+        [Test]
+        public void TryStartMainLevelResearch_MaxLevelThree()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            player.Gold = 2000;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainBuildingLevel));
+            controller.Tick(120f);
+            Assert.AreEqual(2, player.MainLevel);
+
+            player.Gold = 3000;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainBuildingLevel));
+            controller.Tick(180f);
+            Assert.AreEqual(3, player.MainLevel);
+
+            player.Gold = 3000;
+            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainBuildingLevel));
+            Assert.AreEqual(3, player.MainLevel);
+        }
+
+        [Test]
+        public void TryStartStatTrackResearch_SpendsGoldAndCompletes()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.Gold = 75;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsTrue(controller.TryStartResearch(
+                0,
+                main.InstanceId,
+                GameIds.Upgrades.MeleeDamage));
+            Assert.AreEqual(0, player.Gold);
+
+            controller.Tick(8f);
+
+            Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
+            Assert.AreEqual(1, player.MeleeDamageLevel);
+        }
+
+        [Test]
+        public void TryStartStatTrackResearch_RespectsMainLevelCap()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.Gold = 100000;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MeleeDamage));
+            }
+
+            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MeleeDamage));
+
+            controller.Tick(8f);
+            Assert.AreEqual(1, player.MeleeDamageLevel);
+            controller.Tick(10f);
+            Assert.AreEqual(2, player.MeleeDamageLevel);
+            controller.Tick(12f);
+            Assert.AreEqual(3, player.MeleeDamageLevel);
+            Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
+
+            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MeleeDamage));
+
+            player.Gold = 2000;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainBuildingLevel));
+            controller.Tick(120f);
+            Assert.AreEqual(2, player.MainLevel);
+
+            player.Gold = 100000;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MeleeDamage));
+        }
+
+        [Test]
+        public void TryStartMagicResearch_SpendsGoldAndCompletes()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.Gold = 800;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsTrue(controller.TryStartResearch(
+                0,
+                main.InstanceId,
+                GameIds.Upgrades.MainMagic));
+            Assert.AreEqual(0, player.Gold);
+
+            controller.Tick(60f);
+
+            Assert.IsFalse(controller.TryGetResearch(main.InstanceId, out _));
+            Assert.AreEqual(1, player.MagicLevel);
+        }
+
+        [Test]
+        public void TryStartMagicResearch_RespectsMainLevelGate()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.Gold = 10000;
+            var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
+
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainMagic));
+            Assert.IsFalse(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainMagic));
+
+            controller.Tick(60f);
+            Assert.AreEqual(1, player.MagicLevel);
+
+            player.Gold = 2000;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainBuildingLevel));
+            controller.Tick(120f);
+            Assert.AreEqual(2, player.MainLevel);
+
+            player.Gold = 1500;
+            Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainMagic));
+            controller.Tick(90f);
+            Assert.AreEqual(2, player.MagicLevel);
+        }
+
         static MatchController CreateEarlyMatch()
         {
             var controller = new MatchController();

@@ -8,6 +8,12 @@ namespace Game.Tests
     public sealed class BarracksWaveSchedulerTests
     {
         [Test]
+        public void FirstWaveInterval_ReturnsFifteenSeconds()
+        {
+            Assert.AreEqual(15f, BarracksWaveRules.FirstWaveIntervalSeconds, 0.01f);
+        }
+
+        [Test]
         public void GetWaveInterval_L1_ReturnsBaseInterval()
         {
             var interval = BarracksWaveRules.GetWaveIntervalSeconds(1, false);
@@ -29,7 +35,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Initialize_AllL1HumanBarracks_StartWithSameInterval()
+        public void Initialize_AllL1HumanBarracks_FirstWaveFifteenSecondsIntervalBase()
         {
             var scheduler = new BarracksWaveScheduler();
             var players = new List<MatchPlayerState>
@@ -41,7 +47,7 @@ namespace Game.Tests
 
             foreach (var barracks in scheduler.Barracks)
             {
-                Assert.AreEqual(35f, barracks.TimeUntilNextWaveSeconds, 0.01f);
+                Assert.AreEqual(15f, barracks.TimeUntilNextWaveSeconds, 0.01f);
                 Assert.AreEqual(35f, barracks.WaveIntervalSeconds, 0.01f);
             }
         }

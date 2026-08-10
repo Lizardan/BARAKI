@@ -98,7 +98,6 @@ namespace Game.Core
             public const string MeleeDamage = "UPG_MELEE_DMG";
             public const string RangedDamage = "UPG_RANGED_DMG";
             public const string Armor = "UPG_ARMOR";
-            public const string CasterHeal = "UPG_CASTER_HEAL";
 
             public const string TowerHumanSteelTemper = "UPG_TOWER_HUMAN_STEEL_TEMPER";
             public const string TowerHumanHoldTheLine = "UPG_TOWER_HUMAN_HOLD_THE_LINE";

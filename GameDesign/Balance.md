@@ -158,6 +158,8 @@ minutes:
 
 Cast range (all): **6**. См. `Races.md` для полных entity.
 
+> Слот `UPG_MAIN_MAGIC` дополнительно даёт магу **+3 dmg** автоатаки per level (`MagicDamagePerLevel`). Отдельного стат-трека `UPG_CASTER_HEAL` **нет** — убран из дизайна.
+
 ## Stat upgrade effects
 
 | Track | Per level | Max (L9) |
@@ -165,7 +167,6 @@ Cast range (all): **6**. См. `Races.md` для полных entity.
 | `UPG_MELEE_DMG` | +3% | +27% |
 | `UPG_RANGED_DMG` | +3% | +27% |
 | `UPG_ARMOR` | +3% | +27% |
-| `UPG_CASTER_HEAL` | +10% heal | +90% |
 
 ## Buildings
 

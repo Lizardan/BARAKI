@@ -85,14 +85,12 @@ mvp: true
 | `UPG_MELEE_DMG` | **+3%** melee damage | 9 |
 | `UPG_RANGED_DMG` | **+3%** ranged damage | 9 |
 | `UPG_ARMOR` | **+3%** armor / damage reduction | 9 |
-| `UPG_CASTER_HEAL` | **+10%** сила heal-заклинаний (`SPELL_HUMAN_1`) | 9 |
 
 ```entity
 id: UPG_STAT_LEVEL_EFFECTS
 UPG_MELEE_DMG: +3% per level
 UPG_RANGED_DMG: +3% per level
 UPG_ARMOR: +3% per level
-UPG_CASTER_HEAL: +10% heal amount per level
 scope: race_wide
 mvp: true
 ```
@@ -108,9 +106,6 @@ UPG_RANGED_DMG:
 UPG_ARMOR:
   costs_gold: [60, 80, 100, 120, 140, 160, 180, 200, 220]
   research_time_sec: [6, 8, 10, 12, 14, 16, 18, 20, 22]
-UPG_CASTER_HEAL:
-  costs_gold: [90, 115, 140, 165, 190, 215, 240, 265, 290]
-  research_time_sec: [10, 12, 14, 16, 18, 20, 22, 24, 26]
 mvp: true
 ```
 
@@ -150,7 +145,8 @@ requires_main_level: [1, 2, 3]
 mvp: true
 ```
 
-> Заклинания кастуют **маги** в бою. Список: **`Races.md` § Magic**.
+> Заклинания кастуют **маги** в бою. Список: **`Races.md` § Magic**.  
+> Каждый слот дополнительно даёт магу **+3 dmg** к автоатаке (flat, `MagicDamagePerLevel`). Отдельного стат-трека для мага **нет** — прокачка мага = только `UPG_MAIN_MAGIC`.
 
 | Main magic slot | Human |
 |-----------------|-------|
@@ -198,7 +194,7 @@ mvp: true
 | Magic unlock | **800 / 1500 / 2500g**; **60 / 90 / 135 s**; gate = main level |
 | Tower upgrades | **5 tracks × 3 levels**; **4 towers**; race-wide; **500/800/1200g**; **45/90/135s** |
 | Barracks level | Per-barracks, max 4; costs **1000/1500/2500**; time **5/5/5s** (playtest) |
-| Stat upgrades | **+3%** dmg/armor or **+10%** heal per level; costs см. `UPG_STAT_LEVEL_ECONOMY` |
+| Stat upgrades | **+3%** dmg/armor per level; costs см. `UPG_STAT_LEVEL_ECONOMY` |
 | Passive gold | **200g**, **25s** per level; **+25g/30s** per level |
 
 ## Open

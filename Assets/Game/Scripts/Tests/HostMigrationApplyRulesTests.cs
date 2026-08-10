@@ -44,7 +44,7 @@ namespace Game.Tests
 
             // Inject controller via reflection-free path: StoreLastNetworkSnapshot is enough for prefer.
             coordinator.BeginHostLost(0, new[] { true, true }, true);
-            coordinator.BeginStateTransferFromMatch();
+            coordinator.BeginStateTransferFromMatch(runtime);
 
             Assert.IsNotNull(coordinator.CapturedStateBytes);
             Assert.AreEqual(bytes.Length, coordinator.CapturedStateBytes.Length);

@@ -318,12 +318,21 @@ namespace Game.UI.Controllers
                 && controller.TryGetResearchQueue(buildingInstanceId, out queue);
             var passiveBase = 0;
             var barracksBase = 0;
+            var mainLevelBase = 0;
+            var meleeBase = 0;
+            var rangedBase = 0;
+            var hpArmorBase = 0;
             var building = controller?.Buildings.GetByInstanceId(buildingInstanceId);
             if (controller != null && building != null)
             {
                 if (building.OwnerSlot >= 0 && building.OwnerSlot < controller.Players.Count)
                 {
-                    passiveBase = controller.Players[building.OwnerSlot].PassiveGoldLevel;
+                    var player = controller.Players[building.OwnerSlot];
+                    passiveBase = player.PassiveGoldLevel;
+                    mainLevelBase = player.MainLevel;
+                    meleeBase = player.MeleeDamageLevel;
+                    rangedBase = player.RangedDamageLevel;
+                    hpArmorBase = player.HpArmorLevel;
                 }
                 var barracks = controller.WaveScheduler.GetBarracks(building.OwnerSlot, building.BuildingId);
                 if (barracks != null)
@@ -333,6 +342,10 @@ namespace Game.UI.Controllers
             }
             var passiveSeen = 0;
             var barracksSeen = 0;
+            var mainSeen = 0;
+            var meleeSeen = 0;
+            var rangedSeen = 0;
+            var hpArmorSeen = 0;
             for (var i = 0; i < _researchQueueSlots.Length; i++)
             {
                 var slot = _researchQueueSlots[i];
@@ -357,6 +370,26 @@ namespace Game.UI.Controllers
                 {
                     displayLevel = barracksBase + 1 + barracksSeen;
                     barracksSeen++;
+                }
+                else if (research.UpgradeId == GameIds.Upgrades.MainBuildingLevel)
+                {
+                    displayLevel = mainLevelBase + 1 + mainSeen;
+                    mainSeen++;
+                }
+                else if (research.UpgradeId == GameIds.Upgrades.MeleeDamage)
+                {
+                    displayLevel = meleeBase + 1 + meleeSeen;
+                    meleeSeen++;
+                }
+                else if (research.UpgradeId == GameIds.Upgrades.RangedDamage)
+                {
+                    displayLevel = rangedBase + 1 + rangedSeen;
+                    rangedSeen++;
+                }
+                else if (research.UpgradeId == GameIds.Upgrades.Armor)
+                {
+                    displayLevel = hpArmorBase + 1 + hpArmorSeen;
+                    hpArmorSeen++;
                 }
                 else if (HeroRules.TryParseHireUpgradeId(research.UpgradeId, out var heroSlot))
                 {

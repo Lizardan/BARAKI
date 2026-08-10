@@ -50,7 +50,7 @@ namespace Game.Gameplay.Match
                         barracksId,
                         laneId,
                         laneIndex,
-                        interval,
+                        BarracksWaveRules.FirstWaveIntervalSeconds,
                         interval));
                 }
             }

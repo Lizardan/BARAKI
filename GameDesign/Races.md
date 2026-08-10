@@ -121,6 +121,8 @@ mvp: true
 
 Открываются **UPG_MAIN_MAGIC** в main (slot 1/2/3 = main level 1/2/3). Кастуют **UNIT_TYPE_CASTER** автоматически (см. `AI.md`).
 
+> Каждый слот также даёт магу **+3 dmg** к автоатаке (flat, `MagicDamagePerLevel`). Отдельного стат-трека для мага **нет**.
+
 ### Люди
 
 ```entity

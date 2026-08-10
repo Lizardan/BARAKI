@@ -97,6 +97,35 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_UpdatesUpgradeLevels()
+        {
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+
+            var snapshot = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0, Gold = 0, IsEliminated = false,
+                        MainLevel = 3, MagicLevel = 2,
+                        MeleeDamageLevel = 5, RangedDamageLevel = 6, HpArmorLevel = 4,
+                    },
+                },
+            };
+
+            client.ApplyAuthoritativeSnapshot(snapshot);
+
+            Assert.AreEqual(3, client.Players[0].MainLevel);
+            Assert.AreEqual(2, client.Players[0].MagicLevel);
+            Assert.AreEqual(5, client.Players[0].MeleeDamageLevel);
+            Assert.AreEqual(6, client.Players[0].RangedDamageLevel);
+            Assert.AreEqual(4, client.Players[0].HpArmorLevel);
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_UpdatesUnitsIntoCombat()
         {
             var host = new MatchController();

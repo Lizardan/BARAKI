@@ -317,7 +317,7 @@ namespace Game.UI.Controllers
                 }
             }
 
-            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{chargesKey}";
+            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}";
         }
 
         void PopulateBuildingCommands(BuildingState building)
@@ -329,7 +329,31 @@ namespace Game.UI.Controllers
 
             if (MatchInspectorFormatting.IsMainBuilding(building.BuildingId))
             {
-                SetCommand(0, "Ур. здания", enabled: false, null, "Уровень главного здания (скоро).");
+                var queuedMainLevel = controller?.Research.CountUpgrade(
+                    building.InstanceId,
+                    GameIds.Upgrades.MainBuildingLevel) ?? 0;
+                var projectedMainLevel = (player?.MainLevel ?? 0) + queuedMainLevel;
+                var hasMainStep = MatchEconomyRules.TryGetMainLevelUpgrade(
+                    projectedMainLevel,
+                    out var mainCost,
+                    out var mainDuration);
+                var canMain = hasMainStep
+                    && !queueFull
+                    && player != null
+                    && player.Gold >= mainCost;
+                var nextMainLevel = MatchUpgradeLabelRules.GetNextLevel(
+                    player?.MainLevel ?? 0,
+                    queuedMainLevel);
+                SetCommand(
+                    0,
+                    hasMainStep
+                        ? MatchUpgradeLabelRules.FormatMainLevelButton(nextMainLevel, mainCost)
+                        : "Макс. ур.",
+                    canMain,
+                    () => StartResearch(GameIds.Upgrades.MainBuildingLevel),
+                    hasMainStep
+                        ? MatchUpgradeLabelRules.FormatMainLevelTooltip(nextMainLevel, mainCost, mainDuration)
+                        : "Главное здание максимального уровня");
 
                 var queuedPassive = controller?.Research.CountUpgrade(
                     building.InstanceId,
@@ -354,11 +378,38 @@ namespace Game.UI.Controllers
                         MatchEconomyRules.PassiveGoldUpgradeSeconds,
                         MatchEconomyRules.PassiveGoldTickIntervalSeconds));
 
-                SetCommand(2, "Magic", enabled: false, null, "Расовая магия (скоро).");
+                PopulateStatTrackCommand(controller, player, building, queueFull, 2, GameIds.Upgrades.MeleeDamage);
+                PopulateStatTrackCommand(controller, player, building, queueFull, 3, GameIds.Upgrades.RangedDamage);
+                PopulateStatTrackCommand(controller, player, building, queueFull, 4, GameIds.Upgrades.Armor);
+
+                var queuedMagic = controller?.Research.CountUpgrade(
+                    building.InstanceId,
+                    GameIds.Upgrades.MainMagic) ?? 0;
+                var projectedMagicLevel = (player?.MagicLevel ?? 0) + queuedMagic;
+                var magicCost = 0;
+                var magicDuration = 0f;
+                var hasMagicStep = player != null
+                    && MatchEconomyRules.CanPurchaseMagic(projectedMagicLevel, player.MainLevel)
+                    && MatchEconomyRules.TryGetMagicUpgrade(projectedMagicLevel, out magicCost, out magicDuration);
+                var canMagic = hasMagicStep && !queueFull && player != null && player.Gold >= magicCost;
+                var nextMagicLevel = MatchUpgradeLabelRules.GetNextLevel(
+                    player?.MagicLevel ?? 0,
+                    queuedMagic);
+                SetCommand(
+                    5,
+                    hasMagicStep
+                        ? MatchUpgradeLabelRules.FormatMagicButton(nextMagicLevel, magicCost)
+                        : "Макс. магия",
+                    canMagic,
+                    () => StartResearch(GameIds.Upgrades.MainMagic),
+                    hasMagicStep
+                        ? MatchUpgradeLabelRules.FormatMagicTooltip(nextMagicLevel, magicCost, magicDuration)
+                        : "Магия — требуется уровень главного здания");
+
                 var nextSlot = PeekNextHireSlot();
                 var canHire = nextSlot > 0 && !queueFull && CanHireNextHero();
                 SetCommand(
-                    3,
+                    6,
                     nextSlot > 0
                         ? MatchUpgradeLabelRules.FormatHeroHireButton(nextSlot, HeroRules.HireGold)
                         : $"Герой\n{HeroRules.HireGold}g",
@@ -420,6 +471,67 @@ namespace Game.UI.Controllers
             {
                 SetCommand(0, "Апгрейд", enabled: false, null, "Расовые апгрейды башни (скоро).");
             }
+        }
+
+        void PopulateStatTrackCommand(
+            MatchController controller,
+            MatchPlayerState player,
+            BuildingState building,
+            bool queueFull,
+            int slot,
+            string trackId)
+        {
+            var currentLevel = GetPlayerStatLevel(player, trackId);
+            var queued = controller?.Research.CountUpgrade(building.InstanceId, trackId) ?? 0;
+            var nextLevel = MatchUpgradeLabelRules.GetNextLevel(currentLevel, queued);
+            var cost = 0;
+            var duration = 0f;
+            var hasStep = player != null
+                && MatchEconomyRules.TryGetStatTrackUpgrade(
+                    trackId,
+                    currentLevel + queued,
+                    out cost,
+                    out duration);
+            var canBuy = hasStep
+                && !queueFull
+                && player != null
+                && MatchEconomyRules.CanPurchaseStatTrack(trackId, currentLevel + queued, player.MainLevel)
+                && player.Gold >= cost;
+            SetCommand(
+                slot,
+                hasStep
+                    ? MatchUpgradeLabelRules.FormatStatTrackButton(trackId, nextLevel, cost)
+                    : $"Макс. {MatchUpgradeLabelRules.GetStatTrackTitle(trackId)}",
+                canBuy,
+                () => StartResearch(trackId),
+                hasStep
+                    ? MatchUpgradeLabelRules.FormatStatTrackTooltip(trackId, nextLevel, cost, duration)
+                    : $"{MatchUpgradeLabelRules.GetStatTrackTitle(trackId)} — максимальный уровень");
+        }
+
+        static int GetPlayerStatLevel(MatchPlayerState player, string trackId)
+        {
+            if (player == null)
+            {
+                return 0;
+            }
+
+            if (trackId == GameIds.Upgrades.MeleeDamage)
+            {
+                return player.MeleeDamageLevel;
+            }
+
+            if (trackId == GameIds.Upgrades.RangedDamage)
+            {
+                return player.RangedDamageLevel;
+            }
+
+            if (trackId == GameIds.Upgrades.Armor)
+            {
+                return player.HpArmorLevel;
+            }
+
+            return 0;
         }
 
         void PopulateManualCallCommands(

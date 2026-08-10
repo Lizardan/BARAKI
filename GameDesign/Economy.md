@@ -86,7 +86,6 @@ mvp: true
 | `UPG_MELEE_DMG` L1…L9 | **75…275** (см. `Upgrades.md`) | **8…24 s** |
 | `UPG_RANGED_DMG` L1…L9 | **75…275** | **8…24 s** |
 | `UPG_ARMOR` L1…L9 | **60…220** | **6…22 s** |
-| `UPG_CASTER_HEAL` L1…L9 | **90…290** | **10…26 s** |
 | `HERO_HIRE` | 500 | per hero, once |
 | `HERO_DEPLOY` | 1000 | instant |
 
@@ -119,4 +118,4 @@ mvp: true
 | Main level upgrade | **2000 / 3000g**; **120 / 180 s** |
 | Barracks level | **1000 / 1500 / 2500g**; **45 / 90 / 135 s** |
 | Tower upgrade (per level) | **500 / 800 / 1200g**; **45 / 90 / 135 s** |
-| Stat upgrades | **+3%** or **+10% heal** per level; см. `Upgrades.md` |
+| Stat upgrades | **+3%** per level; см. `Upgrades.md` |

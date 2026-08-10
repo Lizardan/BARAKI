@@ -23,6 +23,7 @@ namespace Game.Tests
                     new MatchPlayerSnapshot
                     {
                         Slot = 0, Gold = 500, IsEliminated = false, PassiveGoldLevel = 2, MainLevel = 2,
+                        MagicLevel = 2, MeleeDamageLevel = 3, RangedDamageLevel = 4, HpArmorLevel = 5,
                     },
                     new MatchPlayerSnapshot
                     {
@@ -99,6 +100,10 @@ namespace Game.Tests
             Assert.AreEqual(500, restored.Players[0].Gold);
             Assert.AreEqual(2, restored.Players[0].PassiveGoldLevel);
             Assert.AreEqual(2, restored.Players[0].MainLevel);
+            Assert.AreEqual(2, restored.Players[0].MagicLevel);
+            Assert.AreEqual(3, restored.Players[0].MeleeDamageLevel);
+            Assert.AreEqual(4, restored.Players[0].RangedDamageLevel);
+            Assert.AreEqual(5, restored.Players[0].HpArmorLevel);
             Assert.AreEqual(3, restored.Buildings[0].InstanceId);
             Assert.AreEqual("BUILDING_MAIN", restored.Buildings[0].BuildingId);
             Assert.AreEqual(7, restored.Units[0].UnitId);
@@ -212,6 +217,26 @@ namespace Game.Tests
 
             Assert.IsNotNull(snap.CallCurrent);
             Assert.AreEqual(expected, snap.CallCurrent[0]);
+        }
+
+        [Test]
+        public void Capture_RoundTrip_PreservesUpgradeLevels()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var player = controller.Players[0];
+            player.MagicLevel = 2;
+            player.MeleeDamageLevel = 3;
+            player.RangedDamageLevel = 1;
+            player.HpArmorLevel = 4;
+
+            var restored = MatchSnapshotCodec.Deserialize(
+                MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(controller)));
+
+            Assert.AreEqual(2, restored.Players[0].MagicLevel);
+            Assert.AreEqual(3, restored.Players[0].MeleeDamageLevel);
+            Assert.AreEqual(1, restored.Players[0].RangedDamageLevel);
+            Assert.AreEqual(4, restored.Players[0].HpArmorLevel);
         }
 
         [Test]

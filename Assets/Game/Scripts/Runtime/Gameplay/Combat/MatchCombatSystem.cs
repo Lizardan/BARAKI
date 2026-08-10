@@ -31,6 +31,7 @@ namespace Game.Gameplay.Combat
         readonly List<MatchUnitState> _nestedBuffer = new();
         readonly List<PendingBarracksSpawn> _pendingSpawns = new();
         readonly Dictionary<int, LaneRoute> _committedRoutes = new();
+        readonly List<CombatCorpseState> _corpses = new();
 
         sealed class PendingBarracksSpawn
         {
@@ -45,12 +46,15 @@ namespace Game.Gameplay.Combat
         }
 
         public event Action<UnitKillEvent> UnitKilled;
+        public event Action<CasterSpellCastEvent> SpellCast;
 
         public UnitVisualCatalog UnitVisualCatalog { get; set; }
 
         public IReadOnlyList<MatchUnitState> Units => _units;
         public IReadOnlyList<CombatProjectileState> Projectiles => _projectiles.Active;
         public IReadOnlyList<CombatMeleeStrikeState> MeleeStrikes => _meleeStrikes.Active;
+        /// <summary>Transient host-side corpses kept for resurrect (cull age = CasterSpellRules.ResurrectCorpseMaxAgeSeconds).</summary>
+        public IReadOnlyList<CombatCorpseState> Corpses => _corpses;
 
         public bool TryGetUnitWorldPosition(MatchUnitState unit, out Vector3 position)
         {
@@ -83,6 +87,7 @@ namespace Game.Gameplay.Combat
             _players.Clear();
             _projectiles.Clear();
             _meleeStrikes.Clear();
+            _corpses.Clear();
             _players.AddRange(players);
             _graph = graph;
             _routes = LaneRouteRegistry.Build(graph);
@@ -581,11 +586,15 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
+                var player = wave.OwnerSlot >= 0 && wave.OwnerSlot < _players.Count
+                    ? _players[wave.OwnerSlot]
+                    : null;
                 var stats = UnitStatsResolver.Resolve(
                     catalog,
                     UnitVisualCatalog,
                     wave.OwnerRaceId,
-                    slot.Role);
+                    slot.Role,
+                    player);
                 var unitMarchSpeed = RaceMarchSpeedRules.GetMarchSpeed(race, definition);
                 var spawnDistance = CombatFormationRules.GetSpawnDistanceForRow(
                     slot.RowIndex,
@@ -786,7 +795,8 @@ namespace Game.Gameplay.Combat
                     catalog,
                     UnitVisualCatalog,
                     _players[ownerSlot].RaceId,
-                    role);
+                    role,
+                    _players[ownerSlot]);
             }
 
             var maxHp = Mathf.Max(snapshotHp, 1f);
@@ -854,6 +864,7 @@ namespace Game.Gameplay.Combat
             }
 
             TickPendingSpawns(deltaTime);
+            TickCorpses(deltaTime);
 
             if (_units.Count == 0 && _projectiles.Active.Count == 0 && _meleeStrikes.Active.Count == 0)
             {
@@ -880,6 +891,24 @@ namespace Game.Gameplay.Combat
         void TickProjectiles(float deltaTime)
         {
             _projectiles.Tick(deltaTime, this);
+        }
+
+        void TickCorpses(float deltaTime)
+        {
+            if (_corpses.Count == 0)
+            {
+                return;
+            }
+
+            for (var i = _corpses.Count - 1; i >= 0; i--)
+            {
+                var corpse = _corpses[i];
+                corpse.AgeSeconds += deltaTime;
+                if (corpse.AgeSeconds > CasterSpellRules.ResurrectCorpseMaxAgeSeconds)
+                {
+                    _corpses.RemoveAt(i);
+                }
+            }
         }
 
         void TickMeleeStrikes(float deltaTime)
@@ -977,6 +1006,11 @@ namespace Game.Gameplay.Combat
             TryCompleteCommittedMidMarch(unit);
             if (unit.CommittedMarchPath == null
                 && !TryGetEffectiveRoute(unit, out route))
+            {
+                return;
+            }
+
+            if (unit.Role == UnitRole.Caster && TryCastSpell(unit, deltaTime))
             {
                 return;
             }
@@ -1803,6 +1837,7 @@ namespace Game.Gameplay.Combat
 
             var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty, target.IsHero);
             GrantGold(killerOwnerSlot, bounty);
+            _corpses.Add(new CombatCorpseState(target));
             RemoveUnit(target);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
@@ -1829,6 +1864,164 @@ namespace Game.Gameplay.Combat
             }
 
             return GameIds.Races.Human;
+        }
+
+        int GetMagicLevel(int ownerSlot)
+        {
+            foreach (var player in _players)
+            {
+                if (player.SlotIndex == ownerSlot)
+                {
+                    return player.MagicLevel;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Caster spell AI: ticks cooldowns, then casts by priority Heal → Frost → Resurrect
+        /// when unlocked and a valid target is in cast range. Falls through to baseline attack otherwise.
+        /// </summary>
+        bool TryCastSpell(MatchUnitState unit, float deltaTime)
+        {
+            unit.HealCooldownRemaining = Mathf.Max(0f, unit.HealCooldownRemaining - deltaTime);
+            unit.FrostCooldownRemaining = Mathf.Max(0f, unit.FrostCooldownRemaining - deltaTime);
+            unit.ResurrectCooldownRemaining = Mathf.Max(0f, unit.ResurrectCooldownRemaining - deltaTime);
+
+            var magicLevel = GetMagicLevel(unit.OwnerSlot);
+            if (magicLevel >= CasterSpellRules.HealRequiredMagicLevel
+                && unit.HealCooldownRemaining <= 0f
+                && TryCastHeal(unit))
+            {
+                return true;
+            }
+
+            if (magicLevel >= CasterSpellRules.FrostRequiredMagicLevel
+                && unit.FrostCooldownRemaining <= 0f
+                && TryCastFrost(unit))
+            {
+                return true;
+            }
+
+            if (magicLevel >= CasterSpellRules.ResurrectRequiredMagicLevel
+                && unit.ResurrectCooldownRemaining <= 0f
+                && TryCastResurrect(unit))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryCastHeal(MatchUnitState caster)
+        {
+            var target = CasterSpellRules.PickHealTarget(caster, _units, CasterSpellRules.CastRange);
+            if (target == null)
+            {
+                return false;
+            }
+
+            target.CurrentHp = CasterSpellRules.ApplyHeal(target.CurrentHp, target.Stats.MaxHp);
+            caster.HealCooldownRemaining = CasterSpellRules.HealCooldownSeconds;
+            SpellCast?.Invoke(new CasterSpellCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                CasterSpellType.Heal,
+                target.UnitId,
+                target.WorldPosition,
+                0f));
+            return true;
+        }
+
+        bool TryCastFrost(MatchUnitState caster)
+        {
+            var center = CasterSpellRules.PickFrostCenter(
+                caster,
+                _units,
+                CasterSpellRules.CastRange,
+                CasterSpellRules.FrostRadius);
+            if (center == null)
+            {
+                return false;
+            }
+
+            var victims = CasterSpellRules.GatherFrostVictims(
+                caster,
+                center,
+                _units,
+                CasterSpellRules.FrostRadius);
+            for (var i = 0; i < victims.Count; i++)
+            {
+                ApplyDamage(caster, victims[i], CasterSpellRules.FrostDamage, caster.OwnerSlot);
+            }
+
+            caster.FrostCooldownRemaining = CasterSpellRules.FrostCooldownSeconds;
+            SpellCast?.Invoke(new CasterSpellCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                CasterSpellType.Frost,
+                center.UnitId,
+                center.WorldPosition,
+                CasterSpellRules.FrostRadius));
+            return true;
+        }
+
+        bool TryCastResurrect(MatchUnitState caster)
+        {
+            var corpse = CasterSpellRules.PickResurrectCorpse(
+                caster,
+                _corpses,
+                CasterSpellRules.CastRange,
+                CasterSpellRules.ResurrectCorpseMaxAgeSeconds);
+            if (corpse == null)
+            {
+                return false;
+            }
+
+            var revived = ResurrectUnit(corpse);
+            if (revived == null)
+            {
+                return false;
+            }
+
+            caster.ResurrectCooldownRemaining = CasterSpellRules.ResurrectCooldownSeconds;
+            SpellCast?.Invoke(new CasterSpellCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                CasterSpellType.Resurrect,
+                revived.UnitId,
+                revived.WorldPosition,
+                0f));
+            return true;
+        }
+
+        MatchUnitState ResurrectUnit(CombatCorpseState corpse)
+        {
+            if (!_routes.TryGetRoute(corpse.OwnerSlot, corpse.LaneId, out var route))
+            {
+                return null;
+            }
+
+            var progressDistance = route.ProjectDistance(corpse.WorldPosition);
+            var revived = new MatchUnitState(
+                _nextUnitId++,
+                corpse.OwnerSlot,
+                corpse.LaneId,
+                corpse.Role,
+                corpse.Stats,
+                corpse.Stats.MaxHp,
+                corpse.WorldPosition,
+                route.FindMarchWaypointIndex(corpse.WorldPosition),
+                marchSpawnDistance: progressDistance);
+            revived.MarchProgressDistance = progressDistance;
+            revived.MarchFocusOpponentSlot = corpse.MarchFocusOpponentSlot;
+            ApplySpawnFacing(revived, route, progressDistance);
+            ApplyMarchFocusFromLane(revived, corpse.OwnerSlot, corpse.LaneId);
+            _units.Add(revived);
+            _unitById[revived.UnitId] = revived;
+            _corpses.Remove(corpse);
+            return revived;
         }
 
         void GrantGold(int ownerSlot, int amount)

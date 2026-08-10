@@ -287,6 +287,23 @@ namespace Game.Gameplay.Match
                 return TryStartPassiveGoldResearch(player, building);
             }
 
+            if (upgradeId == GameIds.Upgrades.MainBuildingLevel)
+            {
+                return TryStartMainLevelResearch(player, building);
+            }
+
+            if (upgradeId is GameIds.Upgrades.MeleeDamage
+                or GameIds.Upgrades.RangedDamage
+                or GameIds.Upgrades.Armor)
+            {
+                return TryStartStatTrackResearch(player, building, upgradeId);
+            }
+
+            if (upgradeId == GameIds.Upgrades.MainMagic)
+            {
+                return TryStartMagicResearch(player, building);
+            }
+
             if (HeroRules.TryParseHireUpgradeId(upgradeId, out var heroSlot))
             {
                 return TryStartHeroHireResearch(player, building, heroSlot);
@@ -322,6 +339,11 @@ namespace Game.Gameplay.Match
                 {
                     _players[p.Slot].MainLevel = p.MainLevel;
                 }
+
+                _players[p.Slot].MagicLevel = Math.Max(0, p.MagicLevel);
+                _players[p.Slot].MeleeDamageLevel = Math.Max(0, p.MeleeDamageLevel);
+                _players[p.Slot].RangedDamageLevel = Math.Max(0, p.RangedDamageLevel);
+                _players[p.Slot].HpArmorLevel = Math.Max(0, p.HpArmorLevel);
             }
 
             ApplyAuthoritativeBuildings(snapshot.Buildings);
@@ -575,7 +597,7 @@ namespace Game.Gameplay.Match
 
             DespawnParkedHero(ownerSlot, heroSlot);
 
-            var stats = ResolveHeroStats(player.RaceId, heroSlot);
+            var stats = ResolveHeroStats(player, heroSlot);
             var laneId = BuildingRules.GetLaneBinding(building.BuildingId);
             var unit = _combat.SpawnUnit(
                 ownerSlot,
@@ -673,7 +695,7 @@ namespace Game.Gameplay.Match
             }
 
             player.Gold = remaining;
-            var stats = ResolveUnitStats(player.RaceId, role);
+            var stats = ResolveUnitStats(player, role);
             // Same forward clearance band as auto-wave creeps (not barracks center / inside mesh).
             var spawnDistance = CombatFormationRules.BarracksSpawnForwardClearance;
             _combat.SpawnUnit(
@@ -766,6 +788,145 @@ namespace Game.Gameplay.Match
             return true;
         }
 
+        bool TryStartMainLevelResearch(MatchPlayerState player, BuildingState building)
+        {
+            if (building.BuildingId != GameIds.Buildings.Main)
+            {
+                return false;
+            }
+
+            var queued = _research.CountUpgrade(building.InstanceId, GameIds.Upgrades.MainBuildingLevel);
+            var projectedLevel = player.MainLevel + queued;
+            if (!MatchEconomyRules.TryGetMainLevelUpgrade(projectedLevel, out var cost, out var duration))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TrySpendGold(player.Gold, cost, out var remaining))
+            {
+                return false;
+            }
+
+            var research = new BuildingResearchState(
+                building.InstanceId,
+                player.SlotIndex,
+                building.BuildingId,
+                GameIds.Upgrades.MainBuildingLevel,
+                cost,
+                duration);
+
+            if (!_research.TryEnqueue(research))
+            {
+                return false;
+            }
+
+            player.Gold = remaining;
+            return true;
+        }
+
+        bool TryStartStatTrackResearch(MatchPlayerState player, BuildingState building, string trackId)
+        {
+            if (building.BuildingId != GameIds.Buildings.Main)
+            {
+                return false;
+            }
+
+            var currentLevel = GetStatTrackLevel(player, trackId);
+            var queued = _research.CountUpgrade(building.InstanceId, trackId);
+            var projectedLevel = currentLevel + queued;
+            if (!MatchEconomyRules.CanPurchaseStatTrack(trackId, projectedLevel, player.MainLevel))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TryGetStatTrackUpgrade(trackId, projectedLevel, out var cost, out var duration))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TrySpendGold(player.Gold, cost, out var remaining))
+            {
+                return false;
+            }
+
+            var research = new BuildingResearchState(
+                building.InstanceId,
+                player.SlotIndex,
+                building.BuildingId,
+                trackId,
+                cost,
+                duration);
+
+            if (!_research.TryEnqueue(research))
+            {
+                return false;
+            }
+
+            player.Gold = remaining;
+            return true;
+        }
+
+        static int GetStatTrackLevel(MatchPlayerState player, string trackId)
+        {
+            if (trackId == GameIds.Upgrades.MeleeDamage)
+            {
+                return player.MeleeDamageLevel;
+            }
+
+            if (trackId == GameIds.Upgrades.RangedDamage)
+            {
+                return player.RangedDamageLevel;
+            }
+
+            if (trackId == GameIds.Upgrades.Armor)
+            {
+                return player.HpArmorLevel;
+            }
+
+            return 0;
+        }
+
+        bool TryStartMagicResearch(MatchPlayerState player, BuildingState building)
+        {
+            if (building.BuildingId != GameIds.Buildings.Main)
+            {
+                return false;
+            }
+
+            var queued = _research.CountUpgrade(building.InstanceId, GameIds.Upgrades.MainMagic);
+            var projectedLevel = player.MagicLevel + queued;
+            if (!MatchEconomyRules.CanPurchaseMagic(projectedLevel, player.MainLevel))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TryGetMagicUpgrade(projectedLevel, out var cost, out var duration))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TrySpendGold(player.Gold, cost, out var remaining))
+            {
+                return false;
+            }
+
+            var research = new BuildingResearchState(
+                building.InstanceId,
+                player.SlotIndex,
+                building.BuildingId,
+                GameIds.Upgrades.MainMagic,
+                cost,
+                duration);
+
+            if (!_research.TryEnqueue(research))
+            {
+                return false;
+            }
+
+            player.Gold = remaining;
+            return true;
+        }
+
         void TickResearch(float deltaTime)
         {
             var completed = _research.Tick(deltaTime);
@@ -791,6 +952,71 @@ namespace Game.Gameplay.Match
                     barracks.Level + 1);
                 EnsureBarracksCallCharges(barracks);
                 barracks.CallCharges.OnLevelUp(ResolveSquadCounts(barracks.EffectiveSquadLevel));
+                return;
+            }
+
+            if (research.UpgradeId == GameIds.Upgrades.MainMagic)
+            {
+                if (research.OwnerSlot < 0 || research.OwnerSlot >= _players.Count)
+                {
+                    return;
+                }
+
+                var player = _players[research.OwnerSlot];
+                if (player.MagicLevel < MatchEconomyRules.MaxMagicLevel)
+                {
+                    player.MagicLevel++;
+                }
+
+                return;
+            }
+
+            if (research.UpgradeId == GameIds.Upgrades.MainBuildingLevel)
+            {
+                if (research.OwnerSlot < 0 || research.OwnerSlot >= _players.Count)
+                {
+                    return;
+                }
+
+                var player = _players[research.OwnerSlot];
+                if (player.MainLevel >= MatchEconomyRules.MaxMainLevel)
+                {
+                    return;
+                }
+
+                player.MainLevel++;
+                return;
+            }
+
+            if (research.UpgradeId is GameIds.Upgrades.MeleeDamage
+                or GameIds.Upgrades.RangedDamage
+                or GameIds.Upgrades.Armor)
+            {
+                if (research.OwnerSlot < 0 || research.OwnerSlot >= _players.Count)
+                {
+                    return;
+                }
+
+                var player = _players[research.OwnerSlot];
+                if (research.UpgradeId == GameIds.Upgrades.MeleeDamage)
+                {
+                    player.MeleeDamageLevel = Math.Min(
+                        MatchEconomyRules.MaxStatTrackLevel,
+                        player.MeleeDamageLevel + 1);
+                }
+                else if (research.UpgradeId == GameIds.Upgrades.RangedDamage)
+                {
+                    player.RangedDamageLevel = Math.Min(
+                        MatchEconomyRules.MaxStatTrackLevel,
+                        player.RangedDamageLevel + 1);
+                }
+                else
+                {
+                    player.HpArmorLevel = Math.Min(
+                        MatchEconomyRules.MaxStatTrackLevel,
+                        player.HpArmorLevel + 1);
+                }
+
                 return;
             }
 
@@ -993,8 +1219,8 @@ namespace Game.Gameplay.Match
             return BarracksManualCallRules.GetDefaultSquadCounts(barracksLevel);
         }
 
-        UnitCombatStats ResolveUnitStats(string raceId, UnitRole role) =>
-            UnitStatsResolver.Resolve(CombatCatalog, UnitVisualCatalog, raceId, role);
+        UnitCombatStats ResolveUnitStats(MatchPlayerState player, UnitRole role) =>
+            UnitStatsResolver.Resolve(CombatCatalog, UnitVisualCatalog, player.RaceId, role, player);
 
         void SpawnParkedHero(int ownerSlot, int heroSlot)
         {
@@ -1004,7 +1230,7 @@ namespace Game.Gameplay.Match
             }
 
             var player = _players[ownerSlot];
-            var stats = ResolveHeroStats(player.RaceId, heroSlot);
+            var stats = ResolveHeroStats(player, heroSlot);
             var park = HeroParkRules.GetParkWorldPosition(
                 Layout,
                 ownerSlot,
@@ -1046,13 +1272,14 @@ namespace Game.Gameplay.Match
             slotState.DeployedUnitId = null;
         }
 
-        UnitCombatStats ResolveHeroStats(string raceId, int heroSlot)
+        UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot)
         {
-            var race = CombatCatalog?.GetRace(raceId);
+            var race = CombatCatalog?.GetRace(player.RaceId);
             var hero = race?.GetHeroBySlot(heroSlot);
+            UnitCombatStats stats;
             if (hero != null)
             {
-                return new UnitCombatStats(
+                stats = new UnitCombatStats(
                     UnitRole.Hero,
                     hero.MaxHp,
                     hero.Armor,
@@ -1063,17 +1290,21 @@ namespace Game.Gameplay.Match
                     hero.MoveSpeed,
                     hero.GoldBounty);
             }
+            else
+            {
+                stats = new UnitCombatStats(
+                    UnitRole.Hero,
+                    600f,
+                    4f,
+                    35f,
+                    45f,
+                    1f,
+                    1.5f,
+                    4f,
+                    80);
+            }
 
-            return new UnitCombatStats(
-                UnitRole.Hero,
-                600f,
-                4f,
-                35f,
-                45f,
-                1f,
-                1.5f,
-                4f,
-                80);
+            return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
         private void OnBuildingDestroyed(BuildingDestroyedEvent destroyed)

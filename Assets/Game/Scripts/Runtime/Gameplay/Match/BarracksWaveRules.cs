@@ -5,6 +5,8 @@ namespace Game.Gameplay.Match
     /// <summary>Per-barracks wave timing from <c>Balance.md</c>.</summary>
     public static class BarracksWaveRules
     {
+        /// <summary>Time before the very first wave after match start (Balance.md).</summary>
+        public const float FirstWaveIntervalSeconds = 15f;
         public const float BaseIntervalSeconds = 35f;
         public const float SpawnSpeedPerLevel = 0.05f;
 

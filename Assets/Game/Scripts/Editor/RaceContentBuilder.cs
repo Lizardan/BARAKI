@@ -51,9 +51,6 @@ namespace Game.Editor
                 CreateStatTrack(GameIds.Upgrades.Armor, 0.03f,
                     new[] { 60, 80, 100, 120, 140, 160, 180, 200, 220 },
                     new[] { 6f, 8f, 10f, 12f, 14f, 16f, 18f, 20f, 22f }),
-                CreateStatTrack(GameIds.Upgrades.CasterHeal, 0.10f,
-                    new[] { 90, 115, 140, 165, 190, 215, 240, 265, 290 },
-                    new[] { 10f, 12f, 14f, 16f, 18f, 20f, 22f, 24f, 26f }),
             };
 
             CreateOrUpdateCatalog(human, squads, statTracks);

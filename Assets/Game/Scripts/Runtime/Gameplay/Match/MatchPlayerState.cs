@@ -14,6 +14,10 @@ namespace Game.Gameplay.Match
         public int Gold { get; set; }
         public int MainLevel { get; set; } = MatchEconomyRules.DefaultMainLevel;
         public int PassiveGoldLevel { get; set; }
+        public int MagicLevel { get; set; }
+        public int MeleeDamageLevel { get; set; }
+        public int RangedDamageLevel { get; set; }
+        public int HpArmorLevel { get; set; }
         public float PassiveGoldTickRemainingSeconds { get; set; } =
             MatchEconomyRules.PassiveGoldTickIntervalSeconds;
         public bool IsEliminated { get; set; }

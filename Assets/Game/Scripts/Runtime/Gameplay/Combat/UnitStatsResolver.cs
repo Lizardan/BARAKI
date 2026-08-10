@@ -14,8 +14,10 @@ namespace Game.Gameplay.Combat
             ICombatUnitCatalog catalog,
             UnitVisualCatalog visualCatalog,
             string raceId,
-            UnitRole role)
+            UnitRole role,
+            MatchPlayerState player = null)
         {
+            UnitCombatStats stats;
             if (visualCatalog != null
                 && visualCatalog.TryGetPrefab(raceId, role, out var prefab)
                 && prefab != null)
@@ -23,17 +25,19 @@ namespace Game.Gameplay.Combat
                 var settings = prefab.GetComponentInChildren<UnitBalanceSettings>();
                 if (settings != null)
                 {
-                    return BuildFromSettings(settings, role);
+                    stats = BuildFromSettings(settings, role);
+                    return RaceUpgradeStatsRules.Apply(stats, player);
                 }
             }
 
             var definition = catalog?.GetRace(raceId)?.GetUnit(role);
             if (definition != null)
             {
-                return UnitCombatStats.FromDefinition(definition);
+                stats = UnitCombatStats.FromDefinition(definition);
+                return RaceUpgradeStatsRules.Apply(stats, player);
             }
 
-            return DefaultStats(role);
+            return RaceUpgradeStatsRules.Apply(DefaultStats(role), player);
         }
 
         public static UnitCombatStats BuildFromSettings(UnitBalanceSettings settings, UnitRole role)

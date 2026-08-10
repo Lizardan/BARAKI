@@ -30,6 +30,24 @@ namespace Game.Tests
                 Game.Core.GameIds.Upgrades.BarracksLevel, 2));
             Assert.AreEqual("Герой 1", MatchUpgradeLabelRules.FormatQueueSlotShort(
                 HeroRules.BuildHireUpgradeId(1), 1));
+            Assert.AreEqual("Глав 2", MatchUpgradeLabelRules.FormatQueueSlotShort(
+                Game.Core.GameIds.Upgrades.MainBuildingLevel, 2));
+            Assert.AreEqual("Мил 3", MatchUpgradeLabelRules.FormatQueueSlotShort(
+                Game.Core.GameIds.Upgrades.MeleeDamage, 3));
+            Assert.AreEqual("Дал 4", MatchUpgradeLabelRules.FormatQueueSlotShort(
+                Game.Core.GameIds.Upgrades.RangedDamage, 4));
+            Assert.AreEqual("ХП 5", MatchUpgradeLabelRules.FormatQueueSlotShort(
+                Game.Core.GameIds.Upgrades.Armor, 5));
+        }
+
+        [Test]
+        public void FormatStatTrackButton_IncludesTitleLevelAndCost()
+        {
+            var label = MatchUpgradeLabelRules.FormatStatTrackButton(
+                Game.Core.GameIds.Upgrades.MeleeDamage, 2, 100);
+            StringAssert.Contains("Урон мили", label);
+            StringAssert.Contains("Ур. 2", label);
+            StringAssert.Contains("100g", label);
         }
     }
 }

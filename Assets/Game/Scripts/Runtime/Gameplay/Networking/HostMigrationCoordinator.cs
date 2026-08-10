@@ -133,15 +133,15 @@ namespace Game.Gameplay.Networking
                 ("match", ReconnectMatchId));
         }
 
-        public void BeginStateTransferFromMatch()
+        public void BeginStateTransferFromMatch(MatchRuntime runtime = null)
         {
             if (Phase != HostMigrationRules.MigrationPhase.PausedAwaitingHost)
             {
                 return;
             }
 
-            var runtime = MatchRuntime.Current;
-            var lastGood = runtime?.LastNetworkSnapshotBytes;
+            var activeRuntime = runtime ?? MatchRuntime.Current;
+            var lastGood = activeRuntime?.LastNetworkSnapshotBytes;
             if (lastGood is { Length: > 0 })
             {
                 CapturedStateBytes = lastGood;
@@ -151,9 +151,9 @@ namespace Game.Gameplay.Networking
             }
 
             // Clients normally have empty local sim — live capture is only a fallback for host.
-            if (runtime?.Controller != null && MatchNetworkSession.LocalSlot == PreviousHostSlot)
+            if (activeRuntime?.Controller != null && MatchNetworkSession.LocalSlot == PreviousHostSlot)
             {
-                var snapshot = MatchSnapshotCodec.Capture(runtime.Controller);
+                var snapshot = MatchSnapshotCodec.Capture(activeRuntime.Controller);
                 CapturedStateBytes = MatchSnapshotCodec.Serialize(snapshot);
                 AdvanceAfterStateTransfer(CapturedStateBytes is { Length: > 0 });
                 if (Phase != HostMigrationRules.MigrationPhase.Aborted)

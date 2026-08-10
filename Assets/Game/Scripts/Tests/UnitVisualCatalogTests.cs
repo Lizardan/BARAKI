@@ -624,8 +624,8 @@ namespace Game.Tests
                     "_meleeStrikes",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 Assert.IsNotNull(strikeField);
-                var strikes = (System.Collections.IList)strikeField.GetValue(runtime.Controller.Combat);
-                strikes.Add(new CombatMeleeStrikeState(attacker.UnitId, target.UnitId, 10f, 0.14f)
+                  var strikes = (CombatMeleeStrikeSystem)strikeField.GetValue(runtime.Controller.Combat);
+                  strikes.Spawn(new CombatMeleeStrikeState(attacker.UnitId, target.UnitId, 10f, 0.14f)
                 {
                     TimeRemaining = 0.07f,
                 });
