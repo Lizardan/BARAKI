@@ -7419,6 +7419,7 @@ GameObject:
   - component: {fileID: 8606317939196842313}
   - component: {fileID: 1253259251269709349}
   - component: {fileID: 3045912845643297152}
+  - component: {fileID: 6178778735416417287}
   m_Layer: 0
   m_Name: Human_Siege
   m_TagString: Untagged
@@ -7550,6 +7551,28 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 58070d2e94dfb6e4cacf0aec8c770c43, type: 3}
   - {fileID: 2800000, guid: f078597f9474185438764cc8036a2769, type: 3}
   - {fileID: 2800000, guid: 298a25a451b74f64992ed5fc4293acb6, type: 3}
+--- !u!114 &6178778735416417287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3382017659114300762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e91a2d6256e88f24cb2c7251f2b25325, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitBalanceSettings
+  _maxHp: 200
+  _armor: 0
+  _damageMin: 12
+  _damageMax: 16
+  _attackSpeed: 1
+  _attackRange: 1.5
+  _moveSpeed: 4
+  _goldBounty: 15
+  _maxMana: 0
+  _marchSpeedOverride: 0
 --- !u!1 &3391126807618228224
 GameObject:
   m_ObjectHideFlags: 0

@@ -122,6 +122,11 @@ namespace Game.UI.Controllers
 
         private void LateUpdate()
         {
+            if (_matchRuntime == null)
+            {
+                _matchRuntime = MatchRuntime.Current;
+            }
+
             RefreshLocalPlayerSlot();
             var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
             if (controller != _subscribedController)

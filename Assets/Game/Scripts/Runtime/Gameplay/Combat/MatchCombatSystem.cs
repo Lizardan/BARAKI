@@ -46,6 +46,8 @@ namespace Game.Gameplay.Combat
 
         public event Action<UnitKillEvent> UnitKilled;
 
+        public UnitVisualCatalog UnitVisualCatalog { get; set; }
+
         public IReadOnlyList<MatchUnitState> Units => _units;
         public IReadOnlyList<CombatProjectileState> Projectiles => _projectiles.Active;
         public IReadOnlyList<CombatMeleeStrikeState> MeleeStrikes => _meleeStrikes.Active;
@@ -579,7 +581,11 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                var stats = UnitCombatStats.FromDefinition(definition);
+                var stats = UnitStatsResolver.Resolve(
+                    catalog,
+                    UnitVisualCatalog,
+                    wave.OwnerRaceId,
+                    slot.Role);
                 var unitMarchSpeed = RaceMarchSpeedRules.GetMarchSpeed(race, definition);
                 var spawnDistance = CombatFormationRules.GetSpawnDistanceForRow(
                     slot.RowIndex,
@@ -776,12 +782,11 @@ namespace Game.Gameplay.Combat
         {
             if (catalog != null && ownerSlot >= 0 && ownerSlot < _players.Count)
             {
-                var race = catalog.GetRace(_players[ownerSlot].RaceId);
-                var definition = race?.GetUnit(role);
-                if (definition != null)
-                {
-                    return UnitCombatStats.FromDefinition(definition);
-                }
+                return UnitStatsResolver.Resolve(
+                    catalog,
+                    UnitVisualCatalog,
+                    _players[ownerSlot].RaceId,
+                    role);
             }
 
             var maxHp = Mathf.Max(snapshotHp, 1f);

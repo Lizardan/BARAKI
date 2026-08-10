@@ -14,6 +14,7 @@ namespace Game.Gameplay.Match
         static Material _fireMaterial;
         static Material _arrowShaftMaterial;
         static Material _arrowHeadMaterial;
+        static GameObject _boltPrefab;
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
@@ -26,9 +27,13 @@ namespace Game.Gameplay.Match
             {
                 visual = CreateFireball(projectile);
             }
-            else if (projectile.AttackerRole == UnitRole.Ranged)
+            else if (projectile.AttackerRole is UnitRole.Ranged or UnitRole.Flying)
             {
                 visual = CreateArrow(projectile);
+            }
+            else if (projectile.AttackerRole == UnitRole.Super)
+            {
+                visual = CreateBolt(projectile);
             }
             else
             {
@@ -82,6 +87,40 @@ namespace Game.Gameplay.Match
 
             return root;
         }
+
+        /// <summary>Ballista bolt — uses the actual bolt model from the TT ballista pack.</summary>
+        static GameObject CreateBolt(CombatProjectileState projectile)
+        {
+            var root = new GameObject($"Projectile_{projectile.ProjectileId}");
+            root.transform.localScale = Vector3.one;
+
+            if (_boltPrefab == null) _boltPrefab = LoadBoltPrefab();
+            if (_boltPrefab != null)
+            {
+                var bolt = Object.Instantiate(_boltPrefab, root.transform, false);
+                bolt.name = "Bolt";
+                return root;
+            }
+
+            // Fallback (no Resources): thick arrow-shaped bolt.
+            if (_arrowShaftMaterial == null) _arrowShaftMaterial = LoadMaterial("Art/ProjectileArrowShaft");
+            if (_arrowHeadMaterial == null) _arrowHeadMaterial = LoadMaterial("Art/ProjectileArrowHead");
+
+            var shaft = CreatePrimitiveRoot(PrimitiveType.Cube, "Shaft");
+            shaft.transform.SetParent(root.transform, false);
+            shaft.transform.localScale = new Vector3(0.09f, 0.09f, 0.75f);
+            ApplyMaterial(shaft, _arrowShaftMaterial);
+
+            var head = CreatePrimitiveRoot(PrimitiveType.Cube, "Head");
+            head.transform.SetParent(root.transform, false);
+            head.transform.localPosition = new Vector3(0f, 0f, 0.4f);
+            head.transform.localScale = new Vector3(0.16f, 0.16f, 0.18f);
+            ApplyMaterial(head, _arrowHeadMaterial);
+
+            return root;
+        }
+
+        static GameObject LoadBoltPrefab() => Resources.Load<GameObject>("Art/ProjectileBolt");
 
         static GameObject CreateFireball(CombatProjectileState projectile)
         {
@@ -161,7 +200,7 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var isRanged = projectile.AttackerRole == UnitRole.Ranged;
+            var isRanged = projectile.AttackerRole is UnitRole.Ranged or UnitRole.Flying;
             var isCaster = projectile.AttackerRole == UnitRole.Caster;
 
             if (isRanged)

@@ -487,6 +487,7 @@ GameObject:
   - component: {fileID: 7866099261950310529}
   - component: {fileID: 1770111096339540384}
   - component: {fileID: 4952921500368478586}
+  - component: {fileID: 554690625007063709}
   m_Layer: 0
   m_Name: Human_Super
   m_TagString: Untagged
@@ -555,6 +556,28 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 58070d2e94dfb6e4cacf0aec8c770c43, type: 3}
   - {fileID: 2800000, guid: f078597f9474185438764cc8036a2769, type: 3}
   - {fileID: 2800000, guid: 298a25a451b74f64992ed5fc4293acb6, type: 3}
+--- !u!114 &554690625007063709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6606466237021560246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e91a2d6256e88f24cb2c7251f2b25325, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitBalanceSettings
+  _maxHp: 500
+  _armor: 2
+  _damageMin: 30
+  _damageMax: 40
+  _attackSpeed: 0.5
+  _attackRange: 8
+  _moveSpeed: 4
+  _goldBounty: 50
+  _maxMana: 0
+  _marchSpeedOverride: 0
 --- !u!1 &6833961239349677932
 GameObject:
   m_ObjectHideFlags: 0

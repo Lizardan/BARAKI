@@ -92,6 +92,11 @@ namespace Game.UI.Controllers
 
         void LateUpdate()
         {
+            if (_matchRuntime == null)
+            {
+                _matchRuntime = MatchRuntime.Current;
+            }
+
             if (_selection == null)
             {
                 SubscribeSelection();

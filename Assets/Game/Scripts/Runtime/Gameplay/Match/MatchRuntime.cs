@@ -22,6 +22,7 @@ namespace Game.Gameplay.Match
 
         [SerializeField] private MatchArenaGreybox _greybox;
         [SerializeField] private RaceCatalog _raceCatalog;
+        [SerializeField] private UnitVisualCatalog _unitVisualCatalog;
 
         private bool _isMatchStarted;
         private MatchTickMode _tickMode = MatchTickMode.Offline;
@@ -184,6 +185,9 @@ namespace Game.Gameplay.Match
                 Controller.CombatCatalog = new RaceCatalogCombatCatalog(_raceCatalog);
             }
 
+            var visualCatalog = ResolveUnitVisualCatalog();
+            Controller.UnitVisualCatalog = visualCatalog;
+            Controller.Combat.UnitVisualCatalog = visualCatalog;
             Controller.StartMatch(config);
             _isMatchStarted = true;
             EnsureSelectionBridge();
@@ -204,6 +208,17 @@ namespace Game.Gameplay.Match
 
             FocusCameraOnLocalPlayer(localPlayerSlot);
             TryBeginEarlyPhaseWhenReady();
+        }
+
+        UnitVisualCatalog ResolveUnitVisualCatalog()
+        {
+            if (_unitVisualCatalog != null)
+            {
+                return _unitVisualCatalog;
+            }
+
+            var presenter = MatchCombatPresenter.Current;
+            return presenter != null ? presenter.VisualCatalog : null;
         }
 
         void EnsureFogOfWar(int localPlayerSlot)

@@ -69,6 +69,8 @@ namespace Game.Gameplay.Cameras
 
         private void Update()
         {
+            UpdateFocus();
+
             if (!Application.isFocused)
             {
                 return;
@@ -83,7 +85,6 @@ namespace Game.Gameplay.Cameras
             }
 
             UpdateSmoothZoom();
-            UpdateFocus();
 
             if (!IsPanLocked)
             {

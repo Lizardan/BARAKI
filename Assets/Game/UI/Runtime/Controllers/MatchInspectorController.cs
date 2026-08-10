@@ -105,6 +105,11 @@ namespace Game.UI.Controllers
 
         void LateUpdate()
         {
+            if (_matchRuntime == null)
+            {
+                _matchRuntime = MatchRuntime.Current;
+            }
+
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
             if (_selection == null)
             {

@@ -20,6 +20,7 @@ namespace Game.Gameplay.Combat
                 or UnitRole.Flying
                 or UnitRole.Super;
 
-        public static bool UsesParabolicArc(UnitRole role) => role == UnitRole.Ranged;
+        public static bool UsesParabolicArc(UnitRole role) =>
+            role is UnitRole.Ranged or UnitRole.Flying;
     }
 }

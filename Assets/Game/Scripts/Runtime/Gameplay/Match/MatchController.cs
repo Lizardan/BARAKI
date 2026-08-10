@@ -39,6 +39,7 @@ namespace Game.Gameplay.Match
         public MatchResearchQueue Research => _research;
         public TowerDefenseSystem Towers => _towers;
         public ICombatUnitCatalog CombatCatalog { get; set; }
+        public UnitVisualCatalog UnitVisualCatalog { get; set; }
         public int? WinnerSlot => _winnerSlot;
         public bool IsRunning => Phase is not MatchPhase.Lobby and not MatchPhase.End;
 
@@ -992,26 +993,8 @@ namespace Game.Gameplay.Match
             return BarracksManualCallRules.GetDefaultSquadCounts(barracksLevel);
         }
 
-        UnitCombatStats ResolveUnitStats(string raceId, UnitRole role)
-        {
-            var race = CombatCatalog?.GetRace(raceId);
-            var def = race?.GetUnit(role);
-            if (def != null)
-            {
-                return new UnitCombatStats(
-                    role,
-                    def.MaxHp,
-                    def.Armor,
-                    def.DamageMin,
-                    def.DamageMax,
-                    def.AttackSpeed,
-                    def.AttackRange,
-                    def.MoveSpeed,
-                    def.GoldBounty);
-            }
-
-            return new UnitCombatStats(role, 200f, 1f, 10f, 14f, 1f, 1.5f, 3.5f, 20);
-        }
+        UnitCombatStats ResolveUnitStats(string raceId, UnitRole role) =>
+            UnitStatsResolver.Resolve(CombatCatalog, UnitVisualCatalog, raceId, role);
 
         void SpawnParkedHero(int ownerSlot, int heroSlot)
         {
