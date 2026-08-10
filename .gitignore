@@ -70,24 +70,6 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
-# Temporary auto-generated Android Assets
-/[Aa]ssets/[Ss]treamingAssets/aa.meta
-/[Aa]ssets/[Ss]treamingAssets/aa/*
-
-# WebGL build output inside activity shell (CI assembles)
-/web/activity-shell/Build/**
-!/web/activity-shell/Build/.gitkeep
-
-# Local Cloudflare / Node
-infra/workers/matchmaker/node_modules/
-.wrangler/
-.dev.vars
-infra/playtest.env
-
-# CI-only stamps (written by deploy-windows workflow)
-/BuildSupport/ci-version.txt
-/BuildSupport/github-playtest-token.txt
-
 # Burst / player build artifacts at repo root
 /[Dd]ata/
 

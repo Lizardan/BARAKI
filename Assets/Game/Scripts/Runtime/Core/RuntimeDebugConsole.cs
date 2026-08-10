@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -154,7 +155,7 @@ namespace Game.Core
             }
         }
 
-        private async void SendLogAsync()
+        private UniTaskVoid SendLogAsync()
         {
             if (_isSending)
             {
