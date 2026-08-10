@@ -155,7 +155,7 @@ namespace Game.Core
             }
         }
 
-        private UniTaskVoid SendLogAsync()
+        private async UniTaskVoid SendLogAsync()
         {
             if (_isSending)
             {
