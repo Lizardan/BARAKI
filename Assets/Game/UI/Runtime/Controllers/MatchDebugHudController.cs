@@ -136,7 +136,7 @@ namespace Game.UI.Controllers
 
         void Start()
         {
-            _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+            _matchRuntime = MatchRuntime.Current;
         }
 
         void LateUpdate()
@@ -145,7 +145,7 @@ namespace Game.UI.Controllers
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
             if (_matchRuntime == null)
             {
-                _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+                _matchRuntime = MatchRuntime.Current;
             }
 #else
             HidePanel();

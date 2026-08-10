@@ -62,8 +62,7 @@ namespace Game.Gameplay.Networking
                 request.PlayerCount,
                 lobbyOptions);
 
-            Debug.Log(
-                $"UnityLobbyRelay: created lobby code={lobby.LobbyCode} relay={relayJoinCode}");
+            PlaytestLog.Info("LobbyRelay", "Created", ("code", lobby.LobbyCode), ("relay", relayJoinCode));
 
             return new MatchSessionHandle(
                 lobby.LobbyCode,
@@ -107,7 +106,7 @@ namespace Game.Gameplay.Networking
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(relayJoinCode);
             MatchRelayTransportState.SetClient(joinAllocation, relayJoinCode);
 
-            Debug.Log($"UnityLobbyRelay: joined lobby code={lobby.LobbyCode} relay={relayJoinCode}");
+            PlaytestLog.Info("LobbyRelay", "Joined", ("code", lobby.LobbyCode), ("relay", relayJoinCode));
 
             return new MatchSessionHandle(
                 lobby.LobbyCode,
@@ -161,8 +160,7 @@ namespace Game.Gameplay.Networking
                     },
                 });
 
-            Debug.Log(
-                $"UnityLobbyRelay: migrated host lobby={roomCode} relay={relayJoinCode} slot={localPlayerSlot}");
+            PlaytestLog.Info("LobbyRelay", "MigratedHost", ("code", roomCode), ("relay", relayJoinCode), ("slot", localPlayerSlot));
 
             return new MatchSessionHandle(
                 roomCode,
@@ -219,8 +217,7 @@ namespace Game.Gameplay.Networking
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(relayJoinCode);
             MatchRelayTransportState.SetClient(joinAllocation, relayJoinCode);
 
-            Debug.Log(
-                $"UnityLobbyRelay: rejoined migrated host lobby={roomCode} relay={relayJoinCode} slot={localPlayerSlot}");
+            PlaytestLog.Info("LobbyRelay", "RejoinedMigratedHost", ("code", roomCode), ("relay", relayJoinCode), ("slot", localPlayerSlot));
 
             return new MatchSessionHandle(
                 roomCode,

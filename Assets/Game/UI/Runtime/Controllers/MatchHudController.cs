@@ -93,10 +93,10 @@ namespace Game.UI.Controllers
         {
             if (_matchRuntime == null)
             {
-                _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+                _matchRuntime = MatchRuntime.Current;
             }
 
-            _camera = Camera.main;
+            _camera = CameraCache.Main;
             RefreshLocalPlayerSlot();
             MatchNetworkCommands.CommandResultReceived += OnCommandResultReceived;
         }

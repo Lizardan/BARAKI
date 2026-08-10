@@ -78,7 +78,7 @@ namespace Game.UI.Controllers
         {
             if (_matchRuntime == null)
             {
-                _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+                _matchRuntime = MatchRuntime.Current;
             }
 
             ResolveVisualCatalog();
@@ -109,7 +109,7 @@ namespace Game.UI.Controllers
 
             if (_combatPresenter == null)
             {
-                _combatPresenter = FindAnyObjectByType<MatchCombatPresenter>();
+                _combatPresenter = MatchCombatPresenter.Current;
             }
 
             _visualCatalog = _combatPresenter != null ? _combatPresenter.VisualCatalog : null;

@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using UnityEngine;
 
 namespace Game.Gameplay.Networking
@@ -14,7 +15,7 @@ namespace Game.Gameplay.Networking
             if (IsTruthy(Environment.GetEnvironmentVariable("BARAKI_LOCALDEV")))
             {
                 MatchSessionService.UseLocalDev();
-                Debug.Log("MatchSessionBootstrap: LocalDev backend (BARAKI_LOCALDEV).");
+                PlaytestLog.Info("Bootstrap", "LocalDev", ("reason", "BARAKI_LOCALDEV"));
                 return;
             }
 
@@ -22,13 +23,13 @@ namespace Game.Gameplay.Networking
             if (!IsTruthy(Environment.GetEnvironmentVariable("BARAKI_UGS")))
             {
                 MatchSessionService.UseLocalDev();
-                Debug.Log("MatchSessionBootstrap: LocalDev backend (Editor default).");
+                PlaytestLog.Info("Bootstrap", "LocalDev", ("reason", "EditorDefault"));
                 return;
             }
 #endif
 
             MatchSessionService.UseUnityLobbyRelay();
-            Debug.Log("MatchSessionBootstrap: Unity Lobby + Relay backend.");
+            PlaytestLog.Info("Bootstrap", "UnityLobbyRelay");
         }
 
         static bool IsTruthy(string value) =>

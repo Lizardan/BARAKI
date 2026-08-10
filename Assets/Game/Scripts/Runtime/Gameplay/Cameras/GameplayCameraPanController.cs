@@ -1,3 +1,4 @@
+using Game.Core;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -45,11 +46,8 @@ namespace Game.Gameplay.Cameras
             Current = this;
             if (_cinemachineFollow == null)
             {
-                var virtualCamera = FindAnyObjectByType<CinemachineCamera>();
-                if (virtualCamera != null)
-                {
-                    _cinemachineFollow = virtualCamera.GetComponent<CinemachineFollow>();
-                }
+                _cinemachineFollow = GetComponentInParent<CinemachineFollow>()
+                    ?? GetComponentInChildren<CinemachineFollow>();
             }
 
             if (_cinemachineFollow != null)
@@ -164,7 +162,7 @@ namespace Game.Gameplay.Cameras
                 return;
             }
 
-            var camera = Camera.main;
+            var camera = CameraCache.Main;
             if (camera == null)
             {
                 return;

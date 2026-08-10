@@ -543,7 +543,7 @@ namespace Game.Gameplay.Combat
                 }
             }
 
-            _projectiles.RemoveByOwner(ownerSlot, GetUnitById);
+            _projectiles.RemoveByOwner(ownerSlot);
             _meleeStrikes.RemoveByOwner(ownerSlot, GetUnitById);
         }
 

@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -52,7 +53,7 @@ namespace Game.Gameplay.Match.Selection
         {
             if (_camera == null)
             {
-                _camera = Camera.main;
+                _camera = CameraCache.Main;
             }
         }
 
@@ -76,7 +77,7 @@ namespace Game.Gameplay.Match.Selection
 
             if (_camera == null)
             {
-                _camera = Camera.main;
+                _camera = CameraCache.Main;
             }
 
             if (_camera == null)

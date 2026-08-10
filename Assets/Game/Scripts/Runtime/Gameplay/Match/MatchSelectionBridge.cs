@@ -9,6 +9,8 @@ namespace Game.Gameplay.Match
     /// <summary>Owns pick registry, selection state, and click input for the active match.</summary>
     public sealed class MatchSelectionBridge : MonoBehaviour
     {
+        public static MatchSelectionBridge Current { get; private set; }
+
         readonly MatchPickRegistry _registry = new();
         readonly MatchSelection _selection = new();
 
@@ -22,6 +24,7 @@ namespace Game.Gameplay.Match
 
         public void BeginMatch()
         {
+            Current = this;
             _registry.Clear();
             _selection.Clear();
             _runtime = GetComponent<MatchRuntime>() ?? MatchRuntime.Current;
@@ -161,6 +164,14 @@ namespace Game.Gameplay.Match
             }
 
             controller.TrySetTowerTarget(_localPlayerSlot, buildingInstanceId, target.EntityId);
+        }
+
+        void OnDisable()
+        {
+            if (Current == this)
+            {
+                Current = null;
+            }
         }
     }
 }

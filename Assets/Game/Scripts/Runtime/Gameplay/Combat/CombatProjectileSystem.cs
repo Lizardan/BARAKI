@@ -20,7 +20,7 @@ namespace Game.Gameplay.Combat
             _impactBuffer.Clear();
         }
 
-        public void RemoveByOwner(int ownerSlot, System.Func<int, MatchUnitState> getUnitById)
+        public void RemoveByOwner(int ownerSlot)
         {
             for (var i = _active.Count - 1; i >= 0; i--)
             {
@@ -57,35 +57,6 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 isParabolic);
-            _active.Add(projectile);
-            return projectile;
-        }
-
-        public CombatProjectileState SpawnBuildingProjectile(
-            int attackerUnitId,
-            int targetBuildingInstanceId,
-            int attackerOwnerSlot,
-            UnitRole attackerRole,
-            string raceId,
-            float rawDamage,
-            float flightDuration,
-            UnityEngine.Vector3 start,
-            UnityEngine.Vector3 end,
-            bool isParabolic)
-        {
-            var projectile = new CombatProjectileState(
-                _nextId++,
-                attackerUnitId,
-                targetUnitId: 0,
-                attackerOwnerSlot,
-                attackerRole,
-                raceId,
-                rawDamage,
-                flightDuration,
-                start,
-                end,
-                isParabolic,
-                targetBuildingInstanceId);
             _active.Add(projectile);
             return projectile;
         }

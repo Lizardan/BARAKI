@@ -14,6 +14,8 @@ namespace Game.Gameplay.Match
     /// <summary>Unit markers driven by <see cref="MatchCombatSystem"/>.</summary>
     public sealed class MatchCombatPresenter : MonoBehaviour
     {
+        public static MatchCombatPresenter Current { get; private set; }
+
         sealed class UnitVisual
         {
             public Transform Root;
@@ -57,6 +59,7 @@ namespace Game.Gameplay.Match
 
         void Awake()
         {
+            Current = this;
             ResolveRuntime();
         }
 
@@ -636,6 +639,10 @@ namespace Game.Gameplay.Match
 
         void OnDisable()
         {
+            if (Current == this)
+            {
+                Current = null;
+            }
             ClearVisuals();
         }
 

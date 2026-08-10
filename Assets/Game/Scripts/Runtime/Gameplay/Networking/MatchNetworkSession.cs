@@ -252,7 +252,7 @@ namespace Game.Gameplay.Networking
             }
 
             // LocalDev / non-Relay: apply last-good in-process (no NGO rebind).
-            Debug.Log("HostMigration: LocalDev path — resume without Relay rebind.");
+            PlaytestLog.Info("HostMigration", "LocalDevResume");
             return true;
         }
 
@@ -284,7 +284,7 @@ namespace Game.Gameplay.Networking
                 return await TryStartTransportAsync();
             }
 
-            Debug.Log("HostMigration: LocalDev client path — resume without Relay rebind.");
+            PlaytestLog.Info("HostMigration", "LocalDevClientResume");
             return true;
         }
 

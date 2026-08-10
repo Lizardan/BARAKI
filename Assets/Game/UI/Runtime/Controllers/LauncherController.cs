@@ -839,7 +839,7 @@ namespace Game.UI.Controllers
             _progressShine.style.translate = new Translate(x, 0);
         }
 
-        private void OnReadMoreClicked() => Debug.Log("[Launcher] Read More (placeholder)");
+        private void OnReadMoreClicked() => PlaytestLog.Info("Launcher", "ReadMorePlaceholder");
 
         private void OnChatSendClicked() => TrySendChatMessage();
 

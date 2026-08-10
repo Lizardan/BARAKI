@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Game.Core;
 using UnityEngine;
 
 namespace Game.Gameplay.Match.Fog
@@ -255,7 +256,7 @@ namespace Game.Gameplay.Match.Fog
             _volumeRenderer.receiveShadows = false;
             _volumeRenderer.allowOcclusionWhenDynamic = false;
 
-            var cam = Camera.main;
+            var cam = CameraCache.Main;
             if (cam != null)
             {
                 cam.depthTextureMode |= DepthTextureMode.Depth;

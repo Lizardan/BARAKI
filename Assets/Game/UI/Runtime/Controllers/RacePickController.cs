@@ -57,12 +57,12 @@ namespace Game.UI.Controllers
         {
             if (_matchRuntime == null)
             {
-                _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+                _matchRuntime = MatchRuntime.Current;
             }
 
             if (_panController == null)
             {
-                _panController = FindAnyObjectByType<GameplayCameraPanController>();
+                _panController = GameplayCameraPanController.Current;
             }
 
             if (!GameSession.IsPlaying || _matchRuntime == null || _matchRuntime.IsMatchStarted)

@@ -52,7 +52,7 @@ namespace Game.UI.Controllers
         {
             if (_bridge == null)
             {
-                _bridge = FindAnyObjectByType<MatchSelectionBridge>();
+                _bridge = MatchSelectionBridge.Current;
             }
 
             if (_bridge == null)

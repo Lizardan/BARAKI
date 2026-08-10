@@ -1,3 +1,4 @@
+using Game.Core;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -115,7 +116,7 @@ namespace Game.Gameplay.Match
 
         void LateUpdate()
         {
-            var camera = Camera.main;
+            var camera = CameraCache.Main;
             if (camera == null)
             {
                 return;

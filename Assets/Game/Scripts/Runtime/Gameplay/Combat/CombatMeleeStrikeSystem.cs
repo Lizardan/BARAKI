@@ -19,7 +19,7 @@ namespace Game.Gameplay.Combat
             _impactBuffer.Clear();
         }
 
-        public void RemoveByOwner(int ownerSlot, System.Func<int, MatchUnitState> getUnitById)
+        public void RemoveByOwner(int ownerSlot, System.Func<int?, MatchUnitState> getUnitById)
         {
             for (var i = _active.Count - 1; i >= 0; i--)
             {

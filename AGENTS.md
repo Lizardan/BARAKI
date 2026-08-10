@@ -32,12 +32,12 @@
 ## CI / Release (не сломать)
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
 - **Теги:** `v*` — полный клиент (единственный `/releases/latest`); `updater-v*` — апдейтер (prerelease, никогда не latest; release-prune их не трогает).
-- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла.**
+- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
 - Билд: `Game.Editor.WindowsCiBuild.Build` / `BuildUpdaterOnly`; Inno Setup — `BuildSupport/Installer/`; playtest-токен — `BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).
 - `docs/` — простые HTML (privacy/terms), деплой as-is; `cloudflare/baraki-landing/` — Pages + `functions/download.js` (редирект на `BARAKI-Setup.exe`).
 
 ## Тесты
-- asmdef `Game.Tests`, NUnit, EditMode в основном. CI-гейта на тесты **нет**.
+- asmdef `Game.Tests`, NUnit, EditMode в основном.
 - Запуск: Unity Test Runner или MCP (`run_tests` / `get_test_job`, группа `testing`).
 - После правки кода: проверить `read_console` на ошибки компиляции и прогнать затронутые тесты.
 

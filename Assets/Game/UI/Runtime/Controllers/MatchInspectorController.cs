@@ -91,7 +91,7 @@ namespace Game.UI.Controllers
         {
             if (_matchRuntime == null)
             {
-                _matchRuntime = FindAnyObjectByType<MatchRuntime>();
+                _matchRuntime = MatchRuntime.Current;
             }
 
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;

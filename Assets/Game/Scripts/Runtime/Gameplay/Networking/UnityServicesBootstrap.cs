@@ -271,7 +271,7 @@ namespace Game.Gameplay.Networking
                     SetPlayerName(AuthenticationService.Instance.PlayerName);
                 }
 
-                Debug.Log($"UnityServicesBootstrap: signed in as {AuthenticationService.Instance.PlayerId}");
+                PlaytestLog.Info("UGS", "SignedIn", ("playerId", AuthenticationService.Instance.PlayerId));
             }
             catch (Exception ex)
             {
