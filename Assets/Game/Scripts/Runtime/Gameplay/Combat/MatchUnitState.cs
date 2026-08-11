@@ -62,6 +62,8 @@ namespace Game.Gameplay.Combat
         public float FrostCooldownRemaining { get; set; }
         /// <summary>Cooldown until this unit can cast Resurrect again (Caster role). Transient host state.</summary>
         public float ResurrectCooldownRemaining { get; set; }
+        /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
+        public float FrozenRemainingSeconds { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>
         public int AttackSwingSerial { get; set; }
         public UnitBehaviorState BehaviorState { get; set; }

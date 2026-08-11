@@ -24,6 +24,8 @@ namespace Game.Gameplay.Networking
         public MatchResearchSnapshot[] Research = Array.Empty<MatchResearchSnapshot>();
         public MatchBarracksSnapshot[] Barracks = Array.Empty<MatchBarracksSnapshot>();
         public MatchCenterLaneSnapshot[] CenterLanes = Array.Empty<MatchCenterLaneSnapshot>();
+        /// <summary>Transient host cast events synced to clients for spell VFX (v9+).</summary>
+        public MatchSpellSnapshot[] SpellCasts = Array.Empty<MatchSpellSnapshot>();
         /// <summary>Debug hash (0 = unset). Host fills via <see cref="MatchSnapshotChecksum"/>.</summary>
         public uint Checksum;
     }
@@ -65,6 +67,8 @@ namespace Game.Gameplay.Networking
         public float FacingX;
         public float FacingZ;
         public float Health;
+        /// <summary>Current mana. 0 on pre-v8 snapshots.</summary>
+        public float Mana;
         public bool IsAlive;
         /// <summary><see cref="Combat.UnitBehaviorState"/> as byte. 0 on pre-v6 snapshots.</summary>
         public byte BehaviorState;
@@ -104,9 +108,21 @@ namespace Game.Gameplay.Networking
         public int OpponentSlot;
     }
 
+    public struct MatchSpellSnapshot
+    {
+        public int Serial;
+        public int CasterUnitId;
+        public int OwnerSlot;
+        public byte SpellType;
+        public int TargetUnitId;
+        public float CenterX;
+        public float CenterZ;
+        public float Radius;
+    }
+
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 9;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -170,6 +186,7 @@ namespace Game.Gameplay.Networking
                     writer.Write(u.IsAlive);
                     writer.Write(u.BehaviorState);
                     writer.Write(u.AttackSwingSerial);
+                    writer.Write(u.Mana);
                 }
             }
 
@@ -213,6 +230,22 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            writer.Write(snapshot.SpellCasts?.Length ?? 0);
+            if (snapshot.SpellCasts != null)
+            {
+                foreach (var c in snapshot.SpellCasts)
+                {
+                    writer.Write(c.Serial);
+                    writer.Write(c.CasterUnitId);
+                    writer.Write(c.OwnerSlot);
+                    writer.Write(c.SpellType);
+                    writer.Write(c.TargetUnitId);
+                    writer.Write(c.CenterX);
+                    writer.Write(c.CenterZ);
+                    writer.Write(c.Radius);
+                }
+            }
+
             writer.Write(snapshot.Checksum);
 
             return stream.ToArray();
@@ -228,7 +261,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -313,6 +346,11 @@ namespace Game.Gameplay.Networking
                     unit.AttackSwingSerial = reader.ReadInt32();
                 }
 
+                if (version >= 8)
+                {
+                    unit.Mana = reader.ReadSingle();
+                }
+
                 snapshot.Units[i] = unit;
             }
 
@@ -367,6 +405,26 @@ namespace Game.Gameplay.Networking
                     {
                         OwnerSlot = reader.ReadInt32(),
                         OpponentSlot = reader.ReadInt32(),
+                    };
+                }
+            }
+
+            if (version >= 9)
+            {
+                var spellCount = reader.ReadInt32();
+                snapshot.SpellCasts = new MatchSpellSnapshot[spellCount];
+                for (var i = 0; i < spellCount; i++)
+                {
+                    snapshot.SpellCasts[i] = new MatchSpellSnapshot
+                    {
+                        Serial = reader.ReadInt32(),
+                        CasterUnitId = reader.ReadInt32(),
+                        OwnerSlot = reader.ReadInt32(),
+                        SpellType = reader.ReadByte(),
+                        TargetUnitId = reader.ReadInt32(),
+                        CenterX = reader.ReadSingle(),
+                        CenterZ = reader.ReadSingle(),
+                        Radius = reader.ReadSingle(),
                     };
                 }
             }
@@ -430,6 +488,7 @@ namespace Game.Gameplay.Networking
                     FacingX = u.FacingDirection.x,
                     FacingZ = u.FacingDirection.z,
                     Health = u.CurrentHp,
+                    Mana = u.CurrentMana,
                     IsAlive = u.IsAlive,
                     BehaviorState = (byte)u.BehaviorState,
                     AttackSwingSerial = u.AttackSwingSerial,
@@ -506,6 +565,24 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            var spellCasts = new List<MatchSpellSnapshot>();
+            foreach (var c in controller.Combat.NetworkSpellCasts)
+            {
+                spellCasts.Add(new MatchSpellSnapshot
+                {
+                    Serial = c.Serial,
+                    CasterUnitId = c.CasterUnitId,
+                    OwnerSlot = c.OwnerSlot,
+                    SpellType = (byte)c.SpellType,
+                    TargetUnitId = c.TargetUnitId,
+                    CenterX = c.CenterPosition.x,
+                    CenterZ = c.CenterPosition.z,
+                    Radius = c.Radius,
+                });
+            }
+
+            controller.Combat.ClearNetworkSpellCasts();
+
             var snapshot = new MatchSnapshot
             {
                 PlayerCount = controller.Players.Count,
@@ -518,6 +595,7 @@ namespace Game.Gameplay.Networking
                 Research = research.ToArray(),
                 Barracks = barracks.ToArray(),
                 CenterLanes = centerLanes.ToArray(),
+                SpellCasts = spellCasts.ToArray(),
             };
             snapshot.Checksum = MatchSnapshotChecksum.Compute(snapshot);
             return snapshot;

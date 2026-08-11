@@ -98,7 +98,8 @@ namespace Game.Gameplay.Combat
             float flightDuration,
             UnityEngine.Vector3 start,
             UnityEngine.Vector3 end,
-            int sourceBuildingInstanceId)
+            int sourceBuildingInstanceId,
+            string sourceBuildingId)
         {
             var projectile = new CombatProjectileState(
                 _nextId++,
@@ -113,7 +114,8 @@ namespace Game.Gameplay.Combat
                 end,
                 isParabolic: false,
                 targetBuildingInstanceId: null,
-                sourceBuildingInstanceId: sourceBuildingInstanceId);
+                sourceBuildingInstanceId: sourceBuildingInstanceId,
+                sourceBuildingId: sourceBuildingId);
             _active.Add(projectile);
             return projectile;
         }

@@ -19,7 +19,8 @@ namespace Game.Gameplay.Combat
             CasterSpellType spellType,
             int targetUnitId,
             Vector3 centerPosition,
-            float radius)
+            float radius,
+            int serial = 0)
         {
             CasterUnitId = casterUnitId;
             OwnerSlot = ownerSlot;
@@ -27,6 +28,7 @@ namespace Game.Gameplay.Combat
             TargetUnitId = targetUnitId;
             CenterPosition = centerPosition;
             Radius = radius;
+            Serial = serial;
         }
 
         public int CasterUnitId { get; }
@@ -35,33 +37,56 @@ namespace Game.Gameplay.Combat
         public int TargetUnitId { get; }
         public Vector3 CenterPosition { get; }
         public float Radius { get; }
+        /// <summary>Monotonic per-match cast sequence number (host-side).</summary>
+        public int Serial { get; }
     }
 
     /// <summary>
     /// Combat spell tuning + target-selection helpers for Caster units.
-    /// GDD baseline: SPELL_HUMAN_1 heal 80 / r6 / cd10, SPELL_HUMAN_2 frost AoE r5 dmg40 / cd14,
-    /// SPELL_HUMAN_3 resurrect corpse <=20s / cd30. All spells cast range 6.
+    /// GDD baseline: SPELL_HUMAN_1 heal 80 / r6 / cd10 / mana50, SPELL_HUMAN_2 frost AoE r5 dmg40 / cd14 / mana75,
+    /// SPELL_HUMAN_3 resurrect corpse <=20s / cd30 / mana150. All spells cast range 6.
+    /// Caster pool 200 mana; regenerates at <see cref="ManaRegenPerSecond"/> (5/s ≈ covers one cast per CD).
     /// </summary>
     public static class CasterSpellRules
     {
         public const float CastRange = 6f;
 
+        /// <summary>Mana refilled per second for mana units (Caster 200 pool).</summary>
+        public const float ManaRegenPerSecond = 5f;
+
         public const int HealRequiredMagicLevel = 1;
         public const float HealAmount = 80f;
+        public const float HealManaCost = 50f;
         public const float HealCooldownSeconds = 10f;
 
         public const int FrostRequiredMagicLevel = 2;
         public const float FrostDamage = 40f;
         public const float FrostRadius = 5f;
+        public const float FrostManaCost = 75f;
         public const float FrostCooldownSeconds = 14f;
+        /// <summary>Hard-stun duration applied to every Frost victim.</summary>
+        public const float FrostFreezeSeconds = 1.5f;
 
         public const int ResurrectRequiredMagicLevel = 3;
         public const float ResurrectCorpseMaxAgeSeconds = 20f;
+        public const float ResurrectManaCost = 150f;
         public const float ResurrectCooldownSeconds = 30f;
 
         public static float ApplyHeal(float currentHp, float maxHp)
         {
             return Mathf.Min(maxHp, currentHp + HealAmount);
+        }
+
+        /// <summary>Floating label shown above the caster when the spell is fired.</summary>
+        public static string GetDisplayName(CasterSpellType spellType)
+        {
+            return spellType switch
+            {
+                CasterSpellType.Heal => "Heal",
+                CasterSpellType.Frost => "Frost",
+                CasterSpellType.Resurrect => "Resurrect",
+                _ => spellType.ToString(),
+            };
         }
 
         /// <summary>Lowest-HP living ally (not full health) within range. Includes the caster itself.</summary>

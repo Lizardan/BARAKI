@@ -10,7 +10,7 @@ provides: [gold_rules, costs, income_formulas]
 
 ## Ресурсы
 
-MVP — только **Gold**. Phase 2: Lumber/Mana для спеллов (optional).
+MVP — только **Gold**. **Mana для спеллов** — реализована (пул кастера **200**, реген **5/с**, кост заклинаний 50/75/150 — см. `Balance.md`). Lumber — Phase 2 (optional).
 
 ```entity
 id: RES_GOLD

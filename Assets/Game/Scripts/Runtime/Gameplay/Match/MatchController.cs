@@ -350,7 +350,7 @@ namespace Game.Gameplay.Match
             ApplyAuthoritativeBarracks(snapshot.Barracks);
             ApplyAuthoritativeResearch(snapshot.Research);
             ApplyAuthoritativeCenterLanes(snapshot.CenterLanes);
-            _combat.ApplyAuthoritativeUnits(snapshot.Units, CombatCatalog);
+            _combat.ApplyAuthoritativeUnits(snapshot.Units, snapshot.SpellCasts, CombatCatalog);
 
             MatchTimeSeconds = snapshot.MatchTimeSeconds;
 

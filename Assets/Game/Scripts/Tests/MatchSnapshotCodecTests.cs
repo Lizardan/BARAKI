@@ -119,6 +119,55 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V9_PreservesSpellCasts()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                SpellCasts = new[]
+                {
+                    new MatchSpellSnapshot
+                    {
+                        Serial = 3,
+                        CasterUnitId = 11,
+                        OwnerSlot = 0,
+                        SpellType = (byte)CasterSpellType.Frost,
+                        TargetUnitId = 14,
+                        CenterX = 12.5f,
+                        CenterZ = -4.25f,
+                        Radius = 5f,
+                    },
+                    new MatchSpellSnapshot
+                    {
+                        Serial = 4,
+                        CasterUnitId = 11,
+                        OwnerSlot = 0,
+                        SpellType = (byte)CasterSpellType.Heal,
+                        TargetUnitId = 12,
+                        CenterX = 8f,
+                        CenterZ = 2f,
+                        Radius = 0f,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(2, restored.SpellCasts.Length);
+            Assert.AreEqual(3, restored.SpellCasts[0].Serial);
+            Assert.AreEqual(11, restored.SpellCasts[0].CasterUnitId);
+            Assert.AreEqual((byte)CasterSpellType.Frost, restored.SpellCasts[0].SpellType);
+            Assert.AreEqual(14, restored.SpellCasts[0].TargetUnitId);
+            Assert.AreEqual(12.5f, restored.SpellCasts[0].CenterX, 0.01f);
+            Assert.AreEqual(-4.25f, restored.SpellCasts[0].CenterZ, 0.01f);
+            Assert.AreEqual(5f, restored.SpellCasts[0].Radius, 0.01f);
+            Assert.AreEqual((byte)CasterSpellType.Heal, restored.SpellCasts[1].SpellType);
+        }
+
+        [Test]
         public void Capture_RoundTrip_PreservesBarracksTimerAndUnitAttackAnim()
         {
             var controller = new MatchController();

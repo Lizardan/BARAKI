@@ -397,6 +397,89 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Tick_MarchAvoidance_FlyingIgnoresGroundBlocker()
+        {
+            var groundVsGround = TickMarchFirstStepLateral(UnitRole.Melee, UnitRole.Melee);
+            Assert.Greater(
+                Mathf.Abs(groundVsGround),
+                0.05f,
+                "Ground mover should still sidestep around a ground blocker.");
+
+            var flyingVsGround = TickMarchFirstStepLateral(UnitRole.Flying, UnitRole.Melee);
+            Assert.LessOrEqual(
+                Mathf.Abs(flyingVsGround),
+                0.05f,
+                "Flying mover must not sidestep around a ground blocker.");
+
+            var flyingVsFlying = TickMarchFirstStepLateral(UnitRole.Flying, UnitRole.Flying);
+            Assert.Greater(
+                Mathf.Abs(flyingVsFlying),
+                0.05f,
+                "Flying mover should still sidestep around a flying blocker.");
+        }
+
+        float TickMarchFirstStepLateral(UnitRole moverRole, UnitRole blockerRole)
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            var moverStats = new UnitCombatStats(
+                moverRole,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 6f,
+                goldBounty: 1);
+            var blockerStats = new UnitCombatStats(
+                blockerRole,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane);
+            var route = LaneRoute.FromPath(lane.Path);
+            const float distance = 8f;
+            var spine = route.EvaluateDistance(distance);
+            var forward = route.EvaluateDirectionAtDistance(distance);
+            forward.y = 0f;
+            forward.Normalize();
+            var right = Vector3.Cross(Vector3.up, forward).normalized;
+
+            var mover = combat.SpawnUnit(0, GameIds.Lanes.Center, moverRole, moverStats, distance);
+            var blocker = combat.SpawnUnit(
+                0,
+                GameIds.Lanes.Center,
+                blockerRole,
+                blockerStats,
+                distance + 1.1f);
+            blocker.WorldPosition = spine + forward * 1.1f;
+            blocker.MarchProgressDistance = distance + 1.1f;
+            mover.WorldPosition = spine;
+            mover.MarchProgressDistance = distance;
+            mover.FacingDirection = forward;
+
+            var before = mover.WorldPosition;
+            combat.Tick(0.05f);
+            var movement = mover.WorldPosition - before;
+            movement.y = 0f;
+
+            return movement.sqrMagnitude > 0.0001f
+                ? Vector3.Dot(movement.normalized, right)
+                : 0f;
+        }
+
+        [Test]
         public void Tick_KillGrantsBountyToKillerOwner()
         {
             var controller = new MatchController();

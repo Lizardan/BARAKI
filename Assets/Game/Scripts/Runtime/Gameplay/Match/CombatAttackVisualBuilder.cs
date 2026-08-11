@@ -6,121 +6,91 @@ namespace Game.Gameplay.Match
 {
     public static class CombatAttackVisualBuilder
     {
-        static readonly Color HumanArrowColor = new(0.45f, 0.28f, 0.12f);
         static readonly Color HumanSpellColor = new(0.9f, 0.15f, 0.1f);
 
         const float ProjectileScale = 2f;
+        /// <summary>Bolt prefab already carries a 0.5 normalized scale; these multipliers keep small shots compact and big shots prominent.</summary>
+        const float BoltScaleLarge = 1f;
+        const float BoltScaleSmall = 0.75f;
 
         static Material _fireMaterial;
-        static Material _arrowShaftMaterial;
-        static Material _arrowHeadMaterial;
         static GameObject _boltPrefab;
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
-            GameObject visual;
-            if (projectile.IsBuildingAttack)
-            {
-                visual = CreateBuildingShot(projectile);
-            }
-            else if (projectile.AttackerRole == UnitRole.Caster)
-            {
-                visual = CreateFireball(projectile);
-            }
-            else if (projectile.AttackerRole is UnitRole.Ranged or UnitRole.Flying)
-            {
-                visual = CreateArrow(projectile);
-            }
-            else if (projectile.AttackerRole == UnitRole.Super)
-            {
-                visual = CreateBolt(projectile);
-            }
-            else
-            {
-                visual = CreateRoleCube(projectile, 0.2f * ProjectileScale, HumanSpellColor);
-            }
+            var visual = projectile.AttackerRole == UnitRole.Caster
+                ? CreateFireball(projectile)
+                : CreateBolt(projectile, ResolveBoltScale(projectile));
 
             visual.transform.SetParent(parent, false);
             return visual;
         }
 
-        static Material LoadMaterial(string path)
+        static float ResolveBoltScale(CombatProjectileState projectile)
         {
-            var material = Resources.Load<Material>(path);
-            return material != null ? material : null;
+            if (projectile.IsBuildingAttack)
+            {
+                return BuildingRules.IsMain(projectile.SourceBuildingId) ? BoltScaleLarge : BoltScaleSmall;
+            }
+
+            return projectile.AttackerRole == UnitRole.Super ? BoltScaleLarge : BoltScaleSmall;
         }
 
-        static GameObject CreateBuildingShot(CombatProjectileState projectile)
-        {
-            var visual = CreatePrimitiveRoot(PrimitiveType.Cube, $"BuildingShot_{projectile.ProjectileId}");
-            visual.transform.localScale = Vector3.one * TowerCombatRules.ProjectileCubeScale;
-            ApplyColor(visual, MatchPlayerColors.GetSlotColor(projectile.AttackerOwnerSlot));
-            return visual;
-        }
+        static Material LoadMaterial(string path) => Resources.Load<Material>(path);
 
-        static GameObject CreateRoleCube(CombatProjectileState projectile, float scale, Color color)
-        {
-            var visual = CreatePrimitiveRoot(PrimitiveType.Cube, $"Projectile_{projectile.ProjectileId}");
-            visual.transform.localScale = Vector3.one * scale;
-            ApplyColor(visual, color);
-            return visual;
-        }
-
-        static GameObject CreateArrow(CombatProjectileState projectile)
+        static GameObject CreateBolt(CombatProjectileState projectile, float scale)
         {
             var root = new GameObject($"Projectile_{projectile.ProjectileId}");
-            root.transform.localScale = Vector3.one;
-
-            if (_arrowShaftMaterial == null) _arrowShaftMaterial = LoadMaterial("Art/ProjectileArrowShaft");
-            if (_arrowHeadMaterial == null) _arrowHeadMaterial = LoadMaterial("Art/ProjectileArrowHead");
-
-            var shaft = CreatePrimitiveRoot(PrimitiveType.Cube, "Shaft");
-            shaft.transform.SetParent(root.transform, false);
-            shaft.transform.localScale = new Vector3(0.05f, 0.05f, 0.5f);
-            ApplyMaterial(shaft, _arrowShaftMaterial);
-
-            var head = CreatePrimitiveRoot(PrimitiveType.Cube, "Head");
-            head.transform.SetParent(root.transform, false);
-            head.transform.localPosition = new Vector3(0f, 0f, 0.26f);
-            head.transform.localScale = new Vector3(0.12f, 0.12f, 0.14f);
-            ApplyMaterial(head, _arrowHeadMaterial);
-
-            return root;
-        }
-
-        /// <summary>Ballista bolt — uses the actual bolt model from the TT ballista pack.</summary>
-        static GameObject CreateBolt(CombatProjectileState projectile)
-        {
-            var root = new GameObject($"Projectile_{projectile.ProjectileId}");
-            root.transform.localScale = Vector3.one;
+            root.transform.localScale = Vector3.one * scale;
 
             if (_boltPrefab == null) _boltPrefab = LoadBoltPrefab();
             if (_boltPrefab != null)
             {
                 var bolt = Object.Instantiate(_boltPrefab, root.transform, false);
                 bolt.name = "Bolt";
-                return root;
+            }
+            else
+            {
+                CreateRoleCube(root.transform, 0.15f * ProjectileScale, HumanSpellColor);
             }
 
-            // Fallback (no Resources): thick arrow-shaped bolt.
-            if (_arrowShaftMaterial == null) _arrowShaftMaterial = LoadMaterial("Art/ProjectileArrowShaft");
-            if (_arrowHeadMaterial == null) _arrowHeadMaterial = LoadMaterial("Art/ProjectileArrowHead");
-
-            var shaft = CreatePrimitiveRoot(PrimitiveType.Cube, "Shaft");
-            shaft.transform.SetParent(root.transform, false);
-            shaft.transform.localScale = new Vector3(0.09f, 0.09f, 0.75f);
-            ApplyMaterial(shaft, _arrowShaftMaterial);
-
-            var head = CreatePrimitiveRoot(PrimitiveType.Cube, "Head");
-            head.transform.SetParent(root.transform, false);
-            head.transform.localPosition = new Vector3(0f, 0f, 0.4f);
-            head.transform.localScale = new Vector3(0.16f, 0.16f, 0.18f);
-            ApplyMaterial(head, _arrowHeadMaterial);
+            var teamColor = root.GetComponentInChildren<TtUnitTeamColor>(true);
+            if (teamColor != null)
+            {
+                teamColor.ApplyTeamColor(MatchPlayerColors.GetSlotColor(projectile.AttackerOwnerSlot));
+            }
 
             return root;
         }
 
         static GameObject LoadBoltPrefab() => Resources.Load<GameObject>("Art/ProjectileBolt");
+
+        static void CreateRoleCube(Transform parent, float scale, Color color)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = "BoltFallback";
+            cube.transform.SetParent(parent, false);
+            cube.transform.localScale = Vector3.one * scale;
+
+            var collider = cube.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Object.Destroy(collider);
+                }
+                else
+                {
+                    Object.DestroyImmediate(collider);
+                }
+            }
+
+            var renderer = cube.GetComponent<Renderer>();
+            if (renderer == null) return;
+            var block = new MaterialPropertyBlock();
+            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
+            renderer.SetPropertyBlock(block);
+        }
 
         static GameObject CreateFireball(CombatProjectileState projectile)
         {
@@ -168,52 +138,12 @@ namespace Game.Gameplay.Match
             return visual;
         }
 
-        static void ApplyColor(GameObject visual, Color color)
-        {
-            var renderer = visual.GetComponent<Renderer>();
-            if (renderer == null) return;
-            var block = new MaterialPropertyBlock();
-            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
-            renderer.SetPropertyBlock(block);
-        }
-
         static void ApplyMaterial(GameObject visual, Material material)
         {
             if (material == null) return;
             var renderer = visual.GetComponent<Renderer>();
             if (renderer == null) return;
             renderer.sharedMaterial = material;
-        }
-
-        /// <summary>Building shots = owner-colored cubes; unit shots keep race/role styling.</summary>
-        public static void ResolveVisualStyle(
-            CombatProjectileState projectile,
-            out PrimitiveType primitive,
-            out Vector3 localScale,
-            out Color color)
-        {
-            if (projectile.IsBuildingAttack)
-            {
-                primitive = PrimitiveType.Cube;
-                localScale = Vector3.one * TowerCombatRules.ProjectileCubeScale;
-                color = MatchPlayerColors.GetSlotColor(projectile.AttackerOwnerSlot);
-                return;
-            }
-
-            var isRanged = projectile.AttackerRole is UnitRole.Ranged or UnitRole.Flying;
-            var isCaster = projectile.AttackerRole == UnitRole.Caster;
-
-            if (isRanged)
-            {
-                primitive = PrimitiveType.Cube;
-                localScale = new Vector3(0.08f, 0.08f, 0.55f) * ProjectileScale;
-                color = HumanArrowColor;
-                return;
-            }
-
-            primitive = PrimitiveType.Cube;
-            localScale = Vector3.one * ((isCaster ? 0.24f : 0.2f) * ProjectileScale);
-            color = HumanSpellColor;
         }
 
         public static void UpdateProjectileTransform(Transform visual, CombatProjectileState projectile)

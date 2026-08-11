@@ -80,6 +80,11 @@ namespace Game.Gameplay.Match
             SetBarFill(_healthFill, ref _lastHealthFill, normalized, true);
         }
 
+        /// <summary>Local Y of the HP bar top face relative to this bars root (for "+" / label placement).</summary>
+        public float HealthBarTopLocalY => _manaFill != null
+            ? BarSpacing * 0.5f + BarHeight
+            : BarHeight * 0.5f;
+
         public void SetMana(float normalized)
         {
             if (_manaFill == null)

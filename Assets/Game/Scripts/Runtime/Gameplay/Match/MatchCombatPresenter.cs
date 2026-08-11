@@ -97,6 +97,7 @@ namespace Game.Gameplay.Match
 
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
+            SyncSpellCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(Time.deltaTime);
         }
@@ -118,6 +119,7 @@ namespace Game.Gameplay.Match
 
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
+            SyncSpellCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(0f);
         }
@@ -523,6 +525,76 @@ namespace Game.Gameplay.Match
             }
         }
 
+        /// <summary>Plays host + client spell-cast events (label over caster, "+" over target, Frost ring).</summary>
+        void SyncSpellCasts(MatchCombatSystem combat)
+        {
+            if (!CanSpawnFx())
+            {
+                return;
+            }
+
+            foreach (var cast in combat.ConsumePendingSpellCasts())
+            {
+                ShowSpellFx(cast);
+            }
+        }
+
+        void ShowSpellFx(CasterSpellCastEvent cast)
+        {
+            var color = SpellFxColor(cast.SpellType);
+            if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
+            {
+                SpellFxFactory.CreateLabel(
+                    _root,
+                    casterTop + Vector3.up * 0.45f,
+                    CasterSpellRules.GetDisplayName(cast.SpellType),
+                    color);
+            }
+
+            switch (cast.SpellType)
+            {
+                case CasterSpellType.Heal:
+                    if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
+                    {
+                        SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
+                    }
+
+                    break;
+                case CasterSpellType.Frost:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, FrostFxColor);
+                    break;
+                case CasterSpellType.Resurrect:
+                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 0.6f, ResurrectFxColor);
+                    break;
+            }
+        }
+
+        bool TryGetUnitBarTop(int unitId, out Vector3 position)
+        {
+            position = default;
+            if (!_visuals.TryGetValue(unitId, out var visual)
+                || visual?.Root == null
+                || visual.StatusBars == null)
+            {
+                return false;
+            }
+
+            position = visual.StatusBars.transform.position
+                       + Vector3.up * visual.StatusBars.HealthBarTopLocalY;
+            return true;
+        }
+
+        static Color SpellFxColor(CasterSpellType spellType)
+        {
+            return spellType switch
+            {
+                CasterSpellType.Heal => HealFxColor,
+                CasterSpellType.Frost => FrostFxColor,
+                CasterSpellType.Resurrect => ResurrectFxColor,
+                _ => Color.white,
+            };
+        }
+
         bool CanSpawnFx() => Application.isPlaying && _fxCatalog != null;
 
         static string ResolveRaceId(MatchUnitState unit, MatchController controller)
@@ -715,5 +787,9 @@ namespace Game.Gameplay.Match
         const float BloodFxLifetimeSeconds = 1.2f;
         const float MachineFxLifetimeSeconds = 5f;
         const float ImpactFxLifetimeSeconds = 1.5f;
+
+        static readonly Color HealFxColor = new Color(0.25f, 1f, 0.4f, 1f);
+        static readonly Color FrostFxColor = new Color(0.35f, 0.65f, 1f, 1f);
+        static readonly Color ResurrectFxColor = new Color(1f, 0.85f, 0.25f, 1f);
     }
 }

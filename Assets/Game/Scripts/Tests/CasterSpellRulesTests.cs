@@ -23,10 +23,11 @@ namespace Game.Tests
                 attackSpeed: 0.1f,
                 attackRange: 30f,
                 moveSpeed: 0f,
-                goldBounty: 1);
+                goldBounty: 1,
+                maxMana: 200f);
         }
 
-        static UnitCombatStats UnitStats(UnitRole role, float maxHp = 100f, int bounty = 1)
+        static UnitCombatStats UnitStats(UnitRole role, float maxHp = 100f, int bounty = 1, float moveSpeed = 0f)
         {
             return new UnitCombatStats(
                 role,
@@ -36,7 +37,7 @@ namespace Game.Tests
                 damageMax: 1f,
                 attackSpeed: 0.1f,
                 attackRange: 1f,
-                moveSpeed: 0f,
+                moveSpeed: moveSpeed,
                 goldBounty: bounty);
         }
 
@@ -196,6 +197,36 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Caster_Frost_FreezesVictimsAndStopsTheirMovement()
+        {
+            var combat = CreateCombat(magicLevel: 2);
+            var caster = combat.SpawnUnit(0, Center, UnitRole.Caster, CasterStats());
+            var e1 = combat.SpawnUnit(1, Center, UnitRole.Melee, UnitStats(UnitRole.Melee, moveSpeed: 5f));
+            Place(caster, new Vector3(0f, 0f, 0f));
+            Place(e1, new Vector3(0f, 0f, 2f));
+
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(60f, e1.CurrentHp, 0.01f, "Frost still deals its AoE damage.");
+            Assert.Greater(e1.FrozenRemainingSeconds, 0f, "Frost victim should be frozen.");
+            Assert.AreEqual(UnitBehaviorState.Frozen, e1.BehaviorState, "Frozen unit should report Frozen behavior state.");
+
+            var frozenAt = e1.WorldPosition;
+            var ticks = 0;
+            while (e1.FrozenRemainingSeconds > 0f && ticks < 100)
+            {
+                combat.Tick(0.1f);
+                Assert.AreEqual(frozenAt, e1.WorldPosition, "Frozen unit must not move while stunned.");
+                ticks++;
+            }
+
+            Assert.Greater(ticks, 0);
+            Assert.AreEqual(0f, e1.FrozenRemainingSeconds, 0.01f, "Freeze should expire after FrostFreezeSeconds.");
+            combat.Tick(0.1f);
+            Assert.AreNotEqual(frozenAt, e1.WorldPosition, "Unit should resume moving after the freeze ends.");
+        }
+
+        [Test]
         public void Caster_Resurrect_ExpiredCorpseIsCulled()
         {
             var combat = CreateCombat(magicLevel: 3);
@@ -236,6 +267,61 @@ namespace Game.Tests
             Assert.AreEqual(CasterSpellType.Heal, cast?.SpellType);
             Assert.AreEqual(100f, ally.CurrentHp, 0.01f);
             Assert.AreEqual(100f, enemy.CurrentHp, 0.01f, "Frost must not be cast while heal has a valid target.");
+        }
+
+        [Test]
+        public void Caster_Cast_ConsumesMana()
+        {
+            var combat = CreateCombat(magicLevel: 1);
+            var caster = combat.SpawnUnit(0, Center, UnitRole.Caster, CasterStats());
+            var ally = combat.SpawnUnit(0, Center, UnitRole.Melee, UnitStats(UnitRole.Melee));
+            Place(caster, new Vector3(0f, 0f, 0f));
+            Place(ally, new Vector3(0f, 0f, 1f));
+            ally.CurrentHp = 30f;
+
+            Assert.AreEqual(200f, caster.CurrentMana, 0.01f, "Caster should spawn at full mana.");
+
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(100f, ally.CurrentHp, 0.01f);
+            Assert.AreEqual(
+                200f - CasterSpellRules.HealManaCost,
+                caster.CurrentMana,
+                0.01f,
+                "Heal should spend its mana cost (regen clamps at the full pool first).");
+        }
+
+        [Test]
+        public void Caster_NotEnoughMana_DoesNotCast()
+        {
+            var combat = CreateCombat(magicLevel: 1);
+            var caster = combat.SpawnUnit(0, Center, UnitRole.Caster, CasterStats());
+            var ally = combat.SpawnUnit(0, Center, UnitRole.Melee, UnitStats(UnitRole.Melee));
+            Place(caster, new Vector3(0f, 0f, 0f));
+            Place(ally, new Vector3(0f, 0f, 1f));
+            ally.CurrentHp = 30f;
+            caster.CurrentMana = 0f;
+
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(30f, ally.CurrentHp, 0.01f, "No heal without enough mana.");
+            Assert.AreEqual(0f, caster.HealCooldownRemaining, 0.01f, "Cooldown must not arm on a failed cast.");
+        }
+
+        [Test]
+        public void Caster_ManaRegen_FillsAndClampsToMax()
+        {
+            var combat = CreateCombat(magicLevel: 1);
+            var caster = combat.SpawnUnit(0, Center, UnitRole.Caster, CasterStats());
+            // No valid heal target (caster at full HP, no allies/foes) -> pure regen path.
+            Place(caster, new Vector3(0f, 0f, 0f));
+            caster.CurrentMana = 10f;
+
+            combat.Tick(1f);
+            Assert.AreEqual(15f, caster.CurrentMana, 0.01f, "Mana should regen at 5/s.");
+
+            combat.Tick(40f);
+            Assert.AreEqual(200f, caster.CurrentMana, 0.01f, "Mana should clamp at the pool max.");
         }
     }
 }

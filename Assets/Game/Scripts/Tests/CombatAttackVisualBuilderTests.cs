@@ -8,62 +8,70 @@ namespace Game.Tests
 {
     public sealed class CombatAttackVisualBuilderTests
     {
-        [Test]
-        public void ResolveVisualStyle_BuildingAttack_IsOwnerColoredCube()
+        static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+
+        static CombatProjectileState BuildProjectile(
+            UnitRole role,
+            int ownerSlot = 0,
+            bool fromBuilding = false,
+            string sourceBuildingId = null)
         {
-            var projectile = new CombatProjectileState(
-                projectileId: 1,
-                attackerUnitId: 0,
-                targetUnitId: 2,
-                attackerOwnerSlot: 1,
-                attackerRole: UnitRole.Ranged,
-                attackerRaceId: Game.Core.GameIds.Races.Human,
-                rawDamage: 20f,
-                flightDuration: 0.5f,
-                startPosition: Vector3.zero,
-                targetPosition: Vector3.forward,
-                isParabolic: false,
-                targetBuildingInstanceId: null,
-                sourceBuildingInstanceId: 44);
-
-            CombatAttackVisualBuilder.ResolveVisualStyle(
-                projectile,
-                out var primitive,
-                out var scale,
-                out var color);
-
-            Assert.AreEqual(PrimitiveType.Cube, primitive);
-            Assert.AreEqual(
-                Vector3.one * TowerCombatRules.ProjectileCubeScale,
-                scale);
-            Assert.AreEqual(MatchPlayerColors.GetSlotColor(1), color);
-        }
-
-        [Test]
-        public void CreateProjectileVisual_Ranged_BuildsArrowWithShaftAndHead()
-        {
-            var projectile = new CombatProjectileState(
+            return new CombatProjectileState(
                 projectileId: 7,
-                attackerUnitId: 1,
+                attackerUnitId: fromBuilding ? 0 : 1,
                 targetUnitId: 3,
-                attackerOwnerSlot: 0,
-                attackerRole: UnitRole.Ranged,
+                attackerOwnerSlot: ownerSlot,
+                attackerRole: role,
                 attackerRaceId: Game.Core.GameIds.Races.Human,
                 rawDamage: 12f,
                 flightDuration: 0.6f,
                 startPosition: Vector3.zero,
                 targetPosition: Vector3.forward * 6f,
-                isParabolic: true);
+                isParabolic: true,
+                targetBuildingInstanceId: null,
+                sourceBuildingInstanceId: fromBuilding ? 44 : null,
+                sourceBuildingId: sourceBuildingId);
+        }
 
+        [Test]
+        public void CreateProjectileVisual_Ranged_BuildsSmallBoltWithTeamColor()
+        {
+            var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 1);
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            var shaft = visual.transform.Find("Shaft");
-            var head = visual.transform.Find("Head");
-            Assert.IsNotNull(shaft, "Arrow should have a Shaft child");
-            Assert.IsNotNull(head, "Arrow should have a Head child");
-            Assert.IsTrue(visual.GetComponentsInChildren<Collider>().Length == 0, "Arrow children must not have colliders");
-            Assert.AreEqual(Vector3.one, visual.transform.localScale);
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Ranged shot should use the bolt prefab");
+            AssertScaleNear(visual.transform.localScale, 0.75f);
+            Assert.IsTrue(visual.GetComponentsInChildren<Collider>().Length == 0, "Bolt must not have colliders");
+            AssertTeamColorApplied(visual, MatchPlayerColors.GetSlotColor(1));
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void CreateProjectileVisual_Flying_BuildsSmallBolt()
+        {
+            var projectile = BuildProjectile(UnitRole.Flying, ownerSlot: 2);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Flying shot should use the bolt prefab");
+            AssertScaleNear(visual.transform.localScale, 0.75f);
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void CreateProjectileVisual_Super_BuildsLargeBolt()
+        {
+            var projectile = BuildProjectile(UnitRole.Super, ownerSlot: 0);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Super shot should use the bolt prefab");
+            AssertScaleNear(visual.transform.localScale, 1f);
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
@@ -72,19 +80,7 @@ namespace Game.Tests
         [Test]
         public void CreateProjectileVisual_Caster_BuildsFireballWithTrail()
         {
-            var projectile = new CombatProjectileState(
-                projectileId: 8,
-                attackerUnitId: 1,
-                targetUnitId: 3,
-                attackerOwnerSlot: 2,
-                attackerRole: UnitRole.Caster,
-                attackerRaceId: Game.Core.GameIds.Races.Human,
-                rawDamage: 18f,
-                flightDuration: 0.6f,
-                startPosition: Vector3.zero,
-                targetPosition: Vector3.forward * 6f,
-                isParabolic: false);
-
+            var projectile = BuildProjectile(UnitRole.Caster, ownerSlot: 2);
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
@@ -97,31 +93,57 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CreateProjectileVisual_BuildingShot_IsSingleOwnerColoredCube()
+        public void CreateProjectileVisual_BuildingShot_IsSmallOwnerColoredBolt()
         {
-            var projectile = new CombatProjectileState(
-                projectileId: 9,
-                attackerUnitId: 0,
-                targetUnitId: 2,
-                attackerOwnerSlot: 3,
-                attackerRole: UnitRole.Ranged,
-                attackerRaceId: Game.Core.GameIds.Races.Human,
-                rawDamage: 20f,
-                flightDuration: 0.5f,
-                startPosition: Vector3.zero,
-                targetPosition: Vector3.forward,
-                isParabolic: false,
-                targetBuildingInstanceId: null,
-                sourceBuildingInstanceId: 44);
-
+            var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 3, fromBuilding: true, sourceBuildingId: "BUILDING_TOWER");
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNull(visual.transform.Find("Shaft"), "Building shot should be a plain cube, not an arrow");
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Building shot should use the bolt prefab");
             Assert.IsNull(visual.GetComponent<TrailRenderer>(), "Building shot should have no trail");
+            AssertScaleNear(visual.transform.localScale, 0.75f);
+            AssertTeamColorApplied(visual, MatchPlayerColors.GetSlotColor(3));
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void CreateProjectileVisual_MainBuildingShot_IsLargeBolt()
+        {
+            var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 1, fromBuilding: true, sourceBuildingId: Game.Core.GameIds.Buildings.Main);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Main building shot should use the bolt prefab");
+            AssertScaleNear(visual.transform.localScale, 1f);
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
+        static void AssertScaleNear(Vector3 scale, float expected)
+        {
+            Assert.IsTrue(
+                Mathf.Abs(scale.x - expected) < 0.001f
+                && Mathf.Abs(scale.y - expected) < 0.001f
+                && Mathf.Abs(scale.z - expected) < 0.001f,
+                $"Expected uniform scale {expected}, got {scale}");
+        }
+
+        static void AssertTeamColorApplied(GameObject visual, Color slotColor)
+        {
+            var renderer = visual.GetComponentInChildren<Renderer>(true);
+            Assert.IsNotNull(renderer, "Bolt should have a renderer");
+            var block = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            var texture = block.GetTexture(BaseMapId);
+            Assert.IsNotNull(texture, "Bolt should carry a team-color _BaseMap override");
+            var teamColor = visual.GetComponentInChildren<TtUnitTeamColor>(true);
+            Assert.IsNotNull(teamColor, "Bolt prefab should carry TtUnitTeamColor");
+            Assert.IsTrue(
+                teamColor.TeamTextures != null && teamColor.TeamTextures.Length == 4,
+                "TeamTextures should contain all 4 slot colors");
         }
     }
 }

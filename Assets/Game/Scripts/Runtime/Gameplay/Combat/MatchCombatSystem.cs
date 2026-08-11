@@ -32,6 +32,10 @@ namespace Game.Gameplay.Combat
         readonly List<PendingBarracksSpawn> _pendingSpawns = new();
         readonly Dictionary<int, LaneRoute> _committedRoutes = new();
         readonly List<CombatCorpseState> _corpses = new();
+        readonly List<CasterSpellCastEvent> _networkSpellCasts = new();
+        readonly List<CasterSpellCastEvent> _presenterSpellCasts = new();
+        int _spellCastSerial;
+        int _lastAppliedSpellSerial;
 
         sealed class PendingBarracksSpawn
         {
@@ -55,6 +59,26 @@ namespace Game.Gameplay.Combat
         public IReadOnlyList<CombatMeleeStrikeState> MeleeStrikes => _meleeStrikes.Active;
         /// <summary>Transient host-side corpses kept for resurrect (cull age = CasterSpellRules.ResurrectCorpseMaxAgeSeconds).</summary>
         public IReadOnlyList<CombatCorpseState> Corpses => _corpses;
+
+        /// <summary>
+        /// Casts not yet captured into a snapshot. Host: drained by <see cref="MatchSnapshotCodec.Capture"/>.
+        /// Used to sync spell VFX to clients.
+        /// </summary>
+        public IReadOnlyList<CasterSpellCastEvent> NetworkSpellCasts => _networkSpellCasts;
+
+        /// <summary>Host-only: consumed by the snapshot capture into the next <see cref="NetworkSpellCasts"/>.</summary>
+        public void ClearNetworkSpellCasts() => _networkSpellCasts.Clear();
+
+        /// <summary>
+        /// Casts pending presenter playback (host + clients). Consumers call this once per sync tick;
+        /// the same serial never reappears thanks to snapshot v9 dedup on clients.
+        /// </summary>
+        public IReadOnlyList<CasterSpellCastEvent> ConsumePendingSpellCasts()
+        {
+            var result = new List<CasterSpellCastEvent>(_presenterSpellCasts);
+            _presenterSpellCasts.Clear();
+            return result;
+        }
 
         public bool TryGetUnitWorldPosition(MatchUnitState unit, out Vector3 position)
         {
@@ -88,6 +112,10 @@ namespace Game.Gameplay.Combat
             _projectiles.Clear();
             _meleeStrikes.Clear();
             _corpses.Clear();
+            _networkSpellCasts.Clear();
+            _presenterSpellCasts.Clear();
+            _spellCastSerial = 0;
+            _lastAppliedSpellSerial = 0;
             _players.AddRange(players);
             _graph = graph;
             _routes = LaneRouteRegistry.Build(graph);
@@ -683,6 +711,7 @@ namespace Game.Gameplay.Combat
         /// </summary>
         public void ApplyAuthoritativeUnits(
             MatchUnitSnapshot[] snapshots,
+            MatchSpellSnapshot[] spellCasts = null,
             ICombatUnitCatalog catalog = null)
         {
             _spatialGrid.Clear();
@@ -718,6 +747,36 @@ namespace Game.Gameplay.Combat
 
                 _units.RemoveAt(last);
             }
+
+            ApplyAuthoritativeSpellCasts(spellCasts);
+        }
+
+        /// <summary>Client-side: forward snapshot cast events to the presenter once per serial.</summary>
+        void ApplyAuthoritativeSpellCasts(MatchSpellSnapshot[] spellCasts)
+        {
+            if (spellCasts == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < spellCasts.Length; i++)
+            {
+                var snap = spellCasts[i];
+                if (snap.Serial <= _lastAppliedSpellSerial)
+                {
+                    continue;
+                }
+
+                _lastAppliedSpellSerial = snap.Serial;
+                _presenterSpellCasts.Add(new CasterSpellCastEvent(
+                    snap.CasterUnitId,
+                    snap.OwnerSlot,
+                    (CasterSpellType)snap.SpellType,
+                    snap.TargetUnitId,
+                    new Vector3(snap.CenterX, 0.15f, snap.CenterZ),
+                    snap.Radius,
+                    snap.Serial));
+            }
         }
 
         void UpsertAuthoritativeUnit(MatchUnitSnapshot snap, ICombatUnitCatalog catalog)
@@ -740,6 +799,7 @@ namespace Game.Gameplay.Combat
                 && existing.Role == role)
             {
                 existing.CurrentHp = Mathf.Max(0f, snap.Health);
+                existing.CurrentMana = Mathf.Max(0f, snap.Mana);
                 existing.WorldPosition = position;
                 existing.FacingDirection = facing;
                 existing.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
@@ -769,6 +829,7 @@ namespace Game.Gameplay.Combat
                 marchSpawnDistance: 0f,
                 isHero: role == UnitRole.Hero);
             unit.CurrentHp = Mathf.Max(0f, snap.Health);
+            unit.CurrentMana = Mathf.Max(0f, snap.Mana);
             unit.FacingDirection = facing;
             unit.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
             unit.AttackSwingSerial = snap.AttackSwingSerial;
@@ -826,6 +887,7 @@ namespace Game.Gameplay.Combat
         /// <summary>Defensive building shot — travels as a projectile, damages on impact.</summary>
         public bool TryFireBuildingProjectile(
             int buildingInstanceId,
+            string buildingId,
             int ownerSlot,
             Vector3 buildingWorldPosition,
             int targetUnitId,
@@ -852,7 +914,8 @@ namespace Game.Gameplay.Combat
                 duration,
                 start,
                 end,
-                buildingInstanceId);
+                buildingInstanceId,
+                buildingId);
             return true;
         }
 
@@ -878,10 +941,19 @@ namespace Game.Gameplay.Combat
             _tickBuffer.Sort((a, b) => a.UnitId.CompareTo(b.UnitId));
             foreach (var unit in _tickBuffer)
             {
-                if (unit.IsAlive)
+                if (!unit.IsAlive)
                 {
-                    TickUnit(unit, deltaTime);
+                    continue;
                 }
+
+                if (unit.Stats.HasMana)
+                {
+                    unit.CurrentMana = Mathf.Min(
+                        unit.Stats.MaxMana,
+                        unit.CurrentMana + CasterSpellRules.ManaRegenPerSecond * deltaTime);
+                }
+
+                TickUnit(unit, deltaTime);
             }
 
             TickProjectiles(deltaTime);
@@ -995,6 +1067,13 @@ namespace Game.Gameplay.Combat
         {
             if (unit.IsParkedAtBase)
             {
+                return;
+            }
+
+            if (unit.FrozenRemainingSeconds > 0f)
+            {
+                unit.FrozenRemainingSeconds = Mathf.Max(0f, unit.FrozenRemainingSeconds - deltaTime);
+                unit.BehaviorState = UnitBehaviorState.Frozen;
                 return;
             }
 
@@ -1547,7 +1626,8 @@ namespace Game.Gameplay.Combat
                 if (other.UnitId == unit.UnitId
                     || !other.IsAlive
                     || other.OwnerSlot != unit.OwnerSlot
-                    || other.LaneId != unit.LaneId)
+                    || other.LaneId != unit.LaneId
+                    || !IsSameFlightCategory(unit, other))
                 {
                     continue;
                 }
@@ -1605,10 +1685,23 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
+                if (!IsSameFlightCategory(unit, other))
+                {
+                    continue;
+                }
+
                 allies.Add(other);
             }
 
             return allies;
+        }
+
+        /// <summary>
+        /// Flying units only jostle other flying units; ground units only jostle ground units.
+        /// </summary>
+        static bool IsSameFlightCategory(MatchUnitState a, MatchUnitState b)
+        {
+            return (a.Role == UnitRole.Flying) == (b.Role == UnitRole.Flying);
         }
 
         Vector3 ApplyRouteBypassIfBlocked(MatchUnitState unit, LaneRoute route, Vector3 destination)
@@ -1626,7 +1719,8 @@ namespace Game.Gameplay.Combat
                 if (other.UnitId == unit.UnitId
                     || !other.IsAlive
                     || other.OwnerSlot != unit.OwnerSlot
-                    || other.LaneId != unit.LaneId)
+                    || other.LaneId != unit.LaneId
+                    || !IsSameFlightCategory(unit, other))
                 {
                     continue;
                 }
@@ -1914,8 +2008,20 @@ namespace Game.Gameplay.Combat
             return false;
         }
 
+        void EmitSpellCast(CasterSpellCastEvent cast)
+        {
+            _networkSpellCasts.Add(cast);
+            _presenterSpellCasts.Add(cast);
+            SpellCast?.Invoke(cast);
+        }
+
         bool TryCastHeal(MatchUnitState caster)
         {
+            if (caster.CurrentMana < CasterSpellRules.HealManaCost)
+            {
+                return false;
+            }
+
             var target = CasterSpellRules.PickHealTarget(caster, _units, CasterSpellRules.CastRange);
             if (target == null)
             {
@@ -1923,19 +2029,26 @@ namespace Game.Gameplay.Combat
             }
 
             target.CurrentHp = CasterSpellRules.ApplyHeal(target.CurrentHp, target.Stats.MaxHp);
+            caster.CurrentMana -= CasterSpellRules.HealManaCost;
             caster.HealCooldownRemaining = CasterSpellRules.HealCooldownSeconds;
-            SpellCast?.Invoke(new CasterSpellCastEvent(
+            EmitSpellCast(new CasterSpellCastEvent(
                 caster.UnitId,
                 caster.OwnerSlot,
                 CasterSpellType.Heal,
                 target.UnitId,
                 target.WorldPosition,
-                0f));
+                0f,
+                ++_spellCastSerial));
             return true;
         }
 
         bool TryCastFrost(MatchUnitState caster)
         {
+            if (caster.CurrentMana < CasterSpellRules.FrostManaCost)
+            {
+                return false;
+            }
+
             var center = CasterSpellRules.PickFrostCenter(
                 caster,
                 _units,
@@ -1954,21 +2067,31 @@ namespace Game.Gameplay.Combat
             for (var i = 0; i < victims.Count; i++)
             {
                 ApplyDamage(caster, victims[i], CasterSpellRules.FrostDamage, caster.OwnerSlot);
+                victims[i].FrozenRemainingSeconds = Mathf.Max(
+                    victims[i].FrozenRemainingSeconds,
+                    CasterSpellRules.FrostFreezeSeconds);
             }
 
+            caster.CurrentMana -= CasterSpellRules.FrostManaCost;
             caster.FrostCooldownRemaining = CasterSpellRules.FrostCooldownSeconds;
-            SpellCast?.Invoke(new CasterSpellCastEvent(
+            EmitSpellCast(new CasterSpellCastEvent(
                 caster.UnitId,
                 caster.OwnerSlot,
                 CasterSpellType.Frost,
                 center.UnitId,
                 center.WorldPosition,
-                CasterSpellRules.FrostRadius));
+                CasterSpellRules.FrostRadius,
+                ++_spellCastSerial));
             return true;
         }
 
         bool TryCastResurrect(MatchUnitState caster)
         {
+            if (caster.CurrentMana < CasterSpellRules.ResurrectManaCost)
+            {
+                return false;
+            }
+
             var corpse = CasterSpellRules.PickResurrectCorpse(
                 caster,
                 _corpses,
@@ -1985,14 +2108,16 @@ namespace Game.Gameplay.Combat
                 return false;
             }
 
+            caster.CurrentMana -= CasterSpellRules.ResurrectManaCost;
             caster.ResurrectCooldownRemaining = CasterSpellRules.ResurrectCooldownSeconds;
-            SpellCast?.Invoke(new CasterSpellCastEvent(
+            EmitSpellCast(new CasterSpellCastEvent(
                 caster.UnitId,
                 caster.OwnerSlot,
                 CasterSpellType.Resurrect,
                 revived.UnitId,
                 revived.WorldPosition,
-                0f));
+                0f,
+                ++_spellCastSerial));
             return true;
         }
 

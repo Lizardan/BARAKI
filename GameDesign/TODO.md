@@ -99,6 +99,8 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-11 | Caster spell VFX + Frost freeze: событие каста уходит в снапшот (**v9** `SpellCasts`, serial-dedup) → клиентский presenter; лейбл названия над кастером, зелёный/жёлтый «+» (Heal над HP-полоской, Resurrect на месте возрождения), синий AoE-круг Frost, подъём+fade (primitives + legacy TextMesh, URP Unlit); Frost замораживает жертв **1,5s** (full stun — `Frozen` behavior, не двигается/не атакует); EditMode green (772+ тестов) |
+| 2026-08-11 | Caster mana economy: заклинания тратят ману (**50/75/150**), каст только при достаточной мане, реген **5/с** (пул 200, clamp); `Mana` сериализована в снапшот (v8) — клиентская полоска маны теперь корректна; GDD Balance/Economy синхронизированы |
 | 2026-08-11 | Caster spells implemented: `UNIT_TYPE_CASTER` авто-кастует Heal/Frost/Resurrect (`UPG_MAIN_MAGIC` slot 1/2/3; приоритет Heal→Frost→Resurrect; per-caster CD; transient host корпусы ≤20s; событие `SpellCast` для VFX); каждый слот +3 dmg автоатаки (`MagicDamagePerLevel`); `UPG_CASTER_HEAL` убран из дизайна и кода; полный EditMode green (769 тестов) |
 | 2026-08-02 | WC3 reference extract (Survival Chaos v1.58c): 811 units + 881 abilities + wave/economy JASS analysis; docs `WC3 Reference - Unit Stats.md`, `WC3 Reference - Wave Mechanics.md`; Balance.md сопоставление + кандидаты на правки (#1 быстрая первая волна, #3 bounty базовых) |
 | 2026-07-20 | Playtest UX: barracks manual call (gold+charges), own timers only, building HP bars, idle hero park, defensive building auto-fire + RMB target, tooltips on top; race pick Humans-only (Bugs grey) |

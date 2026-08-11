@@ -126,6 +126,42 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_ForwardsSpellCastsToClientPresenterBuffer()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.Players[0].MagicLevel = 2;
+            var casterStats = new UnitCombatStats(UnitRole.Caster, 100f, 0f, 1f, 1f, 0.1f, 30f, 0f, 1, maxMana: 200f);
+            var enemyStats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 0.1f, 1f, 0f, 1);
+            var caster = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Caster, casterStats);
+            var enemy = host.Combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats);
+            caster.WorldPosition = new Vector3(0f, 0.15f, 0f);
+            enemy.WorldPosition = new Vector3(0f, 0.15f, 2f);
+
+            host.Combat.Tick(0.1f);
+            var snapshot = MatchSnapshotCodec.Capture(host);
+            Assert.AreEqual(1, snapshot.SpellCasts.Length, "Host snapshot should carry the Frost cast event.");
+            Assert.AreEqual((byte)CasterSpellType.Frost, snapshot.SpellCasts[0].SpellType);
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(snapshot);
+
+            var casts = client.Combat.ConsumePendingSpellCasts();
+            Assert.AreEqual(1, casts.Count, "Client should forward the snapshot cast to the presenter buffer.");
+            Assert.AreEqual((byte)CasterSpellType.Frost, (byte)casts[0].SpellType);
+            Assert.AreEqual(snapshot.SpellCasts[0].Serial, casts[0].Serial);
+
+            Assert.AreEqual(0, client.Combat.ConsumePendingSpellCasts().Count, "Consumed buffer should be empty.");
+
+            client.ApplyAuthoritativeSnapshot(snapshot);
+            Assert.AreEqual(
+                0,
+                client.Combat.ConsumePendingSpellCasts().Count,
+                "Re-applying the same serial must not duplicate.");
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_UpdatesUnitsIntoCombat()
         {
             var host = new MatchController();

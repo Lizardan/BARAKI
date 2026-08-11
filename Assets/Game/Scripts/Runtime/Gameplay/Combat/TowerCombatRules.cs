@@ -12,7 +12,6 @@ namespace Game.Gameplay.Combat
         public const float ScanInterval = 0.25f;
         public const float ProjectileSpeed = 26f;
         public const float MuzzleHeight = 2.4f;
-        public const float ProjectileCubeScale = 0.45f;
 
         public static float GetAttackIntervalSeconds() =>
             CombatRules.GetAttackIntervalSeconds(AttackSpeed);

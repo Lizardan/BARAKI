@@ -93,6 +93,7 @@ namespace Game.Gameplay.Combat
                 _random);
             if (!combat.TryFireBuildingProjectile(
                     building.InstanceId,
+                    building.BuildingId,
                     building.OwnerSlot,
                     building.WorldPosition,
                     target.UnitId,
