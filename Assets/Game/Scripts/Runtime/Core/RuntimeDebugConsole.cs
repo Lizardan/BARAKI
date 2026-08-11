@@ -100,7 +100,7 @@ namespace Game.Core
             GUI.enabled = !_isSending;
             if (GUILayout.Button("Отправить лог", _toolbarButtonStyle, GUILayout.Width(130f)))
             {
-                SendLogAsync();
+                SendLogAsync().Forget();
             }
 
             GUI.enabled = true;

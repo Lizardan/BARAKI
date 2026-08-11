@@ -4,8 +4,10 @@
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
-* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
-*******************************************************************************/
+ * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
+ *******************************************************************************/
+
+#nullable enable
 
 using System;
 using System.Collections.Generic;

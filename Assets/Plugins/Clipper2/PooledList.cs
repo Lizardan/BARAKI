@@ -6,8 +6,10 @@
 * Purpose   :  A pool of reusable vertex objects.                    *
 * Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
 *           :  and Daniel Gosnell for their invaluable assistance with C#.     *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
-*******************************************************************************/
+ * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+ *******************************************************************************/
+
+#nullable enable
 
 using System;
 using System.Collections;
