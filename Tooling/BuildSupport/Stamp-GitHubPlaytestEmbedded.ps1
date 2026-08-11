@@ -1,5 +1,5 @@
 # Stamps XOR-obfuscated GitHub PAT into GitHubPlaytestEmbedded.Data.cs
-# Usage (CI): PLAYTEST_LOGS_TOKEN=... pwsh BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1
+# Usage (CI): PLAYTEST_LOGS_TOKEN=... pwsh Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1
 param(
     [string] $Token = $env:PLAYTEST_LOGS_TOKEN,
     [string] $ProjectRoot = (Get-Location).Path
@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $dataPath = Join-Path $ProjectRoot "Assets/Game/Scripts/Runtime/Core/GitHubPlaytestEmbedded.Data.cs"
-$supportDir = Join-Path $ProjectRoot "BuildSupport"
+$supportDir = Join-Path $ProjectRoot "Tooling/BuildSupport"
 New-Item -ItemType Directory -Force -Path $supportDir | Out-Null
 
 function Write-EmptyStub {

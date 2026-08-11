@@ -6,7 +6,7 @@ namespace Game.Core
     /// <summary>Pure helpers for stamping PlayerSettings.bundleVersion in CI.</summary>
     public static class BuildVersionStampRules
     {
-        public const string CiVersionFileRelativePath = "BuildSupport/ci-version.txt";
+        public const string CiVersionFileRelativePath = "Tooling/BuildSupport/ci-version.txt";
 
         public static string Normalize(string raw)
         {

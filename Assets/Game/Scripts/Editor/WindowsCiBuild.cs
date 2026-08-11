@@ -13,7 +13,7 @@ namespace Game.Editor
         public static void Build()
         {
             // game-ci does not reliably forward custom env vars into the Unity process on Windows.
-            // Prefer BuildSupport/ci-version.txt written by the workflow, then env fallback.
+            // Prefer Tooling/BuildSupport/ci-version.txt written by the workflow, then env fallback.
             var projectRoot = Directory.GetCurrentDirectory();
             var version = BuildVersionStampRules.ResolveFromFileThenEnv(
                 projectRoot,
@@ -59,7 +59,7 @@ namespace Game.Editor
 
             Debug.LogWarning(
                 "WindowsCiBuild: GitHub playtest token not embedded. " +
-                "CI must run BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1 before Unity. " +
+                "CI must run Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1 before Unity. " +
                 "Playtest «Отправить лог» will report GitHub not configured.");
         }
 
@@ -125,7 +125,7 @@ namespace Game.Editor
                 return;
             }
 
-            var helperSrc = Path.Combine("BuildSupport", "ApplyUpdate.bat");
+            var helperSrc = Path.Combine("Tooling", "BuildSupport", "ApplyUpdate.bat");
             var helperDst = Path.Combine(outDir, "ApplyUpdate.bat");
             if (File.Exists(helperSrc))
             {

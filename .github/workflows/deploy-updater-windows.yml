@@ -129,7 +129,7 @@ jobs:
             throw "ISCC.exe not found at $iscc"
           }
 
-          & $iscc "BuildSupport/Installer/BARAKI-Updater.iss"
+          & $iscc "Tooling/BuildSupport/Installer/BARAKI-Updater.iss"
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -197,7 +197,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > "cloudflare/baraki-landing/functions/download.js" <<EOF
+          cat > "Tooling/cloudflare/baraki-landing/functions/download.js" <<EOF
           const InstallerUrl =
             "https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/BARAKI-Setup.exe";
 
@@ -207,7 +207,7 @@ jobs:
           EOF
 
       - name: Deploy Pages landing
-        working-directory: cloudflare/baraki-landing
+        working-directory: Tooling/cloudflare/baraki-landing
         shell: bash
         run: |
           set -euo pipefail

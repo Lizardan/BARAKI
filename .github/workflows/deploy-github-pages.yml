@@ -6,7 +6,7 @@ on:
       - main
       - master
     paths:
-      - "docs/**"
+      - "Tooling/docs/**"
       - ".github/workflows/deploy-github-pages.yml"
   workflow_dispatch:
 
@@ -32,7 +32,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: Tooling/docs
 
   deploy:
     needs: build

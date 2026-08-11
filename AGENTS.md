@@ -30,11 +30,11 @@
 - `wc3_*` — справочные референсы; `GameDesign/wc3_source/*.w3x` **не трекаются** (в `.gitignore`) — в коммиты не добавлять.
 
 ## CI / Release (не сломать)
-- Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
+- Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
 - **Теги:** `v*` — полный клиент (единственный `/releases/latest`); `updater-v*` — апдейтер (prerelease, никогда не latest; release-prune их не трогает).
 - CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
-- Билд: `Game.Editor.WindowsCiBuild.Build` / `BuildUpdaterOnly`; Inno Setup — `BuildSupport/Installer/`; playtest-токен — `BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).
-- `docs/` — простые HTML (privacy/terms), деплой as-is; `cloudflare/baraki-landing/` — Pages + `functions/download.js` (редирект на `BARAKI-Setup.exe`).
+- Билд: `Game.Editor.WindowsCiBuild.Build` / `BuildUpdaterOnly`; Inno Setup — `Tooling/BuildSupport/Installer/`; playtest-токен — `Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).
+- `Tooling/` — вспомогательная инфраструктура вне Unity-проекта: `Tooling/docs/` (простые HTML privacy/terms, деплой as-is), `Tooling/cloudflare/baraki-landing/` (Pages + `functions/download.js` — редирект на `BARAKI-Setup.exe`), `Tooling/BuildSupport/` (инсталлятор/скрипты CI).
 
 ## Тесты
 - asmdef `Game.Tests`, NUnit, EditMode в основном.

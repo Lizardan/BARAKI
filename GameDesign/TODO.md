@@ -71,7 +71,7 @@ provides: [backlog, priorities, acceptance_criteria]
 |----|------|--------|------------|
 | DIST-001 | GHA tag `v*` → Windows zip → GitHub Release | done | deploy-windows.yml |
 | DIST-002 | In-game version check + block Play | done | GameUpdateService + hub gate |
-| DIST-003 | Download + ApplyUpdate.bat restart | done | BuildSupport/ApplyUpdate.bat |
+| DIST-003 | Download + ApplyUpdate.bat restart | done | Tooling/BuildSupport/ApplyUpdate.bat |
 
 ---
 

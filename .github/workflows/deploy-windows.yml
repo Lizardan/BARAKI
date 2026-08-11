@@ -21,7 +21,7 @@ on:
       - "Assets/**"
       - "Packages/**"
       - "ProjectSettings/**"
-      - "BuildSupport/**"
+      - "Tooling/BuildSupport/**"
       - ".github/workflows/deploy-windows.yml"
   workflow_dispatch:
     inputs:
@@ -297,8 +297,8 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ steps.ver.outputs.version }}"
-          New-Item -ItemType Directory -Force -Path "BuildSupport" | Out-Null
-          Set-Content -Path "BuildSupport/ci-version.txt" -Value $ver -NoNewline -Encoding utf8
+          New-Item -ItemType Directory -Force -Path "Tooling/BuildSupport" | Out-Null
+          Set-Content -Path "Tooling/BuildSupport/ci-version.txt" -Value $ver -NoNewline -Encoding utf8
           $ps = "ProjectSettings/ProjectSettings.asset"
           $raw = Get-Content -Path $ps -Raw
           $updated = [regex]::Replace($raw, '(?m)^(\s*bundleVersion:\s*).*$', "`${1}$ver")
@@ -311,7 +311,7 @@ jobs:
         env:
           PLAYTEST_LOGS_TOKEN: ${{ secrets.PLAYTEST_LOGS_TOKEN }}
         run: |
-          pwsh -File "BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1"
+          pwsh -File "Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1"
 
       - name: Build Windows x64
         id: unity-build

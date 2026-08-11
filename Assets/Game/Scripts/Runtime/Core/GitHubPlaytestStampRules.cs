@@ -11,7 +11,7 @@ namespace Game.Core
     /// </summary>
     public static class GitHubPlaytestStampRules
     {
-        public const string CiTokenFileRelativePath = "BuildSupport/github-playtest-token.txt";
+        public const string CiTokenFileRelativePath = "Tooling/BuildSupport/github-playtest-token.txt";
         public const string EmbeddedDataRelativePath =
             "Assets/Game/Scripts/Runtime/Core/GitHubPlaytestEmbedded.Data.cs";
         public const string DefaultRepository = "Lizardan/BARAKI";
