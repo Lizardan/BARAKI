@@ -125,5 +125,112 @@ namespace Game.Tests
             Assert.AreEqual(0.7071067f, combined.x, 0.001f);
             Assert.AreEqual(0.7071067f, combined.y, 0.001f);
         }
+
+        [Test]
+        public void TryRayToGround_HitsYZeroPlane()
+        {
+            var ray = new Ray(new Vector3(10f, 20f, -5f), Vector3.down);
+            Assert.IsTrue(GameplayCameraGroundView.TryRayToGround(ray, out var hit));
+            Assert.AreEqual(10f, hit.x, 0.001f);
+            Assert.AreEqual(0f, hit.y, 0.001f);
+            Assert.AreEqual(-5f, hit.z, 0.001f);
+        }
+
+        [Test]
+        public void TryRayToGround_ParallelRayFails()
+        {
+            var ray = new Ray(new Vector3(0f, 5f, 0f), Vector3.forward);
+            Assert.IsFalse(GameplayCameraGroundView.TryRayToGround(ray, out _));
+        }
+
+        [Test]
+        public void TryGetGroundFrustumCorners_ReturnsFourGroundHits()
+        {
+            var cameraObject = new GameObject("FrustumTestCamera");
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.transform.position = new Vector3(0f, 40f, -30f);
+            camera.transform.rotation = Quaternion.Euler(GameplayCameraSettings.DefaultPitchDegrees, 0f, 0f);
+            camera.fieldOfView = GameplayCameraSettings.DefaultFieldOfViewDegrees;
+
+            var corners = new Vector3[4];
+            Assert.IsTrue(GameplayCameraGroundView.TryGetGroundFrustumCorners(camera, corners));
+            for (var i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(0f, corners[i].y, 0.001f);
+            }
+
+            Object.DestroyImmediate(cameraObject);
+        }
+
+        [Test]
+        public void TryProjectViewportToGround_CenterRayHitsNearLookTarget()
+        {
+            var position = new Vector3(0f, 26.529202f, -17.894173f);
+            var rotation = Quaternion.LookRotation(Vector3.zero - position, Vector3.up);
+            var corners = new Vector3[4];
+
+            Assert.IsTrue(GameplayCameraGroundView.TryProjectViewportToGround(
+                position,
+                rotation,
+                GameplayCameraSettings.DefaultFieldOfViewDegrees,
+                16f / 9f,
+                corners));
+
+            var center = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
+            Assert.AreEqual(0f, center.y, 0.001f);
+            Assert.Less(Mathf.Abs(center.x), 35f);
+            Assert.Less(corners[2].z - corners[0].z, 220f);
+        }
+
+        [Test]
+        public void BuildAxisAlignedRectangle_UsesMinMaxXZ()
+        {
+            var frustum = new[]
+            {
+                new Vector3(-10f, 0f, -5f),
+                new Vector3(12f, 0f, -8f),
+                new Vector3(8f, 0f, 20f),
+                new Vector3(-14f, 0f, 15f),
+            };
+            var rect = new Vector3[4];
+            GameplayCameraGroundView.BuildAxisAlignedRectangle(frustum, rect);
+
+            Assert.AreEqual(new Vector3(-14f, 0f, -8f), rect[0]);
+            Assert.AreEqual(new Vector3(12f, 0f, -8f), rect[1]);
+            Assert.AreEqual(new Vector3(12f, 0f, 20f), rect[2]);
+            Assert.AreEqual(new Vector3(-14f, 0f, 20f), rect[3]);
+        }
+
+        [Test]
+        public void MidEdgeRectangle_IsNarrowerThanCornerAabbHorizontally()
+        {
+            var position = new Vector3(0f, 26.529202f, -17.894173f);
+            var rotation = Quaternion.LookRotation(Vector3.zero - position, Vector3.up);
+            const float aspect = 16f / 9f;
+            const float fov = GameplayCameraSettings.DefaultFieldOfViewDegrees;
+
+            var cornerHits = new Vector3[4];
+            Assert.IsTrue(GameplayCameraGroundView.TryProjectViewportToGround(
+                position, rotation, fov, aspect, cornerHits));
+            var cornerRect = new Vector3[4];
+            GameplayCameraGroundView.BuildAxisAlignedRectangle(cornerHits, cornerRect);
+            var cornerWidth = cornerRect[1].x - cornerRect[0].x;
+
+            Assert.IsTrue(GameplayCameraGroundView.TryViewportPointToGround(
+                position, rotation, fov, aspect, new Vector2(0f, 0.5f), out var left));
+            Assert.IsTrue(GameplayCameraGroundView.TryViewportPointToGround(
+                position, rotation, fov, aspect, new Vector2(1f, 0.5f), out var right));
+            Assert.IsTrue(GameplayCameraGroundView.TryViewportPointToGround(
+                position, rotation, fov, aspect, new Vector2(0.5f, 0f), out var bottom));
+            Assert.IsTrue(GameplayCameraGroundView.TryViewportPointToGround(
+                position, rotation, fov, aspect, new Vector2(0.5f, 1f), out var top));
+
+            var midHits = new[] { left, right, bottom, top };
+            var midRect = new Vector3[4];
+            GameplayCameraGroundView.BuildAxisAlignedRectangle(midHits, midRect);
+            var midWidth = midRect[1].x - midRect[0].x;
+
+            Assert.Less(midWidth, cornerWidth - 1f);
+        }
     }
 }

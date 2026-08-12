@@ -142,6 +142,50 @@ namespace Game.Gameplay.Combat
 
             _impactBuffer.Clear();
         }
+
+        /// <summary>
+        /// Client visuals: advance flight without damage; remove finished shots so presenter can play impact FX.
+        /// </summary>
+        public void AdvancePresentation(float deltaTime)
+        {
+            if (deltaTime <= 0f || _active.Count == 0)
+            {
+                return;
+            }
+
+            for (var i = _active.Count - 1; i >= 0; i--)
+            {
+                var projectile = _active[i];
+                projectile.Elapsed += deltaTime;
+                if (projectile.Elapsed < projectile.FlightDuration)
+                {
+                    continue;
+                }
+
+                var last = _active.Count - 1;
+                if (i != last)
+                {
+                    _active[i] = _active[last];
+                }
+
+                _active.RemoveAt(last);
+            }
+        }
+
+        /// <summary>Client: append a spawn-event projectile for local presentation only.</summary>
+        public void AddPresentation(CombatProjectileState projectile)
+        {
+            if (projectile == null)
+            {
+                return;
+            }
+
+            _active.Add(projectile);
+            if (projectile.ProjectileId >= _nextId)
+            {
+                _nextId = projectile.ProjectileId + 1;
+            }
+        }
     }
 
     public interface IProjectileImpactHandler

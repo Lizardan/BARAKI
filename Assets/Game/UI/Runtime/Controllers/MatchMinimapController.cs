@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Core;
+using Game.Gameplay.Cameras;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Fog;
@@ -12,6 +13,7 @@ using UnityEngine.UIElements;
 namespace Game.UI.Controllers
 {
     [RequireComponent(typeof(UIDocument))]
+    [DefaultExecutionOrder(1000)]
     public sealed class MatchMinimapController : MonoBehaviour
     {
         const string BlipClass = "match-minimap__blip";
@@ -26,14 +28,18 @@ namespace Game.UI.Controllers
         MatchFogOfWar _fogOfWar;
         VisualElement _canvas;
         MatchMinimapGeometryElement _geometryElement;
+        MatchMinimapViewportElement _viewportElement;
         MatchMinimapTopology _topology;
         MatchController _topologyController;
         readonly Dictionary<string, VisualElement> _blips = new();
+        readonly Vector3[] _groundCorners = new Vector3[4];
         float _panelWidth = 350f;
         float _panelHeight = 350f;
         float _lastGeometryWidth;
         float _lastGeometryHeight;
         MatchMinimapTopology _lastDrawnTopology;
+        bool _isDraggingMinimap;
+        bool _heldPanInputLock;
 
         void Awake()
         {
@@ -55,6 +61,14 @@ namespace Game.UI.Controllers
                 _geometryElement.style.top = 0;
                 _geometryElement.style.bottom = 0;
                 geometryLayer.Add(_geometryElement);
+
+                _viewportElement = new MatchMinimapViewportElement();
+                _viewportElement.style.position = Position.Absolute;
+                _viewportElement.style.left = 0;
+                _viewportElement.style.right = 0;
+                _viewportElement.style.top = 0;
+                _viewportElement.style.bottom = 0;
+                geometryLayer.Add(_viewportElement);
             }
         }
 
@@ -64,6 +78,29 @@ namespace Game.UI.Controllers
             {
                 _matchRuntime = MatchRuntime.Current;
             }
+
+            if (_canvas == null)
+            {
+                return;
+            }
+
+            _canvas.RegisterCallback<PointerDownEvent>(OnMinimapPointerDown);
+            _canvas.RegisterCallback<PointerMoveEvent>(OnMinimapPointerMove);
+            _canvas.RegisterCallback<PointerUpEvent>(OnMinimapPointerUp);
+            _canvas.RegisterCallback<PointerCaptureOutEvent>(OnMinimapPointerCaptureOut);
+        }
+
+        void OnDisable()
+        {
+            if (_canvas != null)
+            {
+                _canvas.UnregisterCallback<PointerDownEvent>(OnMinimapPointerDown);
+                _canvas.UnregisterCallback<PointerMoveEvent>(OnMinimapPointerMove);
+                _canvas.UnregisterCallback<PointerUpEvent>(OnMinimapPointerUp);
+                _canvas.UnregisterCallback<PointerCaptureOutEvent>(OnMinimapPointerCaptureOut);
+            }
+
+            EndMinimapDrag();
         }
 
         void LateUpdate()
@@ -88,6 +125,7 @@ namespace Game.UI.Controllers
                 _topology = null;
                 _topologyController = null;
                 UpdateGeometry();
+                _viewportElement?.ClearCorners();
                 return;
             }
 
@@ -98,6 +136,7 @@ namespace Game.UI.Controllers
             }
 
             UpdateGeometry();
+            UpdateViewportOverlay(controller.Layout.ArenaRadius);
 
             if (_fogOfWar == null && _matchRuntime != null)
             {
@@ -172,6 +211,142 @@ namespace Game.UI.Controllers
             }
 
             RemoveStaleBlips(activeKeys);
+        }
+
+        void OnMinimapPointerDown(PointerDownEvent evt)
+        {
+            if (evt.button != 0 || !TryGetActiveArenaRadius(out _))
+            {
+                return;
+            }
+
+            _isDraggingMinimap = true;
+            _canvas.CapturePointer(evt.pointerId);
+            BeginPanInputLock();
+            SnapCameraToPanelPosition(evt.localPosition);
+            evt.StopPropagation();
+        }
+
+        void OnMinimapPointerMove(PointerMoveEvent evt)
+        {
+            if (!_isDraggingMinimap)
+            {
+                return;
+            }
+
+            SnapCameraToPanelPosition(evt.localPosition);
+            evt.StopPropagation();
+        }
+
+        void OnMinimapPointerUp(PointerUpEvent evt)
+        {
+            if (!_isDraggingMinimap || evt.button != 0)
+            {
+                return;
+            }
+
+            SnapCameraToPanelPosition(evt.localPosition);
+            if (_canvas.HasPointerCapture(evt.pointerId))
+            {
+                _canvas.ReleasePointer(evt.pointerId);
+            }
+
+            EndMinimapDrag();
+            evt.StopPropagation();
+        }
+
+        void OnMinimapPointerCaptureOut(PointerCaptureOutEvent evt)
+        {
+            EndMinimapDrag();
+        }
+
+        void SnapCameraToPanelPosition(Vector2 localPanelPosition)
+        {
+            if (!TryGetActiveArenaRadius(out var arenaRadius))
+            {
+                return;
+            }
+
+            var pan = GameplayCameraPanController.Current;
+            if (pan == null)
+            {
+                return;
+            }
+
+            var world = MatchMinimapProjection.PanelToWorld(
+                localPanelPosition,
+                _panelWidth,
+                _panelHeight,
+                arenaRadius);
+            pan.FocusOnMinimapPosition(world);
+        }
+
+        bool TryGetActiveArenaRadius(out float arenaRadius)
+        {
+            arenaRadius = MatchArenaGenerator.DefaultArenaRadius;
+            var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
+            if (controller == null || !controller.IsRunning || controller.Layout == null)
+            {
+                return false;
+            }
+
+            arenaRadius = controller.Layout.ArenaRadius;
+            return true;
+        }
+
+        void BeginPanInputLock()
+        {
+            var pan = GameplayCameraPanController.Current;
+            if (pan == null || _heldPanInputLock)
+            {
+                return;
+            }
+
+            pan.SetPanInputLocked(true);
+            _heldPanInputLock = true;
+        }
+
+        void EndMinimapDrag()
+        {
+            _isDraggingMinimap = false;
+            if (!_heldPanInputLock)
+            {
+                return;
+            }
+
+            GameplayCameraPanController.Current?.SetPanInputLocked(false);
+            _heldPanInputLock = false;
+        }
+
+        void UpdateViewportOverlay(float arenaRadius)
+        {
+            if (_viewportElement == null)
+            {
+                return;
+            }
+
+            var camera = CameraCache.Main;
+            if (camera == null
+                || !GameplayCameraGroundView.TryGetGroundFrustumCorners(camera, _groundCorners))
+            {
+                _viewportElement.ClearCorners();
+                return;
+            }
+
+            // Exact frustum trapezoid (no AABB). Unclamped panel mapping avoids edge pull-in.
+            var c0 = WorldToPanel(_groundCorners[0], arenaRadius);
+            var c1 = WorldToPanel(_groundCorners[1], arenaRadius);
+            var c2 = WorldToPanel(_groundCorners[2], arenaRadius);
+            var c3 = WorldToPanel(_groundCorners[3], arenaRadius);
+            _viewportElement.SetCorners(c0, c1, c2, c3);
+        }
+
+        Vector2 WorldToPanel(Vector3 worldPosition, float arenaRadius)
+        {
+            // Unclamped: far frustum corners past the arena must not be pulled onto the map
+            // edge (that artificially inflates the viewport overlay).
+            var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(worldPosition, arenaRadius);
+            return MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
         }
 
         bool ShouldDrawUnitBlip(MatchUnitState unit, int localSlot, MatchCombatSystem combat)

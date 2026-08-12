@@ -162,6 +162,63 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_ForwardsProjectileSpawnEventsToClient()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            var rangedStats = new UnitCombatStats(UnitRole.Ranged, 100f, 0f, 1f, 8f, 0.1f, 12f, 0f, 1);
+            var enemyStats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 0.1f, 1f, 0f, 1);
+            var ranged = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Ranged, rangedStats);
+            var enemy = host.Combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats);
+            ranged.WorldPosition = new Vector3(0f, 0.15f, 0f);
+            enemy.WorldPosition = new Vector3(0f, 0.15f, 3f);
+
+            for (var i = 0; i < 20 && host.Combat.Projectiles.Count == 0; i++)
+            {
+                host.Combat.Tick(0.05f);
+            }
+
+            Assert.Greater(host.Combat.Projectiles.Count, 0, "Host should have spawned a ranged projectile.");
+            Assert.Greater(host.Combat.NetworkProjectileSpawns.Count, 0, "Spawn must queue a network event.");
+
+            var snapshot = MatchSnapshotCodec.Capture(host);
+            Assert.Greater(snapshot.Projectiles.Length, 0, "Snapshot must carry spawn events.");
+            Assert.AreEqual(0, host.Combat.NetworkProjectileSpawns.Count, "Capture drains the network buffer.");
+            Assert.AreEqual(0f, snapshot.Projectiles[0].Elapsed, 0.01f);
+
+            var secondCapture = MatchSnapshotCodec.Capture(host);
+            Assert.AreEqual(0, secondCapture.Projectiles.Length, "No new shots → empty event list.");
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(snapshot);
+
+            Assert.AreEqual(snapshot.Projectiles.Length, client.Combat.Projectiles.Count);
+            Assert.AreEqual(snapshot.Projectiles[0].ProjectileId, client.Combat.Projectiles[0].ProjectileId);
+            Assert.AreEqual(
+                snapshot.Projectiles[0].FlightDuration,
+                client.Combat.Projectiles[0].FlightDuration,
+                0.01f);
+
+            client.ApplyAuthoritativeSnapshot(secondCapture);
+            Assert.AreEqual(
+                snapshot.Projectiles.Length,
+                client.Combat.Projectiles.Count,
+                "Empty spawn list must not clear in-flight client visuals.");
+
+            client.ApplyAuthoritativeSnapshot(snapshot);
+            Assert.AreEqual(
+                snapshot.Projectiles.Length,
+                client.Combat.Projectiles.Count,
+                "Re-applying same ProjectileId must not duplicate.");
+
+            var flight = client.Combat.Projectiles[0].FlightDuration;
+            client.Combat.AdvanceProjectilePresentation(flight + 0.05f);
+            Assert.AreEqual(0, client.Combat.Projectiles.Count, "Client presentation removes finished shots.");
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_UpdatesUnitsIntoCombat()
         {
             var host = new MatchController();

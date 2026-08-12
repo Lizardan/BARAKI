@@ -26,12 +26,16 @@ namespace Game.Gameplay.Cameras
 
         [Header("Focus")]
         [SerializeField] private float _focusMoveSpeed = GameplayCameraSettings.DefaultFocusMoveSpeed;
+        [SerializeField] private float _minimapFocusMoveSpeed = GameplayCameraSettings.DefaultMinimapFocusMoveSpeed;
+        [SerializeField] private float _minimapFocusSmoothTime = GameplayCameraSettings.DefaultMinimapFocusSmoothTime;
 
         [SerializeField] private float _zoomDistance;
         private float _targetZoomDistance;
         private float _zoomVelocity;
         private bool _hasFocusTarget;
+        private bool _minimapFocus;
         private Vector3 _focusTarget;
+        private Vector3 _focusVelocity;
         private bool _externalPanLock;
 
         public bool IsPanLocked => _hasFocusTarget || _externalPanLock;
@@ -64,6 +68,16 @@ namespace Game.Gameplay.Cameras
                 _minZoomDistance,
                 _maxZoomDistance);
             _targetZoomDistance = _zoomDistance;
+            if (_minimapFocusSmoothTime < 0.01f)
+            {
+                _minimapFocusSmoothTime = GameplayCameraSettings.DefaultMinimapFocusSmoothTime;
+            }
+
+            if (_minimapFocusMoveSpeed < 1f)
+            {
+                _minimapFocusMoveSpeed = GameplayCameraSettings.DefaultMinimapFocusMoveSpeed;
+            }
+
             ApplyZoom();
         }
 
@@ -92,11 +106,34 @@ namespace Game.Gameplay.Cameras
             }
         }
 
-        /// <summary>Moves camera to world XZ; pan input is blocked until arrival.</summary>
+        /// <summary>
+        /// Moves camera to world XZ at the normal focus speed (match start / scripted focus).
+        /// Pan input is blocked until arrival.
+        /// </summary>
         public void FocusOnPosition(Vector3 worldPosition)
         {
             _focusTarget = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
             _hasFocusTarget = true;
+            _minimapFocus = false;
+            _focusVelocity = Vector3.zero;
+        }
+
+        /// <summary>Fast smooth chase used while dragging/clicking the minimap.</summary>
+        public void FocusOnMinimapPosition(Vector3 worldPosition)
+        {
+            _focusTarget = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
+            _hasFocusTarget = true;
+            _minimapFocus = true;
+        }
+
+        /// <summary>Snaps camera to world XZ immediately and cancels any in-flight focus.</summary>
+        public void SetPanPosition(Vector3 worldPosition)
+        {
+            _hasFocusTarget = false;
+            _minimapFocus = false;
+            _focusVelocity = Vector3.zero;
+            var clamped = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
+            transform.position = new Vector3(clamped.x, transform.position.y, clamped.z);
         }
 
         private void UpdateFocus()
@@ -108,13 +145,38 @@ namespace Game.Gameplay.Cameras
 
             var current = transform.position;
             var target = new Vector3(_focusTarget.x, current.y, _focusTarget.z);
-            var next = Vector3.MoveTowards(current, target, _focusMoveSpeed * Time.deltaTime);
+
+            Vector3 next;
+            if (_minimapFocus)
+            {
+                next = Vector3.SmoothDamp(
+                    current,
+                    target,
+                    ref _focusVelocity,
+                    Mathf.Max(0.01f, _minimapFocusSmoothTime),
+                    _minimapFocusMoveSpeed,
+                    Time.deltaTime);
+                next.y = current.y;
+                _focusVelocity.y = 0f;
+            }
+            else
+            {
+                next = Vector3.MoveTowards(current, target, _focusMoveSpeed * Time.deltaTime);
+                _focusVelocity = Vector3.zero;
+            }
+
             transform.position = next;
 
-            if ((next - target).sqrMagnitude <= 0.0001f)
+            var arrived = _minimapFocus
+                ? (next - target).sqrMagnitude <= 0.0025f && _focusVelocity.sqrMagnitude <= 0.25f
+                : (next - target).sqrMagnitude <= 0.0001f;
+
+            if (arrived)
             {
                 transform.position = target;
+                _focusVelocity = Vector3.zero;
                 _hasFocusTarget = false;
+                _minimapFocus = false;
             }
         }
 
@@ -202,6 +264,8 @@ namespace Game.Gameplay.Cameras
 
             _zoomSmoothTime = Mathf.Max(0.01f, _zoomSmoothTime);
             _focusMoveSpeed = Mathf.Max(1f, _focusMoveSpeed);
+            _minimapFocusMoveSpeed = Mathf.Max(1f, _minimapFocusMoveSpeed);
+            _minimapFocusSmoothTime = Mathf.Max(0.01f, _minimapFocusSmoothTime);
         }
 #endif
     }

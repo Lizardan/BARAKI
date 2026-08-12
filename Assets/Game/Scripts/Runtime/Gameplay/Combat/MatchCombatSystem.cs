@@ -36,8 +36,10 @@ namespace Game.Gameplay.Combat
         readonly List<CasterSpellCastEvent> _presenterSpellCasts = new();
         readonly List<HeroAbilityCastEvent> _networkHeroCasts = new();
         readonly List<HeroAbilityCastEvent> _presenterHeroCasts = new();
+        readonly List<MatchProjectileSnapshot> _networkProjectileSpawns = new();
         int _spellCastSerial;
         int _lastAppliedSpellSerial;
+        int _lastAppliedProjectileId;
 
         sealed class PendingBarracksSpawn
         {
@@ -99,6 +101,14 @@ namespace Game.Gameplay.Combat
             return result;
         }
 
+        /// <summary>
+        /// Projectile spawn events not yet captured into a snapshot (mirrors <see cref="NetworkSpellCasts"/>).
+        /// </summary>
+        public IReadOnlyList<MatchProjectileSnapshot> NetworkProjectileSpawns => _networkProjectileSpawns;
+
+        /// <summary>Host-only: consumed by snapshot capture into the next <see cref="NetworkProjectileSpawns"/>.</summary>
+        public void ClearNetworkProjectileSpawns() => _networkProjectileSpawns.Clear();
+
         public bool TryGetUnitWorldPosition(MatchUnitState unit, out Vector3 position)
         {
             if (unit == null)
@@ -133,8 +143,12 @@ namespace Game.Gameplay.Combat
             _corpses.Clear();
             _networkSpellCasts.Clear();
             _presenterSpellCasts.Clear();
+            _networkHeroCasts.Clear();
+            _presenterHeroCasts.Clear();
+            _networkProjectileSpawns.Clear();
             _spellCastSerial = 0;
             _lastAppliedSpellSerial = 0;
+            _lastAppliedProjectileId = 0;
             _players.AddRange(players);
             _graph = graph;
             _routes = LaneRouteRegistry.Build(graph);
@@ -733,7 +747,8 @@ namespace Game.Gameplay.Combat
         public void ApplyAuthoritativeUnits(
             MatchUnitSnapshot[] snapshots,
             MatchSpellSnapshot[] spellCasts = null,
-            ICombatUnitCatalog catalog = null)
+            ICombatUnitCatalog catalog = null,
+            MatchProjectileSnapshot[] projectiles = null)
         {
             _spatialGrid.Clear();
             var keep = new HashSet<int>();
@@ -770,6 +785,89 @@ namespace Game.Gameplay.Combat
             }
 
             ApplyAuthoritativeSpellCasts(spellCasts);
+            ApplyAuthoritativeProjectiles(projectiles);
+        }
+
+        /// <summary>
+        /// Client-side: apply one-shot projectile spawn events (deduped by ProjectileId), then fly locally.
+        /// Empty arrays are no-ops — unlike units, projectiles are not a continuous replicated list.
+        /// </summary>
+        public void ApplyAuthoritativeProjectiles(MatchProjectileSnapshot[] snapshots)
+        {
+            if (snapshots == null || snapshots.Length == 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < snapshots.Length; i++)
+            {
+                var snap = snapshots[i];
+                if (snap.ProjectileId <= _lastAppliedProjectileId || snap.FlightDuration <= 0f)
+                {
+                    continue;
+                }
+
+                _lastAppliedProjectileId = snap.ProjectileId;
+                var role = Enum.IsDefined(typeof(UnitRole), (int)snap.AttackerRole)
+                    ? (UnitRole)snap.AttackerRole
+                    : UnitRole.Ranged;
+                int? targetBuilding = snap.TargetBuildingInstanceId >= 0
+                    ? snap.TargetBuildingInstanceId
+                    : null;
+                int? sourceBuilding = snap.SourceBuildingInstanceId >= 0
+                    ? snap.SourceBuildingInstanceId
+                    : null;
+                var sourceBuildingId = string.IsNullOrEmpty(snap.SourceBuildingId)
+                    ? null
+                    : snap.SourceBuildingId;
+
+                _projectiles.AddPresentation(new CombatProjectileState(
+                    snap.ProjectileId,
+                    attackerUnitId: 0,
+                    targetUnitId: -1,
+                    snap.AttackerOwnerSlot,
+                    role,
+                    attackerRaceId: string.Empty,
+                    rawDamage: 0f,
+                    snap.FlightDuration,
+                    new Vector3(snap.StartX, snap.StartY, snap.StartZ),
+                    new Vector3(snap.TargetX, snap.TargetY, snap.TargetZ),
+                    snap.IsParabolic,
+                    targetBuilding,
+                    sourceBuilding,
+                    sourceBuildingId));
+            }
+        }
+
+        /// <summary>Client visuals: advance projectile flight without host damage resolution.</summary>
+        public void AdvanceProjectilePresentation(float deltaTime) =>
+            _projectiles.AdvancePresentation(deltaTime);
+
+        void EmitNetworkProjectileSpawn(CombatProjectileState projectile)
+        {
+            if (projectile == null)
+            {
+                return;
+            }
+
+            _networkProjectileSpawns.Add(new MatchProjectileSnapshot
+            {
+                ProjectileId = projectile.ProjectileId,
+                AttackerOwnerSlot = projectile.AttackerOwnerSlot,
+                AttackerRole = (byte)projectile.AttackerRole,
+                StartX = projectile.StartPosition.x,
+                StartY = projectile.StartPosition.y,
+                StartZ = projectile.StartPosition.z,
+                TargetX = projectile.TargetPosition.x,
+                TargetY = projectile.TargetPosition.y,
+                TargetZ = projectile.TargetPosition.z,
+                FlightDuration = projectile.FlightDuration,
+                Elapsed = 0f,
+                IsParabolic = projectile.IsParabolic,
+                TargetBuildingInstanceId = projectile.TargetBuildingInstanceId ?? -1,
+                SourceBuildingInstanceId = projectile.SourceBuildingInstanceId ?? -1,
+                SourceBuildingId = projectile.SourceBuildingId ?? string.Empty,
+            });
         }
 
         /// <summary>Client-side: forward snapshot cast events to the presenter once per serial.</summary>
@@ -940,7 +1038,7 @@ namespace Game.Gameplay.Combat
                 end,
                 TowerCombatRules.ProjectileSpeed);
 
-            _projectiles.SpawnFromBuilding(
+            var projectile = _projectiles.SpawnFromBuilding(
                 targetUnitId,
                 ownerSlot,
                 GetPlayerRaceId(ownerSlot),
@@ -950,6 +1048,7 @@ namespace Game.Gameplay.Combat
                 end,
                 buildingInstanceId,
                 buildingId);
+            EmitNetworkProjectileSpawn(projectile);
             return true;
         }
 
@@ -1626,7 +1725,7 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 CombatAttackRules.ProjectileSpeed);
-            _projectiles.SpawnBuildingAttack(
+            var projectile = _projectiles.SpawnBuildingAttack(
                 attacker.UnitId,
                 building.InstanceId,
                 attacker.OwnerSlot,
@@ -1636,6 +1735,7 @@ namespace Game.Gameplay.Combat
                 duration,
                 start,
                 end);
+            EmitNetworkProjectileSpawn(projectile);
         }
 
         MatchUnitState GetUnitById(int? unitId)
@@ -1895,7 +1995,7 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 CombatAttackRules.ProjectileSpeed);
-            _projectiles.Spawn(
+            var projectile = _projectiles.Spawn(
                 attacker.UnitId,
                 target.UnitId,
                 attacker.OwnerSlot,
@@ -1906,6 +2006,7 @@ namespace Game.Gameplay.Combat
                 start,
                 end,
                 isParabolic);
+            EmitNetworkProjectileSpawn(projectile);
         }
 
         public void ResolveProjectileImpact(CombatProjectileState projectile)

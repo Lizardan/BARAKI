@@ -26,6 +26,11 @@ namespace Game.Gameplay.Networking
         public MatchCenterLaneSnapshot[] CenterLanes = Array.Empty<MatchCenterLaneSnapshot>();
         /// <summary>Transient host cast events synced to clients for spell VFX (v9+).</summary>
         public MatchSpellSnapshot[] SpellCasts = Array.Empty<MatchSpellSnapshot>();
+        /// <summary>
+        /// One-shot projectile spawn events for client VFX (v12+), drained like <see cref="SpellCasts"/>.
+        /// Not a continuous in-flight list — clients advance flight locally after apply.
+        /// </summary>
+        public MatchProjectileSnapshot[] Projectiles = Array.Empty<MatchProjectileSnapshot>();
         /// <summary>Debug hash (0 = unset). Host fills via <see cref="MatchSnapshotChecksum"/>.</summary>
         public uint Checksum;
     }
@@ -128,9 +133,32 @@ namespace Game.Gameplay.Networking
         public float Radius;
     }
 
+    /// <summary>Client-render projectile spawn event. Damage resolution stays host-only.</summary>
+    public struct MatchProjectileSnapshot
+    {
+        public int ProjectileId;
+        public int AttackerOwnerSlot;
+        public byte AttackerRole;
+        public float StartX;
+        public float StartY;
+        public float StartZ;
+        public float TargetX;
+        public float TargetY;
+        public float TargetZ;
+        public float FlightDuration;
+        /// <summary>Always 0 on spawn events; kept for v12 wire compatibility.</summary>
+        public float Elapsed;
+        public bool IsParabolic;
+        /// <summary>-1 when not targeting a building.</summary>
+        public int TargetBuildingInstanceId;
+        /// <summary>-1 when not fired by a building.</summary>
+        public int SourceBuildingInstanceId;
+        public string SourceBuildingId;
+    }
+
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 11;
+        public const int CurrentVersion = 12;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -258,6 +286,29 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            writer.Write(snapshot.Projectiles?.Length ?? 0);
+            if (snapshot.Projectiles != null)
+            {
+                foreach (var p in snapshot.Projectiles)
+                {
+                    writer.Write(p.ProjectileId);
+                    writer.Write(p.AttackerOwnerSlot);
+                    writer.Write(p.AttackerRole);
+                    writer.Write(p.StartX);
+                    writer.Write(p.StartY);
+                    writer.Write(p.StartZ);
+                    writer.Write(p.TargetX);
+                    writer.Write(p.TargetY);
+                    writer.Write(p.TargetZ);
+                    writer.Write(p.FlightDuration);
+                    writer.Write(p.Elapsed);
+                    writer.Write(p.IsParabolic);
+                    writer.Write(p.TargetBuildingInstanceId);
+                    writer.Write(p.SourceBuildingInstanceId);
+                    writer.Write(p.SourceBuildingId ?? string.Empty);
+                }
+            }
+
             writer.Write(snapshot.Checksum);
 
             return stream.ToArray();
@@ -273,7 +324,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -455,6 +506,33 @@ namespace Game.Gameplay.Networking
                     spell.CenterZ = reader.ReadSingle();
                     spell.Radius = reader.ReadSingle();
                     snapshot.SpellCasts[i] = spell;
+                }
+            }
+
+            if (version >= 12)
+            {
+                var projectileCount = reader.ReadInt32();
+                snapshot.Projectiles = new MatchProjectileSnapshot[projectileCount];
+                for (var i = 0; i < projectileCount; i++)
+                {
+                    snapshot.Projectiles[i] = new MatchProjectileSnapshot
+                    {
+                        ProjectileId = reader.ReadInt32(),
+                        AttackerOwnerSlot = reader.ReadInt32(),
+                        AttackerRole = reader.ReadByte(),
+                        StartX = reader.ReadSingle(),
+                        StartY = reader.ReadSingle(),
+                        StartZ = reader.ReadSingle(),
+                        TargetX = reader.ReadSingle(),
+                        TargetY = reader.ReadSingle(),
+                        TargetZ = reader.ReadSingle(),
+                        FlightDuration = reader.ReadSingle(),
+                        Elapsed = reader.ReadSingle(),
+                        IsParabolic = reader.ReadBoolean(),
+                        TargetBuildingInstanceId = reader.ReadInt32(),
+                        SourceBuildingInstanceId = reader.ReadInt32(),
+                        SourceBuildingId = reader.ReadString(),
+                    };
                 }
             }
 
@@ -646,6 +724,14 @@ namespace Game.Gameplay.Networking
             controller.Combat.ClearNetworkSpellCasts();
             controller.Combat.ClearNetworkHeroCasts();
 
+            var projectiles = new List<MatchProjectileSnapshot>(controller.Combat.NetworkProjectileSpawns.Count);
+            foreach (var p in controller.Combat.NetworkProjectileSpawns)
+            {
+                projectiles.Add(p);
+            }
+
+            controller.Combat.ClearNetworkProjectileSpawns();
+
             var snapshot = new MatchSnapshot
             {
                 PlayerCount = controller.Players.Count,
@@ -659,6 +745,7 @@ namespace Game.Gameplay.Networking
                 Barracks = barracks.ToArray(),
                 CenterLanes = centerLanes.ToArray(),
                 SpellCasts = spellCasts.ToArray(),
+                Projectiles = projectiles.ToArray(),
             };
             snapshot.Checksum = MatchSnapshotChecksum.Compute(snapshot);
             return snapshot;

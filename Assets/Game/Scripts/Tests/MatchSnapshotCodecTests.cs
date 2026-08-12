@@ -168,6 +168,72 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V12_PreservesProjectileSpawnEvents()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Projectiles = new[]
+                {
+                    new MatchProjectileSnapshot
+                    {
+                        ProjectileId = 9,
+                        AttackerOwnerSlot = 1,
+                        AttackerRole = (byte)UnitRole.Ranged,
+                        StartX = 1f,
+                        StartY = 0.5f,
+                        StartZ = 2f,
+                        TargetX = 4f,
+                        TargetY = 0.4f,
+                        TargetZ = 6f,
+                        FlightDuration = 0.35f,
+                        Elapsed = 0f,
+                        IsParabolic = true,
+                        TargetBuildingInstanceId = -1,
+                        SourceBuildingInstanceId = -1,
+                        SourceBuildingId = string.Empty,
+                    },
+                    new MatchProjectileSnapshot
+                    {
+                        ProjectileId = 10,
+                        AttackerOwnerSlot = 0,
+                        AttackerRole = (byte)UnitRole.Ranged,
+                        StartX = 0f,
+                        StartY = 1f,
+                        StartZ = 0f,
+                        TargetX = 2f,
+                        TargetY = 0.5f,
+                        TargetZ = 2f,
+                        FlightDuration = 0.2f,
+                        Elapsed = 0f,
+                        IsParabolic = false,
+                        TargetBuildingInstanceId = -1,
+                        SourceBuildingInstanceId = 7,
+                        SourceBuildingId = GameIds.Buildings.Main,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(2, restored.Projectiles.Length);
+            Assert.AreEqual(9, restored.Projectiles[0].ProjectileId);
+            Assert.AreEqual(1, restored.Projectiles[0].AttackerOwnerSlot);
+            Assert.AreEqual((byte)UnitRole.Ranged, restored.Projectiles[0].AttackerRole);
+            Assert.AreEqual(1f, restored.Projectiles[0].StartX, 0.01f);
+            Assert.AreEqual(0.5f, restored.Projectiles[0].StartY, 0.01f);
+            Assert.AreEqual(4f, restored.Projectiles[0].TargetX, 0.01f);
+            Assert.AreEqual(0.35f, restored.Projectiles[0].FlightDuration, 0.01f);
+            Assert.AreEqual(0f, restored.Projectiles[0].Elapsed, 0.01f);
+            Assert.IsTrue(restored.Projectiles[0].IsParabolic);
+            Assert.AreEqual(7, restored.Projectiles[1].SourceBuildingInstanceId);
+            Assert.AreEqual(GameIds.Buildings.Main, restored.Projectiles[1].SourceBuildingId);
+        }
+
+        [Test]
         public void Capture_RoundTrip_PreservesBarracksTimerAndUnitAttackAnim()
         {
             var controller = new MatchController();

@@ -97,6 +97,11 @@ namespace Game.Gameplay.Match
             }
 
             EnsureRoot();
+            if (_runtime.TickMode == MatchTickMode.Client)
+            {
+                controller.Combat.AdvanceProjectilePresentation(Time.deltaTime);
+            }
+
             SyncVisuals(controller, controller.Combat);
             SyncSpellCasts(controller.Combat);
             SyncHeroAbilityCasts(controller.Combat);
@@ -546,7 +551,7 @@ namespace Game.Gameplay.Match
         /// <summary>Plays host + client spell-cast events (label over caster, "+" over target, Frost ring).</summary>
         void SyncSpellCasts(MatchCombatSystem combat)
         {
-            if (!CanSpawnFx())
+            if (!Application.isPlaying)
             {
                 return;
             }
@@ -590,7 +595,7 @@ namespace Game.Gameplay.Match
         /// <summary>Plays hero ability cast events (label over hero, Strike/Ultimate rings, Heal "+").</summary>
         void SyncHeroAbilityCasts(MatchCombatSystem combat)
         {
-            if (!CanSpawnFx())
+            if (!Application.isPlaying)
             {
                 return;
             }

@@ -34,6 +34,8 @@ namespace Game.Gameplay.Cameras
         public const float DefaultPanSpeed = 55f;
         public const float DefaultPanBoundsRadius = MatchArenaGenerator.DefaultArenaRadius + 32f;
         public const float DefaultFocusMoveSpeed = 100f;
+        public const float DefaultMinimapFocusMoveSpeed = 520f;
+        public const float DefaultMinimapFocusSmoothTime = 0.04f;
 
         public static Vector3 GetPlayerBaseFocusPosition(MatchArenaLayout layout, int playerSlot)
         {
