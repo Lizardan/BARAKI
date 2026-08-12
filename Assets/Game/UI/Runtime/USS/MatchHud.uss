@@ -28,6 +28,59 @@
     padding-right: 18px;
 }
 
+.match-hud__camera-pad {
+    position: absolute;
+    left: 16px;
+    top: 72px;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px;
+}
+
+.match-hud__camera-pad-cross {
+    width: 120px;
+    flex-direction: column;
+    align-items: stretch;
+    flex-shrink: 0;
+}
+
+.match-hud__camera-pad-row {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.match-hud__camera-pad-spacer {
+    width: 36px;
+    height: 36px;
+}
+
+.match-hud__camera-pad-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+    letter-spacing: 0;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.match-hud__camera-pad-hint {
+    margin-left: 10px;
+    max-width: 148px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(184, 169, 130);
+    white-space: normal;
+    -unity-text-align: middle-left;
+    letter-spacing: 0.5px;
+    line-height: 16px;
+}
+
 .match-hud__phase {
     min-width: 88px;
     font-size: 15px;

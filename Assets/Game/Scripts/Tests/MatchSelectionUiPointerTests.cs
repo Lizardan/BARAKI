@@ -80,5 +80,19 @@ namespace Game.Tests
                 topBar: null,
                 debugHudPanel: debug));
         }
+
+        [Test]
+        public void IsPointerOverBlockedUi_TrueWhenPickedInsideCameraPad()
+        {
+            var pad = new VisualElement { name = "CameraPad" };
+            var button = new Button { name = "CameraPadDownButton" };
+            pad.Add(button);
+
+            Assert.IsTrue(MatchSelectionUiPointer.IsPointerOverBlockedUi(
+                picked: button,
+                bottomDock: null,
+                topBar: null,
+                cameraPad: pad));
+        }
     }
 }

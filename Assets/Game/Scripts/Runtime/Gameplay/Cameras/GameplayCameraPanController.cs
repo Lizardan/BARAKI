@@ -29,9 +29,15 @@ namespace Game.Gameplay.Cameras
         [SerializeField] private float _minimapFocusMoveSpeed = GameplayCameraSettings.DefaultMinimapFocusMoveSpeed;
         [SerializeField] private float _minimapFocusSmoothTime = GameplayCameraSettings.DefaultMinimapFocusSmoothTime;
 
+        [Header("Yaw")]
+        [SerializeField] private float _yawSmoothTime = GameplayCameraSettings.DefaultYawSmoothTime;
+
         [SerializeField] private float _zoomDistance;
         private float _targetZoomDistance;
         private float _zoomVelocity;
+        private float _yawDegrees;
+        private float _targetYawDegrees;
+        private float _yawVelocity;
         private bool _hasFocusTarget;
         private bool _minimapFocus;
         private Vector3 _focusTarget;
@@ -40,9 +46,44 @@ namespace Game.Gameplay.Cameras
 
         public bool IsPanLocked => _hasFocusTarget || _externalPanLock;
 
+        /// <summary>Current visual yaw (may be mid-tween toward <see cref="TargetYawDegrees"/>).</summary>
+        public float YawDegrees => _yawDegrees;
+
+        public float TargetYawDegrees => _targetYawDegrees;
+
         public void SetPanInputLocked(bool locked)
         {
             _externalPanLock = locked;
+        }
+
+        /// <summary>Snaps horizontal camera yaw immediately (no tween).</summary>
+        public void SetYawDegrees(float yawDegrees)
+        {
+            _yawDegrees = yawDegrees;
+            _targetYawDegrees = yawDegrees;
+            _yawVelocity = 0f;
+            ApplyZoom();
+        }
+
+        /// <summary>Starts a short SmoothDampAngle turn toward the given yaw.</summary>
+        public void SetYawDegreesSmooth(float yawDegrees)
+        {
+            _targetYawDegrees = yawDegrees;
+        }
+
+        /// <summary>
+        /// Rotates the camera so the base lies on the chosen screen edge
+        /// (center of the arena toward the opposite edge). Uses a fast smooth turn.
+        /// </summary>
+        public void OrientBaseToScreenEdge(
+            Vector3 baseWorldPosition,
+            Vector3 arenaCenter,
+            CameraBaseScreenEdge edge)
+        {
+            SetYawDegreesSmooth(GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                baseWorldPosition,
+                arenaCenter,
+                edge));
         }
 
         private void Awake()
@@ -57,12 +98,14 @@ namespace Game.Gameplay.Cameras
             if (_cinemachineFollow != null)
             {
                 _zoomDistance = GameplayCameraSettings.GetZoomDistanceFromFollowOffset(_cinemachineFollow.FollowOffset);
+                _yawDegrees = GameplayCameraSettings.GetYawDegreesFromFollowOffset(_cinemachineFollow.FollowOffset);
             }
             else
             {
                 _zoomDistance = GameplayCameraSettings.DefaultZoomDistance;
             }
 
+            _targetYawDegrees = _yawDegrees;
             _zoomDistance = GameplayCameraSettings.ClampZoomDistance(
                 _zoomDistance,
                 _minZoomDistance,
@@ -78,12 +121,18 @@ namespace Game.Gameplay.Cameras
                 _minimapFocusMoveSpeed = GameplayCameraSettings.DefaultMinimapFocusMoveSpeed;
             }
 
+            if (_yawSmoothTime < 0.01f)
+            {
+                _yawSmoothTime = GameplayCameraSettings.DefaultYawSmoothTime;
+            }
+
             ApplyZoom();
         }
 
         private void Update()
         {
             UpdateFocus();
+            UpdateSmoothYaw();
 
             if (!Application.isFocused)
             {
@@ -210,6 +259,29 @@ namespace Game.Gameplay.Cameras
             ApplyZoom();
         }
 
+        private void UpdateSmoothYaw()
+        {
+            if (Mathf.Abs(Mathf.DeltaAngle(_yawDegrees, _targetYawDegrees)) < 0.01f
+                && Mathf.Abs(_yawVelocity) < 0.01f)
+            {
+                if (!Mathf.Approximately(_yawDegrees, _targetYawDegrees))
+                {
+                    _yawDegrees = _targetYawDegrees;
+                    _yawVelocity = 0f;
+                    ApplyZoom();
+                }
+
+                return;
+            }
+
+            _yawDegrees = Mathf.SmoothDampAngle(
+                _yawDegrees,
+                _targetYawDegrees,
+                ref _yawVelocity,
+                Mathf.Max(0.01f, _yawSmoothTime));
+            ApplyZoom();
+        }
+
         private void ApplyPan(Mouse mouse, Keyboard keyboard)
         {
             var edgeInput = mouse != null
@@ -243,7 +315,9 @@ namespace Game.Gameplay.Cameras
                 return;
             }
 
-            _cinemachineFollow.FollowOffset = GameplayCameraSettings.FollowOffsetFromZoomDistance(_zoomDistance);
+            _cinemachineFollow.FollowOffset = GameplayCameraSettings.FollowOffsetFromZoomDistance(
+                _zoomDistance,
+                _yawDegrees);
         }
 
         private void OnDisable()
@@ -263,6 +337,7 @@ namespace Game.Gameplay.Cameras
             }
 
             _zoomSmoothTime = Mathf.Max(0.01f, _zoomSmoothTime);
+            _yawSmoothTime = Mathf.Max(0.01f, _yawSmoothTime);
             _focusMoveSpeed = Mathf.Max(1f, _focusMoveSpeed);
             _minimapFocusMoveSpeed = Mathf.Max(1f, _minimapFocusMoveSpeed);
             _minimapFocusSmoothTime = Mathf.Max(0.01f, _minimapFocusSmoothTime);

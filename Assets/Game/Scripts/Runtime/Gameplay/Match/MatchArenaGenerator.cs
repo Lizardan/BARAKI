@@ -19,8 +19,15 @@ namespace Game.Gameplay.Match
         /// </summary>
         public const float FirstPlayerAngleRadians = -Mathf.PI * 0.5f;
 
-        /// <summary>Unity plane is 10×10 at scale 1; +40 world units margin beyond the road square.</summary>
-        public static float DefaultGroundPlaneScale => (DefaultArenaRadius * 2f + 40f) / 10f;
+        /// <summary>
+        /// World half-extent of the Ground plane along X/Z.
+        /// Matches arena ring radius plus one road-width margin beyond the road square.
+        /// </summary>
+        public static float GroundHalfExtent(float arenaRadius = DefaultArenaRadius) =>
+            arenaRadius + MatchArenaGreyboxBuilder.RoadWidth;
+
+        /// <summary>Unity plane is 10×10 at scale 1; scale so world half-extent equals <see cref="GroundHalfExtent"/>.</summary>
+        public static float DefaultGroundPlaneScale => GroundHalfExtent() * 2f / 10f;
 
         /// <summary>
         /// N=2 road/path assets are authored with player 0 at +X; rotate into layout space

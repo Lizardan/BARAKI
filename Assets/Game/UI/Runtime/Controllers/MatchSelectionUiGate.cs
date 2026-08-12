@@ -13,6 +13,7 @@ namespace Game.UI.Controllers
         VisualElement _bottomDock;
         VisualElement _topBar;
         VisualElement _debugHudPanel;
+        VisualElement _cameraPad;
         MatchSelectionBridge _bridge;
         MatchSelectionInput _boundInput;
 
@@ -27,6 +28,7 @@ namespace Game.UI.Controllers
             _bottomDock = root.Q<VisualElement>("BottomDock");
             _topBar = root.Q<VisualElement>("TopBar");
             _debugHudPanel = root.Q<VisualElement>("DebugHudPanel");
+            _cameraPad = root.Q<VisualElement>("CameraPad");
         }
 
         void OnEnable()
@@ -95,7 +97,8 @@ namespace Game.UI.Controllers
                     picked,
                     _bottomDock,
                     _topBar,
-                    _debugHudPanel))
+                    _debugHudPanel,
+                    _cameraPad))
             {
                 return true;
             }
@@ -103,7 +106,8 @@ namespace Game.UI.Controllers
             // Layout fallback when Pick misses (Ignore overlays / scale edge cases).
             return ContainsPanelPoint(_bottomDock, panelPosition)
                    || ContainsPanelPoint(_topBar, panelPosition)
-                   || ContainsPanelPoint(_debugHudPanel, panelPosition);
+                   || ContainsPanelPoint(_debugHudPanel, panelPosition)
+                   || ContainsPanelPoint(_cameraPad, panelPosition);
         }
 
         static bool ContainsPanelPoint(VisualElement element, Vector2 panelPosition) =>

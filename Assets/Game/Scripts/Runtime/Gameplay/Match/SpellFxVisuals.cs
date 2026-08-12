@@ -1,4 +1,5 @@
 using Game.Core;
+using Game.Gameplay.Cameras;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -81,9 +82,14 @@ namespace Game.Gameplay.Match
                 return;
             }
 
+            // Only tip on X; yaw locked to gameplay camera compass (same as HP bars).
+            var yaw = GameplayCameraPanController.Current != null
+                ? GameplayCameraPanController.Current.YawDegrees
+                : 0f;
             transform.rotation = UnitWorldStatusBars.ResolvePitchOnlyBillboard(
                 transform.position,
-                camera.transform.position);
+                camera.transform.position,
+                yaw);
         }
 
         void ApplyAlpha(float alpha)

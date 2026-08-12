@@ -14,6 +14,29 @@
             <ui:Label name="CommandFeedbackLabel" text="" class="match-hud__command-feedback match-hud__command-feedback--hidden" />
             <ui:Label name="StartCountdownLabel" text="" class="match-hud__start-countdown" />
         </ui:VisualElement>
+        <ui:VisualElement name="CameraPad" class="match-hud__camera-pad" picking-mode="Position">
+            <ui:VisualElement class="match-hud__camera-pad-cross" picking-mode="Ignore">
+                <ui:VisualElement class="match-hud__camera-pad-row">
+                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                    <ui:Button name="CameraPadUpButton" text="^" class="ui-btn match-hud__camera-pad-btn" />
+                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:VisualElement class="match-hud__camera-pad-row">
+                    <ui:Button name="CameraPadLeftButton" text="&lt;" class="ui-btn match-hud__camera-pad-btn" />
+                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                    <ui:Button name="CameraPadRightButton" text="&gt;" class="ui-btn match-hud__camera-pad-btn" />
+                </ui:VisualElement>
+                <ui:VisualElement class="match-hud__camera-pad-row">
+                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                    <ui:Button name="CameraPadDownButton" text="v" class="ui-btn match-hud__camera-pad-btn" />
+                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="CameraPadHint"
+                      text="Ориентация базы"
+                      class="match-hud__camera-pad-hint"
+                      picking-mode="Ignore" />
+        </ui:VisualElement>
         <ui:VisualElement name="MigrationOverlay" class="match-hud__migration match-hud__migration--hidden" picking-mode="Position">
             <ui:Label name="MigrationLabel" text="Смена хоста…" class="match-hud__migration-label" />
         </ui:VisualElement>

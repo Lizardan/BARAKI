@@ -37,6 +37,7 @@ namespace Game.UI.Controllers
         float _panelHeight = 350f;
         float _lastGeometryWidth;
         float _lastGeometryHeight;
+        float _lastGeometryYaw = float.NaN;
         MatchMinimapTopology _lastDrawnTopology;
         bool _isDraggingMinimap;
         bool _heldPanInputLock;
@@ -277,7 +278,8 @@ namespace Game.UI.Controllers
                 localPanelPosition,
                 _panelWidth,
                 _panelHeight,
-                arenaRadius);
+                arenaRadius,
+                pan.YawDegrees);
             pan.FocusOnMinimapPosition(world);
         }
 
@@ -345,9 +347,18 @@ namespace Game.UI.Controllers
         {
             // Unclamped: far frustum corners past the arena must not be pulled onto the map
             // edge (that artificially inflates the viewport overlay).
-            var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(worldPosition, arenaRadius);
+            var yaw = GetViewYawDegrees();
+            var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(
+                worldPosition,
+                arenaRadius,
+                yaw);
             return MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
         }
+
+        static float GetViewYawDegrees() =>
+            GameplayCameraPanController.Current != null
+                ? GameplayCameraPanController.Current.YawDegrees
+                : 0f;
 
         bool ShouldDrawUnitBlip(MatchUnitState unit, int localSlot, MatchCombatSystem combat)
         {
@@ -378,17 +389,20 @@ namespace Game.UI.Controllers
             }
 
             var arenaRadius = _topologyController?.Layout?.ArenaRadius ?? MatchArenaGenerator.DefaultArenaRadius;
+            var yaw = GetViewYawDegrees();
             var sizeChanged = !Mathf.Approximately(_lastGeometryWidth, _panelWidth)
                 || !Mathf.Approximately(_lastGeometryHeight, _panelHeight);
-            if (!sizeChanged && ReferenceEquals(_topology, _lastDrawnTopology))
+            var yawChanged = float.IsNaN(_lastGeometryYaw) || !Mathf.Approximately(_lastGeometryYaw, yaw);
+            if (!sizeChanged && !yawChanged && ReferenceEquals(_topology, _lastDrawnTopology))
             {
                 return;
             }
 
             _lastGeometryWidth = _panelWidth;
             _lastGeometryHeight = _panelHeight;
+            _lastGeometryYaw = yaw;
             _lastDrawnTopology = _topology;
-            _geometryElement.SetDrawData(_topology, arenaRadius, _panelWidth, _panelHeight);
+            _geometryElement.SetDrawData(_topology, arenaRadius, _panelWidth, _panelHeight, yaw);
         }
 
         VisualElement GetOrCreateBlip(string key, string extraClass)
@@ -412,7 +426,10 @@ namespace Game.UI.Controllers
 
         void PlaceBlip(VisualElement blip, Vector3 worldPosition, float arenaRadius, float size)
         {
-            var normalized = MatchMinimapProjection.WorldToNormalized(worldPosition, arenaRadius);
+            var normalized = MatchMinimapProjection.WorldToNormalized(
+                worldPosition,
+                arenaRadius,
+                GetViewYawDegrees());
             var panelPosition = MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
             blip.style.left = panelPosition.x - size * 0.5f;
             blip.style.top = panelPosition.y - size * 0.5f;

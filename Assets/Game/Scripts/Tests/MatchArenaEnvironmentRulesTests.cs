@@ -178,13 +178,31 @@ namespace Game.Tests
             var layout = MatchArenaGenerator.Generate(4);
             var walkable = WalkableSurfaceCache.GetOrCreate(4);
             var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
-            var max = MatchArenaEnvironmentRules.MapHalfExtent(layout.ArenaRadius);
+            var ground = MatchArenaGenerator.GroundHalfExtent(layout.ArenaRadius);
+
+            Assert.AreEqual(ground, MatchArenaEnvironmentRules.MapHalfExtent(layout.ArenaRadius), 0.001f);
 
             foreach (var placement in placements)
             {
-                Assert.LessOrEqual(Mathf.Abs(placement.Position.x), max + 0.05f);
-                Assert.LessOrEqual(Mathf.Abs(placement.Position.z), max + 0.05f);
+                Assert.LessOrEqual(Mathf.Abs(placement.Position.x), ground + 0.05f);
+                Assert.LessOrEqual(Mathf.Abs(placement.Position.z), ground + 0.05f);
             }
+        }
+
+        [Test]
+        public void BuildPlacements_N4_OuterFringeHasTreesOnGround()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var walkable = WalkableSurfaceCache.GetOrCreate(4);
+            var placements = MatchArenaEnvironmentRules.BuildPlacements(layout, walkable);
+            var ground = MatchArenaGenerator.GroundHalfExtent(layout.ArenaRadius);
+            var bandStart = ground - MatchArenaEnvironmentRules.OuterFringeBand;
+
+            var fringeTrees = placements.Count(placement =>
+                placement.Kind is EnvironmentPropKind.Tree or EnvironmentPropKind.Pine
+                && Mathf.Max(Mathf.Abs(placement.Position.x), Mathf.Abs(placement.Position.z)) >= bandStart);
+
+            Assert.Greater(fringeTrees, 20, "Outer Ground perimeter should keep a forest frame.");
         }
 
         [Test]

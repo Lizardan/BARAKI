@@ -50,9 +50,11 @@ namespace Game.Gameplay.Match
         public const string DecorRootName = "EnvironmentDecor";
 
         public const float MinBaseDistance = 40f;
-        public const float LandscapeOuterMargin = 6f;
         public const float NatureCellSize = 8.5f;
         public const float FlowerCellSize = 7.5f;
+        /// <summary>Grass strip between the outer road edge and Ground perimeter filled with trees.</summary>
+        public const float OuterFringeBand = 12f;
+        public const float OuterFringeCellSize = 6.5f;
         const int FootprintSampleCount = 8;
 
         public static int SeedForPlayerCount(int playerCount) =>
@@ -60,20 +62,16 @@ namespace Game.Gameplay.Match
 
         public static bool AllowsWalkableOverlay(EnvironmentPropKind kind) => false;
 
-        /// <summary>Square map half-extent covering perimeter roads + thin fringe.</summary>
+        /// <summary>
+        /// Décor centers must stay on the Ground plane — same half-extent as
+        /// <see cref="MatchArenaGenerator.GroundHalfExtent"/>.
+        /// </summary>
         public static float MapHalfExtent(float arenaRadius) =>
-            arenaRadius + MatchArenaGreyboxBuilder.RoadWidth + LandscapeOuterMargin;
+            MatchArenaGenerator.GroundHalfExtent(arenaRadius);
 
-        /// <summary>Axis-aligned half-extent for a given player count (circular ring fits in arenaRadius).</summary>
-        public static float MapHalfExtent(float arenaRadius, int playerCount)
-        {
-            if (playerCount == 2 || playerCount == 4)
-            {
-                return arenaRadius * Mathf.Sqrt(2f) + MatchArenaGreyboxBuilder.RoadWidth + LandscapeOuterMargin;
-            }
-
-            return MapHalfExtent(arenaRadius);
-        }
+        /// <summary>Same as <see cref="MapHalfExtent(float)"/>; playerCount kept for call-site compatibility.</summary>
+        public static float MapHalfExtent(float arenaRadius, int _) =>
+            MapHalfExtent(arenaRadius);
 
         public static bool IsWithinMapBounds(Vector3 position, float arenaRadius)
         {
@@ -81,11 +79,8 @@ namespace Game.Gameplay.Match
             return Mathf.Abs(position.x) <= max + 0.01f && Mathf.Abs(position.z) <= max + 0.01f;
         }
 
-        public static bool IsWithinMapBounds(Vector3 position, float arenaRadius, int playerCount)
-        {
-            var max = MapHalfExtent(arenaRadius, playerCount);
-            return Mathf.Abs(position.x) <= max + 0.01f && Mathf.Abs(position.z) <= max + 0.01f;
-        }
+        public static bool IsWithinMapBounds(Vector3 position, float arenaRadius, int _) =>
+            IsWithinMapBounds(position, arenaRadius);
 
         public static float FootprintRadius(EnvironmentPropKind kind) => kind switch
         {
@@ -201,6 +196,7 @@ namespace Game.Gameplay.Match
 
             TryAddPocketLandscape(result, layout, walkable, rng, radius);
             TryAddNatureGrid(result, layout, walkable, rng, radius);
+            TryAddOuterFringeForest(result, layout, walkable, rng, radius);
             TryAddRoadsideClutter(result, layout, walkable, rng, radius);
 
             return result;
@@ -441,6 +437,64 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
+                    result.Add(new EnvironmentPropPlacement(kind, flat, Yaw(rng)));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Dense forest frame on the Ground perimeter (outside the outer road, inside the plane).
+        /// Replaces the old beyond-Ground fringe that used to hang in empty space.
+        /// </summary>
+        static void TryAddOuterFringeForest(
+            List<EnvironmentPropPlacement> result,
+            MatchArenaLayout layout,
+            WalkableSurface walkable,
+            System.Random rng,
+            float radius)
+        {
+            var ground = MapHalfExtent(radius);
+            var outerRoad = radius + MatchArenaGreyboxBuilder.RoadWidth * 0.5f;
+            var inner = Mathf.Min(outerRoad + 1.5f, ground - 1f);
+            var bandStart = Mathf.Max(inner, ground - OuterFringeBand);
+            var cell = OuterFringeCellSize;
+            var row = 0;
+            for (var z = -ground; z <= ground; z += cell)
+            {
+                var xOffset = (row & 1) == 0 ? 0f : cell * 0.5f;
+                row++;
+                for (var x = -ground + xOffset; x <= ground; x += cell)
+                {
+                    var jitter = new Vector3(
+                        (float)(rng.NextDouble() - 0.5) * cell * 0.4f,
+                        0f,
+                        (float)(rng.NextDouble() - 0.5) * cell * 0.4f);
+                    var flat = new Vector3(x, 0f, z) + jitter;
+                    if (!IsWithinMapBounds(flat, radius))
+                    {
+                        continue;
+                    }
+
+                    // Chebyshev distance: square frame along Ground edges / corners.
+                    var chebyshev = Mathf.Max(Mathf.Abs(flat.x), Mathf.Abs(flat.z));
+                    if (chebyshev < bandStart)
+                    {
+                        continue;
+                    }
+
+                    if (walkable != null && walkable.Contains(flat))
+                    {
+                        continue;
+                    }
+
+                    var roll = Hash(x + 17f, z - 9f) % 10;
+                    var kind = roll <= 6 ? EnvironmentPropKind.Pine : EnvironmentPropKind.Tree;
+                    if (!CanPlace(flat, walkable, layout.Slots, kind, radius, MinBaseDistance * 0.45f))
+                    {
+                        continue;
+                    }
+
+                    flat.y = 0f;
                     result.Add(new EnvironmentPropPlacement(kind, flat, Yaw(rng)));
                 }
             }

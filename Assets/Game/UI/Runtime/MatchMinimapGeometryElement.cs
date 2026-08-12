@@ -16,6 +16,7 @@ namespace Game.UI
         float _arenaRadius = 120f;
         float _panelWidth = 350f;
         float _panelHeight = 350f;
+        float _viewYawDegrees;
 
         public MatchMinimapGeometryElement()
         {
@@ -27,12 +28,14 @@ namespace Game.UI
             MatchMinimapTopology topology,
             float arenaRadius,
             float panelWidth,
-            float panelHeight)
+            float panelHeight,
+            float viewYawDegrees = 0f)
         {
             _topology = topology;
             _arenaRadius = Mathf.Max(1f, arenaRadius);
             _panelWidth = Mathf.Max(1f, panelWidth);
             _panelHeight = Mathf.Max(1f, panelHeight);
+            _viewYawDegrees = viewYawDegrees;
             MarkDirtyRepaint();
         }
 
@@ -124,7 +127,8 @@ namespace Game.UI
         {
             var normalized = MatchMinimapProjection.WorldToNormalized(
                 new Vector3(worldXZ.x, 0f, worldXZ.y),
-                _arenaRadius);
+                _arenaRadius,
+                _viewYawDegrees);
             return MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
         }
 

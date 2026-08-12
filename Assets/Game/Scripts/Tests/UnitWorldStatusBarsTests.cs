@@ -33,8 +33,26 @@ namespace Game.Tests
                 pitch -= 360f;
             }
 
-            // Camera at 45° elevation → pitch ≈ +45°.
+            // Camera at 45° elevation → pitch ≈ +45° (local −Z face tips toward camera).
             Assert.AreEqual(45f, pitch, 0.5f);
+        }
+
+        [Test]
+        public void ResolvePitchOnlyBillboard_WithViewYaw_KeepsLocalNegZTowardCamera()
+        {
+            // Camera west of bar (matches follow offset at view yaw 90°).
+            var barPos = Vector3.zero;
+            var cameraPos = new Vector3(-4f, 4f, 0f);
+            const float viewYaw = 90f;
+
+            var rotation = UnitWorldStatusBars.ResolvePitchOnlyBillboard(barPos, cameraPos, viewYaw);
+            var localNegZFlat = rotation * Vector3.back;
+            localNegZFlat.y = 0f;
+            localNegZFlat.Normalize();
+            var toCameraFlat = new Vector3(cameraPos.x - barPos.x, 0f, cameraPos.z - barPos.z).normalized;
+
+            Assert.AreEqual(viewYaw, rotation.eulerAngles.y, 0.05f);
+            Assert.Greater(Vector3.Dot(localNegZFlat, toCameraFlat), 0.99f);
         }
 
         [Test]

@@ -87,5 +87,32 @@ namespace Game.Tests
             Assert.Less(outside.y, 0f);
             Assert.AreEqual(0f, clamped.y, 0.001f);
         }
+
+        [Test]
+        public void WorldToNormalized_WithYaw90_MapsNegXToBottom()
+        {
+            const float radius = 120f;
+            var west = MatchMinimapProjection.WorldToNormalized(
+                new Vector3(-radius, 0f, 0f),
+                radius,
+                viewYawDegrees: 90f);
+
+            Assert.AreEqual(0.5f, west.x, 0.001f);
+            Assert.AreEqual(1f, west.y, 0.001f);
+        }
+
+        [Test]
+        public void PanelToWorld_WithYaw_RoundTrips()
+        {
+            const float radius = 120f;
+            const float yaw = -90f;
+            var original = new Vector3(40f, 0f, -25f);
+            var normalized = MatchMinimapProjection.WorldToNormalized(original, radius, yaw);
+            var panel = MatchMinimapProjection.NormalizedToPanel(normalized, 350f, 350f);
+            var back = MatchMinimapProjection.PanelToWorld(panel, 350f, 350f, radius, yaw);
+
+            Assert.AreEqual(original.x, back.x, 0.05f);
+            Assert.AreEqual(original.z, back.z, 0.05f);
+        }
     }
 }

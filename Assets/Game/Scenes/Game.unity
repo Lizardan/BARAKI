@@ -334,6 +334,7 @@ GameObject:
   - component: {fileID: 410087040}
   - component: {fileID: 410087042}
   - component: {fileID: 410087043}
+  - component: {fileID: 410087044}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -466,6 +467,19 @@ MonoBehaviour:
   _menuIntensity: 0.22
   _playIntensity: 1.15
   _duration: 0.65
+--- !u!114 &410087044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410087039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c4e2a91b8d05f64e3a1c9d0f6b2e845, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.GameplayCameraYawLightFollower
+  _lightTransform: {fileID: 410087041}
 --- !u!1 &411625580
 GameObject:
   m_ObjectHideFlags: 0
@@ -482,6 +496,7 @@ GameObject:
   - component: {fileID: 411625585}
   - component: {fileID: 411625584}
   - component: {fileID: 411625588}
+  - component: {fileID: 411625589}
   m_Layer: 0
   m_Name: MatchHud
   m_TagString: Untagged
@@ -607,6 +622,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f71af0366407b2e4081086239c4e8966, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchDebugHudController
+  _uiDocument: {fileID: 411625583}
+--- !u!114 &411625589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 411625580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8c3e91f4b2d6e7091c5a4f8d3e2b170, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchCameraPadController
   _uiDocument: {fileID: 411625583}
 --- !u!1 &659531375
 GameObject:

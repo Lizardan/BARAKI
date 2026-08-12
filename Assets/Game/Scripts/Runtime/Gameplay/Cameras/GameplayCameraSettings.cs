@@ -4,6 +4,15 @@ using UnityEngine.InputSystem;
 
 namespace Game.Gameplay.Cameras
 {
+    /// <summary>Which screen edge the local base should sit on after a compass yaw.</summary>
+    public enum CameraBaseScreenEdge
+    {
+        Bottom = 0,
+        Right = 1,
+        Top = 2,
+        Left = 3,
+    }
+
     /// <summary>
     /// Shared RTS camera tuning matched to Warcraft 3 defaults (AoA 304°, FOV 70°).
     /// </summary>
@@ -17,10 +26,10 @@ namespace Game.Gameplay.Cameras
         /// <summary>Vertical FOV matching WC3 <c>bj_CAMERA_DEFAULT_FOV</c> / MiscData FOV=70.</summary>
         public const float DefaultFieldOfViewDegrees = 70f;
 
-        /// <summary>Unit direction for pitch-only follow (no yaw).</summary>
+        /// <summary>Unit direction for pitch-only follow at yaw 0 (camera south of target).</summary>
         public static readonly Vector3 IsometricFollowDirection = CreateFollowDirection(DefaultPitchDegrees);
 
-        /// <summary>World-space follow offset — pitch only (no yaw).</summary>
+        /// <summary>World-space follow offset — pitch only, yaw 0.</summary>
         public static readonly Vector3 IsometricFollowOffset =
             IsometricFollowDirection * DefaultZoomDistance;
 
@@ -36,6 +45,8 @@ namespace Game.Gameplay.Cameras
         public const float DefaultFocusMoveSpeed = 100f;
         public const float DefaultMinimapFocusMoveSpeed = 520f;
         public const float DefaultMinimapFocusSmoothTime = 0.04f;
+        /// <summary>Very short SmoothDampAngle time for compass / pad yaw turns.</summary>
+        public const float DefaultYawSmoothTime = 0.06f;
 
         public static Vector3 GetPlayerBaseFocusPosition(MatchArenaLayout layout, int playerSlot)
         {
@@ -50,6 +61,33 @@ namespace Game.Gameplay.Cameras
             }
 
             return layout.Slots[playerSlot].GetBuildingWorldPosition(Game.Core.GameIds.Buildings.Main);
+        }
+
+        /// <summary>
+        /// Yaw that places <paramref name="baseWorldPosition"/> on the chosen screen edge
+        /// (arena center toward the opposite edge).
+        /// </summary>
+        public static float ComputeYawDegreesForBaseAtScreenEdge(
+            Vector3 baseWorldPosition,
+            Vector3 arenaCenter,
+            CameraBaseScreenEdge edge)
+        {
+            var toBase = baseWorldPosition - arenaCenter;
+            toBase.y = 0f;
+            if (toBase.sqrMagnitude < 0.0001f)
+            {
+                return 0f;
+            }
+
+            // Default view: screen-down is −Z. Rotate so screen-down aligns with toBase.
+            var yawBottom = Mathf.Atan2(-toBase.x, -toBase.z) * Mathf.Rad2Deg;
+            return edge switch
+            {
+                CameraBaseScreenEdge.Right => yawBottom + 90f,
+                CameraBaseScreenEdge.Top => yawBottom + 180f,
+                CameraBaseScreenEdge.Left => yawBottom - 90f,
+                _ => yawBottom,
+            };
         }
 
         public static Vector3 ComputeEdgePanDirection(Camera camera, Vector2 edgeInput)
@@ -171,14 +209,32 @@ namespace Game.Gameplay.Cameras
             return followOffset.magnitude;
         }
 
+        /// <summary>
+        /// Horizontal yaw baked into a follow offset (0 = default south-looking isometric).
+        /// </summary>
+        public static float GetYawDegreesFromFollowOffset(Vector3 followOffset)
+        {
+            var flat = new Vector3(followOffset.x, 0f, followOffset.z);
+            if (flat.sqrMagnitude < 0.0001f)
+            {
+                return 0f;
+            }
+
+            // RotateY(yaw) * (0,0,-1) = flat → (-sin, -cos) = flat.normalized
+            return Mathf.Atan2(-flat.x, -flat.z) * Mathf.Rad2Deg;
+        }
+
         public static float ClampZoomDistance(float distance, float minDistance, float maxDistance)
         {
             return Mathf.Clamp(distance, minDistance, maxDistance);
         }
 
-        public static Vector3 FollowOffsetFromZoomDistance(float distance)
+        public static Vector3 FollowOffsetFromZoomDistance(float distance, float yawDegrees = 0f)
         {
-            return IsometricFollowDirection * distance;
+            var direction = Mathf.Abs(yawDegrees) < 0.001f
+                ? IsometricFollowDirection
+                : Quaternion.Euler(0f, yawDegrees, 0f) * IsometricFollowDirection;
+            return direction * distance;
         }
 
         private static Vector3 CreateFollowDirection(float pitchDegrees)

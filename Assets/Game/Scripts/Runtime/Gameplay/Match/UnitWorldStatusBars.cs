@@ -1,9 +1,13 @@
 using Game.Core;
+using Game.Gameplay.Cameras;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>HP/mana strips above units and buildings; pitch-only billboard toward the camera.</summary>
+    /// <summary>
+    /// HP/mana strips above units and buildings.
+    /// Pitch-only tip toward the camera; yaw stays locked to the gameplay camera compass.
+    /// </summary>
     public sealed class UnitWorldStatusBars : MonoBehaviour
     {
         const float SizeMultiplier = 1.5f;
@@ -127,15 +131,17 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            // Pitch only (around X): face camera elevation. No yaw spin around Y.
+            // Only tip on X. Yaw is locked to camera compass (not free look-at on Y).
             transform.rotation = ResolvePitchOnlyBillboard(
                 transform.position,
                 camera.transform.position,
-                lockedYawDegrees: 0f);
+                GetViewYawDegrees());
         }
 
         /// <summary>
-        /// Pitch-only billboard: tilt around X toward the camera, keep yaw locked (no spin around Y).
+        /// Pitch-only billboard: tip around X toward the camera elevation.
+        /// Yaw stays fixed at <paramref name="lockedYawDegrees"/> (no spin around Y).
+        /// Face convention: local −Z toward the camera when yaw matches the view.
         /// </summary>
         public static Quaternion ResolvePitchOnlyBillboard(
             Vector3 barPosition,
@@ -149,10 +155,15 @@ namespace Game.Gameplay.Match
                 return Quaternion.Euler(0f, lockedYawDegrees, 0f);
             }
 
-            // Camera above → positive Euler X so the bar face tips toward the camera (not mirrored).
+            // Elevation of the camera relative to the bar. Positive = camera above → tip face up.
             var pitchDegrees = Mathf.Atan2(toCamera.y, Mathf.Max(horizontalDistance, 0.0001f)) * Mathf.Rad2Deg;
             return Quaternion.Euler(pitchDegrees, lockedYawDegrees, 0f);
         }
+
+        static float GetViewYawDegrees() =>
+            GameplayCameraPanController.Current != null
+                ? GameplayCameraPanController.Current.YawDegrees
+                : 0f;
 
         static void DestroyCollider(GameObject target)
         {

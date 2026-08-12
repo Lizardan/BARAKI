@@ -64,6 +64,48 @@ namespace Game.Tests
         }
 
         [Test]
+        public void FollowOffsetFromZoomDistance_AppliesYawAroundY()
+        {
+            var offset = GameplayCameraSettings.FollowOffsetFromZoomDistance(100f, yawDegrees: 90f);
+
+            Assert.AreEqual(100f, offset.magnitude, 0.001f);
+            Assert.AreEqual(90f, GameplayCameraSettings.GetYawDegreesFromFollowOffset(offset), 0.01f);
+            Assert.Less(offset.x, 0f);
+            Assert.AreEqual(0f, offset.z, 0.001f);
+        }
+
+        [Test]
+        public void ComputeYawDegreesForBaseAtScreenEdge_Slot0Bottom_IsZero()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var basePos = layout.Slots[0].BasePosition;
+
+            var yaw = GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                basePos,
+                Vector3.zero,
+                CameraBaseScreenEdge.Bottom);
+
+            Assert.AreEqual(0f, yaw, 0.5f);
+        }
+
+        [Test]
+        public void ComputeYawDegreesForBaseAtScreenEdge_RightIsBottomPlus90()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var basePos = layout.Slots[1].BasePosition;
+            var bottom = GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                basePos,
+                Vector3.zero,
+                CameraBaseScreenEdge.Bottom);
+            var right = GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                basePos,
+                Vector3.zero,
+                CameraBaseScreenEdge.Right);
+
+            Assert.AreEqual(Mathf.DeltaAngle(0f, bottom + 90f), Mathf.DeltaAngle(0f, right), 0.01f);
+        }
+
+        [Test]
         public void FollowOffsetFromZoomDistance_UsesWarcraft3Pitch()
         {
             var offset = GameplayCameraSettings.FollowOffsetFromZoomDistance(100f);

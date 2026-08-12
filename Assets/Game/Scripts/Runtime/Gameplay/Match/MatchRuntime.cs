@@ -248,6 +248,12 @@ namespace Game.Gameplay.Match
             var focusPosition = GameplayCameraSettings.GetPlayerBaseFocusPosition(
                 Controller.Layout,
                 localPlayerSlot);
+            // Snap on match start — pad buttons use the smooth OrientBaseToScreenEdge path.
+            panController.SetYawDegrees(
+                GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                    focusPosition,
+                    Vector3.zero,
+                    CameraBaseScreenEdge.Bottom));
             panController.FocusOnPosition(focusPosition);
         }
 
