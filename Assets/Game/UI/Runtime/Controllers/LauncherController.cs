@@ -23,11 +23,6 @@ namespace Game.UI.Controllers
         private const float ShinePeriodSeconds = 1.6f;
         private const float UgsInitTimeoutSeconds = 8f;
         private const float FriendsInitTimeoutSeconds = 8f;
-#if BARAKI_UPDATER_ONLY
-        private const bool IsUpdaterOnlyBuild = true;
-#else
-        private const bool IsUpdaterOnlyBuild = false;
-#endif
 
         private static readonly string[] NewsImageClasses =
         {
@@ -368,14 +363,6 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            if (!BootstrapUpdateFlowRules.ShouldOfferEnterGame(
-                    IsUpdaterOnlyBuild,
-                    GameUpdateService.UpdateRequired))
-            {
-                ShowUpdaterOnlyIdle(GameUpdateService.CheckFailed);
-                return;
-            }
-
             if (GameUpdateService.CheckFailed)
             {
                 var detail = string.IsNullOrWhiteSpace(GameUpdateService.LastError)
@@ -488,31 +475,6 @@ namespace Game.UI.Controllers
             _warmingDetail = null;
             ApplyProgress(LauncherProgressPhase.Ready, 1f);
             SetUpdateRange(null, null);
-        }
-
-        private void ShowUpdaterOnlyIdle(bool checkFailed)
-        {
-            _isUpdating = false;
-            _isReadyToRestart = false;
-            if (checkFailed)
-            {
-                var detail = string.IsNullOrWhiteSpace(GameUpdateService.LastError)
-                    ? "Попробуйте позже."
-                    : GameUpdateService.LastError;
-                _warmingDetail = $"Не удалось проверить обновления: {detail}";
-                ApplyProgress(LauncherProgressPhase.Warming, 0f);
-            }
-            else
-            {
-                _warmingDetail = "Последняя версия уже установлена";
-                ApplyProgress(LauncherProgressPhase.Warming, 1f);
-            }
-
-            SetUpdateRange(null, null);
-            if (_playButton != null)
-            {
-                _playButton.SetEnabled(false);
-            }
         }
 
         private void OnApplyProgress(GameUpdateApplyProgress progress)

@@ -1,9 +1,5 @@
-using Game.Core;
-using Game.UI.Controllers;
 using NUnit.Framework;
 using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Game.Tests
@@ -79,20 +75,6 @@ namespace Game.Tests
             StringAssert.Contains("flex-grow", uss);
             StringAssert.Contains("flex-direction", uss);
             StringAssert.Contains("transition-duration", uss);
-        }
-
-        [Test]
-        public void BootstrapScene_HasLauncherController()
-        {
-            EditorSceneManager.OpenScene("Assets/Game/Scenes/Bootstrap.unity");
-            var controller = Object.FindAnyObjectByType<LauncherController>();
-            Assert.IsNotNull(controller, "Bootstrap scene should include LauncherController.");
-            Assert.IsTrue(controller.enabled, "LauncherController must be enabled.");
-
-            var uiDocument = controller.GetComponent<UIDocument>();
-            Assert.IsNotNull(uiDocument, "Launcher should include UIDocument.");
-            Assert.IsNotNull(uiDocument.visualTreeAsset, "Launcher UIDocument should reference Launcher.uxml.");
-            StringAssert.Contains("Launcher", uiDocument.visualTreeAsset.name);
         }
     }
 }

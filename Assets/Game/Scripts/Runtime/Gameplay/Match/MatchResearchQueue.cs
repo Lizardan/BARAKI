@@ -104,9 +104,6 @@ namespace Game.Gameplay.Match
             return true;
         }
 
-        /// <summary>Deprecated name kept for call sites; enqueues when space available.</summary>
-        public bool TryBegin(BuildingResearchState research) => TryEnqueue(research);
-
         public IEnumerable<int> BuildingInstanceIds
         {
             get

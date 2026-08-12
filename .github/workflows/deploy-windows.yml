@@ -512,8 +512,6 @@ jobs:
               done
 
           echo "Keeping last ${KEEP_RELEASES} full-client GitHub Releases; deleting older..."
-          # Only prune full-client v* releases. Updater releases (updater-v*) feed the bootstrap
-          # installer redirect and must never be swept here, even if they are old.
           mapfile -t tags < <(gh release list --repo "$REPO" --limit 50 --json tagName -q '.[].tagName' | grep -E '^v[0-9]')
           if [ "${#tags[@]}" -gt "$KEEP_RELEASES" ]; then
             for ((i=KEEP_RELEASES; i<${#tags[@]}; i++)); do

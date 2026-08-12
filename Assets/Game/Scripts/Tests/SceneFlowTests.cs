@@ -1,10 +1,12 @@
 using Game.Core;
+using Game.Gameplay.Cameras;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using Game.UI;
 using Game.UI.Controllers;
 using NUnit.Framework;
+using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -95,6 +97,26 @@ namespace Game.Tests
 
             var uiDocument = controller.GetComponent<UIDocument>();
             Assert.IsNotNull(uiDocument.visualTreeAsset, "MatchHud UIDocument should reference MatchHud.uxml.");
+        }
+
+        [Test]
+        public void GameScene_HasCameraAndArenaGreybox()
+        {
+            EditorSceneManager.OpenScene("Assets/Game/Scenes/Game.unity");
+            Assert.IsNotNull(
+                Object.FindAnyObjectByType<CinemachineBrain>(),
+                "Main Camera should have CinemachineBrain.");
+            Assert.IsNotNull(
+                Object.FindAnyObjectByType<CinemachineCamera>(),
+                "Game scene should include a CinemachineCamera.");
+
+            var greybox = Object.FindAnyObjectByType<MatchArenaGreybox>();
+            Assert.IsNotNull(greybox, "Game scene should include MatchArenaGreybox.");
+            Assert.AreEqual(4, greybox.PlayerCount);
+
+            Assert.IsNotNull(
+                Object.FindAnyObjectByType<GameplayCameraPanController>(),
+                "Game scene should include edge-scroll camera pan.");
         }
 
         [Test]

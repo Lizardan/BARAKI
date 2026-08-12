@@ -159,13 +159,5 @@ namespace Game.Gameplay.Match
                 aggroRadius: float.MaxValue,
                 graph);
         }
-
-        /// <summary>Legacy alias for <see cref="FindBuildingTarget"/>.</summary>
-        public BuildingState FindSiegeTarget(
-            int attackerOwnerSlot,
-            string laneId,
-            Vector3 attackerPosition,
-            float attackRange) =>
-            FindBuildingTarget(attackerOwnerSlot, laneId, attackerPosition, attackRange, graph: null);
     }
 }

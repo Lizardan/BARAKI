@@ -2,8 +2,6 @@ namespace Game.Gameplay.Match
 {
     public readonly struct MatchArenaGreyboxSpec
     {
-        public const int LegacyCenterRingSegments = 32;
-
         public MatchArenaGreyboxSpec(int playerCount, int buildingMarkerCount, int laneLineCount, int centerRingMarkerCount)
         {
             PlayerCount = playerCount;

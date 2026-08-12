@@ -31,10 +31,10 @@
 
 ## CI / Release (не сломать)
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
-- **Теги:** `v*` — полный клиент (единственный `/releases/latest`); `updater-v*` — апдейтер (prerelease, никогда не latest; release-prune их не трогает).
+- **Теги:** `v*` — полный клиент (единственный `/releases/latest`).
 - CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
-- Билд: `Game.Editor.WindowsCiBuild.Build` / `BuildUpdaterOnly`; Inno Setup — `Tooling/BuildSupport/Installer/`; playtest-токен — `Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).
-- `Tooling/` — вспомогательная инфраструктура вне Unity-проекта: `Tooling/docs/` (простые HTML privacy/terms, деплой as-is), `Tooling/cloudflare/baraki-landing/` (Pages + `functions/download.js` — редирект на `BARAKI-Setup.exe`), `Tooling/BuildSupport/` (инсталлятор/скрипты CI).
+- Билд: `Game.Editor.WindowsCiBuild.Build`; playtest-токен — `Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).
+- `Tooling/` — вспомогательная инфраструктура вне Unity-проекта: `Tooling/docs/` (простые HTML privacy/terms, деплой as-is), `Tooling/cloudflare/baraki-landing/` (Pages + `functions/download.js` — редирект на GitHub Releases), `Tooling/BuildSupport/` (скрипты CI).
 
 ## Тесты
 - asmdef `Game.Tests`, NUnit, EditMode в основном.

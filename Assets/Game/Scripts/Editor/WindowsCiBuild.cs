@@ -10,6 +10,8 @@ namespace Game.Editor
     /// <summary>Headless Windows Standalone build for game-ci (GitHub Releases pipeline).</summary>
     public static class WindowsCiBuild
     {
+        const string PlayerExecutableFileName = "BARAKI.exe";
+
         public static void Build()
         {
             // game-ci does not reliably forward custom env vars into the Unity process on Windows.
@@ -36,7 +38,7 @@ namespace Game.Editor
                 "WindowsCiBuild",
                 scenes,
                 "build/Windows",
-                UpdaterReleaseRules.InstalledExecutableFileName,
+                PlayerExecutableFileName,
                 null,
                 version);
         }
@@ -61,23 +63,6 @@ namespace Game.Editor
                 "WindowsCiBuild: GitHub playtest token not embedded. " +
                 "CI must run Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1 before Unity. " +
                 "Playtest «Отправить лог» will report GitHub not configured.");
-        }
-
-        public static void BuildUpdaterOnly()
-        {
-            PlayerSettings.bundleVersion = UpdaterReleaseRules.UpdaterBuildVersion;
-            PlayerSettings.productName = "BARAKI";
-
-            var updaterReleaseVersion = BuildVersionStampRules.Normalize(
-                System.Environment.GetEnvironmentVariable("BARAKI_UPDATER_VERSION"));
-
-            BuildWindowsPlayer(
-                "WindowsCiBuild.UpdaterOnly",
-                UpdaterBuildRules.Scenes,
-                UpdaterBuildRules.OutputDirectory,
-                UpdaterReleaseRules.InstalledExecutableFileName,
-                UpdaterBuildRules.ExtraScriptingDefines,
-                updaterReleaseVersion);
         }
 
         private static void BuildWindowsPlayer(

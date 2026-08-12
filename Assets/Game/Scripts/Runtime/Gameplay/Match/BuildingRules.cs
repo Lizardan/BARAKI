@@ -92,19 +92,6 @@ namespace Game.Gameplay.Match
                    && building.OwnerSlot != attackerOwnerSlot;
         }
 
-        /// <summary>Legacy name — same as lane attack eligibility without graph (tests / simple checks).</summary>
-        public static bool CanSiegeTarget(string unitLaneId, string buildingId)
-        {
-            // Buildings are approachable from any lane once near them; keep a soft hint for Main/towers.
-            if (IsBarracks(buildingId))
-            {
-                return true;
-            }
-
-            return unitLaneId == GameIds.Lanes.Center
-                   || string.IsNullOrEmpty(BuildingRules.GetLaneBinding(buildingId));
-        }
-
         public static float GetSurfaceDistance(float centerDistance, string buildingId) =>
             System.Math.Max(0f, centerDistance - GetEngageRadius(buildingId));
     }

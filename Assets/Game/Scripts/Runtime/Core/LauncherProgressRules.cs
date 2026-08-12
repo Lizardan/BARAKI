@@ -65,9 +65,6 @@ namespace Game.Core
                 or LauncherProgressPhase.UpdateAvailable
                 or LauncherProgressPhase.ReadyToRestart;
 
-        /// <summary>Legacy alias used by older call sites.</summary>
-        public static bool IsPlayEnabled(LauncherProgressPhase phase) => IsCtaEnabled(phase);
-
         public static LauncherProgressPhase FromApplyPhase(GameUpdateApplyPhase phase) =>
             phase switch
             {
