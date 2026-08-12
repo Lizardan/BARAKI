@@ -57,16 +57,20 @@ namespace Game.Gameplay.Match
             && heroSlot <= GetMaxHiredHeroes(mainLevel)
             && gold >= HireGold;
 
+        /// <summary>
+        /// Can the hero be deployed from a specific barracks? Death cooldown is per-barracks:
+        /// only the barracks the hero last fought from is blocked until its cooldown expires.
+        /// </summary>
         public static bool CanDeploy(
             HeroLifecycleState state,
-            float deathCooldownRemaining,
+            float barracksDeathCooldownRemaining,
             int gold,
             bool barracksIntact) =>
             barracksIntact
             && gold >= DeployGold
             && state is HeroLifecycleState.IdleAtBase
                 or HeroLifecycleState.Dead
-            && deathCooldownRemaining <= 0f
+            && barracksDeathCooldownRemaining <= 0f
             && state != HeroLifecycleState.Deployed;
     }
 }

@@ -30,6 +30,7 @@ namespace Game.Gameplay.Match
             public bool IsFogHidden;
             public Renderer[] CachedRenderers;
             public UnitRole Role;
+            public bool IsParkedAtBase;
         }
 
         sealed class DyingVisual
@@ -98,6 +99,7 @@ namespace Game.Gameplay.Match
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
             SyncSpellCasts(controller.Combat);
+            SyncHeroAbilityCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(Time.deltaTime);
         }
@@ -120,6 +122,7 @@ namespace Game.Gameplay.Match
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
             SyncSpellCasts(controller.Combat);
+            SyncHeroAbilityCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(0f);
         }
@@ -224,7 +227,15 @@ namespace Game.Gameplay.Match
             {
                 if (_visuals.TryGetValue(unitId, out var visual) && visual?.Root != null)
                 {
-                    BeginDeath(visual);
+                    if (visual.IsParkedAtBase)
+                    {
+                        // Parked hero dismissed to lane: vanish without a death animation.
+                        DestroyManaged(visual.Root.gameObject);
+                    }
+                    else
+                    {
+                        BeginDeath(visual);
+                    }
                 }
 
                 _visuals.Remove(unitId);
@@ -289,6 +300,12 @@ namespace Game.Gameplay.Match
         {
             if (visual.Animator == null)
             {
+                return;
+            }
+
+            if (visual.IsParkedAtBase)
+            {
+                UnitCombatAnimatorDriver.TickStand(visual.Animator, visual.AnimPlayback);
                 return;
             }
 
@@ -449,6 +466,7 @@ namespace Game.Gameplay.Match
                 StatusBars = statusBars,
                 GroundRingDiameter = MatchPickFootprint.GetModelFootprintDiameter(model),
                 Role = unit.Role,
+                IsParkedAtBase = unit.IsParkedAtBase,
             };
             AttachUnitPickCollider(unitVisual, unit);
             return unitVisual;
@@ -567,6 +585,62 @@ namespace Game.Gameplay.Match
                     SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 0.6f, ResurrectFxColor);
                     break;
             }
+        }
+
+        /// <summary>Plays hero ability cast events (label over hero, Strike/Ultimate rings, Heal "+").</summary>
+        void SyncHeroAbilityCasts(MatchCombatSystem combat)
+        {
+            if (!CanSpawnFx())
+            {
+                return;
+            }
+
+            foreach (var cast in combat.ConsumePendingHeroAbilityCasts())
+            {
+                ShowHeroAbilityFx(cast);
+            }
+        }
+
+        void ShowHeroAbilityFx(HeroAbilityCastEvent cast)
+        {
+            var color = HeroAbilityFxColor(cast.Ability);
+            if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
+            {
+                SpellFxFactory.CreateLabel(
+                    _root,
+                    casterTop + Vector3.up * 0.5f,
+                    HeroAbilityRules.GetDisplayName(cast.Ability),
+                    color);
+            }
+
+            switch (cast.Ability)
+            {
+                case HeroAbilityType.Heal:
+                    if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
+                    {
+                        SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
+                    }
+
+                    break;
+                case HeroAbilityType.Strike:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, StrikeFxColor, 0.75f);
+                    break;
+                case HeroAbilityType.Ultimate:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, UltimateFxColor, 1.2f);
+                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 1.4f, UltimateFxColor, 1.2f, 0.7f);
+                    break;
+            }
+        }
+
+        static Color HeroAbilityFxColor(HeroAbilityType ability)
+        {
+            return ability switch
+            {
+                HeroAbilityType.Heal => HealFxColor,
+                HeroAbilityType.Strike => StrikeFxColor,
+                HeroAbilityType.Ultimate => UltimateFxColor,
+                _ => Color.white,
+            };
         }
 
         bool TryGetUnitBarTop(int unitId, out Vector3 position)
@@ -791,5 +865,7 @@ namespace Game.Gameplay.Match
         static readonly Color HealFxColor = new Color(0.25f, 1f, 0.4f, 1f);
         static readonly Color FrostFxColor = new Color(0.35f, 0.65f, 1f, 1f);
         static readonly Color ResurrectFxColor = new Color(1f, 0.85f, 0.25f, 1f);
+        static readonly Color StrikeFxColor = new Color(1f, 0.55f, 0.2f, 1f);
+        static readonly Color UltimateFxColor = new Color(1f, 0.3f, 0.2f, 1f);
     }
 }

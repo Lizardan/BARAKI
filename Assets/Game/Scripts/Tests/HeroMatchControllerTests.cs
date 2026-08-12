@@ -70,6 +70,57 @@ namespace Game.Tests
         }
 
         [Test]
+        public void TryDeployHero_AfterHeroDeath_BlocksSameBarracksAllowsOtherBarracks()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].Gold = 1500;
+            Assert.IsTrue(controller.TryHireHero(0, 1));
+            controller.Tick(HeroRules.HireResearchSeconds);
+
+            var left = FindBuilding(controller, 0, GameIds.Buildings.BarracksLeft);
+            var right = FindBuilding(controller, 0, GameIds.Buildings.BarracksRight);
+
+            Assert.IsTrue(controller.TryDeployHero(0, left.InstanceId, 1));
+            var heroId = controller.Combat.Units[0].UnitId;
+            Assert.AreEqual(0, controller.Players[0].Gold);
+
+            controller.Combat.ApplyExternalDamage(heroId, 100000f, killerOwnerSlot: 1);
+
+            var slotState = controller.GetHeroRoster(0).Get(1);
+            Assert.AreEqual(HeroLifecycleState.Dead, slotState.State);
+            Assert.Greater(slotState.GetDeathCooldown(left.InstanceId), 0f);
+            Assert.AreEqual(0f, slotState.GetDeathCooldown(right.InstanceId));
+
+            Assert.IsFalse(controller.TryDeployHero(0, left.InstanceId, 1));
+
+            controller.Players[0].Gold = 1000;
+            Assert.IsTrue(controller.TryDeployHero(0, right.InstanceId, 1));
+            Assert.AreEqual(HeroLifecycleState.Deployed, controller.GetHeroRoster(0).Get(1).State);
+        }
+
+        [Test]
+        public void TryDeployHero_DeathCooldown_ExpiresAfterCooldownSeconds()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].Gold = 1500;
+            Assert.IsTrue(controller.TryHireHero(0, 1));
+            controller.Tick(HeroRules.HireResearchSeconds);
+
+            var left = FindBuilding(controller, 0, GameIds.Buildings.BarracksLeft);
+            Assert.IsTrue(controller.TryDeployHero(0, left.InstanceId, 1));
+            controller.Combat.ApplyExternalDamage(controller.Combat.Units[0].UnitId, 100000f, killerOwnerSlot: 1);
+
+            var slotState = controller.GetHeroRoster(0).Get(1);
+            Assert.Greater(slotState.GetDeathCooldown(left.InstanceId), 0f);
+
+            controller.Tick(HeroRules.DeathCooldownSeconds);
+
+            Assert.AreEqual(0f, slotState.GetDeathCooldown(left.InstanceId));
+            controller.Players[0].Gold = 1000;
+            Assert.IsTrue(controller.TryDeployHero(0, left.InstanceId, 1));
+        }
+
+        [Test]
         public void TrySetTowerTarget_AcceptsEnemyInPlay()
         {
             var controller = CreateEarlyMatch();

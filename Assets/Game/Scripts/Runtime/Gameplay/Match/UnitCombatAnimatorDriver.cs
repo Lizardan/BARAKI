@@ -94,6 +94,23 @@ namespace Game.Gameplay.Match
                 && animator.GetNextAnimatorStateInfo(0).IsName(stateName);
         }
 
+        /// <summary>Forces the idle Stand state (used for heroes parked at base).</summary>
+        public static void TickStand(Animator animator, UnitCombatAnimatorPlayback playback)
+        {
+            if (animator == null)
+            {
+                throw new System.ArgumentNullException(nameof(animator));
+            }
+
+            if (playback == null)
+            {
+                throw new System.ArgumentNullException(nameof(playback));
+            }
+
+            animator.SetFloat(SpeedParam, 0f);
+            CrossFade(animator, playback, StandState, LocomotionCrossFadeDuration, force: false);
+        }
+
         public static void Tick(
             Animator animator,
             UnitCombatAnimatorPlayback playback,

@@ -752,7 +752,7 @@ namespace Game.UI.Controllers
 
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
             {
-                if (HeroRules.CanDeploy(roster.Get(slot).State, roster.Get(slot).DeathCooldownRemaining, player.Gold, true))
+                if (HeroRules.CanDeploy(roster.Get(slot).State, roster.Get(slot).GetDeathCooldown(_selectedBuildingInstanceId), player.Gold, true))
                 {
                     return true;
                 }
@@ -774,7 +774,7 @@ namespace Game.UI.Controllers
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
             {
                 var state = roster.Get(slot);
-                if (!HeroRules.CanDeploy(state.State, state.DeathCooldownRemaining, player.Gold, true))
+                if (!HeroRules.CanDeploy(state.State, state.GetDeathCooldown(_selectedBuildingInstanceId), player.Gold, true))
                 {
                     continue;
                 }

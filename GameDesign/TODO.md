@@ -1,6 +1,6 @@
 ---
 doc_id: todo
-version: 0.4
+version: 0.5
 status: locked
 depends_on: [vision, technical, map_topology, platform]
 provides: [backlog, priorities, acceptance_criteria]
@@ -54,6 +54,19 @@ provides: [backlog, priorities, acceptance_criteria]
 
 ---
 
+## Phase 1b — Hero system (XP / abilities)
+
+| ID | Task | Status | Acceptance |
+|----|------|--------|------------|
+| HERO-001 | TT_King = слот 1 (HERO_HUMAN_1) | done | GDD Heroes.md; UnitVisualCatalog hero prefab = Human_Hero (nested TT_King + TtUnitTeamColor + Human_Melee.controller) |
+| HERO-002 | XP/Level: HeroLevelRules, слот-уровень, XP за килл героем и за здания | done | HeroLevelRulesTests, HeroMatchControllerTests |
+| HERO-003 | Рост статов с уровнем + редеплой с сохранённым уровнем | done | ResolveHeroStats tests |
+| HERO-004 | Снапшот v11: HeroLevel/HeroXp/HeroXpNext | done | snapshot tests |
+| HERO-005 | 4 способности (1/4/7/10): авто-каст + VFX + аура + самобафф ульта | done | HeroAbilityRulesTests |
+| HERO-006 | UI ContextStrip: уровень + XP-прогресс | done | hero strip shows TT_King, level, XP progress; formatting tests |
+
+---
+
 ## Phase 2 — Hub + social
 
 | ID | Task | Status | Acceptance |
@@ -99,6 +112,8 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-12 | Hero visual: Human_Hero.prefab (guid ac87b9a4) заменён с greybox-примитивов на nested TT_King + TtUnitTeamColor (4 текстуры команд) + Animator (Human_Melee.controller, ApplyRootMotion=off); тесты green (803 passed) |
+| 2026-08-11 | Hero system (XP/levels): TT_King = слот 1; XP за убийства юнитов героем + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут с уровнем; 4 способности (удар/хил/аура/ульта) на 1/4/7/10, самобафф ульта +50%/8с; снапшот v11 (HeroLevel/HeroXp/HeroXpNext) |
 | 2026-08-11 | Caster spell VFX + Frost freeze: событие каста уходит в снапшот (**v9** `SpellCasts`, serial-dedup) → клиентский presenter; лейбл названия над кастером, зелёный/жёлтый «+» (Heal над HP-полоской, Resurrect на месте возрождения), синий AoE-круг Frost, подъём+fade (primitives + legacy TextMesh, URP Unlit); Frost замораживает жертв **1,5s** (full stun — `Frozen` behavior, не двигается/не атакует); EditMode green (772+ тестов) |
 | 2026-08-11 | Caster mana economy: заклинания тратят ману (**50/75/150**), каст только при достаточной мане, реген **5/с** (пул 200, clamp); `Mana` сериализована в снапшот (v8) — клиентская полоска маны теперь корректна; GDD Balance/Economy синхронизированы |
 | 2026-08-11 | Caster spells implemented: `UNIT_TYPE_CASTER` авто-кастует Heal/Frost/Resurrect (`UPG_MAIN_MAGIC` slot 1/2/3; приоритет Heal→Frost→Resurrect; per-caster CD; transient host корпусы ≤20s; событие `SpellCast` для VFX); каждый слот +3 dmg автоатаки (`MagicDamagePerLevel`); `UPG_CASTER_HEAL` убран из дизайна и кода; полный EditMode green (769 тестов) |

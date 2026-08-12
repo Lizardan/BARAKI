@@ -69,6 +69,10 @@ namespace Game.Gameplay.Networking
         public float Health;
         /// <summary>Current mana. 0 on pre-v8 snapshots.</summary>
         public float Mana;
+        /// <summary>Hero level (1 for non-heroes). 0 on pre-v10 snapshots.</summary>
+        public int Level;
+        /// <summary>XP toward next level (heroes only). 0 on pre-v10 snapshots.</summary>
+        public int Xp;
         public bool IsAlive;
         /// <summary><see cref="Combat.UnitBehaviorState"/> as byte. 0 on pre-v6 snapshots.</summary>
         public byte BehaviorState;
@@ -114,6 +118,10 @@ namespace Game.Gameplay.Networking
         public int CasterUnitId;
         public int OwnerSlot;
         public byte SpellType;
+        /// <summary>0 = caster spell, 1 = hero ability (see <see cref="HeroAbility"/>).</summary>
+        public byte SpellKind;
+        /// <summary>Hero ability type (valid when <see cref="SpellKind"/> == 1).</summary>
+        public byte HeroAbility;
         public int TargetUnitId;
         public float CenterX;
         public float CenterZ;
@@ -122,7 +130,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 9;
+        public const int CurrentVersion = 11;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -187,6 +195,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(u.BehaviorState);
                     writer.Write(u.AttackSwingSerial);
                     writer.Write(u.Mana);
+                    writer.Write(u.Level);
+                    writer.Write(u.Xp);
                 }
             }
 
@@ -239,6 +249,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(c.CasterUnitId);
                     writer.Write(c.OwnerSlot);
                     writer.Write(c.SpellType);
+                    writer.Write(c.SpellKind);
+                    writer.Write(c.HeroAbility);
                     writer.Write(c.TargetUnitId);
                     writer.Write(c.CenterX);
                     writer.Write(c.CenterZ);
@@ -261,7 +273,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -351,6 +363,16 @@ namespace Game.Gameplay.Networking
                     unit.Mana = reader.ReadSingle();
                 }
 
+                if (version >= 10)
+                {
+                    unit.Level = reader.ReadInt32();
+                    unit.Xp = reader.ReadInt32();
+                }
+                else
+                {
+                    unit.Level = 1;
+                }
+
                 snapshot.Units[i] = unit;
             }
 
@@ -415,17 +437,24 @@ namespace Game.Gameplay.Networking
                 snapshot.SpellCasts = new MatchSpellSnapshot[spellCount];
                 for (var i = 0; i < spellCount; i++)
                 {
-                    snapshot.SpellCasts[i] = new MatchSpellSnapshot
+                    var spell = new MatchSpellSnapshot
                     {
                         Serial = reader.ReadInt32(),
                         CasterUnitId = reader.ReadInt32(),
                         OwnerSlot = reader.ReadInt32(),
                         SpellType = reader.ReadByte(),
-                        TargetUnitId = reader.ReadInt32(),
-                        CenterX = reader.ReadSingle(),
-                        CenterZ = reader.ReadSingle(),
-                        Radius = reader.ReadSingle(),
                     };
+                    if (version >= 11)
+                    {
+                        spell.SpellKind = reader.ReadByte();
+                        spell.HeroAbility = reader.ReadByte();
+                    }
+
+                    spell.TargetUnitId = reader.ReadInt32();
+                    spell.CenterX = reader.ReadSingle();
+                    spell.CenterZ = reader.ReadSingle();
+                    spell.Radius = reader.ReadSingle();
+                    snapshot.SpellCasts[i] = spell;
                 }
             }
 
@@ -477,6 +506,18 @@ namespace Game.Gameplay.Networking
             var units = new List<MatchUnitSnapshot>();
             foreach (var u in controller.Combat.Units)
             {
+                var level = u.Level;
+                var xp = 0;
+                if (u.IsHero && u.HeroSlot >= 1)
+                {
+                    var hero = controller.GetHeroRoster(u.OwnerSlot)?.Get(u.HeroSlot);
+                    if (hero != null)
+                    {
+                        level = hero.Level;
+                        xp = hero.Xp;
+                    }
+                }
+
                 units.Add(new MatchUnitSnapshot
                 {
                     UnitId = u.UnitId,
@@ -489,6 +530,8 @@ namespace Game.Gameplay.Networking
                     FacingZ = u.FacingDirection.z,
                     Health = u.CurrentHp,
                     Mana = u.CurrentMana,
+                    Level = level,
+                    Xp = xp,
                     IsAlive = u.IsAlive,
                     BehaviorState = (byte)u.BehaviorState,
                     AttackSwingSerial = u.AttackSwingSerial,
@@ -574,6 +617,25 @@ namespace Game.Gameplay.Networking
                     CasterUnitId = c.CasterUnitId,
                     OwnerSlot = c.OwnerSlot,
                     SpellType = (byte)c.SpellType,
+                    SpellKind = 0,
+                    HeroAbility = 0,
+                    TargetUnitId = c.TargetUnitId,
+                    CenterX = c.CenterPosition.x,
+                    CenterZ = c.CenterPosition.z,
+                    Radius = c.Radius,
+                });
+            }
+
+            foreach (var c in controller.Combat.NetworkHeroCasts)
+            {
+                spellCasts.Add(new MatchSpellSnapshot
+                {
+                    Serial = c.Serial,
+                    CasterUnitId = c.CasterUnitId,
+                    OwnerSlot = c.OwnerSlot,
+                    SpellType = 0,
+                    SpellKind = 1,
+                    HeroAbility = (byte)c.Ability,
                     TargetUnitId = c.TargetUnitId,
                     CenterX = c.CenterPosition.x,
                     CenterZ = c.CenterPosition.z,
@@ -582,6 +644,7 @@ namespace Game.Gameplay.Networking
             }
 
             controller.Combat.ClearNetworkSpellCasts();
+            controller.Combat.ClearNetworkHeroCasts();
 
             var snapshot = new MatchSnapshot
             {

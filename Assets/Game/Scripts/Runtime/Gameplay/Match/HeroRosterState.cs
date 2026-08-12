@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Gameplay.Match
 {
@@ -6,12 +7,85 @@ namespace Game.Gameplay.Match
     {
         public int HeroSlot { get; }
         public HeroLifecycleState State { get; set; } = HeroLifecycleState.None;
-        public float DeathCooldownRemaining { get; set; }
+        /// <summary>Barracks this hero was last deployed from (death cooldown is per-barracks).</summary>
+        public int? LastDeployBarracksInstanceId { get; set; }
+        /// <summary>Per-barracks death cooldown: barracks instance id → remaining seconds.</summary>
+        readonly Dictionary<int, float> _barracksDeathCooldowns = new();
         public int? DeployedUnitId { get; set; }
+        /// <summary>Hero level (per-match, survives death/redeploy). Starts at 1.</summary>
+        public int Level { get; set; } = HeroLevelRules.StartingLevel;
+        /// <summary>XP progress toward the next level. Carries within the match.</summary>
+        public int Xp { get; set; }
 
         public HeroSlotState(int heroSlot)
         {
             HeroSlot = heroSlot;
+        }
+
+        /// <summary>Remaining death cooldown for a specific barracks. 0 = deploy allowed there.</summary>
+        public float GetDeathCooldown(int barracksInstanceId) =>
+            _barracksDeathCooldowns.TryGetValue(barracksInstanceId, out var remaining)
+                ? remaining
+                : 0f;
+
+        public void MarkDeployedFrom(int barracksInstanceId)
+        {
+            LastDeployBarracksInstanceId = barracksInstanceId;
+        }
+
+        /// <summary>Starts the death cooldown on the barracks this hero was last deployed from.</summary>
+        public void StartDeathCooldown(float seconds)
+        {
+            if (LastDeployBarracksInstanceId.HasValue)
+            {
+                _barracksDeathCooldowns[LastDeployBarracksInstanceId.Value] = seconds;
+            }
+        }
+
+        public void TickCooldowns(float deltaTime)
+        {
+            var expired = default(List<int>);
+            foreach (var pair in _barracksDeathCooldowns)
+            {
+                var remaining = pair.Value - deltaTime;
+                if (remaining <= 0f)
+                {
+                    (expired ??= new List<int>()).Add(pair.Key);
+                }
+                else
+                {
+                    _barracksDeathCooldowns[pair.Key] = remaining;
+                }
+            }
+
+            if (expired == null)
+            {
+                return;
+            }
+
+            foreach (var barracksId in expired)
+            {
+                _barracksDeathCooldowns.Remove(barracksId);
+            }
+        }
+
+        /// <summary>
+        /// Grants XP and applies any level-ups (handles multi-level jumps).
+        /// Match-scoped: progress survives hero death/redeploy, resets on new match.
+        /// </summary>
+        public void AddXp(int amount)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            Xp += amount;
+            while (HeroLevelRules.CanLevelUp(Level, Xp))
+            {
+                Xp -= HeroLevelRules.XpToNext(Level);
+                Level++;
+            }
         }
     }
 
@@ -57,11 +131,7 @@ namespace Game.Gameplay.Match
         {
             for (var i = 0; i < _slots.Length; i++)
             {
-                if (_slots[i].DeathCooldownRemaining > 0f)
-                {
-                    _slots[i].DeathCooldownRemaining =
-                        Math.Max(0f, _slots[i].DeathCooldownRemaining - deltaTime);
-                }
+                _slots[i].TickCooldowns(deltaTime);
             }
         }
     }

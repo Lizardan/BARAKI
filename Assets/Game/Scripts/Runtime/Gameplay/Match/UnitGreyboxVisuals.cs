@@ -26,6 +26,9 @@ namespace Game.Gameplay.Match
         /// <summary>Extra world lift so flying units stay clearly above the road.</summary>
         public const float FlyingHoverHeight = 4f;
 
+        /// <summary>Hero model is raised slightly so its status bar sits above the crown.</summary>
+        public const float HeroVisualHeight = 0.15f;
+
         /// <summary>
         /// WC3 meshes face +X; match locomotion faces +Z. Prefab yaw aligns model forward.
         /// </summary>
@@ -63,6 +66,7 @@ namespace Game.Gameplay.Match
             role switch
             {
                 UnitRole.Flying => Vector3.up * FlyingHoverHeight,
+                UnitRole.Hero => Vector3.up * HeroVisualHeight,
                 _ => Vector3.zero,
             };
     }

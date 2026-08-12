@@ -88,6 +88,49 @@ mvp: true
 3. Deploy снова из любого **живого** barracks (1000g); re-hire не нужен
 ```
 
+## Leveling & XP
+
+```entity
+id: HERO_LEVELING
+max_level: 10
+xp_source_unit_kill: hero_credits_kill_of_enemy_unit
+xp_source_building_kill: own_units_kill_enemy_building
+level_persist: within_match    # переживает смерть и redeploy; сброс в новом матче
+mvp: true
+
+id: HERO_LEVEL_STATS
+hp_per_level: 40
+damage_per_level: 3
+armor_per_level: 0.5
+mvp: true
+```
+
+- Опыт получает **герой-слот** (уровень живёт в слоте, не на юните): при убийстве героем **вражеского юнита** (XP = bounty жертвы) и при убийстве твоими юнитами **вражеского здания** (фикс. XP) — независимо от состояния героя (idle/deployed/dead).
+- При deploy/redeploy герой спавнится с **уровнем слота** (не с 1).
+- Статы растут с уровнем: `base + (level-1) * per_level`.
+
+## Hero abilities
+
+Каждый герой — **4 способности**, открываются по уровню (авто-каст, игрок не микроит):
+
+| Slot | Unlock | Ability | Механика |
+|------|--------|---------|----------|
+| 1 | lvl 1 | Удар (AoE) | Урон по врагам вокруг героя, CD |
+| 2 | lvl 4 | Хил | Лечение героя + союзников в радиусе, CD |
+| 3 | lvl 7 | Аура | Пассив, пока герой жив: +% урона армии владельца |
+| 4 | lvl 10 | Ульта | Большой AoE урон + самоусиление, длинный CD |
+
+```entity
+id: HERO_ABILITY_UNLOCK_LEVELS
+ability_1: 1
+ability_2: 4
+ability_3: 7
+ability_4: 10
+mvp: true
+```
+
+> Активки — CD-only (без маны). Аура — глобальный бафф владельца (без радиуса).
+
 ## Morale bonus (боевой дух)
 
 | Состояние | Bonus |
@@ -151,6 +194,7 @@ Classic RTS — см. `Units.md` / `AI.md`.
 id: HERO_HUMAN_1
 slot: 1
 race_id: RACE_HUMAN
+hero_name: TT_King
 idle_morale: HERO_MORALE_SLOT_1
 max_hp: 600
 armor: 4
@@ -211,7 +255,7 @@ mvp: true
 | Deployed / dead | Morale **нет**; re-hire **не нужен** |
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
-| XP / leveling | **Нет** |
+| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10 |
 
 ## Open
 

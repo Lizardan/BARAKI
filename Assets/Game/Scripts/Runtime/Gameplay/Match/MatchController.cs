@@ -588,7 +588,7 @@ namespace Game.Gameplay.Match
             var slotState = roster.Get(heroSlot);
             if (!HeroRules.CanDeploy(
                     slotState.State,
-                    slotState.DeathCooldownRemaining,
+                    slotState.GetDeathCooldown(buildingInstanceId),
                     player.Gold,
                     barracksIntact: true))
             {
@@ -597,7 +597,7 @@ namespace Game.Gameplay.Match
 
             DespawnParkedHero(ownerSlot, heroSlot);
 
-            var stats = ResolveHeroStats(player, heroSlot);
+            var stats = ResolveHeroStats(player, heroSlot, slotState.Level);
             var laneId = BuildingRules.GetLaneBinding(building.BuildingId);
             var unit = _combat.SpawnUnit(
                 ownerSlot,
@@ -605,11 +605,13 @@ namespace Game.Gameplay.Match
                 UnitRole.Hero,
                 stats,
                 isHero: true,
-                heroSlot: heroSlot);
+                heroSlot: heroSlot,
+                level: slotState.Level);
 
             player.Gold -= HeroRules.DeployGold;
             slotState.State = HeroLifecycleState.Deployed;
             slotState.DeployedUnitId = unit.UnitId;
+            slotState.MarkDeployedFrom(buildingInstanceId);
             return true;
         }
 
@@ -1132,8 +1134,27 @@ namespace Game.Gameplay.Match
 
         private void OnUnitKilled(UnitKillEvent killEvent)
         {
+            HandleKillXp(killEvent);
             HandleHeroDeath(killEvent);
             UnitKilled?.Invoke(killEvent);
+        }
+
+        /// <summary>Grants XP to the hero slot that landed the kill (XP = victim gold bounty).</summary>
+        void HandleKillXp(UnitKillEvent killEvent)
+        {
+            if (killEvent.KillerUnitId <= 0)
+            {
+                return;
+            }
+
+            var killer = _combat.GetUnit(killEvent.KillerUnitId);
+            if (killer == null || !killer.IsHero)
+            {
+                return;
+            }
+
+            var roster = GetHeroRoster(killer.OwnerSlot);
+            roster?.Get(killer.HeroSlot).AddXp(HeroLevelRules.GetKillXp(killEvent.GoldGranted));
         }
 
         void HandleHeroDeath(UnitKillEvent killEvent)
@@ -1151,7 +1172,7 @@ namespace Game.Gameplay.Match
 
                     state.State = HeroLifecycleState.Dead;
                     state.DeployedUnitId = null;
-                    state.DeathCooldownRemaining = HeroRules.DeathCooldownSeconds;
+                    state.StartDeathCooldown(HeroRules.DeathCooldownSeconds);
                     return;
                 }
             }
@@ -1230,7 +1251,8 @@ namespace Game.Gameplay.Match
             }
 
             var player = _players[ownerSlot];
-            var stats = ResolveHeroStats(player, heroSlot);
+            var roster = _heroRosters[ownerSlot].Get(heroSlot);
+            var stats = ResolveHeroStats(player, heroSlot, roster.Level);
             var park = HeroParkRules.GetParkWorldPosition(
                 Layout,
                 ownerSlot,
@@ -1242,11 +1264,11 @@ namespace Game.Gameplay.Match
                 UnitRole.Hero,
                 stats,
                 isHero: true,
-                heroSlot: heroSlot);
+                heroSlot: heroSlot,
+                level: roster.Level);
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
-            var roster = _heroRosters[ownerSlot].Get(heroSlot);
             roster.DeployedUnitId = unit.UnitId;
         }
 
@@ -1272,7 +1294,7 @@ namespace Game.Gameplay.Match
             slotState.DeployedUnitId = null;
         }
 
-        UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot)
+        UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
             var race = CombatCatalog?.GetRace(player.RaceId);
             var hero = race?.GetHeroBySlot(heroSlot);
@@ -1304,11 +1326,38 @@ namespace Game.Gameplay.Match
                     80);
             }
 
+            stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
             return RaceUpgradeStatsRules.Apply(stats, player);
+        }
+
+        /// <summary>Grants fixed XP to every hired hero of the destroying owner when an enemy building falls.</summary>
+        void HandleBuildingKillXp(BuildingDestroyedEvent destroyed)
+        {
+            if (destroyed.OwnerSlot == destroyed.AttackerOwnerSlot)
+            {
+                return;
+            }
+
+            var roster = GetHeroRoster(destroyed.AttackerOwnerSlot);
+            if (roster == null)
+            {
+                return;
+            }
+
+            for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
+            {
+                var slot = roster.Get(heroSlot);
+                if (slot.State != HeroLifecycleState.None)
+                {
+                    slot.AddXp(HeroLevelRules.GetBuildingKillXp());
+                }
+            }
         }
 
         private void OnBuildingDestroyed(BuildingDestroyedEvent destroyed)
         {
+            HandleBuildingKillXp(destroyed);
+
             _elimination.HandleBuildingDestroyed(
                 destroyed,
                 _buildings,

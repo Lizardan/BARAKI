@@ -34,6 +34,8 @@ namespace Game.Gameplay.Combat
         readonly List<CombatCorpseState> _corpses = new();
         readonly List<CasterSpellCastEvent> _networkSpellCasts = new();
         readonly List<CasterSpellCastEvent> _presenterSpellCasts = new();
+        readonly List<HeroAbilityCastEvent> _networkHeroCasts = new();
+        readonly List<HeroAbilityCastEvent> _presenterHeroCasts = new();
         int _spellCastSerial;
         int _lastAppliedSpellSerial;
 
@@ -51,6 +53,7 @@ namespace Game.Gameplay.Combat
 
         public event Action<UnitKillEvent> UnitKilled;
         public event Action<CasterSpellCastEvent> SpellCast;
+        public event Action<HeroAbilityCastEvent> HeroSpellCast;
 
         public UnitVisualCatalog UnitVisualCatalog { get; set; }
 
@@ -77,6 +80,22 @@ namespace Game.Gameplay.Combat
         {
             var result = new List<CasterSpellCastEvent>(_presenterSpellCasts);
             _presenterSpellCasts.Clear();
+            return result;
+        }
+
+        /// <summary>
+        /// Hero ability casts not yet captured into a snapshot (mirrors <see cref="NetworkSpellCasts"/>).
+        /// </summary>
+        public IReadOnlyList<HeroAbilityCastEvent> NetworkHeroCasts => _networkHeroCasts;
+
+        /// <summary>Host-only: consumed by the snapshot capture into the next <see cref="NetworkHeroCasts"/>.</summary>
+        public void ClearNetworkHeroCasts() => _networkHeroCasts.Clear();
+
+        /// <summary>Hero ability casts pending presenter playback (host + clients).</summary>
+        public IReadOnlyList<HeroAbilityCastEvent> ConsumePendingHeroAbilityCasts()
+        {
+            var result = new List<HeroAbilityCastEvent>(_presenterHeroCasts);
+            _presenterHeroCasts.Clear();
             return result;
         }
 
@@ -671,7 +690,8 @@ namespace Game.Gameplay.Combat
             float distanceAlongLane = 0f,
             Vector3 formationOffset = default,
             bool isHero = false,
-            int heroSlot = 0)
+            int heroSlot = 0,
+            int level = 1)
         {
             if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
             {
@@ -694,7 +714,8 @@ namespace Game.Gameplay.Combat
                 route.FindMarchWaypointIndex(worldPosition),
                 marchSpawnDistance: distanceAlongLane,
                 isHero: isHero,
-                heroSlot: heroSlot);
+                heroSlot: heroSlot,
+                level: level);
             unit.MarchProgressDistance = progressDistance;
             ApplySpawnFacing(unit, route, distanceAlongLane);
             ApplyMarchFocusFromLane(unit, ownerSlot, laneId);
@@ -768,6 +789,19 @@ namespace Game.Gameplay.Combat
                 }
 
                 _lastAppliedSpellSerial = snap.Serial;
+                if (snap.SpellKind == 1)
+                {
+                    _presenterHeroCasts.Add(new HeroAbilityCastEvent(
+                        snap.CasterUnitId,
+                        snap.OwnerSlot,
+                        (HeroAbilityType)snap.HeroAbility,
+                        new Vector3(snap.CenterX, 0.15f, snap.CenterZ),
+                        snap.Radius,
+                        snap.TargetUnitId,
+                        snap.Serial));
+                    continue;
+                }
+
                 _presenterSpellCasts.Add(new CasterSpellCastEvent(
                     snap.CasterUnitId,
                     snap.OwnerSlot,
@@ -1090,6 +1124,11 @@ namespace Game.Gameplay.Combat
             }
 
             if (unit.Role == UnitRole.Caster && TryCastSpell(unit, deltaTime))
+            {
+                return;
+            }
+
+            if (unit.IsHero && TryCastHeroAbility(unit, deltaTime))
             {
                 return;
             }
@@ -1917,6 +1956,12 @@ namespace Game.Gameplay.Combat
             }
 
             var damage = CombatRules.ApplyArmor(rawDamage, target.Stats.Armor);
+            damage *= GetArmyDamageMultiplier(attacker);
+            if (attacker != null && attacker.UltimateBuffRemaining > 0f)
+            {
+                damage *= 1f + HeroAbilityRules.UltimateSelfDamageBonusPercent;
+            }
+
             target.CurrentHp -= damage;
 
             if (target.IsAlive)
@@ -1938,13 +1983,47 @@ namespace Game.Gameplay.Combat
                 target.OwnerSlot,
                 target.UnitId,
                 bounty,
-                target.Role));
+                target.Role,
+                attacker?.UnitId ?? 0));
         }
 
         int GetUnitOwnerSlot(int unitId)
         {
             var unit = GetUnitById(unitId);
             return unit?.OwnerSlot ?? 0;
+        }
+
+        /// <summary>
+        /// Aura (passive, hero level ≥ <see cref="HeroLevelRules.AuraUnlockLevel"/>): army of the
+        /// hero's owner deals +<see cref="HeroAbilityRules.AuraDamageBonusPercent"/> damage while
+        /// that hero is alive.
+        /// </summary>
+        float GetArmyDamageMultiplier(MatchUnitState attacker)
+        {
+            if (attacker == null || !attacker.IsAlive)
+            {
+                return 1f;
+            }
+
+            var ownerSlot = attacker.OwnerSlot;
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var candidate = _units[i];
+                if (candidate == null
+                    || !candidate.IsAlive
+                    || !candidate.IsHero
+                    || candidate.OwnerSlot != ownerSlot)
+                {
+                    continue;
+                }
+
+                if (candidate.Level >= HeroLevelRules.AuraUnlockLevel)
+                {
+                    return 1f + HeroAbilityRules.AuraDamageBonusPercent;
+                }
+            }
+
+            return 1f;
         }
 
         string GetPlayerRaceId(int ownerSlot)
@@ -2149,9 +2228,156 @@ namespace Game.Gameplay.Combat
             return revived;
         }
 
-        void GrantGold(int ownerSlot, int amount)
+        /// <summary>
+        /// Hero ability AI: ticks cooldowns, then casts by priority Heal → Ultimate → Strike
+        /// when unlocked and a valid target is in range. Falls through to baseline attack otherwise.
+        /// </summary>
+        bool TryCastHeroAbility(MatchUnitState unit, float deltaTime)
         {
-            foreach (var player in _players)
+            unit.HealCooldownRemaining = Mathf.Max(0f, unit.HealCooldownRemaining - deltaTime);
+            unit.StrikeCooldownRemaining = Mathf.Max(0f, unit.StrikeCooldownRemaining - deltaTime);
+            unit.UltimateCooldownRemaining = Mathf.Max(0f, unit.UltimateCooldownRemaining - deltaTime);
+            unit.UltimateBuffRemaining = Mathf.Max(0f, unit.UltimateBuffRemaining - deltaTime);
+
+            var level = unit.Level;
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, level)
+                && unit.HealCooldownRemaining <= 0f
+                && TryCastHeroHeal(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, level)
+                && unit.UltimateCooldownRemaining <= 0f
+                && TryCastHeroUltimate(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Strike, level)
+                && unit.StrikeCooldownRemaining <= 0f
+                && TryCastHeroStrike(unit))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryCastHeroHeal(MatchUnitState caster)
+        {
+            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, HeroAbilityRules.HealRadius);
+            var target = FindMostInjuredAlly(allies);
+            if (target == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < allies.Count; i++)
+            {
+                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(allies[i].CurrentHp, allies[i].Stats.MaxHp);
+            }
+
+            caster.HealCooldownRemaining = HeroAbilityRules.HealCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Heal,
+                caster.WorldPosition,
+                HeroAbilityRules.HealRadius,
+                target.UnitId,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastHeroStrike(MatchUnitState caster)
+        {
+            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, HeroAbilityRules.StrikeRadius);
+            if (enemies.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                ApplyDamage(caster, enemies[i], HeroAbilityRules.StrikeDamage, caster.OwnerSlot);
+            }
+
+            caster.StrikeCooldownRemaining = HeroAbilityRules.StrikeCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Strike,
+                caster.WorldPosition,
+                HeroAbilityRules.StrikeRadius,
+                targetUnitId: 0,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastHeroUltimate(MatchUnitState caster)
+        {
+            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, HeroAbilityRules.UltimateRadius);
+            if (enemies.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                ApplyDamage(caster, enemies[i], HeroAbilityRules.UltimateDamage, caster.OwnerSlot);
+            }
+
+            caster.UltimateBuffRemaining = HeroAbilityRules.UltimateSelfBuffSeconds;
+            caster.UltimateCooldownRemaining = HeroAbilityRules.UltimateCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Ultimate,
+                caster.WorldPosition,
+                HeroAbilityRules.UltimateRadius,
+                targetUnitId: 0,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        static MatchUnitState FindMostInjuredAlly(List<MatchUnitState> allies)
+        {
+            if (allies == null || allies.Count == 0)
+            {
+                return null;
+            }
+
+            MatchUnitState best = null;
+            var bestFraction = float.MaxValue;
+            for (var i = 0; i < allies.Count; i++)
+            {
+                var candidate = allies[i];
+                if (candidate.CurrentHp >= candidate.Stats.MaxHp - 0.001f)
+                {
+                    continue;
+                }
+
+                var fraction = candidate.CurrentHp / candidate.Stats.MaxHp;
+                if (fraction < bestFraction)
+                {
+                    bestFraction = fraction;
+                    best = candidate;
+                }
+            }
+
+            return best;
+        }
+
+        void EmitHeroAbilityCast(HeroAbilityCastEvent cast)
+        {
+            _networkHeroCasts.Add(cast);
+            _presenterHeroCasts.Add(cast);
+            HeroSpellCast?.Invoke(cast);
+        }
+
+        void GrantGold(int ownerSlot, int amount)
+        {            foreach (var player in _players)
             {
                 if (player.SlotIndex == ownerSlot)
                 {

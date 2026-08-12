@@ -179,18 +179,36 @@ namespace Game.UI.Controllers
             }
 
             var stats = unit.Stats;
-            _title.text = MatchInspectorFormatting.FormatRole(unit.Role);
+            var isHero = unit.IsHero && unit.HeroSlot >= 1;
+            _title.text = isHero
+                ? MatchInspectorFormatting.FormatHeroName(unit.HeroSlot)
+                : MatchInspectorFormatting.FormatRole(unit.Role);
             SetOwnerVisible(false);
             _hpStat.text = $"HP: {MatchInspectorFormatting.FormatHp(unit.CurrentHp, stats.MaxHp)}";
             _stat1.text = $"Урон: {MatchInspectorFormatting.FormatDamageRange(stats.DamageMin, stats.DamageMax)}";
             _stat2.text = $"Броня: {MatchInspectorFormatting.FormatStatValue(stats.Armor)}";
             _stat3.text = $"Дальность: {MatchInspectorFormatting.FormatStatValue(stats.AttackRange)}";
             _stat4.text = $"Скорость: {MatchInspectorFormatting.FormatStatValue(stats.MoveSpeed)}";
-            _stat5.text = stats.HasMana
-                ? $"Мана: {MatchInspectorFormatting.FormatHp(unit.CurrentMana, stats.MaxMana)}"
-                : string.Empty;
+            _stat5.text = isHero
+                ? FormatHeroProgress(unit)
+                : stats.HasMana
+                    ? $"Мана: {MatchInspectorFormatting.FormatHp(unit.CurrentMana, stats.MaxMana)}"
+                    : string.Empty;
             ApplyUnitPortrait(unit);
             SetResearchVisible(false);
+        }
+
+        string FormatHeroProgress(MatchUnitState unit)
+        {
+            var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
+            var hero = controller?.GetHeroRoster(unit.OwnerSlot)?.Get(unit.HeroSlot);
+            if (hero == null)
+            {
+                return string.Empty;
+            }
+
+            return $"{MatchInspectorFormatting.FormatHeroLevel(hero.Level)} · "
+                   + MatchInspectorFormatting.FormatHeroXp(hero.Xp, hero.Level);
         }
 
         void PopulateBuilding(int instanceId)

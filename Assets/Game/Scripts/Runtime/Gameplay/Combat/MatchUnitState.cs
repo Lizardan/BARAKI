@@ -18,7 +18,8 @@ namespace Game.Gameplay.Combat
             float? marchMoveSpeed = null,
             float marchSpawnDistance = 0f,
             bool isHero = false,
-            int heroSlot = 0)
+            int heroSlot = 0,
+            int level = 1)
         {
             UnitId = unitId;
             OwnerSlot = ownerSlot;
@@ -36,6 +37,7 @@ namespace Game.Gameplay.Combat
             FacingDirection = Vector3.forward;
             IsHero = isHero || role == UnitRole.Hero;
             HeroSlot = heroSlot;
+            Level = level;
             IsParkedAtBase = false;
         }
 
@@ -46,6 +48,8 @@ namespace Game.Gameplay.Combat
         public UnitCombatStats Stats { get; }
         public bool IsHero { get; }
         public int HeroSlot { get; }
+        /// <summary>Hero level this unit was spawned with (per-match slot level).</summary>
+        public int Level { get; }
         /// <summary>Hired hero waiting behind base — no march/combat AI.</summary>
         public bool IsParkedAtBase { get; set; }
         public float CurrentHp { get; set; }
@@ -62,6 +66,12 @@ namespace Game.Gameplay.Combat
         public float FrostCooldownRemaining { get; set; }
         /// <summary>Cooldown until this unit can cast Resurrect again (Caster role). Transient host state.</summary>
         public float ResurrectCooldownRemaining { get; set; }
+        /// <summary>Cooldown until this hero can Strike again (hero ability). Transient host state.</summary>
+        public float StrikeCooldownRemaining { get; set; }
+        /// <summary>Cooldown until this hero can cast the Ultimate again. Transient host state.</summary>
+        public float UltimateCooldownRemaining { get; set; }
+        /// <summary>Remaining self-buff seconds from the Ultimate (+damage). Transient host state.</summary>
+        public float UltimateBuffRemaining { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>

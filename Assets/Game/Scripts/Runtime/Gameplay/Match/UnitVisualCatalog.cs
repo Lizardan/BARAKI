@@ -34,6 +34,7 @@ namespace Game.Gameplay.Match
             [SerializeField] private GameObject _siege;
             [SerializeField] private GameObject _flying;
             [SerializeField] private GameObject _super;
+            [SerializeField] private GameObject _hero;
 
             [SerializeField] private Texture2D _meleePortrait;
             [SerializeField] private Texture2D _rangedPortrait;
@@ -41,6 +42,7 @@ namespace Game.Gameplay.Match
             [SerializeField] private Texture2D _siegePortrait;
             [SerializeField] private Texture2D _flyingPortrait;
             [SerializeField] private Texture2D _superPortrait;
+            [SerializeField] private Texture2D _heroPortrait;
 
             public GameObject Melee => _melee;
             public GameObject Ranged => _ranged;
@@ -48,6 +50,7 @@ namespace Game.Gameplay.Match
             public GameObject Siege => _siege;
             public GameObject Flying => _flying;
             public GameObject Super => _super;
+            public GameObject Hero => _hero;
 
             public GameObject GetPrefab(UnitRole role) => role switch
             {
@@ -57,6 +60,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Siege => _siege,
                 UnitRole.Flying => _flying,
                 UnitRole.Super => _super,
+                UnitRole.Hero => _hero,
                 _ => null,
             };
 
@@ -68,6 +72,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Siege => _siegePortrait,
                 UnitRole.Flying => _flyingPortrait,
                 UnitRole.Super => _superPortrait,
+                UnitRole.Hero => _heroPortrait,
                 _ => null,
             };
         }

@@ -43,6 +43,22 @@ namespace Game.UI
 
         public static string FormatDamageRange(float min, float max) => $"{min:0.#}–{max:0.#}";
 
+        public static string FormatHeroName(int heroSlot) => heroSlot switch
+        {
+            1 => "TT_King",
+            2 => "Герой 2",
+            3 => "Герой 3",
+            _ => $"Герой {heroSlot}",
+        };
+
+        public static string FormatHeroLevel(int level) => $"Ур. {level}";
+
+        public static string FormatHeroXp(int xp, int level)
+        {
+            var next = HeroLevelRules.XpToNext(level);
+            return HeroLevelRules.IsMaxLevel(level) ? $"XP: MAX" : $"XP: {xp}/{next}";
+        }
+
         public static string FormatReadonlyHint() => "Только просмотр";
 
         public static string FormatNoActiveResearch() => "Нет активного исследования";
