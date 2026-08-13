@@ -8,7 +8,8 @@ namespace Game.Gameplay.Networking
         public static bool TryApplyLastGood(
             MatchController controller,
             byte[] lastGoodBytes,
-            int previousHostSlot)
+            int previousHostSlot,
+            bool eliminatePreviousHost = false)
         {
             if (controller == null || lastGoodBytes == null || lastGoodBytes.Length == 0)
             {
@@ -18,7 +19,7 @@ namespace Game.Gameplay.Networking
             var snapshot = MatchSnapshotCodec.Deserialize(lastGoodBytes);
             controller.ApplyAuthoritativeSnapshot(snapshot);
 
-            if (previousHostSlot >= 0)
+            if (eliminatePreviousHost && previousHostSlot >= 0)
             {
                 controller.TryEliminateForDisconnect(previousHostSlot);
             }

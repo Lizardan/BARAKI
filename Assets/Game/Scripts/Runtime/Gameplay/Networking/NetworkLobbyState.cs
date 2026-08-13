@@ -45,8 +45,13 @@ namespace Game.Gameplay.Networking
         private readonly NetworkVariable<bool> _matchStarted = new();
         private readonly NetworkVariable<int> _revision = new();
         private readonly NetworkList<NetworkLobbySlot> _slots = new();
+        private readonly NetworkVariable<byte> _disconnectUiPhase = new();
+        private readonly NetworkVariable<int> _disconnectUiSlot = new(-1);
+        private readonly NetworkVariable<FixedString64Bytes> _disconnectUiName = new();
         private readonly float[] _disconnectAtRealtime = new float[NetworkLobbySlotRules.MaxSlots];
         private readonly bool[] _hasDisconnectTimer = new bool[NetworkLobbySlotRules.MaxSlots];
+        float _disconnectReadUntilRealtime;
+        float _nextLocalPersistAtRealtime;
 
         public static NetworkLobbyState Instance { get; private set; }
 
@@ -57,6 +62,17 @@ namespace Game.Gameplay.Networking
         public int Revision => _revision.Value;
         public string RoomCodeValue => _roomCode.Value.ToString();
         public bool MatchStartedValue => _matchStarted.Value;
+        public MatchDisconnectHoldRules.OverlayPhase DisconnectUiPhase =>
+            (MatchDisconnectHoldRules.OverlayPhase)_disconnectUiPhase.Value;
+        public int DisconnectUiSlot => _disconnectUiSlot.Value;
+        public string DisconnectUiName => _disconnectUiName.Value.ToString();
+        public int ReservedSlotCount => CountReservedSlots();
+        public bool HasDisconnectHold =>
+            MatchDisconnectHoldRules.ShouldPauseMatch(
+                _matchStarted.Value,
+                ReservedSlotCount,
+                DisconnectUiPhase,
+                HostMigrationCoordinator.Instance != null && HostMigrationCoordinator.Instance.IsPaused);
         /// <summary>
         /// Designated host is lobby slot 0 (listen-server host), seated via
         /// <see cref="SeatListenHost"/>. Non-host peers request Start via ServerRpc.
@@ -132,7 +148,11 @@ namespace Game.Gameplay.Networking
             }
 
             var slot = _slots[index];
-            return new LobbySlotInfo(slot.IsOccupied, slot.IsReady, slot.DisplayName.ToString());
+            return new LobbySlotInfo(
+                slot.IsOccupied,
+                slot.IsReady,
+                slot.DisplayName.ToString(),
+                slot.IsReserved);
         }
 
         public int FindClientSlot(ulong clientId) => FindSlotByClientId(clientId);
@@ -200,6 +220,27 @@ namespace Game.Gameplay.Networking
             RequestReconnectServerRpc(sessionToken ?? string.Empty);
         }
 
+        public void RequestKickDisconnected(int slot)
+        {
+            if (slot < 0)
+            {
+                return;
+            }
+
+            if (HostMigrationSession.IsRebinding || !IsServer)
+            {
+                HostMigrationSession.QueueKick(slot);
+            }
+
+            if (IsServer)
+            {
+                KickDisconnected(slot, fromPendingMigration: HostMigrationSession.IsRebinding);
+                return;
+            }
+
+            RequestKickDisconnectedServerRpc(slot);
+        }
+
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
         public void RequestReadyServerRpc(bool isReady, RpcParams rpcParams = default)
         {
@@ -210,6 +251,12 @@ namespace Game.Gameplay.Networking
         public void RequestReconnectServerRpc(string sessionToken, RpcParams rpcParams = default)
         {
             TryClaimReconnect(-1, rpcParams.Receive.SenderClientId, sessionToken);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestKickDisconnectedServerRpc(int slot, RpcParams rpcParams = default)
+        {
+            KickDisconnected(slot, fromPendingMigration: false);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -248,8 +295,11 @@ namespace Game.Gameplay.Networking
 
             if (HostMigrationSession.IsRebinding && NetworkManager.IsHost)
             {
+                RestoreSlotsFromMigrationSnapshot();
                 SeatMigratedListenHost();
                 MatchNetworkBootstrap.Ensure().EnsureMatchAuthority();
+                ApplyPendingKicks();
+                RefreshDisconnectHoldPause();
             }
             else if (NetworkLobbySlotRules.ShouldSeatListenHostOnServerInit(NetworkManager.IsHost))
             {
@@ -264,6 +314,21 @@ namespace Game.Gameplay.Networking
             if (FindSlotByClientId(clientId) >= 0)
             {
                 return;
+            }
+
+            if (MatchNetworkBootstrap.TryGetApprovedReconnectToken(clientId, out var reconnectToken)
+                && !string.IsNullOrEmpty(reconnectToken))
+            {
+                TryClaimReconnect(-1, clientId, reconnectToken);
+                if (FindSlotByClientId(clientId) >= 0)
+                {
+                    return;
+                }
+
+                if (_matchStarted.Value)
+                {
+                    return;
+                }
             }
 
             var occupied = new bool[_slots.Count];
@@ -313,7 +378,16 @@ namespace Game.Gameplay.Networking
             }
 
             ReserveSlotForGrace(slot);
-            if (DisconnectGraceRules.IsHostSlotDisconnect(slot))
+            SetDisconnectUi(
+                MatchDisconnectHoldRules.OverlayPhase.Waiting,
+                slot,
+                _slots[slot].DisplayName.ToString());
+            RefreshDisconnectHoldPause();
+            PersistLocalReconnect();
+            if (DisconnectGraceRules.IsHostSlotDisconnect(slot, MatchNetworkSession.ListenHostSlot)
+                && IsServer
+                && NetworkManager != null
+                && FindSlotByClientId(NetworkManager.LocalClientId) != slot)
             {
                 BeginHostMigrationIfNeeded(slot);
             }
@@ -324,12 +398,20 @@ namespace Game.Gameplay.Networking
 
         private void Update()
         {
-            if (!IsSpawned || !IsServer || !_matchStarted.Value)
+            if (!IsSpawned || !_matchStarted.Value)
+            {
+                return;
+            }
+
+            TickLocalReconnectPersist();
+            RefreshDisconnectHoldPause();
+            if (!IsServer)
             {
                 return;
             }
 
             TickDisconnectGrace();
+            TickDisconnectReadDelay();
         }
 
         private void SetReady(int slot, bool isReady)
@@ -391,6 +473,7 @@ namespace Game.Gameplay.Networking
                 "Start",
                 ("slot", senderSlot),
                 ("players", PlayerCount));
+            PersistLocalReconnect();
             BumpRevision();
             MatchNetworkBootstrap.Ensure().EnsureMatchAuthority();
             SessionFlowTracker.NotifyChanged();
@@ -413,7 +496,7 @@ namespace Game.Gameplay.Networking
 
         /// <summary>
         /// After host migration the new NGO host keeps their original player slot
-        /// (may be ≠ 0). Previous host slot stays reserved for eliminate-on-resume.
+        /// (may be ≠ 0). Previous host slot stays reserved for reconnect or kick.
         /// </summary>
         void SeatMigratedListenHost()
         {
@@ -434,13 +517,71 @@ namespace Game.Gameplay.Networking
             }
 
             var displayName = ResolveClientDisplayName(NetworkManager.LocalClientId);
-            OccupySlot(slot, NetworkManager.LocalClientId, displayName);
+            var playerId = UnityServicesBootstrap.PlayerId;
+            OccupySlot(slot, NetworkManager.LocalClientId, displayName, playerId);
             MatchNetworkSession.LocalSlot = slot;
             MatchNetworkSession.ListenHostSlot = slot;
         }
 
-            private void OccupySlot(int slot, ulong clientId, string displayName)
+        void RestoreSlotsFromMigrationSnapshot()
         {
+            var snapshot = HostMigrationSession.SlotSnapshot;
+            if (snapshot == null || snapshot.Length == 0)
+            {
+                return;
+            }
+
+            var designated = HostMigrationSession.DesignatedHostSlot;
+            var previousHost = HostMigrationSession.PreviousHostSlot;
+            for (var slot = 0; slot < _slots.Count && slot < snapshot.Length; slot++)
+            {
+                if (slot == designated)
+                {
+                    continue;
+                }
+
+                var snap = snapshot[slot];
+                if (!snap.ShouldRestore)
+                {
+                    continue;
+                }
+
+                var reserved = snap.IsReserved || slot == previousHost;
+                _slots[slot] = new NetworkLobbySlot
+                {
+                    ClientId = ulong.MaxValue,
+                    IsOccupied = true,
+                    IsReady = false,
+                    IsReserved = reserved,
+                    DisplayName = new FixedString64Bytes(snap.DisplayName),
+                    PlayerId = new FixedString64Bytes(snap.PlayerId),
+                };
+                if (reserved)
+                {
+                    _hasDisconnectTimer[slot] = true;
+                    _disconnectAtRealtime[slot] = Time.realtimeSinceStartup
+                        - Mathf.Max(0f, snap.SecondsSinceDisconnect);
+                }
+            }
+
+            if (CountReservedSlots() > 0)
+            {
+                var focus = FindFirstReservedSlot();
+                SetDisconnectUi(
+                    MatchDisconnectHoldRules.OverlayPhase.Waiting,
+                    focus,
+                    focus >= 0 ? _slots[focus].DisplayName.ToString() : string.Empty,
+                    startReadDelay: false);
+            }
+        }
+
+        private void OccupySlot(int slot, ulong clientId, string displayName, string playerId = null)
+        {
+            if (string.IsNullOrEmpty(playerId))
+            {
+                playerId = ResolveSlotPlayerId(clientId);
+            }
+
             _slots[slot] = new NetworkLobbySlot
             {
                 ClientId = clientId,
@@ -448,7 +589,7 @@ namespace Game.Gameplay.Networking
                 IsReady = false,
                 IsReserved = false,
                 DisplayName = new FixedString64Bytes(displayName),
-                PlayerId = new FixedString64Bytes(ResolveSlotPlayerId(clientId)),
+                PlayerId = new FixedString64Bytes(playerId ?? string.Empty),
             };
             _hasDisconnectTimer[slot] = false;
             _disconnectAtRealtime[slot] = 0f;
@@ -525,9 +666,194 @@ namespace Game.Gameplay.Networking
                 displayName = ResolveClientDisplayName(clientId);
             }
 
-            OccupySlot(slot, clientId, displayName);
+            var playerId = _slots[slot].PlayerId.ToString();
+            OccupySlot(slot, clientId, displayName, playerId);
+            SetDisconnectUi(MatchDisconnectHoldRules.OverlayPhase.Returned, slot, displayName);
+            RefreshDisconnectHoldPause();
+            PersistLocalReconnect();
             BumpRevision();
             NotifyChanged();
+        }
+
+        public void ApplyPendingKicks()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            var slot = HostMigrationSession.ConsumePendingKick();
+            if (slot >= 0)
+            {
+                KickDisconnected(slot, fromPendingMigration: true);
+            }
+        }
+
+        public HostMigrationSlotSnapshot[] ExportSlotSnapshot()
+        {
+            var snapshot = new HostMigrationSlotSnapshot[_slots.Count];
+            var now = Time.realtimeSinceStartup;
+            for (var i = 0; i < _slots.Count; i++)
+            {
+                var slot = _slots[i];
+                var elapsed = _hasDisconnectTimer[i] ? Mathf.Max(0f, now - _disconnectAtRealtime[i]) : 0f;
+                snapshot[i] = new HostMigrationSlotSnapshot(
+                    slot.IsOccupied,
+                    slot.IsReserved,
+                    slot.DisplayName.ToString(),
+                    slot.PlayerId.ToString(),
+                    elapsed);
+            }
+
+            return snapshot;
+        }
+
+        public int FindFirstReservedSlot()
+        {
+            for (var i = 0; i < _slots.Count; i++)
+            {
+                if (_slots[i].IsReserved)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        int CountReservedSlots()
+        {
+            var count = 0;
+            for (var i = 0; i < _slots.Count; i++)
+            {
+                if (_slots[i].IsReserved)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        void KickDisconnected(int slot, bool fromPendingMigration)
+        {
+            if (!IsServer || slot < 0 || slot >= _slots.Count)
+            {
+                return;
+            }
+
+            if (!_slots[slot].IsReserved && !fromPendingMigration)
+            {
+                return;
+            }
+
+            var displayName = _slots[slot].DisplayName.ToString();
+            var wasListenHost = DisconnectGraceRules.IsHostSlotDisconnect(
+                slot,
+                MatchNetworkSession.ListenHostSlot);
+            var runtime = MatchRuntime.Current;
+            runtime?.Controller?.TryEliminateForDisconnect(slot);
+            ClearSlot(slot);
+
+            var remaining = CountReservedSlots();
+            var needsMigration = wasListenHost
+                && !fromPendingMigration
+                && HostMigrationCoordinator.Instance != null
+                && HostMigrationCoordinator.Instance.Phase == HostMigrationRules.MigrationPhase.Playing
+                && remaining >= 0
+                && IsServer
+                && NetworkManager != null
+                && FindSlotByClientId(NetworkManager.LocalClientId) != slot;
+
+            if (needsMigration)
+            {
+                SetDisconnectUi(
+                    MatchDisconnectHoldRules.OverlayPhase.Migrating,
+                    slot,
+                    displayName,
+                    startReadDelay: false);
+                BeginHostMigrationIfNeeded(slot);
+            }
+            else
+            {
+                var remainingFocus = remaining > 0 ? FindFirstReservedSlot() : slot;
+                SetDisconnectUi(
+                    remaining > 0
+                        ? MatchDisconnectHoldRules.OverlayPhase.Waiting
+                        : MatchDisconnectHoldRules.OverlayPhase.Kicked,
+                    remainingFocus,
+                    remaining > 0 && remainingFocus >= 0 && remainingFocus < _slots.Count
+                        ? _slots[remainingFocus].DisplayName.ToString()
+                        : displayName,
+                    startReadDelay: remaining <= 0);
+            }
+
+            RefreshDisconnectHoldPause();
+            BumpRevision();
+            SessionFlowTracker.NotifyChanged();
+        }
+
+        void SetDisconnectUi(
+            MatchDisconnectHoldRules.OverlayPhase phase,
+            int slot,
+            string displayName,
+            bool startReadDelay = true)
+        {
+            _disconnectUiPhase.Value = (byte)phase;
+            _disconnectUiSlot.Value = slot;
+            _disconnectUiName.Value = new FixedString64Bytes(displayName ?? string.Empty);
+            if (startReadDelay
+                && phase is MatchDisconnectHoldRules.OverlayPhase.Returned
+                    or MatchDisconnectHoldRules.OverlayPhase.Kicked)
+            {
+                _disconnectReadUntilRealtime = Time.realtimeSinceStartup
+                    + MatchDisconnectHoldRules.OverlayReadDelaySeconds;
+            }
+            else if (phase == MatchDisconnectHoldRules.OverlayPhase.None)
+            {
+                _disconnectReadUntilRealtime = 0f;
+            }
+        }
+
+        void TickDisconnectReadDelay()
+        {
+            var phase = DisconnectUiPhase;
+            if (phase is not (MatchDisconnectHoldRules.OverlayPhase.Returned
+                or MatchDisconnectHoldRules.OverlayPhase.Kicked))
+            {
+                return;
+            }
+
+            if (_disconnectReadUntilRealtime <= 0f
+                || Time.realtimeSinceStartup < _disconnectReadUntilRealtime)
+            {
+                return;
+            }
+
+            var remaining = CountReservedSlots();
+            if (remaining > 0)
+            {
+                var focus = FindFirstReservedSlot();
+                SetDisconnectUi(
+                    MatchDisconnectHoldRules.OverlayPhase.Waiting,
+                    focus,
+                    focus >= 0 ? _slots[focus].DisplayName.ToString() : string.Empty,
+                    startReadDelay: false);
+                return;
+            }
+
+            SetDisconnectUi(MatchDisconnectHoldRules.OverlayPhase.None, -1, string.Empty);
+            RefreshDisconnectHoldPause();
+        }
+
+        void RefreshDisconnectHoldPause()
+        {
+            var shouldHold = MatchDisconnectHoldRules.ShouldPauseMatch(
+                _matchStarted.Value,
+                CountReservedSlots(),
+                DisconnectUiPhase,
+                HostMigrationCoordinator.Instance != null && HostMigrationCoordinator.Instance.IsPaused);
+            MatchPauseGate.SetDisconnectHoldPaused(shouldHold);
         }
 
         void TickDisconnectGrace()
@@ -545,12 +871,53 @@ namespace Game.Gameplay.Networking
                     continue;
                 }
 
-                var runtime = MatchRuntime.Current;
-                runtime?.Controller?.TryEliminateForDisconnect(slot);
-                ClearSlot(slot);
-                BumpRevision();
+                KickDisconnected(slot, fromPendingMigration: false);
             }
         }
+
+        void PersistLocalReconnect()
+        {
+            if (!_matchStarted.Value)
+            {
+                return;
+            }
+
+            var token = MatchNetworkSession.BuildReconnectToken();
+            if (string.IsNullOrEmpty(token) || MatchNetworkSession.LocalSlot < 0)
+            {
+                return;
+            }
+
+            PendingMatchReconnectStore.Save(new PendingMatchReconnectState(
+                RoomCodeValue,
+                MatchNetworkSession.CurrentHandle.LobbyId,
+                MatchNetworkSession.LocalSlot,
+                PlayerCount,
+                token,
+                DateTime.UtcNow.Ticks));
+        }
+
+        void TickLocalReconnectPersist()
+        {
+            if (Time.realtimeSinceStartup < _nextLocalPersistAtRealtime)
+            {
+                return;
+            }
+
+            _nextLocalPersistAtRealtime = Time.realtimeSinceStartup
+                + MatchDisconnectHoldRules.LocalPersistIntervalSeconds;
+            PersistLocalReconnect();
+        }
+
+        void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus)
+            {
+                PersistLocalReconnect();
+            }
+        }
+
+        void OnApplicationQuit() => PersistLocalReconnect();
 
         void BeginHostMigrationIfNeeded(int previousHostSlot)
         {
@@ -567,12 +934,17 @@ namespace Game.Gameplay.Networking
             }
 
             var occupied = new bool[_slots.Count];
+            var reserved = new bool[_slots.Count];
             for (var i = 0; i < _slots.Count; i++)
             {
                 occupied[i] = _slots[i].IsOccupied;
+                reserved[i] = _slots[i].IsReserved;
             }
 
-            coordinator.BeginHostLost(previousHostSlot, occupied, matchInProgress: true);
+            coordinator.BeginHostLost(
+                previousHostSlot,
+                HostMigrationRules.BuildEligibleOccupied(occupied, reserved),
+                matchInProgress: true);
             if (coordinator.Phase == HostMigrationRules.MigrationPhase.Aborted)
             {
                 return;
@@ -657,6 +1029,9 @@ namespace Game.Gameplay.Networking
             _roomCode.OnValueChanged += OnRoomCodeChanged;
             _matchStarted.OnValueChanged += OnMatchStartedChanged;
             _revision.OnValueChanged += OnRevisionChanged;
+            _disconnectUiPhase.OnValueChanged += OnDisconnectUiChanged;
+            _disconnectUiSlot.OnValueChanged += OnDisconnectUiSlotChanged;
+            _disconnectUiName.OnValueChanged += OnDisconnectUiNameChanged;
         }
 
         private void UnsubscribeFromChanges()
@@ -666,6 +1041,9 @@ namespace Game.Gameplay.Networking
             _roomCode.OnValueChanged -= OnRoomCodeChanged;
             _matchStarted.OnValueChanged -= OnMatchStartedChanged;
             _revision.OnValueChanged -= OnRevisionChanged;
+            _disconnectUiPhase.OnValueChanged -= OnDisconnectUiChanged;
+            _disconnectUiSlot.OnValueChanged -= OnDisconnectUiSlotChanged;
+            _disconnectUiName.OnValueChanged -= OnDisconnectUiNameChanged;
         }
 
         private void OnSlotsChanged(NetworkListEvent<NetworkLobbySlot> changeEvent)
@@ -683,10 +1061,24 @@ namespace Game.Gameplay.Networking
         private void OnRoomCodeChanged(FixedString64Bytes previous, FixedString64Bytes current) =>
             NotifyChanged();
 
-        private void OnMatchStartedChanged(bool previous, bool current) =>
+        private void OnMatchStartedChanged(bool previous, bool current)
+        {
+            if (current)
+            {
+                PersistLocalReconnect();
+            }
+
             NotifyChanged();
+        }
 
         private void OnRevisionChanged(int previous, int current) =>
+            NotifyChanged();
+
+        void OnDisconnectUiChanged(byte previous, byte current) => NotifyChanged();
+
+        void OnDisconnectUiSlotChanged(int previous, int current) => NotifyChanged();
+
+        void OnDisconnectUiNameChanged(FixedString64Bytes previous, FixedString64Bytes current) =>
             NotifyChanged();
 
         private void BumpRevision()
@@ -695,6 +1087,11 @@ namespace Game.Gameplay.Networking
             NotifyChanged();
         }
 
-        private void NotifyChanged() => Changed?.Invoke();
+        private void NotifyChanged()
+        {
+            MatchNetworkSession.CacheLobbyRoster(ExportSlotSnapshot());
+            RefreshDisconnectHoldPause();
+            Changed?.Invoke();
+        }
     }
 }

@@ -35,6 +35,7 @@
                     <ui:VisualElement class="ui-panel__inner mm__nav-inner">
                         <ui:Label text="ИГРА" class="ui-panel__header-text mm__section-label" />
                         <ui:Button name="PlayButton" text="В БОЙ" class="ui-btn ui-btn--primary" />
+                        <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="ui-btn ui-overlay--hidden" />
                         <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="ui-btn" />
                         <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted" />
                         <ui:VisualElement class="ui-hints">

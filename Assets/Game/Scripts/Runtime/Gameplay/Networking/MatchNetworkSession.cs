@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using Cysharp.Threading.Tasks;
 using Game.Core;
+using Game.Gameplay.Match;
 using Unity.Netcode;
 using Unity.Services.Relay.Models;
 using UnityEngine;
@@ -13,10 +14,12 @@ namespace Game.Gameplay.Networking
     {
         private static MatchSessionHandle s_currentHandle;
         private static bool s_hasHandle;
+        static HostMigrationSlotSnapshot[] s_cachedRoster;
 
         public static MatchSessionHandle CurrentHandle => s_currentHandle;
         public static bool HasHandle => s_hasHandle;
         public static bool IsNetworked { get; private set; }
+        public static bool IsRejoiningMatch { get; set; }
         public static int PlayerCount { get; internal set; }
         public static int LocalSlot { get; internal set; } = -1;
         /// <summary>Player slot of the current listen-host (starts at 0; updates after migration).</summary>
@@ -74,6 +77,7 @@ namespace Game.Gameplay.Networking
 
             IsNetworked = MatchNetworkEndpoint.TryParse(handle.TransportEndpoint, out var endpoint)
                             && endpoint.IsNetworked;
+            MatchLobbyHeartbeat.Ensure().Bind(handle.LobbyId);
         }
 
         public static async UniTask<bool> TryStartTransportAsync(
@@ -144,6 +148,23 @@ namespace Game.Gameplay.Networking
         public static void RequestStart() =>
             NetworkLobbyState.Instance?.RequestStart();
 
+        public static void RequestKickDisconnected(int slot)
+        {
+            if (slot < 0)
+            {
+                return;
+            }
+
+            var lobby = NetworkLobbyState.Instance;
+            if (lobby != null)
+            {
+                lobby.RequestKickDisconnected(slot);
+                return;
+            }
+
+            HostMigrationSession.QueueKick(slot);
+        }
+
         public static event Action NetworkRacePickChanged;
 
         internal static void NotifyRacePickChanged() => NetworkRacePickChanged?.Invoke();
@@ -205,10 +226,14 @@ namespace Game.Gameplay.Networking
             s_currentHandle = default;
             s_hasHandle = false;
             IsNetworked = false;
+            IsRejoiningMatch = false;
             PlayerCount = 0;
             LocalSlot = -1;
             ListenHostSlot = NetworkLobbySlotRules.HostSlot;
+            s_cachedRoster = null;
             HostMigrationSession.Clear();
+            MatchLobbyHeartbeat.Ensure().Bind(null);
+            MatchPauseGate.SetDisconnectHoldPaused(false);
             // Leaving a cleared session must not leave stale joinable lobby presence.
             SessionFlowTracker.NotifyChanged();
         }
@@ -219,8 +244,13 @@ namespace Game.Gameplay.Networking
         /// <summary>Leave match networking and reset session (results → menu/lobby).</summary>
         public static void LeaveMatch()
         {
+            var matchEnded = MatchRuntime.Current?.Controller?.Phase == MatchPhase.End;
             Shutdown();
             GameSession.Reset();
+            if (matchEnded)
+            {
+                PendingMatchReconnectStore.Clear();
+            }
         }
 
         /// <summary>Designated host: new Relay allocation + lobby Data update + StartAsHost.</summary>
@@ -321,6 +351,92 @@ namespace Game.Gameplay.Networking
             lobby.RequestReconnect(token);
         }
 
+        public static void CacheLobbyRoster(HostMigrationSlotSnapshot[] snapshot)
+        {
+            s_cachedRoster = snapshot;
+        }
+
+        public static HostMigrationSlotSnapshot[] CopyCachedRoster()
+        {
+            if (s_cachedRoster == null || s_cachedRoster.Length == 0)
+            {
+                return Array.Empty<HostMigrationSlotSnapshot>();
+            }
+
+            var copy = new HostMigrationSlotSnapshot[s_cachedRoster.Length];
+            Array.Copy(s_cachedRoster, copy, s_cachedRoster.Length);
+            return copy;
+        }
+
+        public static bool[] GetEligibleHostSlots()
+        {
+            var roster = s_cachedRoster;
+            if (roster == null || roster.Length == 0)
+            {
+                return Array.Empty<bool>();
+            }
+
+            var occupied = new bool[roster.Length];
+            var reserved = new bool[roster.Length];
+            for (var i = 0; i < roster.Length; i++)
+            {
+                occupied[i] = roster[i].IsOccupied;
+                reserved[i] = roster[i].IsReserved;
+            }
+
+            return HostMigrationRules.BuildEligibleOccupied(occupied, reserved);
+        }
+
+        public static string GetCachedSlotName(int slot)
+        {
+            if (s_cachedRoster == null || slot < 0 || slot >= s_cachedRoster.Length)
+            {
+                return string.Empty;
+            }
+
+            return s_cachedRoster[slot].DisplayName;
+        }
+
+        public static async UniTask<bool> TryReturnToPendingMatchAsync()
+        {
+            if (!PendingMatchReconnectStore.TryLoadActive(out var pending)
+                || !PendingMatchReconnectRules.CanAttemptRejoin(
+                    true,
+                    pending.RoomCode,
+                    pending.Slot,
+                    pending.SessionToken,
+                    pending.SavedUtcTicks,
+                    DateTime.UtcNow.Ticks))
+            {
+                PendingMatchReconnectStore.Clear();
+                return false;
+            }
+
+            var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
+                ? "Player"
+                : PlayerProfileService.DisplayName;
+            var handle = await MatchSessionService.Backend.JoinAsync(
+                new JoinMatchRequest(pending.RoomCode, displayName));
+            ApplyHandle(new MatchSessionHandle(
+                handle.RoomCode,
+                pending.PlayerCount > 0 ? pending.PlayerCount : handle.PlayerCount,
+                pending.Slot,
+                handle.TransportEndpoint,
+                isListenHost: false,
+                relayJoinCode: handle.RelayJoinCode,
+                lobbyId: handle.LobbyId));
+            LocalSlot = pending.Slot;
+            IsRejoiningMatch = true;
+            if (!await TryStartTransportAsync())
+            {
+                IsRejoiningMatch = false;
+                return false;
+            }
+
+            ClaimReconnectIfNeeded();
+            return true;
+        }
+
         static string BuildConnectionPayload(bool isHost)
         {
             var room = !string.IsNullOrWhiteSpace(RoomCode)
@@ -328,7 +444,7 @@ namespace Game.Gameplay.Networking
                 : s_currentHandle.RoomCode;
             if (!string.IsNullOrWhiteSpace(room)
                 && LocalSlot >= 0
-                && (MatchStarted || HostMigrationSession.IsRebinding))
+                && (MatchStarted || HostMigrationSession.IsRebinding || IsRejoiningMatch))
             {
                 return MatchConnectionPayloadRules.BuildReconnect(
                     PlayerReconnectRules.BuildSessionToken(

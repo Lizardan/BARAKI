@@ -135,11 +135,13 @@ state_source: last_good_snapshot
 mvp: false
 ```
 
-- Потеря хоста детектится NGO-коллбэком + debounce-грейс `HostMigrationRules.HostLossGraceSeconds` (1.5 c) — паника на коротких обрывах исключена.
-- Игра паузится (`Time.timeScale = 0`); слот нового хоста выбирается `HostMigrationRules.ElectNewHostSlot` (первый занятый слот после бывшего хоста).
+- Потеря хоста детектится NGO-коллбэком + debounce-грейс `HostMigrationRules.HostLossGraceSeconds` (1.5 c) — паника на коротких обрывах исключена. Клиенты паузятся сразу.
+- Игра паузится (`Time.timeScale = 0`); слот нового хоста выбирается `HostMigrationRules.ElectNewHostSlot` среди **живых** (occupied && !reserved).
 - Ожидание клиентов на ребренд: `ClientRejoinTimeoutSeconds` (5 c), минимум `MinClientRejoinWaitSeconds` (0.5 c).
 - Перенос состояния: новый хост применяет **последний good-снапшот** (`MatchRuntime.LastNetworkSnapshotBytes`); live-capture — только fallback для бывшего хоста. Снапшот v7.
 - На старте каждой новой сессии `MatchRuntime` очищает `_lastNetworkSnapshot*`, чтобы снапшот прошлой игры не просочился в миграцию следующей.
+- После rebind слоты восстанавливаются из snapshot: живые клиенты ClaimReconnect, бывший хост остаётся reserved (не elimination), пока его не кикнут или он не вернётся. Пауза держится до кика/реконекта + 1 с.
+- Unity Lobby heartbeat (15 с) + `HostId` transfer при миграции, чтобы «вернуться в матч» нашёл комнату.
 
 ```entity
 id: NET_RECONNECT_TOKEN
@@ -152,7 +154,8 @@ mvp: false
 
 - Токен `room:slot:playerId`; legacy-форматы без PlayerId парсятся для обратной совместимости.
 - `PlayerReconnectRules.CanClaimSlot` не даёт токену без PlayerId занять слот, у которого владелец известен (защита от сквоттинга).
-- Дефолтный reconnect-грейс — `PlayerReconnectRules.DefaultGraceSeconds` (90 c); слот резервируется, после исчерпания грейса — elimination.
+- Дефолтный reconnect-грейс — `PlayerReconnectRules.DefaultGraceSeconds` (90 c); слот резервируется, после исчерпания грейса — elimination как кик.
+- Mid-match disconnect ставит global pause и оверлей (ник + «Кикнуть»). Reconnect → «вернулся» + 1 с; кик → elimination + 1 с. Лаунчер/меню: «Вернуться в матч», если слот не кикнули и грейс жив.
 
 ## Distribution
 

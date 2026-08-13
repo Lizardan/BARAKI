@@ -86,15 +86,20 @@ namespace Game.Core
 
     public readonly struct LobbySlotInfo
     {
-        public LobbySlotInfo(bool isOccupied, bool isReady, string displayName)
+        public LobbySlotInfo(bool isOccupied, bool isReady, string displayName, bool isReserved = false)
         {
             IsOccupied = isOccupied;
             IsReady = isReady;
             DisplayName = displayName ?? string.Empty;
+            IsReserved = isReserved;
         }
 
         public bool IsOccupied { get; }
         public bool IsReady { get; }
         public string DisplayName { get; }
+        public bool IsReserved { get; }
+
+        /// <summary>Still in the match and able to become listen-host.</summary>
+        public bool IsEligibleHost => IsOccupied && !IsReserved;
     }
 }

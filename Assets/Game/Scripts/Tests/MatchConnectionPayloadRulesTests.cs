@@ -36,5 +36,14 @@ namespace Game.Tests
 
             Assert.IsFalse(MatchConnectionPayloadRules.TryReadDisplayName(payload, out _));
         }
+
+        [Test]
+        public void TryReadReconnectToken_RoundTrips()
+        {
+            var payload = System.Text.Encoding.UTF8.GetBytes(
+                MatchConnectionPayloadRules.BuildReconnect("room:3:player-9"));
+            Assert.IsTrue(MatchConnectionPayloadRules.TryReadReconnectToken(payload, out var token));
+            Assert.AreEqual("room:3:player-9", token);
+        }
     }
 }

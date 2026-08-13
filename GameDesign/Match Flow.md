@@ -164,26 +164,24 @@ mvp: true
 | Case | MVP | Early Access / Phase 2 |
 |------|-----|------------------------|
 | Surrender | Немедленная elimination | — |
-| Disconnect | Матч **не на паузе**; grace **90s** → **elimination** | **Reconnect** в окне grace |
-| Reconnect | **Не в MVP** | Восстановление слота, state sync |
+| Disconnect | Пауза, оверлей (ник + кик); reconnect или кик | **Reconnect** в окне grace |
+| Reconnect | Лаунчер/меню «Вернуться в матч» | Восстановление слота, state sync |
 
 ```entity
-id: DISCONNECT_POLICY_MVP
-grace_seconds: 90
-global_pause: false           # матч продолжается во время grace
-reconnect: false
-eliminate_on_expiry: true
-status: locked
-mvp: true
-
 id: DISCONNECT_POLICY_EA
 grace_seconds: 90
+global_pause: true
 reconnect: true
-eliminate_on_expiry: true
+kick_disconnected: true
+overlay_read_delay_s: 1
+eliminate_on_kick_or_expiry: true
 mvp: false
 ```
 
-> MVP: заложить в netcode **session token + player slot id**, чтобы reconnect не требовал переписывания. Реализацию отложить.
+- Любой disconnect mid-match ставит матч на паузу (`Time.timeScale = 0`) и показывает оверлей с ником и кнопкой «Кикнуть».
+- Кик → elimination, 1 с на прочтение, снятие паузы. Если кикнутый был listen-host и миграция ещё не прошла — сначала host migration.
+- Reconnect (лаг / «Вернуться в матч») → «вернулся», 1 с, снятие паузы. Слот резервируется на 90 с.
+- Потеря listen-host: пауза сразу, миграция после 1.5 с grace; слот бывшего хоста остаётся reserved (не elimination), пока его не кикнут или он не вернётся.
 
 ## Рейтинг (не в MVP)
 
@@ -230,7 +228,7 @@ Lobby → Countdown → GenerateArena → InProgress → Ended
 
 | Решение | Значение |
 |---------|----------|
-| Pause при disconnect | **Нет** — матч продолжается во время grace; EA reconnect без global pause |
+| Pause при disconnect | **Да** — global pause + оверлей (ник, кик); 1 с read-delay перед unpause |
 | Center при elimination | Retarget → **след. alive слот по CW** |
 | Player count N | **Фиксировано при создании лобби**; смена N = **новое лобби** |
 | Spectator (eliminated) | **Да** — FoW **off**, свободная камера, смотреть за всеми |

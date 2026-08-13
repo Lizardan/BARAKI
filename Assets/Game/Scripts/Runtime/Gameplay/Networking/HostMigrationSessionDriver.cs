@@ -87,11 +87,15 @@ namespace Game.Gameplay.Networking
                 }
 
                 var previousRelay = MatchNetworkSession.CurrentHandle.RelayJoinCode;
+                var slotSnapshot = NetworkLobbyState.Instance != null
+                    ? NetworkLobbyState.Instance.ExportSlotSnapshot()
+                    : MatchNetworkSession.CopyCachedRoster();
                 HostMigrationSession.Begin(
                     coordinator.PreviousHostSlot,
                     coordinator.DesignatedHostSlot,
                     coordinator.CapturedStateBytes,
-                    previousRelay);
+                    previousRelay,
+                    slotSnapshot);
 
                 var isDesignated = MatchNetworkSession.LocalSlot == coordinator.DesignatedHostSlot;
                 MatchNetworkSession.ShutdownTransportKeepingSession();
@@ -158,6 +162,22 @@ namespace Game.Gameplay.Networking
                     await UniTask.Delay(
                         (int)(HostMigrationRules.MinClientRejoinWaitSeconds * 1000f),
                         ignoreTimeScale: true);
+                }
+
+                NetworkLobbyState.Instance?.ApplyPendingKicks();
+                var lobby = NetworkLobbyState.Instance;
+                var reserved = lobby != null
+                    ? lobby.ReservedSlotCount
+                    : HostMigrationSession.CountReservedSlots();
+                var holdPhase = lobby != null
+                    ? lobby.DisconnectUiPhase
+                    : MatchDisconnectHoldRules.OverlayPhase.Waiting;
+                if (reserved > 0
+                    || holdPhase is MatchDisconnectHoldRules.OverlayPhase.Waiting
+                        or MatchDisconnectHoldRules.OverlayPhase.Returned
+                        or MatchDisconnectHoldRules.OverlayPhase.Kicked)
+                {
+                    MatchPauseGate.SetDisconnectHoldPaused(true);
                 }
 
                 coordinator.TryResume(

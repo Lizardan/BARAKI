@@ -27,6 +27,7 @@ namespace Game.Gameplay.Networking
         private bool _isInitialized;
         private readonly Dictionary<ulong, string> _approvedDisplayNames = new();
         private readonly Dictionary<ulong, string> _approvedPlayerIds = new();
+        private readonly Dictionary<ulong, string> _approvedReconnectTokens = new();
 
         public NetworkManager NetworkManager => _networkManager;
 
@@ -91,6 +92,14 @@ namespace Game.Gameplay.Networking
             return s_instance != null
                 && s_instance._approvedPlayerIds.TryGetValue(clientId, out playerId)
                 && !string.IsNullOrWhiteSpace(playerId);
+        }
+
+        public static bool TryGetApprovedReconnectToken(ulong clientId, out string token)
+        {
+            token = string.Empty;
+            return s_instance != null
+                && s_instance._approvedReconnectTokens.TryGetValue(clientId, out token)
+                && !string.IsNullOrWhiteSpace(token);
         }
 
         public void ConfigureEndpoint(
@@ -288,6 +297,11 @@ namespace Game.Gameplay.Networking
             if (MatchConnectionPayloadRules.TryReadPlayerId(request.Payload, out var playerId))
             {
                 _approvedPlayerIds[request.ClientNetworkId] = playerId;
+            }
+
+            if (MatchConnectionPayloadRules.TryReadReconnectToken(request.Payload, out var reconnectToken))
+            {
+                _approvedReconnectTokens[request.ClientNetworkId] = reconnectToken;
             }
 
             response.Approved = true;

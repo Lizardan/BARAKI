@@ -29,10 +29,12 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HostSlot_IsSlotZero()
+        public void HostSlot_UsesListenHostSlot()
         {
             Assert.IsTrue(DisconnectGraceRules.IsHostSlotDisconnect(0));
             Assert.IsFalse(DisconnectGraceRules.IsHostSlotDisconnect(1));
+            Assert.IsTrue(DisconnectGraceRules.IsHostSlotDisconnect(2, listenHostSlot: 2));
+            Assert.IsFalse(DisconnectGraceRules.IsHostSlotDisconnect(0, listenHostSlot: 2));
         }
     }
 }

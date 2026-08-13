@@ -8,8 +8,16 @@ namespace Game.Tests
 {
     public sealed class HostMigrationApplyRulesTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            MatchPauseGate.ResetForTests();
+            HostMigrationSession.Clear();
+            Time.timeScale = 1f;
+        }
+
         [Test]
-        public void TryApplyLastGood_RestoresGoldAndEliminatesPreviousHost()
+        public void TryApplyLastGood_RestoresGoldWithoutEliminatingPreviousHost()
         {
             var host = new MatchController();
             host.StartMatch(MatchConfig.MvpDefault(2));
@@ -24,6 +32,26 @@ namespace Game.Tests
 
             Assert.IsTrue(HostMigrationApplyRules.TryApplyLastGood(resume, bytes, previousHostSlot: 0));
             Assert.AreEqual(250, resume.Players[1].Gold);
+            Assert.IsFalse(resume.Players[0].IsEliminated);
+        }
+
+        [Test]
+        public void TryApplyLastGood_CanEliminatePreviousHostOnKick()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            var bytes = MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(host));
+
+            var resume = new MatchController();
+            resume.StartMatch(MatchConfig.MvpDefault(2));
+            resume.BeginEarlyPhase();
+
+            Assert.IsTrue(HostMigrationApplyRules.TryApplyLastGood(
+                resume,
+                bytes,
+                previousHostSlot: 0,
+                eliminatePreviousHost: true));
             Assert.IsTrue(resume.Players[0].IsEliminated);
         }
 

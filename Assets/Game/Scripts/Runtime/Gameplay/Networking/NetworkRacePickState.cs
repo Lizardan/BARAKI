@@ -81,6 +81,12 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
+            if (HostMigrationSession.IsRebinding)
+            {
+                RestoreSessionAfterRebind(playerCount);
+                return;
+            }
+
             if (_playerCount.Value == playerCount &&
                 _racePicks.Count == playerCount &&
                 !_matchSimStarted.Value)
@@ -97,6 +103,18 @@ namespace Game.Gameplay.Networking
             }
 
             FillLocalStandInPicks();
+            NotifyChanged();
+        }
+
+        void RestoreSessionAfterRebind(int playerCount)
+        {
+            _playerCount.Value = playerCount;
+            _matchSimStarted.Value = true;
+            while (_racePicks.Count < playerCount)
+            {
+                _racePicks.Add(default);
+            }
+
             NotifyChanged();
         }
 

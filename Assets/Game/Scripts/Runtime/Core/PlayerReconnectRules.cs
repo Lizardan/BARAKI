@@ -4,6 +4,7 @@ namespace Game.Core
     public static class PlayerReconnectRules
     {
         public const float DefaultGraceSeconds = 90f;
+        public const float OverlayReadDelaySeconds = MatchDisconnectHoldRules.OverlayReadDelaySeconds;
 
         public static bool CanReconnect(
             bool matchInProgress,

@@ -221,8 +221,7 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            if (HostMigrationCoordinator.Instance != null
-                && HostMigrationCoordinator.Instance.IsPaused)
+            if (MatchPauseGate.IsPaused)
             {
                 return;
             }
@@ -314,9 +313,7 @@ namespace Game.Gameplay.Networking
             CommandResultReceived?.Invoke(result);
         }
 
-        static bool IsCommandsBlocked() =>
-            HostMigrationCoordinator.Instance != null
-            && HostMigrationCoordinator.Instance.IsPaused;
+        static bool IsCommandsBlocked() => MatchPauseGate.IsPaused;
 
         int ResolveSenderSlot(RpcParams rpcParams)
         {

@@ -45,6 +45,7 @@ namespace Game.UI.Controllers
 
         private VisualElement _root;
         private Button _playButton;
+        private Button _returnToMatchButton;
         private Button _heroReadMoreButton;
         private Button _chatSendButton;
         private TextField _chatInput;
@@ -225,6 +226,7 @@ namespace Game.UI.Controllers
             }
 
             _playButton = _root.Q<Button>("PlayButton");
+            _returnToMatchButton = _root.Q<Button>("ReturnToMatchButton");
             _heroReadMoreButton = _root.Q<Button>("HeroReadMoreButton");
             _chatSendButton = _root.Q<Button>("ChatSendButton");
             _chatInput = _root.Q<TextField>("ChatInput");
@@ -380,6 +382,7 @@ namespace Game.UI.Controllers
             }
 
             ShowReadyToEnter();
+            RefreshReturnToMatchButton();
         }
 
         private async UniTask WarmSocialServicesAsync()
@@ -475,6 +478,67 @@ namespace Game.UI.Controllers
             _warmingDetail = null;
             ApplyProgress(LauncherProgressPhase.Ready, 1f);
             SetUpdateRange(null, null);
+            RefreshReturnToMatchButton();
+        }
+
+        void RefreshReturnToMatchButton()
+        {
+            if (_returnToMatchButton == null)
+            {
+                return;
+            }
+
+            var show = _phase == LauncherProgressPhase.Ready
+                       && !_isEntering
+                       && PendingMatchReconnectStore.TryLoadActive(out _);
+            _returnToMatchButton.EnableInClassList("ln-btn--hidden", !show);
+            _returnToMatchButton.SetEnabled(show);
+        }
+
+        void OnReturnToMatchClicked()
+        {
+            if (_isEntering || _phase != LauncherProgressPhase.Ready)
+            {
+                return;
+            }
+
+            ReturnToMatchAsync().Forget();
+        }
+
+        async UniTaskVoid ReturnToMatchAsync()
+        {
+            _isEntering = true;
+            if (_playButton != null)
+            {
+                _playButton.SetEnabled(false);
+            }
+
+            if (_returnToMatchButton != null)
+            {
+                _returnToMatchButton.SetEnabled(false);
+            }
+
+            _warmingDetail = "Возврат в матч…";
+            ApplyProgress(LauncherProgressPhase.Warming, 1f);
+            RefreshReturnToMatchButton();
+
+            try
+            {
+                if (!await MatchNetworkSession.TryReturnToPendingMatchAsync())
+                {
+                    throw new InvalidOperationException("Не удалось вернуться в матч.");
+                }
+
+                await SceneManager.LoadSceneAsync(GameSceneNames.Lobby).ToUniTask();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[Launcher] Return to match failed: {ex.Message}");
+                PendingMatchReconnectStore.Clear();
+                _isEntering = false;
+                ShowReadyToEnter();
+                SetErrorText("Матч уже недоступен.");
+            }
         }
 
         private void OnApplyProgress(GameUpdateApplyProgress progress)
@@ -697,6 +761,7 @@ namespace Game.UI.Controllers
             if (register)
             {
                 if (_playButton != null) _playButton.clicked += OnPrimaryCtaClicked;
+                if (_returnToMatchButton != null) _returnToMatchButton.clicked += OnReturnToMatchClicked;
                 if (_heroReadMoreButton != null) _heroReadMoreButton.clicked += OnReadMoreClicked;
                 if (_chatSendButton != null) _chatSendButton.clicked += OnChatSendClicked;
                 if (_chatInput != null) _chatInput.RegisterCallback<KeyDownEvent>(OnChatInputKeyDown);
@@ -704,6 +769,7 @@ namespace Game.UI.Controllers
             else
             {
                 if (_playButton != null) _playButton.clicked -= OnPrimaryCtaClicked;
+                if (_returnToMatchButton != null) _returnToMatchButton.clicked -= OnReturnToMatchClicked;
                 if (_heroReadMoreButton != null) _heroReadMoreButton.clicked -= OnReadMoreClicked;
                 if (_chatSendButton != null) _chatSendButton.clicked -= OnChatSendClicked;
                 if (_chatInput != null) _chatInput.UnregisterCallback<KeyDownEvent>(OnChatInputKeyDown);

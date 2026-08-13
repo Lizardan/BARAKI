@@ -26,8 +26,10 @@ namespace Game.Gameplay.Networking
         public int PreviousHostSlot { get; private set; } = -1;
         public string ReconnectMatchId { get; private set; } = string.Empty;
         public byte[] CapturedStateBytes { get; private set; }
+        public string PreviousHostDisplayName { get; private set; } = string.Empty;
 
         float _hostLossDetectedAtRealtime = -1f;
+        bool _isolationCheckStarted;
 
         void Awake()
         {
@@ -50,6 +52,8 @@ namespace Game.Gameplay.Networking
 
         void Update()
         {
+            TryWatchIsolatedHost();
+
             // Listen-server host drop: remaining clients detect lost connection and elect.
             if (Phase != HostMigrationRules.MigrationPhase.Playing)
             {
@@ -59,7 +63,16 @@ namespace Game.Gameplay.Networking
             var nm = NetworkManager.Singleton;
             if (nm == null || !nm.IsClient || nm.IsServer || nm.IsConnectedClient)
             {
-                _hostLossDetectedAtRealtime = -1f;
+                if (_hostLossDetectedAtRealtime >= 0f && nm != null && nm.IsConnectedClient)
+                {
+                    _hostLossDetectedAtRealtime = -1f;
+                    MatchPauseGate.SetDisconnectHoldPaused(false);
+                }
+                else
+                {
+                    _hostLossDetectedAtRealtime = -1f;
+                }
+
                 return;
             }
 
@@ -68,10 +81,13 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            // Debounce: a short network hiccup must not trigger a full migration.
+            // Pause immediately so a host drop does not keep simulating on clients.
             if (_hostLossDetectedAtRealtime < 0f)
             {
                 _hostLossDetectedAtRealtime = Time.realtimeSinceStartup;
+                PreviousHostSlot = MatchNetworkSession.ListenHostSlot;
+                PreviousHostDisplayName = MatchNetworkSession.GetCachedSlotName(PreviousHostSlot);
+                MatchPauseGate.SetDisconnectHoldPaused(true);
                 return;
             }
 
@@ -81,17 +97,22 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            var lobby = NetworkLobbyState.Instance;
-            var count = lobby != null ? lobby.SlotCount : MatchNetworkSession.PlayerCount;
-            if (count <= 0)
+            var occupied = MatchNetworkSession.GetEligibleHostSlots();
+            if (occupied.Length == 0)
             {
-                count = MatchSetup.DefaultPlayerCount;
-            }
+                var lobby = NetworkLobbyState.Instance;
+                var count = lobby != null ? lobby.SlotCount : MatchNetworkSession.PlayerCount;
+                if (count <= 0)
+                {
+                    count = MatchSetup.DefaultPlayerCount;
+                }
 
-            var occupied = new bool[count];
-            for (var i = 0; i < count; i++)
-            {
-                occupied[i] = lobby == null || lobby.GetSlotInfo(i).IsOccupied;
+                occupied = new bool[count];
+                for (var i = 0; i < count; i++)
+                {
+                    var info = lobby?.GetSlotInfo(i) ?? default;
+                    occupied[i] = lobby == null || info.IsEligibleHost;
+                }
             }
 
             // Previous listen-host may no longer be slot 0 after a prior migration.
@@ -102,6 +123,37 @@ namespace Game.Gameplay.Networking
             }
         }
 
+        void TryWatchIsolatedHost()
+        {
+            if (_isolationCheckStarted || Phase != HostMigrationRules.MigrationPhase.Playing)
+            {
+                return;
+            }
+
+            var nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsHost || !MatchNetworkSession.MatchStarted)
+            {
+                return;
+            }
+
+            if (nm.ConnectedClientsList.Count > 1)
+            {
+                _isolationCheckStarted = false;
+                return;
+            }
+
+            var lobby = NetworkLobbyState.Instance;
+            if (lobby == null || lobby.ReservedSlotCount <= 0)
+            {
+                return;
+            }
+
+            _isolationCheckStarted = true;
+            HostIsolationWatch.Ensure().BeginCheck();
+        }
+
+        void SyncPauseGate() => MatchPauseGate.SetMigrationPaused(IsPaused);
+
         public void BeginHostLost(int previousHostSlot, bool[] occupiedSlots, bool matchInProgress)
         {
             var slotCount = occupiedSlots?.Length ?? 0;
@@ -109,7 +161,7 @@ namespace Game.Gameplay.Networking
                 || !HostMigrationRules.IsValidHostSlot(previousHostSlot, slotCount))
             {
                 Phase = HostMigrationRules.MigrationPhase.Aborted;
-                Time.timeScale = 1f;
+                SyncPauseGate();
                 return;
             }
 
@@ -118,13 +170,18 @@ namespace Game.Gameplay.Networking
             if (DesignatedHostSlot < 0)
             {
                 Phase = HostMigrationRules.MigrationPhase.Aborted;
-                Time.timeScale = 1f;
+                SyncPauseGate();
                 return;
             }
 
             Phase = HostMigrationRules.NextPhase(HostMigrationRules.MigrationPhase.Playing, true);
-            Time.timeScale = 0f;
+            SyncPauseGate();
             ReconnectMatchId = MatchNetworkSession.RoomCode;
+            if (string.IsNullOrEmpty(PreviousHostDisplayName))
+            {
+                PreviousHostDisplayName = MatchNetworkSession.GetCachedSlotName(previousHostSlot);
+            }
+
             PlaytestLog.Info(
                 "Migration",
                 "Paused",
@@ -188,7 +245,8 @@ namespace Game.Gameplay.Networking
             return HostMigrationApplyRules.TryApplyLastGood(
                 controller,
                 CapturedStateBytes,
-                PreviousHostSlot);
+                PreviousHostSlot,
+                eliminatePreviousHost: false);
         }
 
         public void AdvanceAfterStateTransfer(bool success)
@@ -196,7 +254,7 @@ namespace Game.Gameplay.Networking
             Phase = HostMigrationRules.NextPhase(Phase, success);
             if (Phase == HostMigrationRules.MigrationPhase.Aborted)
             {
-                Time.timeScale = 1f;
+                SyncPauseGate();
                 HostMigrationSession.Clear();
                 PlaytestLog.Warn("Migration", "Abort", ("phase", "transfer"));
             }
@@ -242,16 +300,16 @@ namespace Game.Gameplay.Networking
                 && !HostMigrationRules.IsValidHostSlot(DesignatedHostSlot, MatchNetworkSession.PlayerCount))
             {
                 Phase = HostMigrationRules.MigrationPhase.Aborted;
-                Time.timeScale = 1f;
+                SyncPauseGate();
                 HostMigrationSession.Clear();
                 PlaytestLog.Warn("Migration", "Abort", ("phase", "resume-slot"));
                 return;
             }
 
             Phase = HostMigrationRules.MigrationPhase.Playing;
-            Time.timeScale = 1f;
             MatchNetworkSession.ListenHostSlot = DesignatedHostSlot;
             HostMigrationSession.Clear();
+            SyncPauseGate();
             PlaytestLog.Info(
                 "Migration",
                 "Resume",

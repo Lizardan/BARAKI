@@ -17,9 +17,7 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        public static bool AreCommandsBlocked =>
-            HostMigrationCoordinator.Instance != null
-            && HostMigrationCoordinator.Instance.IsPaused;
+        public static bool AreCommandsBlocked => MatchPauseGate.IsPaused;
 
         public static event Action<MatchCommandResult> CommandResultReceived
         {

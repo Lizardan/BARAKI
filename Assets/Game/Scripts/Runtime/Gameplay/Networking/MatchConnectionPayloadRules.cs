@@ -30,6 +30,24 @@ namespace Game.Gameplay.Networking
         public static string BuildReconnect(string sessionToken) =>
             ReconnectPrefix + (sessionToken ?? string.Empty);
 
+        public static bool TryReadReconnectToken(byte[] payload, out string token)
+        {
+            token = string.Empty;
+            if (payload == null || payload.Length == 0)
+            {
+                return false;
+            }
+
+            var text = Encoding.UTF8.GetString(payload);
+            if (!text.StartsWith(ReconnectPrefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            token = text[ReconnectPrefix.Length..];
+            return !string.IsNullOrWhiteSpace(token);
+        }
+
         public static bool TryReadDisplayName(byte[] payload, out string displayName)
         {
             displayName = string.Empty;

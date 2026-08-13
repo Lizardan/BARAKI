@@ -33,6 +33,7 @@
                     </ui:VisualElement>
 
                     <ui:Button name="PlayButton" text="ИГРАТЬ" class="ln-btn ln-btn--play" />
+                    <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="ln-btn ln-btn--play ln-btn--return ln-btn--hidden" />
 
                     <ui:Label name="ProgressErrorLabel" text="" class="ln-progress__error ln-progress__error--hidden" picking-mode="Ignore" />
                 </ui:VisualElement>

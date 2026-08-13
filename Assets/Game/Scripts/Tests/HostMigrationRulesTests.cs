@@ -6,6 +6,24 @@ namespace Game.Tests
     public sealed class HostMigrationRulesTests
     {
         [Test]
+        public void BuildEligibleOccupied_SkipsReserved()
+        {
+            var eligible = HostMigrationRules.BuildEligibleOccupied(
+                new[] { true, true, true },
+                new[] { true, false, true });
+            Assert.IsFalse(eligible[0]);
+            Assert.IsTrue(eligible[1]);
+            Assert.IsFalse(eligible[2]);
+        }
+
+        [Test]
+        public void ShouldHoldPauseAfterMigration_WhenReservedRemain()
+        {
+            Assert.IsTrue(HostMigrationRules.ShouldHoldPauseAfterMigration(1));
+            Assert.IsFalse(HostMigrationRules.ShouldHoldPauseAfterMigration(0));
+        }
+
+        [Test]
         public void ElectNewHostSlot_PicksNextOccupied()
         {
             var slots = new[] { true, false, true, true };

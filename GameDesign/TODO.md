@@ -93,7 +93,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | RES-001 | Mid-match host migration (pause → full state → resume) | done | Pause/elect/capture/rebinding phases; Relay rebind notify hooked |
-| RES-002 | Player reconnect into active match | done | Grace reserve + session token ClaimReconnect |
+| RES-002 | Player reconnect into active match | done | Pause overlay + kick/return + session token ClaimReconnect |
 
 ---
 

@@ -50,6 +50,33 @@ namespace Game.Core
         public static bool IsValidHostSlot(int slot, int slotCount) =>
             slot >= 0 && slotCount > 0 && slot < slotCount;
 
+        /// <summary>
+        /// Reserved (disconnected) slots must not be elected; only live occupants can host.
+        /// </summary>
+        public static bool[] BuildEligibleOccupied(bool[] occupied, bool[] reserved)
+        {
+            if (occupied == null)
+            {
+                return Array.Empty<bool>();
+            }
+
+            var eligible = new bool[occupied.Length];
+            for (var i = 0; i < occupied.Length; i++)
+            {
+                var isReserved = reserved != null && i < reserved.Length && reserved[i];
+                eligible[i] = occupied[i] && !isReserved;
+            }
+
+            return eligible;
+        }
+
+        /// <summary>
+        /// After Relay rebind the match stays paused while the previous host (or any
+        /// reserved player) can still reconnect or be kicked.
+        /// </summary>
+        public static bool ShouldHoldPauseAfterMigration(int reservedSlotCount) =>
+            reservedSlotCount > 0;
+
         public static bool ShouldPauseMatch(bool hostDisconnected, bool matchInProgress) =>
             hostDisconnected && matchInProgress;
 

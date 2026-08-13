@@ -44,6 +44,7 @@ namespace Game.UI.Controllers
         private VisualElement _menuOverlayDim;
         private VisualElement _menuDialog;
         private Button _playButton;
+        private Button _returnToMatchButton;
         private Button _settingsButton;
         private Button _quitButton;
         private Button _settingsCloseButton;
@@ -190,6 +191,7 @@ namespace Game.UI.Controllers
 
             var titleLabel = _root.Q<Label>("TitleLabel");
             _playButton = _root.Q<Button>("PlayButton");
+            _returnToMatchButton = _root.Q<Button>("ReturnToMatchButton");
             _settingsButton = _root.Q<Button>("SettingsButton");
             _quitButton = _root.Q<Button>("QuitButton");
             _settingsCloseButton = _root.Q<Button>("SettingsCloseButton");
@@ -288,6 +290,13 @@ namespace Game.UI.Controllers
                 _settingsCloseButton.clicked += OnSettingsClose;
             }
 
+            if (_returnToMatchButton != null)
+            {
+                _returnToMatchButton.clicked += OnReturnToMatchClicked;
+            }
+
+            RefreshReturnToMatchButton();
+
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
             FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
@@ -324,6 +333,11 @@ namespace Game.UI.Controllers
             if (_settingsCloseButton != null)
             {
                 _settingsCloseButton.clicked -= OnSettingsClose;
+            }
+
+            if (_returnToMatchButton != null)
+            {
+                _returnToMatchButton.clicked -= OnReturnToMatchClicked;
             }
 
             _profileBadge?.UnregisterCallback<ClickEvent>(OnProfileBadgeClicked);
@@ -627,6 +641,62 @@ namespace Game.UI.Controllers
             }
 
             OpenMatchEntry();
+        }
+
+        void RefreshReturnToMatchButton()
+        {
+            if (_returnToMatchButton == null)
+            {
+                return;
+            }
+
+            var show = PendingMatchReconnectStore.TryLoadActive(out _);
+            _returnToMatchButton.EnableInClassList(OverlayHiddenClass, !show);
+            _returnToMatchButton.SetEnabled(show && !_overlayBlocksMenu);
+        }
+
+        void OnReturnToMatchClicked()
+        {
+            if (_isTransitioning || _overlayBlocksMenu)
+            {
+                return;
+            }
+
+            ReturnToMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+
+        async UniTask ReturnToMatchAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            if (_isTransitioning)
+            {
+                return;
+            }
+
+            _isTransitioning = true;
+            ShowLobbyEntry();
+            try
+            {
+                if (!await MatchNetworkSession.TryReturnToPendingMatchAsync())
+                {
+                    throw new System.InvalidOperationException("Не удалось вернуться в матч.");
+                }
+
+                SessionFlowTracker.NotifyChanged();
+                await LoadSceneWithFadeAsync(GameSceneNames.Lobby, cancellationToken);
+            }
+            catch (System.OperationCanceledException)
+            {
+            }
+            catch (System.Exception ex)
+            {
+                MatchNetworkSession.Shutdown();
+                PendingMatchReconnectStore.Clear();
+                Debug.LogWarning($"Return to match failed: {ex.Message}");
+                _isTransitioning = false;
+                EnsureLobbyEntryClosed();
+                RefreshReturnToMatchButton();
+                ShowMatchEntryError("Матч уже недоступен.");
+            }
         }
 
         private void BindHubUi()
@@ -1364,6 +1434,7 @@ namespace Game.UI.Controllers
                     : PlayerProfileService.DisplayName;
                 var handle = await MatchSessionService.Backend.CreateAsync(
                     new CreateMatchRequest(playerCount, displayName));
+                PendingMatchReconnectStore.Clear();
                 MatchNetworkSession.ApplyHandle(handle);
                 if (!await MatchNetworkSession.TryStartTransportAsync())
                 {
@@ -1421,6 +1492,10 @@ namespace Game.UI.Controllers
                     : PlayerProfileService.DisplayName;
                 var handle = await MatchSessionService.Backend.JoinAsync(
                     new JoinMatchRequest(code, displayName));
+                if (!MatchNetworkSession.IsRejoiningMatch)
+                {
+                    PendingMatchReconnectStore.Clear();
+                }
                 MatchNetworkSession.ApplyHandle(handle);
                 if (!await MatchNetworkSession.TryStartTransportAsync())
                 {
@@ -1499,6 +1574,7 @@ namespace Game.UI.Controllers
             var menuEnabled = !_overlayBlocksMenu;
 
             _playButton?.SetEnabled(menuEnabled);
+            _returnToMatchButton?.SetEnabled(menuEnabled && PendingMatchReconnectStore.TryLoadActive(out _));
             _settingsButton?.SetEnabled(menuEnabled);
             _quitButton?.SetEnabled(menuEnabled);
             _editProfileButton?.SetEnabled(menuEnabled);

@@ -41,6 +41,10 @@ namespace Game.UI.Controllers
         private Label _commandFeedbackLabel;
         private Label _startCountdownLabel;
         private VisualElement _migrationOverlay;
+        private Label _disconnectTitle;
+        private Label _disconnectBody;
+        private Button _disconnectKickButton;
+        private int _disconnectKickSlot = -1;
         private VisualElement _resultsOverlay;
         private Label _resultsTitle;
         private Button _resultsRematchButton;
@@ -71,6 +75,9 @@ namespace Game.UI.Controllers
             _commandFeedbackLabel = root.Q<Label>("CommandFeedbackLabel");
             _startCountdownLabel = root.Q<Label>("StartCountdownLabel");
             _migrationOverlay = root.Q<VisualElement>("MigrationOverlay");
+            _disconnectTitle = root.Q<Label>("DisconnectTitle");
+            _disconnectBody = root.Q<Label>("DisconnectBody");
+            _disconnectKickButton = root.Q<Button>("DisconnectKickButton");
             _resultsOverlay = root.Q<VisualElement>("ResultsOverlay");
             _resultsTitle = root.Q<Label>("ResultsTitle");
             _resultsRematchButton = root.Q<Button>("ResultsRematchButton");
@@ -99,11 +106,20 @@ namespace Game.UI.Controllers
             _camera = CameraCache.Main;
             RefreshLocalPlayerSlot();
             MatchNetworkCommands.CommandResultReceived += OnCommandResultReceived;
+            if (_disconnectKickButton != null)
+            {
+                _disconnectKickButton.clicked += OnDisconnectKickClicked;
+            }
         }
 
         private void OnDisable()
         {
             MatchNetworkCommands.CommandResultReceived -= OnCommandResultReceived;
+            if (_disconnectKickButton != null)
+            {
+                _disconnectKickButton.clicked -= OnDisconnectKickClicked;
+            }
+
             UnsubscribeFromController();
         }
 
@@ -207,16 +223,42 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var paused = HostMigrationCoordinator.Instance != null
-                         && HostMigrationCoordinator.Instance.IsPaused;
-            if (paused)
-            {
-                _migrationOverlay.RemoveFromClassList(MigrationHiddenClass);
-            }
-            else
+            var view = MatchDisconnectOverlayQuery.Capture();
+            if (!view.IsVisible)
             {
                 _migrationOverlay.AddToClassList(MigrationHiddenClass);
+                return;
             }
+
+            _migrationOverlay.RemoveFromClassList(MigrationHiddenClass);
+            if (_disconnectTitle != null)
+            {
+                _disconnectTitle.text = string.IsNullOrWhiteSpace(view.PlayerName)
+                    ? "Пауза"
+                    : view.PlayerName;
+            }
+
+            if (_disconnectBody != null)
+            {
+                _disconnectBody.text = view.StatusText;
+            }
+
+            _disconnectKickSlot = view.KickSlot;
+            if (_disconnectKickButton != null)
+            {
+                _disconnectKickButton.EnableInClassList("match-hud__disconnect-kick--hidden", !view.ShowKick);
+                _disconnectKickButton.SetEnabled(view.ShowKick && view.KickSlot >= 0);
+            }
+        }
+
+        void OnDisconnectKickClicked()
+        {
+            if (_disconnectKickSlot < 0)
+            {
+                return;
+            }
+
+            MatchNetworkSession.RequestKickDisconnected(_disconnectKickSlot);
         }
 
         private void OnUnitKilled(UnitKillEvent killEvent)

@@ -145,6 +145,7 @@ namespace Game.Gameplay.Networking
                 lobbyId,
                 new UpdateLobbyOptions
                 {
+                    HostId = UnityServicesBootstrap.PlayerId,
                     Data = new Dictionary<string, DataObject>
                     {
                         {
@@ -227,6 +228,36 @@ namespace Game.Gameplay.Networking
                 isListenHost: false,
                 relayJoinCode: relayJoinCode,
                 lobbyId: lobbyId);
+        }
+
+        public async UniTask SendHeartbeatAsync(string lobbyId)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                return;
+            }
+
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+            await LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
+        }
+
+        public async UniTask<string> TryGetLobbyHostPlayerIdAsync(string lobbyId)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                return string.Empty;
+            }
+
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+            var lobby = await LobbyService.Instance.GetLobbyAsync(lobbyId);
+            if (lobby?.Data != null
+                && lobby.Data.TryGetValue(DataHostPlayerId, out var hostData)
+                && !string.IsNullOrEmpty(hostData.Value))
+            {
+                return hostData.Value;
+            }
+
+            return lobby?.HostId ?? string.Empty;
         }
 
         static Player BuildPlayer(string displayName) =>

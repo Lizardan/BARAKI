@@ -38,7 +38,13 @@
                       picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:VisualElement name="MigrationOverlay" class="match-hud__migration match-hud__migration--hidden" picking-mode="Position">
-            <ui:Label name="MigrationLabel" text="Смена хоста…" class="match-hud__migration-label" />
+            <ui:VisualElement class="ui-dialog match-hud__disconnect-panel">
+                <ui:Label name="DisconnectTitle" text="Игрок завис" class="ui-dialog__title match-hud__disconnect-title" />
+                <ui:Label name="DisconnectBody" text="" class="match-hud__disconnect-body" />
+                <ui:VisualElement name="DisconnectActions" class="match-hud__disconnect-actions">
+                    <ui:Button name="DisconnectKickButton" text="Кикнуть" class="ui-btn match-hud__disconnect-kick" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="BarracksTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
         <ui:VisualElement name="PassiveGoldTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />

@@ -8,6 +8,14 @@ namespace Game.Tests
 {
     public sealed class HostMigrationCoordinatorTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            MatchPauseGate.ResetForTests();
+            HostMigrationSession.Clear();
+            Time.timeScale = 1f;
+        }
+
         [Test]
         public void BeginHostLost_ElectsAndPauses()
         {

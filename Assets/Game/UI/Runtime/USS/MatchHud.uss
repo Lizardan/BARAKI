@@ -164,6 +164,38 @@
     letter-spacing: 1px;
 }
 
+.match-hud__disconnect-panel {
+    align-items: center;
+    padding: 28px 32px 24px;
+    min-width: 360px;
+}
+
+.match-hud__disconnect-title {
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.match-hud__disconnect-body {
+    font-size: 18px;
+    color: rgb(224, 211, 185);
+    -unity-text-align: middle-center;
+    margin-bottom: 18px;
+    white-space: normal;
+}
+
+.match-hud__disconnect-actions {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.match-hud__disconnect-kick {
+    min-width: 160px;
+}
+
+.match-hud__disconnect-kick--hidden {
+    display: none;
+}
+
 .match-hud__start-countdown {
     margin-left: 20px;
     font-size: 14px;
