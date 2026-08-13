@@ -49,15 +49,15 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Generate_N8_HasThreeLanesPerPlayer()
+        public void Generate_N5_HasThreeLanesPerPlayer()
         {
-            var layout = MatchArenaGenerator.Generate(8);
-            Assert.AreEqual(24, layout.Lanes.Count);
+            var layout = MatchArenaGenerator.Generate(5);
+            Assert.AreEqual(15, layout.Lanes.Count);
             foreach (var slot in layout.Slots)
             {
-                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex - 1, 8), slot.LeftOpponentSlot);
-                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex + 1, 8), slot.RightOpponentSlot);
-                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex + 4, 8), slot.CenterPrimaryTargetSlot);
+                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex - 1, 5), slot.LeftOpponentSlot);
+                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex + 1, 5), slot.RightOpponentSlot);
+                Assert.AreEqual(MatchArenaGenerator.Mod(slot.SlotIndex + 2, 5), slot.CenterPrimaryTargetSlot);
             }
         }
 

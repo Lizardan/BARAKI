@@ -10,7 +10,7 @@ provides: [pillars, audience, scope, non_goals]
 
 ## Elevator pitch
 
-**BARAKI** — мультиплеерная FFA-стратегия на **Windows**: экономика и оборона базы, армии сами идут в бой. **2–8** игроков. **Только люди**, без ботов. Запуск из главного меню (info hub): друзья, профиль, создание/вход в лобби.
+**BARAKI** — мультиплеерная FFA-стратегия на **Windows**: экономика и оборона базы, армии сами идут в бой. **2–5** игроков. **Только люди**, без ботов. Запуск из главного меню (info hub): друзья, профиль, создание/вход в лобби.
 
 ## Референс vs наш продукт
 
@@ -18,7 +18,7 @@ provides: [pillars, audience, scope, non_goals]
 |---|------------------|--------|
 | Жанр | Tug of War FFA | То же |
 | Платформа | WC3 custom map | **Windows** + Unity 6.5 Standalone |
-| Игроки | 4 FFA | **2–8 FFA**, только люди |
+| Игроки | 4 FFA | **2–5 FFA**, только люди |
 | Расы | 22 (WC3 фэнтези) | **4 на Early Access**, уникальные |
 | Боты | VI для одиночки | **Нет** — только PvP |
 | Управление | База, герои, башни | То же |
@@ -46,7 +46,7 @@ provides: [pillars, audience, scope, non_goals]
 ### In scope (MVP)
 
 - **Windows Standalone** — основной клиент
-- **2–8** игроков; хост = listen-server (Unity Lobby + Relay)
+- **2–5** игроков; хост = listen-server (Unity Lobby + Relay)
 - Процедурная топология: `TOPOLOGY_DUEL` + `TOPOLOGY_RING`
 - **1 раса (MVP):** Люди (+2 слота TBD); barracks **level 1–4**
 - Core loop: spawn, combat, gold, upgrades, hero, towers
@@ -94,7 +94,7 @@ provides: [pillars, audience, scope, non_goals]
 - [x] Расы — **уникальные**, не WC3
 - [x] **Early Access: 4+ расы** (старт с 2)
 - [x] **Только PvP**, ботов нет
-- [x] **2–8 игроков** casual; рейтинг только **2 и 4**
+- [x] **2–5 игроков** casual; рейтинг только **2 и 4**
 - [x] **Reconnect / host migration** — не в MVP, запланированы
 - [x] **Название: BARAKI**
 - [x] **Disconnect grace: 90 сек** на MVP (без reconnect)
@@ -108,7 +108,7 @@ provides: [pillars, audience, scope, non_goals]
 | Primary platform | **Windows x64 Standalone** |
 | Net model | **Host-as-server** + Unity Lobby + Relay |
 | Discord / WebGL | **Out of scope** |
-| Player count | **2–8** (как в core GDD) |
+| Player count | **2–5** (как в core GDD) |
 | Экономика рас | **Симметричная** (одинаковые bounty/costs); отличия через abilities и hero |
 | Уникальность рас | **2+ / 1−** passives, **tower** upgrades, **magic** (main) → **уникальные заклинания магов** |
 | Distribution | **GitHub Actions → GitHub Releases → in-game force update** |

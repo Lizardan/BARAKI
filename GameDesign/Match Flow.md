@@ -13,7 +13,7 @@ provides: [phases, win_conditions, timings, player_slots, lobby]
 ```entity
 id: MATCH_FFA
 players_min: 2
-players_max: 8
+players_max: 5
 mode: free_for_all
 win_condition: last_standing    # последний игрок, не выбывший
 elimination_rule: all_buildings_destroyed
@@ -28,7 +28,7 @@ mvp: true
 | N | `topology_id` | Описание |
 |---|---------------|----------|
 | 2 | `TOPOLOGY_DUEL` | Дуэль, 3 параллельных коридора |
-| 3–8 | `TOPOLOGY_RING` | Базы на N-угольнике, см. `Map Topology.md` |
+| 3–5 | `TOPOLOGY_RING` | Базы на N-угольнике, см. `Map Topology.md` |
 
 Соседство и сплайны **генерируются** при старте — не хардкод таблицы на 4 игрока.
 
@@ -47,7 +47,7 @@ mvp: true
 
 ```
 Main Menu → Play → Create / Join
-  → Create: Mode Select (N=2..8 tiles; MVP selectable: 2 and 4)
+  → Create: Mode Select (N=2..5 tiles; MVP selectable: 2, 3, 4)
   → Join: Unity Lobby join code (online) / room code (LocalDev Editor)
   → Lobby: N slot rows, Ready per player, Host Start when all occupied+ready
   → Load Game.unity → Race pick (each human) → match
@@ -60,9 +60,9 @@ Main Menu → Play → Create / Join
 ```entity
 id: LOBBY_RULES
 min_players: 2
-max_players: 8
+max_players: 5
 player_count: fixed_at_create
-mvp_selectable_modes: [2, 4]
+mvp_selectable_modes: [2, 3, 4]
 empty_slots: closed
 bot_fill: never
 local_standins: LocalDev_only
@@ -199,7 +199,7 @@ rated: true
 mvp: false
 
 id: QUEUE_CASUAL
-player_count: 2..8
+player_count: 2..5
 rated: false
 mvp: true
 ```

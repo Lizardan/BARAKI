@@ -1,7 +1,7 @@
 # AGENTS.md — BARAKI (Unity)
 
 ## Проект
-- RTS-ремейк WC3-карты SurvivalChaos: FFA 2–8, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
+- RTS-ремейк WC3-карты SurvivalChaos: FFA 2–5, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
 - Unity `6000.5.5f1` (`F:\Unity\Editor\6000.5.5f1`), C# 12, URP 17.5, Cinemachine 3, Input System 1.19.
 - Асинхронность: `Awaitable` — только в bootstrap (`Game.Core`); Gameplay/UI — `UniTask`/`UniTaskVoid`. **Никогда** `Task`/`async void`.
 

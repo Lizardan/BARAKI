@@ -1238,9 +1238,7 @@ namespace Game.UI.Controllers
             _modeGrid.style.justifyContent = Justify.Center;
             _modeGrid.style.alignItems = Align.Center;
 
-            // Two centered rows (4 + 3) so tiles stay evenly aligned.
-            var rowTop = CreateModeRow();
-            var rowBottom = CreateModeRow();
+            var row = CreateModeRow();
             for (var n = MatchModeRules.MinPlayers; n <= MatchModeRules.MaxPlayers; n++)
             {
                 var playerCount = n;
@@ -1251,18 +1249,10 @@ namespace Game.UI.Controllers
                         CreateMatchAsync(playerCount, this.GetCancellationTokenOnDestroy()).Forget();
                 }
 
-                if (playerCount <= 5)
-                {
-                    rowTop.Add(button);
-                }
-                else
-                {
-                    rowBottom.Add(button);
-                }
+                row.Add(button);
             }
 
-            _modeGrid.Add(rowTop);
-            _modeGrid.Add(rowBottom);
+            _modeGrid.Add(row);
         }
 
         private static VisualElement CreateModeRow()

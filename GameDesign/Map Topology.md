@@ -8,7 +8,7 @@ provides: [arena_layout, lane_graph_rules, player_count_scaling, duel_mode]
 
 # Map Topology
 
-> Как карта и маршруты масштабируются от **дуэли (2)** до **FFA (8)** без отдельной карты на каждый размер.
+> Как карта и маршруты масштабируются от **дуэли (2)** до **FFA (5)** без отдельной карты на каждый размер.
 
 ## Принцип: кольцо + центр
 
@@ -25,7 +25,7 @@ provides: [arena_layout, lane_graph_rules, player_count_scaling, duel_mode]
 ```entity
 id: TOPOLOGY_RING
 players_min: 3
-players_max: 8
+players_max: 5
 layout: regular_polygon
 slot_assignment: clockwise_from_host
 mvp: true
@@ -61,13 +61,12 @@ center_opponents(i) = { j | j != i }           # в арене — бой со �
       P4
 ```
 
-**N = 8 (октагон)**
+**N = 5 (пентагон)**
 ```
-   P8—P1—P2
-  /         \
- P7   ARENA  P3
-  \         /
-   P6—P5—P4
+      P1
+   P5   P2
+     ARENA
+   P4   P3
 ```
 Flank lane — по ребрам кольца. Center — от каждой базы к центральной арене.
 
@@ -112,7 +111,7 @@ mvp: true
 
 ```yaml
 MatchArenaGenerator:
-  player_count: 2..8
+  player_count: 2..5
   topology: DUEL if count==2 else RING
   radius: float              # расстояние баз от центра
   center_arena_radius: float # зона слияния center lanes
@@ -121,7 +120,7 @@ MatchArenaGenerator:
 
 ### Шаги генерации
 
-1. `N =` число занятых слотов в лобби (2–8, без ботов).
+1. `N =` число занятых слотов в лобби (2–5, без ботов).
 2. Выбрать `TOPOLOGY_DUEL` или `TOPOLOGY_RING`.
 3. Для каждого `i ∈ [0, N)`:
    - `angle = 2π * i / N` (дуэль: i=0 → 0°, i=1 → 180°).
@@ -190,7 +189,7 @@ LaneGraph:
           spline: SplineAsset
 ```
 
-Агент **не хардкодит** таблицу 4 игроков — только алгоритм + unit-тесты на N ∈ {2,3,4,6,8}.
+Агент **не хардкодит** таблицу 4 игроков — только алгоритм + unit-тесты на N ∈ {2,3,4,5}.
 
 ---
 
@@ -199,7 +198,7 @@ LaneGraph:
 ```entity
 id: MATCH_FFA
 players_min: 2
-players_max: 8
+players_max: 5
 fill_mode: humans_only      # пустые слоты не заполняются ботами
 player_count: fixed_at_create
 start_condition: all_slots_filled_and_ready
@@ -211,7 +210,7 @@ mvp: true
 |-------|----------------|
 | Дуэль | Лобби с **N = 2** |
 | Малый FFA | **N = 3–4** |
-| Большой FFA | **N = 5–8** |
+| Большой FFA | **N = 5** |
 
 Старт матча только когда **все N слотов заняты людьми** и все Ready. **N не меняется** после создания — для другого размера нужно **новое лобби**.
 
@@ -224,8 +223,7 @@ mvp: true
 | 2 | 1.0 | 0.3 (узкий) | Коридоры длиннее по оси |
 | 3 | 0.9 | 0.35 | |
 | 4 | 1.0 | 0.4 | Референсный размер |
-| 6 | 1.1 | 0.45 | |
-| 8 | 1.2 | 0.5 | Шире арена, больше места в центре |
+| 5 | 1.1 | 0.45 | Шире арена, больше места в центре |
 
 Точные метры — в greybox после первого playtest.
 
@@ -250,7 +248,7 @@ MVP default **N=4** использует hand-tuned квадратный пер�
 
 **Path-on-mesh:** waypoint-полилинии (`LanePath`, `N4RoadCenterlineBuilder`) совпадают с centerline дорог; юниты физически остаются на дороге (`RoadWidth/2`) или в center arena (`UnitLocomotionRules.ClampToWalkable`) — без отдельных march/combat drift.
 
-**N≠4 (2,3,5..8):** procedural circular ring fallback — playable greybox, без parity с N=4. Generalization — отдельный reference spec per N (см. `Technical.md`).
+**N≠4 (2,3,5):** procedural circular ring fallback — playable greybox, без parity с N=4. Generalization — отдельный reference spec per N (см. `Technical.md`).
 
 ---
 
@@ -259,7 +257,7 @@ MVP default **N=4** использует hand-tuned квадратный пер�
 | Решение | Значение |
 |---------|----------|
 | Host меняет N | **Нет** — N задаётся **при создании** лобби; другой N → **новое лобби** |
-| Ranked pools | **Только N=2 и N=4** rated; N=8 и прочие — casual (см. `Match Flow.md`) |
+| Ranked pools | **Только N=2 и N=4** rated; N=3/5 и прочие — casual (см. `Match Flow.md`) |
 | Spectator для eliminated | **Да** — FoW **off**, свободная камера, весь матч до results |
 | Center march target | Слот **напротив**; merge и бой в **Central Arena** |
 | Center при elimination | Target → **след. alive слот по CW** от выбывшего |

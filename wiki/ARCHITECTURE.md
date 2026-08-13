@@ -1,6 +1,6 @@
 # BARAKI — Architecture
 
-RTS-ремейк WC3-карты SurvivalChaos: FFA 2–8, игрок строит базу, юниты автономны.
+RTS-ремейк WC3-карты SurvivalChaos: FFA 2–5, игрок строит базу, юниты автономны.
 listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
 
 ## Tech stack

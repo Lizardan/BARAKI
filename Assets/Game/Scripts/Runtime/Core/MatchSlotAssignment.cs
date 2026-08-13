@@ -33,9 +33,11 @@ namespace Game.Core
             int localParticipantCount,
             Random random = null)
         {
-            if (playerCount < 2 || playerCount > 8)
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(playerCount), "Player count must be 2..8.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(playerCount),
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             if (localParticipantCount < 1 || localParticipantCount > playerCount)
@@ -50,9 +52,11 @@ namespace Game.Core
 
         public static int[] CreateShuffledSlotOrder(int playerCount, Random random)
         {
-            if (playerCount < 2 || playerCount > 8)
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(playerCount), "Player count must be 2..8.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(playerCount),
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             if (random == null)

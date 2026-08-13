@@ -9,8 +9,12 @@ namespace Game.UI
     public sealed class MatchMinimapGeometryElement : VisualElement
     {
         const int GroundSegments = 48;
+        const float ReferencePanelSize = 350f;
         const float RoadCasingWidth = 5f;
         const float RoadFillWidth = 3f;
+        const float GroundBorderWidth = 2f;
+        const float CenterStrokeWidth = 1.4f;
+        const float BaseStrokeWidth = 1.2f;
 
         static readonly Color s_groundFill = new(0.13f, 0.16f, 0.12f, 1f);
         static readonly Color s_groundBorder = new(0.27f, 0.33f, 0.24f, 1f);
@@ -25,6 +29,8 @@ namespace Game.UI
         float _panelWidth = 350f;
         float _panelHeight = 350f;
         float _viewYawDegrees;
+        bool _drawGround = true;
+        bool _drawFilledRects = true;
 
         public MatchMinimapGeometryElement()
         {
@@ -37,7 +43,9 @@ namespace Game.UI
             float arenaRadius,
             float panelWidth,
             float panelHeight,
-            float viewYawDegrees = 0f)
+            float viewYawDegrees = 0f,
+            bool drawGround = true,
+            bool drawFilledRects = true)
         {
             _topology = topology;
             _arenaRadius = Mathf.Max(1f, arenaRadius);
@@ -45,6 +53,8 @@ namespace Game.UI
             _panelWidth = Mathf.Max(1f, panelWidth);
             _panelHeight = Mathf.Max(1f, panelHeight);
             _viewYawDegrees = viewYawDegrees;
+            _drawGround = drawGround;
+            _drawFilledRects = drawFilledRects;
             MarkDirtyRepaint();
         }
 
@@ -61,9 +71,18 @@ namespace Game.UI
                 return;
             }
 
-            DrawGround(painter);
+            if (_drawGround)
+            {
+                DrawGround(painter);
+            }
+
             DrawCenterArena(painter);
-            DrawFilledRects(painter);
+
+            if (_drawFilledRects)
+            {
+                DrawFilledRects(painter);
+            }
+
             DrawRoads(painter);
         }
 
@@ -79,7 +98,7 @@ namespace Game.UI
             };
 
             FillPolygon(painter, corners, s_groundFill);
-            StrokePolygon(painter, corners, s_groundBorder, 2f);
+            StrokePolygon(painter, corners, s_groundBorder, StrokePx(GroundBorderWidth, min: 1f));
         }
 
         void DrawCenterArena(Painter2D painter)
@@ -104,7 +123,7 @@ namespace Game.UI
             painter.Fill();
 
             painter.strokeColor = s_centerStroke;
-            painter.lineWidth = 1.4f;
+            painter.lineWidth = StrokePx(CenterStrokeWidth, min: 1f);
             painter.BeginPath();
             Circle(painter, center, radiusPx, move: true);
             painter.ClosePath();
@@ -142,12 +161,12 @@ namespace Game.UI
                 {
                     var color = MatchPlayerColors.GetSlotColor(rect.OwnerSlot);
                     FillPolygon(painter, corners, WithAlpha(color, 0.42f));
-                    StrokePolygon(painter, corners, WithAlpha(color, 0.9f), 1.2f);
+                    StrokePolygon(painter, corners, WithAlpha(color, 0.9f), StrokePx(BaseStrokeWidth, min: 1f));
                 }
                 else
                 {
                     FillPolygon(painter, corners, s_centerFill);
-                    StrokePolygon(painter, corners, s_centerStroke, 1.4f);
+                    StrokePolygon(painter, corners, s_centerStroke, StrokePx(CenterStrokeWidth, min: 1f));
                 }
             }
         }
@@ -186,9 +205,12 @@ namespace Game.UI
         {
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
-            StrokeSegments(painter, s_roadCasing, RoadCasingWidth);
-            StrokeSegments(painter, s_roadFill, RoadFillWidth);
+            StrokeSegments(painter, s_roadCasing, StrokePx(RoadCasingWidth, min: 2f));
+            StrokeSegments(painter, s_roadFill, StrokePx(RoadFillWidth, min: 1.25f));
         }
+
+        float StrokePx(float referenceWidth, float min) =>
+            Mathf.Max(min, referenceWidth * Mathf.Max(_panelWidth, _panelHeight) / ReferencePanelSize);
 
         void StrokeSegments(Painter2D painter, Color color, float width)
         {

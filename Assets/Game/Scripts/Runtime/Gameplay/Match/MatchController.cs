@@ -58,9 +58,11 @@ namespace Game.Gameplay.Match
                 throw new InvalidOperationException($"Cannot start match while phase is {Phase}.");
             }
 
-            if (config.PlayerCount < 2 || config.PlayerCount > 8)
+            if (!MatchModeRules.IsValidPlayerCount(config.PlayerCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(config), "Player count must be 2..8.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(config),
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             if (config.RaceIds == null || config.RaceIds.Count != config.PlayerCount)

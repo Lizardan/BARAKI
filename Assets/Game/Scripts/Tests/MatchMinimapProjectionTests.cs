@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using NUnit.Framework;
@@ -128,7 +129,7 @@ namespace Game.Tests
         [Test]
         public void MapHalfExtent_KeepsEveryBasePadOnMap_ForAllModesAndYaw()
         {
-            for (var players = 2; players <= 8; players++)
+            for (var players = 2; players <= MatchModeRules.MaxPlayers; players++)
             {
                 var layout = MatchArenaGenerator.Generate(players);
                 var graph = LaneGraphBuilder.Build(layout);

@@ -17,7 +17,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | GDD-001 | Структура GameDesign | done | |
-| GDD-002 | Топология 2–8 | done | |
+| GDD-002 | Топология 2–5 | done | |
 | GDD-003 | PvP-only, уникальные расы | done | |
 | GDD-010 | Пивот: Windows hub + Lobby/Relay + R2 | done | Platform.md; Vision/Technical/TODO updated |
 | GDD-011 | Discord/WebGL/CF → removed | done | GitHub-only distribution + legal |
@@ -136,4 +136,4 @@ provides: [backlog, priorities, acceptance_criteria]
 - [x] Dedicated server — rejected
 - [x] WC3 lockstep — rejected
 - [x] Playtest race gate — только Люди (Жуки disabled)
-- [x] Уникальные расы, без ботов, 2–8 игроков
+- [x] Уникальные расы, без ботов, 2–5 игроков

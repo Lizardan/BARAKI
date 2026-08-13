@@ -13,9 +13,11 @@ namespace Game.Core
 
         public RacePickSession(int playerCount, int localPlayerSlot)
         {
-            if (playerCount < 2 || playerCount > 8)
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(playerCount), "Player count must be 2..8.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(playerCount),
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             if (localPlayerSlot < 0 || localPlayerSlot >= playerCount)

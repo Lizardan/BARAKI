@@ -366,12 +366,12 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Build_N8_AllSlotsHaveThreeLanes()
+        public void Build_N5_AllSlotsHaveThreeLanes()
         {
-            var layout = MatchArenaGenerator.Generate(8);
+            var layout = MatchArenaGenerator.Generate(5);
             var graph = LaneGraphBuilder.Build(layout);
 
-            for (var i = 0; i < 8; i++)
+            for (var i = 0; i < 5; i++)
             {
                 Assert.IsTrue(graph.TryGetLane(i, GameIds.Lanes.Left, out _));
                 Assert.IsTrue(graph.TryGetLane(i, GameIds.Lanes.Center, out _));

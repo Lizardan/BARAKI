@@ -4,7 +4,7 @@
 
 ## Что это
 
-**BARAKI** — мультиплеерная FFA на **Windows**. Игрок управляет **базой**, не юнитами. **2–8** игроков. **Только PvP**, без ботов. Главное меню — info hub (профиль, друзья, обновления).
+**BARAKI** — мультиплеерная FFA на **Windows**. Игрок управляет **базой**, не юнитами. **2–5** игроков. **Только PvP**, без ботов. Главное меню — info hub (профиль, друзья, обновления).
 
 ## Формат AI-Ready
 
@@ -18,7 +18,7 @@
 |------|------------|--------------|
 | [Vision.md](Vision.md) | Пиллары, аудитория, scope | Старт проекта |
 | [Core Gameplay.md](Core%20Gameplay.md) | Петля, lanes, автобой | Любая геймплейная задача |
-| [Map Topology.md](Map%20Topology.md) | Карта 2–8 игроков, LaneGraph | Карта / lanes |
+| [Map Topology.md](Map%20Topology.md) | Карта 2–5 игроков, LaneGraph | Карта / lanes |
 | [Match Flow.md](Match%20Flow.md) | Фазы матча, лобби, disconnect | GameSession |
 | [Economy.md](Economy.md) | Золото, доход | Экономика |
 | [Units.md](Units.md) | Типы юнитов, статы | Combat |
@@ -36,7 +36,7 @@
 
 ## MVP
 
-**Windows Standalone**, **2–8** игроков, **2 расы**, host-as-server + Unity Lobby + Relay. См. `TODO.md`, `Platform.md`.
+**Windows Standalone**, **2–5** игроков, **2 расы**, host-as-server + Unity Lobby + Relay. См. `TODO.md`, `Platform.md`.
 
 ## Открытые вопросы
 

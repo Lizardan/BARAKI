@@ -14,7 +14,7 @@ namespace Game.Core
             int localPlayerSlot = DefaultLocalPlayerSlot,
             IReadOnlyList<string> raceIds = null)
         {
-            PlayerCount = Math.Clamp(playerCount, 2, 8);
+            PlayerCount = Math.Clamp(playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);
             LocalPlayerSlot = Math.Clamp(localPlayerSlot, 0, PlayerCount - 1);
             RaceIds = raceIds;
         }

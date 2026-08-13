@@ -6,7 +6,7 @@ namespace Game.Core
     public static class MatchModeRules
     {
         public const int MinPlayers = 2;
-        public const int MaxPlayers = 8;
+        public const int MaxPlayers = 5;
 
         public static bool IsValidPlayerCount(int playerCount) =>
             playerCount is >= MinPlayers and <= MaxPlayers;
@@ -21,6 +21,7 @@ namespace Game.Core
                 2 => "1 vs 1",
                 3 => "FFA 3",
                 4 => "FFA 4",
+                5 => "FFA 5",
                 _ => $"FFA {playerCount}",
             };
     }

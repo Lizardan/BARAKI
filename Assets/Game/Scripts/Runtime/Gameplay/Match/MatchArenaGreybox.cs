@@ -1,3 +1,4 @@
+using Game.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -22,7 +23,7 @@ namespace Game.Gameplay.Match
 
         public void Configure(int playerCount, float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius)
         {
-            _playerCount = Mathf.Clamp(playerCount, 2, 8);
+            _playerCount = Mathf.Clamp(playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);
             _centerArenaRadius = Mathf.Max(5f, centerArenaRadius);
             Rebuild();
         }
@@ -102,7 +103,7 @@ namespace Game.Gameplay.Match
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            _playerCount = Mathf.Clamp(_playerCount, 2, 8);
+            _playerCount = Mathf.Clamp(_playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);
             _arenaRadius = Mathf.Max(20f, _arenaRadius);
             _centerArenaRadius = Mathf.Max(5f, _centerArenaRadius);
         }

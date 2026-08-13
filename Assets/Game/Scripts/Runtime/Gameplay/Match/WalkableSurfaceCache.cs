@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using Game.Core;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2..8.
+    /// Static walkable bake per map mode (player count). SourceParts geometry is deterministic for N=2..5.
     /// </summary>
     public static class WalkableSurfaceCache
     {
@@ -12,9 +13,12 @@ namespace Game.Gameplay.Match
 
         public static WalkableSurface GetOrCreate(int playerCount)
         {
-            if (playerCount < 2 || playerCount > 8)
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
             {
-                throw new System.ArgumentOutOfRangeException(nameof(playerCount), playerCount, "Player count must be 2..8.");
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(playerCount),
+                    playerCount,
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             if (s_byPlayerCount.TryGetValue(playerCount, out var cached))

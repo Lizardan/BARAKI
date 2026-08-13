@@ -131,7 +131,7 @@ note: Ориентиры playtest; **не** enforced time cap
 minutes:
   N2: 12-18
   N4: 18-25
-  N8: 25-35
+  N5: 20-28
 ```
 
 ## Unit combat (Human baseline)

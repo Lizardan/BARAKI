@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using NUnit.Framework;
@@ -54,7 +55,7 @@ namespace Game.Tests
         [Test]
         public void Build_CenterSpokes_ReachPerimeterJunctions_ForAllModes()
         {
-            for (var players = 2; players <= 8; players++)
+            for (var players = 2; players <= MatchModeRules.MaxPlayers; players++)
             {
                 var layout = MatchArenaGenerator.Generate(players);
                 var graph = LaneGraphBuilder.Build(layout);
@@ -73,7 +74,7 @@ namespace Game.Tests
         [Test]
         public void Build_BasePads_AreCenteredOnMain()
         {
-            for (var players = 2; players <= 8; players++)
+            for (var players = 2; players <= MatchModeRules.MaxPlayers; players++)
             {
                 var layout = MatchArenaGenerator.Generate(players);
                 var graph = LaneGraphBuilder.Build(layout);

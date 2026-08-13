@@ -67,9 +67,9 @@ namespace Game.Tests
         }
 
         [Test]
-        public void BuildSharedFlankRing_N8_ReturnsClosedCircularPath()
+        public void BuildSharedFlankRing_N5_ReturnsClosedCircularPath()
         {
-            var path = PerimeterRingPathBuilder.BuildSharedFlankRing(HalfSize, playerCount: 8);
+            var path = PerimeterRingPathBuilder.BuildSharedFlankRing(HalfSize, playerCount: 5);
 
             Assert.AreEqual(PerimeterRingPathBuilder.CircularRingSegments + 1, path.WaypointCount);
             Assert.Less(Vector3.Distance(path.Start, path.End), 0.01f);

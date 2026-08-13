@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Procedural arena layout for N=2..8. Splines (MVP-003) attach to barracks world positions.
+    /// Procedural arena layout for N=2..5. Splines (MVP-003) attach to barracks world positions.
     /// </summary>
     public static class MatchArenaGenerator
     {
@@ -44,9 +44,12 @@ namespace Game.Gameplay.Match
             float arenaRadius = DefaultArenaRadius,
             float mainToTowerDistance = DefaultMainToTowerDistance)
         {
-            if (playerCount is < 2 or > 8)
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(playerCount), playerCount, "Player count must be 2..8.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(playerCount),
+                    playerCount,
+                    $"Player count must be {MatchModeRules.MinPlayers}..{MatchModeRules.MaxPlayers}.");
             }
 
             var topology = playerCount == 2 ? TopologyKind.Duel : TopologyKind.Ring;

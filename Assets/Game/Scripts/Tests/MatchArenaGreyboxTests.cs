@@ -618,14 +618,14 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CreateSpec_N8_HasTwentyFourLanes()
+        public void CreateSpec_N5_HasExpectedCounts()
         {
-            var layout = MatchArenaGenerator.Generate(8);
+            var layout = MatchArenaGenerator.Generate(5);
             var graph = LaneGraphBuilder.Build(layout);
             var spec = MatchArenaGreyboxBuilder.CreateSpec(layout, graph);
 
-            Assert.AreEqual(64, spec.BuildingMarkerCount);
-            Assert.AreEqual(9, spec.LaneLineCount);
+            Assert.AreEqual(40, spec.BuildingMarkerCount);
+            Assert.AreEqual(6, spec.LaneLineCount);
         }
 
         [Test]
