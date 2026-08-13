@@ -1,10 +1,11 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Game.Core
 {
     /// <summary>
-    /// Applies startup windowed resolution and Main Menu fullscreen.
+    /// Applies startup windowed resolution (borderless chrome on Windows) and Main Menu fullscreen.
     /// Keeps the player running when the window loses focus.
     /// Persists windowed prefs on quit so the next cold start is not Fullscreen Window.
     /// Centers the windowed client after FullScreenWindow would leave it at top-left.
@@ -44,6 +45,15 @@ namespace Game.Core
         {
             ApplyCursorPolicy(scene.name);
 
+            if (GameDisplayRules.ShouldUseBorderlessChrome(scene.name))
+            {
+#if !UNITY_EDITOR
+                // SetResolution applies end-of-frame; refresh chrome after Unity settles.
+                FinalizeStartupWindowAsync().Forget();
+#endif
+                return;
+            }
+
             if (!GameDisplayRules.ShouldEnterFullscreen(scene.name))
             {
                 return;
@@ -70,7 +80,7 @@ namespace Game.Core
                 GameDisplayRules.StartupWidth,
                 GameDisplayRules.StartupHeight,
                 GameDisplayRules.StartupFullScreenMode);
-            CenterStartupWindow();
+            FinalizeStartupWindowAsync().Forget();
 #endif
         }
 
@@ -110,6 +120,22 @@ namespace Game.Core
             }
 
             PlayerPrefs.Save();
+#endif
+        }
+
+        static async UniTaskVoid FinalizeStartupWindowAsync()
+        {
+#if UNITY_EDITOR
+            await UniTask.CompletedTask;
+#else
+            // Resolution changes apply at end of frame; wait before touching Win32 chrome.
+            await UniTask.DelayFrame(1);
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate);
+
+            GameNativeWindowChrome.TryApplyBorderless(
+                GameDisplayRules.StartupWidth,
+                GameDisplayRules.StartupHeight);
+            CenterStartupWindow();
 #endif
         }
 

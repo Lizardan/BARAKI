@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Unity.Netcode;
@@ -154,6 +155,73 @@ namespace Game.Gameplay.Networking
             }
 
             RequestManualCallServerRpc(barracksBuildingInstanceId, (byte)role);
+        }
+
+        /// <summary>
+        /// Debug cheat: give gold to every living player. Any peer may request; server applies + syncs.
+        /// </summary>
+        public void RequestDebugAddGoldToAll(int amount)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            if (IsServer)
+            {
+                ApplyDebugAddGoldToAllLocal(amount);
+                return;
+            }
+
+            RequestDebugAddGoldToAllServerRpc(amount);
+        }
+
+        void ApplyDebugAddGoldToAllLocal(int amount)
+        {
+            if (!IsServer || amount <= 0)
+            {
+                return;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null || !controller.IsRunning)
+            {
+                return;
+            }
+
+            var granted = controller.DebugAddGoldToAll(amount);
+            PlaytestLog.Info(
+                "Cheat",
+                "GoldAll",
+                ("amount", amount),
+                ("players", granted));
+            PublishSnapshotNow();
+        }
+
+        void PublishSnapshotNow()
+        {
+            if (!IsServer || _matchRuntime?.Controller == null)
+            {
+                return;
+            }
+
+            var snapshot = MatchSnapshotCodec.Capture(_matchRuntime.Controller);
+            var bytes = MatchSnapshotCodec.Serialize(snapshot);
+            _matchRuntime.StoreLastNetworkSnapshot(snapshot, bytes);
+            ApplySnapshotClientRpc(bytes);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void RequestDebugAddGoldToAllServerRpc(int amount, RpcParams rpcParams = default)
+        {
+            // Hard cap keeps a malicious/buggy client from exploding economy state.
+            if (amount <= 0 || amount > 1_000_000)
+            {
+                return;
+            }
+
+            ApplyDebugAddGoldToAllLocal(amount);
         }
 
         /// <summary>

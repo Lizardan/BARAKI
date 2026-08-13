@@ -32,6 +32,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ShouldUseBorderlessChrome_OnlyOnBootstrap()
+        {
+            Assert.IsTrue(GameDisplayRules.ShouldUseBorderlessChrome(GameSceneNames.Bootstrap));
+            Assert.IsFalse(GameDisplayRules.ShouldUseBorderlessChrome(GameSceneNames.MainMenu));
+            Assert.IsFalse(GameDisplayRules.ShouldUseBorderlessChrome(GameSceneNames.Lobby));
+            Assert.IsFalse(GameDisplayRules.ShouldUseBorderlessChrome(GameSceneNames.Game));
+        }
+
+        [Test]
         public void ShouldConfineCursor_EverywhereExceptBootstrap()
         {
             Assert.IsFalse(GameDisplayRules.ShouldConfineCursor(GameSceneNames.Bootstrap));

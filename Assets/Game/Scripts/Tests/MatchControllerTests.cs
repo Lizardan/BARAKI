@@ -35,6 +35,19 @@ namespace Game.Tests
         }
 
         [Test]
+        public void DebugAddGoldToAll_AddsAmountToEveryLivingPlayer()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var granted = controller.DebugAddGoldToAll(1000);
+
+            Assert.AreEqual(2, granted);
+            Assert.AreEqual(1250, controller.Players[0].Gold);
+            Assert.AreEqual(1250, controller.Players[1].Gold);
+        }
+
+        [Test]
         public void BeginEarlyPhase_TransitionsToEarlyAndActivatesWaves()
         {
             var controller = new MatchController();

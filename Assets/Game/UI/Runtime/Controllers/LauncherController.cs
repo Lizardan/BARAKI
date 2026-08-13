@@ -48,6 +48,7 @@ namespace Game.UI.Controllers
         private Button _returnToMatchButton;
         private Button _heroReadMoreButton;
         private Button _chatSendButton;
+        private Button _closeButton;
         private TextField _chatInput;
         private VisualElement _newsList;
         private VisualElement _chatMessages;
@@ -58,6 +59,7 @@ namespace Game.UI.Controllers
         private VisualElement _progressFill;
         private VisualElement _progressShine;
         private Label _progressErrorLabel;
+        private readonly LauncherWindowChromeDriver _windowChrome = new();
         private LauncherProgressPhase _phase = LauncherProgressPhase.Ready;
         private IVisualElementScheduledItem _shineSchedule;
         private float _shineElapsed;
@@ -134,6 +136,12 @@ namespace Game.UI.Controllers
 
             RegisterCallbacks(false);
             StopShineAnimation();
+            _windowChrome.Detach();
+        }
+
+        private void OnDestroy()
+        {
+            _windowChrome.Dispose();
         }
 
 #if UNITY_EDITOR
@@ -229,6 +237,7 @@ namespace Game.UI.Controllers
             _returnToMatchButton = _root.Q<Button>("ReturnToMatchButton");
             _heroReadMoreButton = _root.Q<Button>("HeroReadMoreButton");
             _chatSendButton = _root.Q<Button>("ChatSendButton");
+            _closeButton = _root.Q<Button>("CloseButton");
             _chatInput = _root.Q<TextField>("ChatInput");
             _newsList = _root.Q<VisualElement>("NewsList");
             _chatMessages = _root.Q<VisualElement>("ChatMessages");
@@ -245,6 +254,26 @@ namespace Game.UI.Controllers
                 _chatInput.value = string.Empty;
                 _chatInput.textEdition.placeholder = "Написать в чат…";
             }
+
+            BindWindowChrome();
+        }
+
+        private void BindWindowChrome()
+        {
+            var screen = _root != null ? _root.Q<VisualElement>("LauncherScreen") ?? _root : null;
+            _windowChrome.Attach(screen, _closeButton, QuitLauncher);
+        }
+
+        private static void QuitLauncher()
+        {
+#if UNITY_EDITOR
+            if (Application.isPlaying)
+            {
+                EditorApplication.isPlaying = false;
+            }
+#else
+            Application.Quit();
+#endif
         }
 
         private void PopulatePlaceholders()

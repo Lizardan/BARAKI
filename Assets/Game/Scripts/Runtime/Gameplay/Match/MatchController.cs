@@ -248,6 +248,30 @@ namespace Game.Gameplay.Match
             return true;
         }
 
+        /// <summary>Debug/cheat: add gold to every non-eliminated player. Returns how many were granted.</summary>
+        public int DebugAddGoldToAll(int amount)
+        {
+            if (amount <= 0 || !IsRunning)
+            {
+                return 0;
+            }
+
+            var granted = 0;
+            for (var i = 0; i < _players.Count; i++)
+            {
+                var player = _players[i];
+                if (player.IsEliminated)
+                {
+                    continue;
+                }
+
+                player.Gold += amount;
+                granted++;
+            }
+
+            return granted;
+        }
+
         public bool TryStartResearch(int ownerSlot, int buildingInstanceId, string upgradeId)
         {
             if (!IsRunning || Phase == MatchPhase.Start)

@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using Game.Gameplay.Data;
 
 namespace Game.Gameplay.Networking
@@ -55,5 +56,21 @@ namespace Game.Gameplay.Networking
 
         public static void RequestManualCall(int barracksBuildingInstanceId, UnitRole role) =>
             MatchNetworkAuthority.Instance?.RequestManualCall(barracksBuildingInstanceId, role);
+
+        /// <summary>
+        /// Debug cheat: request +gold for every living player (server applies; works from any peer).
+        /// Returns false when offline/local path should be used instead.
+        /// </summary>
+        public static bool TryRequestDebugAddGoldToAll(int amount)
+        {
+            var authority = MatchNetworkAuthority.Instance;
+            if (authority == null || !authority.IsSpawned)
+            {
+                return false;
+            }
+
+            authority.RequestDebugAddGoldToAll(amount);
+            return true;
+        }
     }
 }

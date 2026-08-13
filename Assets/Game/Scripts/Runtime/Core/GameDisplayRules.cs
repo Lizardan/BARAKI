@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Game.Core
 {
-    /// <summary>Display policy: windowed bootstrap, fullscreen from Main Menu.</summary>
+    /// <summary>Display policy: borderless windowed bootstrap, fullscreen from Main Menu.</summary>
     public static class GameDisplayRules
     {
         public const int StartupWidth = 1280;
@@ -26,6 +26,10 @@ namespace Game.Core
 
         public static bool RunInBackground => true;
 
+        /// <summary>
+        /// Unity mode for Bootstrap: still <see cref="FullScreenMode.Windowed"/>.
+        /// OS title bar is stripped separately via <see cref="GameNativeWindowChrome"/>.
+        /// </summary>
         public static FullScreenMode StartupFullScreenMode => FullScreenMode.Windowed;
 
         public static FullScreenMode MainMenuFullScreenMode => FullScreenMode.FullScreenWindow;
@@ -35,12 +39,16 @@ namespace Game.Core
         public static bool ShouldEnterFullscreen(string sceneName) =>
             sceneName == GameSceneNames.MainMenu;
 
+        /// <summary>Bootstrap launcher: 1280×720 without OS window frame.</summary>
+        public static bool ShouldUseBorderlessChrome(string sceneName) =>
+            sceneName == GameSceneNames.Bootstrap;
+
         public static bool ShouldConfineCursor(string sceneName) =>
             sceneName != GameSceneNames.Bootstrap;
 
         /// <summary>
         /// Hard OS confine to the game window (not camera edge logic).
-        /// Bootstrap keeps free cursor for OS window chrome.
+        /// Bootstrap keeps free cursor (launcher UI / eventual window drag).
         /// </summary>
         public static CursorLockMode ResolveCursorLockMode(string sceneName) =>
             ShouldConfineCursor(sceneName) ? CursorLockMode.Confined : CursorLockMode.None;

@@ -247,6 +247,48 @@
     background-color: rgb(96, 116, 138);
 }
 
+/* Window chrome (borderless launcher) */
+
+.ln-window-chrome {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.ln-btn--close {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding-left: 0;
+    padding-right: 0;
+    /* ✕ lives in Symbols 2 — not in Noto Sans */
+    -unity-font: url("../Fonts/NotoSansSymbols2-Regular.ttf");
+    font-size: 18px;
+    letter-spacing: 0;
+    -unity-font-style: normal;
+    color: rgb(239, 228, 207);
+    background-color: rgb(52, 52, 56);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.55);
+}
+
+.ln-btn--close:hover {
+    background-color: rgb(118, 46, 46);
+    border-color: rgb(160, 78, 78);
+    color: rgb(239, 228, 207);
+    scale: 1.02;
+}
+
+.ln-btn--close:active {
+    background-color: rgb(86, 34, 34);
+    scale: 0.98;
+}
+
 /* Progress */
 
 .ln-progress {
