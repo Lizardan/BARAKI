@@ -6,6 +6,21 @@ namespace Game.Gameplay.Match.Selection
     {
         public const float ContentScale = 0.92f;
 
+        /// <summary>
+        /// Extra world space beyond the arena ring that the minimap projection must cover so the
+        /// outer base pads (greybox base arena shifted toward the map edge) stay fully visible.
+        /// Without it, <see cref="WorldToNormalized"/> clamps the pads and the clamped corners
+        /// shear/tear as the camera yaws.
+        /// </summary>
+        public static float MapOuterMargin =>
+            MatchArenaGreyboxBuilder.BaseArenaOutwardOffset
+            + MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f
+            + 2f;
+
+        /// <summary>Half extent shared by every minimap mapping (geometry, blips, viewport, click-pan).</summary>
+        public static float MapHalfExtent(float arenaRadius) =>
+            Mathf.Max(1f, arenaRadius + MapOuterMargin);
+
         public static Vector2 WorldToNormalized(
             Vector3 worldPosition,
             float arenaRadius,

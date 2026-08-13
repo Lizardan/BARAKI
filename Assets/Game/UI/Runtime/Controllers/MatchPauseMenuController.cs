@@ -20,6 +20,7 @@ namespace Game.UI.Controllers
         private const string ResultsHiddenClass = "match-hud__results--hidden";
         private const string PausedButtonText = "Продолжить";
         private const string ResumeButtonText = "Пауза";
+        private const float TopSortingOrder = 300f;
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -29,6 +30,7 @@ namespace Game.UI.Controllers
         private Button _pauseToggleButton;
         private Button _quitMatchButton;
         private Button _quitGameButton;
+        private float _defaultSortingOrder;
         private bool _isOpen;
 
         private void Awake()
@@ -39,6 +41,7 @@ namespace Game.UI.Controllers
             }
 
             _root = _uiDocument.rootVisualElement;
+            _defaultSortingOrder = _uiDocument.sortingOrder;
             _pauseOverlay = _root.Q<VisualElement>("PauseOverlay");
             _resultsOverlay = _root.Q<VisualElement>("ResultsOverlay");
             _pauseToggleButton = _root.Q<Button>("PauseToggleButton");
@@ -122,6 +125,11 @@ namespace Game.UI.Controllers
             if (_pauseOverlay != null)
             {
                 _pauseOverlay.EnableInClassList(PauseOverlayHiddenClass, !open);
+            }
+
+            if (_uiDocument != null)
+            {
+                _uiDocument.sortingOrder = open ? TopSortingOrder : _defaultSortingOrder;
             }
         }
 

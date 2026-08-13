@@ -278,7 +278,7 @@ namespace Game.UI.Controllers
                 localPanelPosition,
                 _panelWidth,
                 _panelHeight,
-                arenaRadius,
+                MatchMinimapProjection.MapHalfExtent(arenaRadius),
                 pan.YawDegrees);
             pan.FocusOnMinimapPosition(world);
         }
@@ -350,7 +350,7 @@ namespace Game.UI.Controllers
             var yaw = GetViewYawDegrees();
             var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(
                 worldPosition,
-                arenaRadius,
+                MatchMinimapProjection.MapHalfExtent(arenaRadius),
                 yaw);
             return MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
         }
@@ -428,7 +428,7 @@ namespace Game.UI.Controllers
         {
             var normalized = MatchMinimapProjection.WorldToNormalized(
                 worldPosition,
-                arenaRadius,
+                MatchMinimapProjection.MapHalfExtent(arenaRadius),
                 GetViewYawDegrees());
             var panelPosition = MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
             blip.style.left = panelPosition.x - size * 0.5f;

@@ -1,3 +1,4 @@
+using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using NUnit.Framework;
 using UnityEngine;
@@ -113,6 +114,48 @@ namespace Game.Tests
 
             Assert.AreEqual(original.x, back.x, 0.05f);
             Assert.AreEqual(original.z, back.z, 0.05f);
+        }
+
+        [Test]
+        public void MapHalfExtent_KeepsEveryBasePadOnMap_ForAllModesAndYaw()
+        {
+            for (var players = 2; players <= 8; players++)
+            {
+                var layout = MatchArenaGenerator.Generate(players);
+                var graph = LaneGraphBuilder.Build(layout);
+                var topology = MatchMinimapTopologyBuilder.Build(layout, graph);
+                var halfExtent = MatchMinimapProjection.MapHalfExtent(layout.ArenaRadius);
+
+                for (var yaw = 0f; yaw < 360f; yaw += 15f)
+                {
+                    foreach (var rect in topology.FilledRects)
+                    {
+                        for (var cornerIndex = 0; cornerIndex < 4; cornerIndex++)
+                        {
+                            var corner = GetRectCorner(rect, cornerIndex);
+                            var projected = MatchMinimapProjection.WorldToNormalized(
+                                new Vector3(corner.x, 0f, corner.y),
+                                halfExtent,
+                                yaw);
+                            Assert.IsTrue(
+                                projected.x >= -0.0001f && projected.x <= 1.0001f,
+                                $"P{players} slot {rect.OwnerSlot} corner {cornerIndex} yaw {yaw}: x {projected.x} outside map");
+                            Assert.IsTrue(
+                                projected.y >= -0.0001f && projected.y <= 1.0001f,
+                                $"P{players} slot {rect.OwnerSlot} corner {cornerIndex} yaw {yaw}: y {projected.y} outside map");
+                        }
+                    }
+                }
+            }
+        }
+
+        static Vector2 GetRectCorner(MatchMinimapRect rect, int index)
+        {
+            var rad = rect.RotationDegrees * Mathf.Deg2Rad;
+            var cos = Mathf.Cos(rad);
+            var sin = Mathf.Sin(rad);
+            var local = new Vector2[] { new(-rect.HalfExtents.x, -rect.HalfExtents.y), new(rect.HalfExtents.x, -rect.HalfExtents.y), new(rect.HalfExtents.x, rect.HalfExtents.y), new(-rect.HalfExtents.x, rect.HalfExtents.y) }[index];
+            return rect.Center + new Vector2(local.x * cos - local.y * sin, local.x * sin + local.y * cos);
         }
     }
 }
