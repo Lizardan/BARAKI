@@ -78,6 +78,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
+        <ui:VisualElement name="WindowFrame" class="ln-window-frame" picking-mode="Ignore">
+        </ui:VisualElement>
         <ui:VisualElement name="WindowChrome" class="ln-window-chrome" picking-mode="Ignore">
             <ui:Button name="CloseButton" text="✕" tooltip="Закрыть" class="ln-btn ln-btn--close" />
         </ui:VisualElement>

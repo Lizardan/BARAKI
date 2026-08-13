@@ -56,6 +56,8 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<VisualElement>("ChatMessages"), "Chat messages.");
             Assert.IsNotNull(root.Q<TextField>("ChatInput"), "Chat input.");
             Assert.IsNotNull(root.Q<Button>("ChatSendButton"), "Chat send.");
+            Assert.IsNotNull(root.Q<VisualElement>("WindowFrame"), "Window contour.");
+            Assert.IsNotNull(root.Q<Button>("CloseButton"), "Close button.");
         }
 
         [Test]
@@ -75,6 +77,38 @@ namespace Game.Tests
             StringAssert.Contains("flex-grow", uss);
             StringAssert.Contains("flex-direction", uss);
             StringAssert.Contains("transition-duration", uss);
+        }
+
+        [Test]
+        public void LauncherUss_WindowContourMatchesInnerPanelFrames()
+        {
+            var uss = System.IO.File.ReadAllText(
+                "Assets/Game/UI/Runtime/USS/Launcher.uss");
+            var frameIndex = uss.IndexOf(".ln-window-frame {", System.StringComparison.Ordinal);
+            Assert.GreaterOrEqual(frameIndex, 0, ".ln-window-frame block.");
+            var nextBlock = uss.IndexOf("\n.", frameIndex + 1, System.StringComparison.Ordinal);
+            Assert.Greater(nextBlock, frameIndex);
+            var block = uss.Substring(frameIndex, nextBlock - frameIndex);
+
+            StringAssert.Contains("border-width: 2px", block);
+            StringAssert.Contains("border-color: rgba(125, 117, 104, 0.55)", block);
+            StringAssert.Contains("border-radius: 0", block);
+        }
+
+        [Test]
+        public void LauncherUss_CloseButtonBorderIsBrassAccent()
+        {
+            var uss = System.IO.File.ReadAllText(
+                "Assets/Game/UI/Runtime/USS/Launcher.uss");
+            var closeIndex = uss.IndexOf(".ln-btn--close {", System.StringComparison.Ordinal);
+            Assert.GreaterOrEqual(closeIndex, 0, ".ln-btn--close block.");
+            var nextBlock = uss.IndexOf("\n.", closeIndex + 1, System.StringComparison.Ordinal);
+            Assert.Greater(nextBlock, closeIndex);
+            var block = uss.Substring(closeIndex, nextBlock - closeIndex);
+
+            StringAssert.Contains("border-color: rgb(184, 169, 130)", block);
+            StringAssert.Contains("top: 0", uss);
+            StringAssert.Contains("right: 0", uss);
         }
     }
 }

@@ -65,5 +65,13 @@ namespace Game.Core
             var y = workArea.y + Math.Max(0, (workArea.height - windowHeight) / 2);
             return new Vector2Int(x, y);
         }
+
+        public static bool MatchesStartupResolution(int width, int height, FullScreenMode mode) =>
+            width == StartupWidth &&
+            height == StartupHeight &&
+            mode == StartupFullScreenMode;
+
+        public static bool MatchesWindowPosition(Vector2Int current, Vector2Int target) =>
+            current == target;
     }
 }

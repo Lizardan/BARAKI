@@ -9,6 +9,7 @@ namespace Game.Core
     /// Keeps the player running when the window loses focus.
     /// Persists windowed prefs on quit so the next cold start is not Fullscreen Window.
     /// Centers the windowed client after FullScreenWindow would leave it at top-left.
+    /// Strips OS chrome before the Unity splash so the first visible frame has no title bar.
     /// </summary>
     public static class GameDisplayBootstrap
     {
@@ -17,6 +18,19 @@ namespace Game.Core
         {
             // Earliest managed hook: stamp windowed boot prefs before most systems run.
             PersistStartupWindowPreferences();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        private static void OnAfterAssembliesLoaded()
+        {
+            ApplyStartupBorderlessLayout();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+        private static void OnBeforeSplashScreen()
+        {
+            // Player window already exists; splash has not been drawn yet.
+            ApplyStartupBorderlessLayout();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -76,12 +90,39 @@ namespace Game.Core
         public static void ApplyStartupWindow()
         {
 #if !UNITY_EDITOR
-            Screen.SetResolution(
-                GameDisplayRules.StartupWidth,
-                GameDisplayRules.StartupHeight,
-                GameDisplayRules.StartupFullScreenMode);
+            if (!GameDisplayRules.MatchesStartupResolution(
+                    Screen.width,
+                    Screen.height,
+                    Screen.fullScreenMode))
+            {
+                Screen.SetResolution(
+                    GameDisplayRules.StartupWidth,
+                    GameDisplayRules.StartupHeight,
+                    GameDisplayRules.StartupFullScreenMode);
+            }
+
+            ApplyStartupBorderlessChrome();
             FinalizeStartupWindowAsync().Forget();
 #endif
+        }
+
+        /// <summary>
+        /// Strips the OS title bar immediately. Safe before splash; no resolution change.
+        /// </summary>
+        public static void ApplyStartupBorderlessChrome()
+        {
+#if !UNITY_EDITOR
+            GameNativeWindowChrome.TryApplyBorderless(
+                GameDisplayRules.StartupWidth,
+                GameDisplayRules.StartupHeight);
+#endif
+        }
+
+        static void ApplyStartupBorderlessLayout()
+        {
+            ApplyStartupBorderlessChrome();
+            CenterStartupWindow();
+            ApplyStartupBorderlessChrome();
         }
 
         /// <summary>Fullscreen Window when entering Main Menu.</summary>
@@ -93,6 +134,7 @@ namespace Game.Core
                 desktop.width,
                 desktop.height,
                 GameDisplayRules.MainMenuFullScreenMode);
+            FinalizeTaskbarMinimizeAsync().Forget();
 #endif
         }
 
@@ -139,6 +181,17 @@ namespace Game.Core
 #endif
         }
 
+        static async UniTaskVoid FinalizeTaskbarMinimizeAsync()
+        {
+#if UNITY_EDITOR
+            await UniTask.CompletedTask;
+#else
+            await UniTask.DelayFrame(1);
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate);
+            GameNativeWindowChrome.TryEnableTaskbarMinimize();
+#endif
+        }
+
         static void CenterStartupWindow()
         {
             var display = Screen.mainWindowDisplayInfo;
@@ -151,6 +204,11 @@ namespace Game.Core
                 display.workArea,
                 GameDisplayRules.StartupWidth,
                 GameDisplayRules.StartupHeight);
+            if (GameDisplayRules.MatchesWindowPosition(Screen.mainWindowPosition, position))
+            {
+                return;
+            }
+
             Screen.MoveMainWindowTo(display, position);
 
             PlayerPrefs.SetInt(GameDisplayRules.ScreenWindowPositionXPrefsKey, position.x);
