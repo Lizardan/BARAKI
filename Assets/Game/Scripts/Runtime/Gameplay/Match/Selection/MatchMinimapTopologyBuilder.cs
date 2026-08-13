@@ -29,25 +29,8 @@ namespace Game.Gameplay.Match.Selection
             var filledRects = new List<MatchMinimapRect>();
             var roadSegments = new List<MatchMinimapSegment>();
             var halfSize = layout.ArenaRadius;
-            var centerHalf = N2RoadReferenceSpec.CenterArenaHalfSize;
 
-            filledRects.Add(new MatchMinimapRect(Vector2.zero, new Vector2(centerHalf, centerHalf), 0f));
-
-            foreach (var slot in layout.Slots)
-            {
-                var localOffset = new Vector3(
-                    0f,
-                    0f,
-                    -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
-                var worldCenter = slot.BasePosition + slot.BaseRotation * localOffset;
-                filledRects.Add(new MatchMinimapRect(
-                    ToXZ(worldCenter),
-                    new Vector2(
-                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
-                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
-                    slot.BaseRotation.eulerAngles.y,
-                    slot.SlotIndex));
-            }
+            AddBasePads(filledRects, layout);
 
             AddSegment(
                 roadSegments,
@@ -64,29 +47,10 @@ namespace Game.Gameplay.Match.Selection
             var filledRects = new List<MatchMinimapRect>();
             var roadSegments = new List<MatchMinimapSegment>();
 
-            var centerHalf = N4RoadReferenceSpec.CenterArenaHalfSize;
-            filledRects.Add(new MatchMinimapRect(Vector2.zero, new Vector2(centerHalf, centerHalf), 0f));
-
-            foreach (var slot in layout.Slots)
-            {
-                var localOffset = new Vector3(
-                    0f,
-                    0f,
-                    -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
-                var worldCenter = slot.BasePosition + slot.BaseRotation * localOffset;
-                var rotationY = slot.BaseRotation.eulerAngles.y;
-                filledRects.Add(new MatchMinimapRect(
-                    ToXZ(worldCenter),
-                    new Vector2(
-                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
-                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
-                    rotationY,
-                    slot.SlotIndex));
-            }
-
+            AddBasePads(filledRects, layout);
             AppendN4PerimeterStrips(roadSegments, layout.ArenaRadius);
             AppendN4CornerArcs(roadSegments, layout.ArenaRadius);
-            AppendN4SpokeConnectors(roadSegments);
+            AppendCenterSpokes(roadSegments, layout);
             AppendSharedFlankRing(roadSegments, layout.ArenaRadius);
 
             return new MatchMinimapTopology(filledRects, roadSegments);
@@ -99,22 +63,8 @@ namespace Game.Gameplay.Match.Selection
         {
             var filledRects = new List<MatchMinimapRect>();
             var roadSegments = new List<MatchMinimapSegment>();
-            var centerHalf = N4RoadReferenceSpec.CenterArenaHalfSize;
 
-            filledRects.Add(new MatchMinimapRect(Vector2.zero, new Vector2(centerHalf, centerHalf), 0f));
-
-            foreach (var slot in layout.Slots)
-            {
-                var localOffset = new Vector3(0f, 0f, -MatchArenaGreyboxBuilder.BaseArenaOutwardOffset);
-                var worldCenter = slot.BasePosition + slot.BaseRotation * localOffset;
-                filledRects.Add(new MatchMinimapRect(
-                    ToXZ(worldCenter),
-                    new Vector2(
-                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
-                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
-                    slot.BaseRotation.eulerAngles.y,
-                    slot.SlotIndex));
-            }
+            AddBasePads(filledRects, layout);
 
             if (layout.PlayerCount == 3)
             {
@@ -124,11 +74,11 @@ namespace Game.Gameplay.Match.Selection
             {
                 var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, layout.PlayerCount);
                 AppendPolyline(roadSegments, PathWaypoints(ring));
+                AppendCenterSpokes(roadSegments, layout);
+                var exit = CircularRingRoadGeometry.ExitStraightLength;
                 foreach (var slot in layout.Slots)
                 {
-                    CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out var junction, out var radial, out var tangent);
-                    AddSegment(roadSegments, junction, radial * centerHalf);
-                    var exit = CircularRingRoadGeometry.ExitStraightLength;
+                    CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out var junction, out _, out var tangent);
                     AddSegment(roadSegments, junction, junction + tangent * exit);
                     AddSegment(roadSegments, junction, junction - tangent * exit);
                 }
@@ -137,10 +87,32 @@ namespace Game.Gameplay.Match.Selection
             return new MatchMinimapTopology(filledRects, roadSegments);
         }
 
+        static void AddBasePads(List<MatchMinimapRect> filledRects, MatchArenaLayout layout)
+        {
+            foreach (var slot in layout.Slots)
+            {
+                var yaw = MatchMinimapProjection.YawDegrees(slot.BaseRotation);
+                filledRects.Add(new MatchMinimapRect(
+                    ToXZ(slot.BasePosition),
+                    new Vector2(
+                        MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f,
+                        MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f),
+                    yaw,
+                    slot.SlotIndex));
+            }
+        }
+
+        static void AppendCenterSpokes(List<MatchMinimapSegment> segments, MatchArenaLayout layout)
+        {
+            foreach (var slot in layout.Slots)
+            {
+                AddSegment(segments, slot.BasePosition, Vector3.zero);
+            }
+        }
+
         static void AppendN3Perimeter(List<MatchMinimapSegment> segments, MatchArenaLayout layout)
         {
             var radius = layout.ArenaRadius;
-            var centerHalf = N4RoadReferenceSpec.CenterArenaHalfSize;
             var curve = new List<Vector3>(CircularRingRoadGeometry.ExitCurveSamples + 1);
             var n = layout.PlayerCount;
 
@@ -166,11 +138,10 @@ namespace Game.Gameplay.Match.Selection
                 AppendPolyline(segments, curve);
             }
 
+            AppendCenterSpokes(segments, layout);
+
             foreach (var slot in layout.Slots)
             {
-                CircularRingRoadGeometry.GetBaseFrame(slot.BasePosition, out var junction, out var radial, out _);
-                AddSegment(segments, junction, radial * centerHalf);
-
                 var leftTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksLeft);
                 var rightTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksRight);
                 var leftBarracks = slot.GetBuildingWorldPosition(Game.Core.GameIds.Buildings.BarracksLeft);
@@ -217,29 +188,6 @@ namespace Game.Gameplay.Match.Selection
                     PerimeterCornerArc.PathArcSegments);
                 AppendPolyline(segments, samples);
             }
-        }
-
-        static void AppendN4SpokeConnectors(List<MatchMinimapSegment> segments)
-        {
-            var center = N4RoadReferenceSpec.SpokeConnectorCenter;
-            var halfLength = N4RoadReferenceSpec.SpokeConnectorHalfLength;
-
-            AddSegment(
-                segments,
-                new Vector3(0f, 0f, center - halfLength),
-                new Vector3(0f, 0f, center + halfLength));
-            AddSegment(
-                segments,
-                new Vector3(0f, 0f, -center - halfLength),
-                new Vector3(0f, 0f, -center + halfLength));
-            AddSegment(
-                segments,
-                new Vector3(center - halfLength, 0f, 0f),
-                new Vector3(center + halfLength, 0f, 0f));
-            AddSegment(
-                segments,
-                new Vector3(-center - halfLength, 0f, 0f),
-                new Vector3(-center + halfLength, 0f, 0f));
         }
 
         static void AppendSharedFlankRing(List<MatchMinimapSegment> segments, float halfSize)

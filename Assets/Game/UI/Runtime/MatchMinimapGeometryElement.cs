@@ -62,29 +62,49 @@ namespace Game.UI
             }
 
             DrawGround(painter);
+            DrawCenterArena(painter);
             DrawFilledRects(painter);
             DrawRoads(painter);
         }
 
-        /// <summary>Playable ground disc; everything drawn on top stays inside it.</summary>
+        /// <summary>Square playable ground matching the square minimap panel.</summary>
         void DrawGround(Painter2D painter)
         {
-            var groundRadius = _arenaRadius + MatchArenaGreyboxBuilder.RoadWidth;
+            var corners = new List<Vector2>
+            {
+                MatchMinimapProjection.NormalizedToPanel(new Vector2(0f, 0f), _panelWidth, _panelHeight),
+                MatchMinimapProjection.NormalizedToPanel(new Vector2(1f, 0f), _panelWidth, _panelHeight),
+                MatchMinimapProjection.NormalizedToPanel(new Vector2(1f, 1f), _panelWidth, _panelHeight),
+                MatchMinimapProjection.NormalizedToPanel(new Vector2(0f, 1f), _panelWidth, _panelHeight),
+            };
+
+            FillPolygon(painter, corners, s_groundFill);
+            StrokePolygon(painter, corners, s_groundBorder, 2f);
+        }
+
+        void DrawCenterArena(Painter2D painter)
+        {
+            var radius = _topology.CenterArenaRadius;
+            if (radius <= 0.01f)
+            {
+                return;
+            }
+
             var center = Project(Vector2.zero);
-            var radiusPx = Vector2.Distance(center, Project(new Vector2(groundRadius, 0f)));
+            var radiusPx = Vector2.Distance(center, Project(new Vector2(radius, 0f)));
             if (radiusPx <= 0.5f)
             {
                 return;
             }
 
-            painter.fillColor = s_groundFill;
+            painter.fillColor = s_centerFill;
             painter.BeginPath();
             Circle(painter, center, radiusPx, move: true);
             painter.ClosePath();
             painter.Fill();
 
-            painter.strokeColor = s_groundBorder;
-            painter.lineWidth = 2f;
+            painter.strokeColor = s_centerStroke;
+            painter.lineWidth = 1.4f;
             painter.BeginPath();
             Circle(painter, center, radiusPx, move: true);
             painter.ClosePath();
@@ -187,26 +207,10 @@ namespace Game.UI
 
         List<Vector2> GetRectCorners(MatchMinimapRect rect)
         {
-            var rad = rect.RotationDegrees * Mathf.Deg2Rad;
-            var cos = Mathf.Cos(rad);
-            var sin = Mathf.Sin(rad);
-            var hx = rect.HalfExtents.x;
-            var hy = rect.HalfExtents.y;
-            var localCorners = new[]
-            {
-                new Vector2(-hx, -hy),
-                new Vector2(hx, -hy),
-                new Vector2(hx, hy),
-                new Vector2(-hx, hy),
-            };
-
             var projected = new List<Vector2>(4);
-            foreach (var local in localCorners)
+            for (var i = 0; i < 4; i++)
             {
-                var rotated = new Vector2(
-                    local.x * cos - local.y * sin,
-                    local.x * sin + local.y * cos);
-                projected.Add(Project(rect.Center + rotated));
+                projected.Add(Project(rect.GetWorldCorner(i)));
             }
 
             return projected;

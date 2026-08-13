@@ -627,5 +627,29 @@ namespace Game.Tests
             Assert.AreEqual(64, spec.BuildingMarkerCount);
             Assert.AreEqual(9, spec.LaneLineCount);
         }
+
+        [Test]
+        public void BuildCenterLaneDisplayPath_ReachesPerimeterJunctions()
+        {
+            foreach (var playerCount in new[] { 2, 3, 4, 5 })
+            {
+                var layout = MatchArenaGenerator.Generate(playerCount);
+                var owner = layout.Slots[0];
+                var opponent = layout.Slots[owner.CenterPrimaryTargetSlot];
+                var path = MatchArenaGreyboxBuilder.BuildCenterLaneDisplayPath(owner, opponent);
+
+                Assert.AreEqual(3, path.WaypointCount, $"N={playerCount}");
+                Assert.AreEqual(0f, path.GetWaypoint(1).magnitude, 0.01f, $"N={playerCount} mid");
+
+                var start = path.GetWaypoint(0);
+                start.y = 0f;
+                var end = path.GetWaypoint(2);
+                end.y = 0f;
+                Assert.AreEqual(0f, Vector3.Distance(start, owner.BasePosition), 0.01f, $"N={playerCount} start");
+                Assert.AreEqual(0f, Vector3.Distance(end, opponent.BasePosition), 0.01f, $"N={playerCount} end");
+                Assert.AreEqual(layout.ArenaRadius, start.magnitude, 0.05f, $"N={playerCount} start radius");
+                Assert.AreEqual(layout.ArenaRadius, end.magnitude, 0.05f, $"N={playerCount} end radius");
+            }
+        }
     }
 }

@@ -94,44 +94,31 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
-                CreateCenterLaneLine(lanesRoot, lane);
+                CreateCenterLaneLine(lanesRoot, lane, layout);
             }
         }
 
-        static void CreateCenterLaneLine(Transform lanesRoot, LaneSpline lane)
+        static void CreateCenterLaneLine(Transform lanesRoot, LaneSpline lane, MatchArenaLayout layout)
         {
             CreateLaneLineFromPath(
                 lanesRoot,
                 $"P{lane.OwnerSlot}_{lane.LaneId}",
-                ExtractCenterDisplayPath(lane.Path),
+                BuildCenterLaneDisplayPath(layout.Slots[lane.OwnerSlot], layout.Slots[lane.OpponentSlot]),
                 LaneLineWidthCenter,
                 GetLaneColor(lane.LaneId));
         }
 
-        /// <summary>Full straight spoke: barracks → center arena → opponent barracks.</summary>
-        static LanePath ExtractCenterDisplayPath(LanePath path)
+        /// <summary>
+        /// Visual spoke centerline: perimeter junction → origin → opponent junction.
+        /// Matches the road, not the march path that starts at barracks.
+        /// </summary>
+        public static LanePath BuildCenterLaneDisplayPath(PlayerSlotLayout owner, PlayerSlotLayout opponent)
         {
-            if (path.WaypointCount >= 5)
-            {
-                return new LanePath(new[]
-                {
-                    path.GetWaypoint(0),
-                    path.GetWaypoint(2),
-                    path.GetWaypoint(4),
-                });
-            }
-
-            if (path.WaypointCount >= 3)
-            {
-                return new LanePath(new[]
-                {
-                    path.GetWaypoint(0),
-                    path.GetWaypoint(1),
-                    path.GetWaypoint(2),
-                });
-            }
-
-            return path;
+            var start = owner.BasePosition;
+            var end = opponent.BasePosition;
+            start.y = 0f;
+            end.y = 0f;
+            return new LanePath(new[] { start, Vector3.zero, end });
         }
 
         static Transform PopulateRoadNetwork(
@@ -584,6 +571,8 @@ namespace Game.Gameplay.Match
             var line = lineObject.AddComponent<LineRenderer>();
             line.useWorldSpace = true;
             line.loop = loop;
+            line.numCapVertices = 4;
+            line.numCornerVertices = 4;
             line.widthMultiplier = width;
             line.positionCount = path.WaypointCount;
             for (var i = 0; i < path.WaypointCount; i++)

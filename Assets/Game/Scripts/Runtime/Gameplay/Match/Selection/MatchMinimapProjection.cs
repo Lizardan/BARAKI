@@ -7,15 +7,18 @@ namespace Game.Gameplay.Match.Selection
         public const float ContentScale = 0.92f;
 
         /// <summary>
-        /// Extra world space beyond the arena ring that the minimap projection must cover so the
-        /// outer base pads (greybox base arena shifted toward the map edge) stay fully visible.
-        /// Without it, <see cref="WorldToNormalized"/> clamps the pads and the clamped corners
-        /// shear/tear as the camera yaws.
+        /// Extra world space beyond the arena ring so centred base pads stay fully visible
+        /// (including the wide corners) as the camera yaws.
         /// </summary>
-        public static float MapOuterMargin =>
-            MatchArenaGreyboxBuilder.BaseArenaOutwardOffset
-            + MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f
-            + 2f;
+        public static float MapOuterMargin
+        {
+            get
+            {
+                var hx = MatchArenaGreyboxBuilder.BaseArenaWidth * 0.5f;
+                var hy = MatchArenaGreyboxBuilder.BaseArenaDepth * 0.5f;
+                return Mathf.Sqrt(hx * hx + hy * hy) + 2f;
+            }
+        }
 
         /// <summary>Half extent shared by every minimap mapping (geometry, blips, viewport, click-pan).</summary>
         public static float MapHalfExtent(float arenaRadius) =>
@@ -43,8 +46,8 @@ namespace Game.Gameplay.Match.Selection
         {
             var view = RotateYaw(worldPosition, viewYawDegrees);
             var halfExtent = Mathf.Max(1f, arenaRadius);
-            var x = Mathf.InverseLerp(-halfExtent, halfExtent, view.x);
-            var z = Mathf.InverseLerp(-halfExtent, halfExtent, view.z);
+            var x = (view.x / halfExtent) * 0.5f + 0.5f;
+            var z = (view.z / halfExtent) * 0.5f + 0.5f;
             return new Vector2(x, 1f - z);
         }
 
@@ -112,5 +115,17 @@ namespace Game.Gameplay.Match.Selection
                 world.y,
                 world.x * sin + world.z * cos);
         }
+
+        public static float YawDegrees(Quaternion rotation)
+        {
+            var forward = rotation * Vector3.forward;
+            return Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>
+        /// CSS clockwise degrees so an axis-aligned blip matches a world-yawed square on the minimap.
+        /// </summary>
+        public static float BlipRotateDegrees(float worldYawDegrees, float viewYawDegrees) =>
+            worldYawDegrees - viewYawDegrees;
     }
 }

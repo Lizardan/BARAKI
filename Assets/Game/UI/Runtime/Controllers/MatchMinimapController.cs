@@ -157,8 +157,13 @@ namespace Game.UI.Controllers
                 var key = GetBaseKey(slot);
                 activeKeys.Add(key);
                 var blip = GetOrCreateBlip(key, BlipBaseClass);
-                var position = controller.Layout.Slots[slot].BasePosition;
-                PlaceBlip(blip, position, arenaRadius, 9f);
+                var slotLayout = controller.Layout.Slots[slot];
+                PlaceBlip(
+                    blip,
+                    slotLayout.BasePosition,
+                    arenaRadius,
+                    9f,
+                    MatchMinimapProjection.YawDegrees(slotLayout.BaseRotation));
                 blip.style.backgroundColor = MatchPlayerColors.GetSlotColor(slot);
                 blip.EnableInClassList(BlipSelectedClass, false);
             }
@@ -168,7 +173,14 @@ namespace Game.UI.Controllers
                 var key = GetBuildingKey(building.InstanceId);
                 activeKeys.Add(key);
                 var blip = GetOrCreateBlip(key, BlipBuildingClass);
-                PlaceBlip(blip, building.WorldPosition, arenaRadius, 7f);
+                var yaw = 0f;
+                if (building.OwnerSlot >= 0 && building.OwnerSlot < controller.Layout.Slots.Count)
+                {
+                    yaw = MatchMinimapProjection.YawDegrees(
+                        controller.Layout.Slots[building.OwnerSlot].BaseRotation);
+                }
+
+                PlaceBlip(blip, building.WorldPosition, arenaRadius, 7f, yaw);
                 blip.style.backgroundColor = building.IsRuins
                     ? new Color(0.45f, 0.22f, 0.22f)
                     : new Color(0.55f, 0.55f, 0.55f);
@@ -419,22 +431,31 @@ namespace Game.UI.Controllers
                 blip.AddToClassList(extraClass);
             }
 
+            blip.style.transformOrigin = new TransformOrigin(Length.Percent(50f), Length.Percent(50f));
             _canvas.Add(blip);
             _blips[key] = blip;
             return blip;
         }
 
-        void PlaceBlip(VisualElement blip, Vector3 worldPosition, float arenaRadius, float size)
+        void PlaceBlip(
+            VisualElement blip,
+            Vector3 worldPosition,
+            float arenaRadius,
+            float size,
+            float worldYawDegrees = 0f)
         {
+            var viewYaw = GetViewYawDegrees();
             var normalized = MatchMinimapProjection.WorldToNormalized(
                 worldPosition,
                 MatchMinimapProjection.MapHalfExtent(arenaRadius),
-                GetViewYawDegrees());
+                viewYaw);
             var panelPosition = MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
             blip.style.left = panelPosition.x - size * 0.5f;
             blip.style.top = panelPosition.y - size * 0.5f;
             blip.style.width = size;
             blip.style.height = size;
+            blip.style.rotate = new Rotate(
+                Angle.Degrees(MatchMinimapProjection.BlipRotateDegrees(worldYawDegrees, viewYaw)));
         }
 
         void RemoveStaleBlips(HashSet<string> activeKeys)

@@ -117,6 +117,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BlipRotateDegrees_MatchesBaseYawWhenViewIsZero()
+        {
+            var layout = MatchArenaGenerator.Generate(3);
+            var yaw = MatchMinimapProjection.YawDegrees(layout.Slots[1].BaseRotation);
+            Assert.AreEqual(yaw, MatchMinimapProjection.BlipRotateDegrees(yaw, 0f), 0.01f);
+            Assert.AreEqual(yaw - 90f, MatchMinimapProjection.BlipRotateDegrees(yaw, 90f), 0.01f);
+        }
+
+        [Test]
         public void MapHalfExtent_KeepsEveryBasePadOnMap_ForAllModesAndYaw()
         {
             for (var players = 2; players <= 8; players++)
@@ -149,13 +158,7 @@ namespace Game.Tests
             }
         }
 
-        static Vector2 GetRectCorner(MatchMinimapRect rect, int index)
-        {
-            var rad = rect.RotationDegrees * Mathf.Deg2Rad;
-            var cos = Mathf.Cos(rad);
-            var sin = Mathf.Sin(rad);
-            var local = new Vector2[] { new(-rect.HalfExtents.x, -rect.HalfExtents.y), new(rect.HalfExtents.x, -rect.HalfExtents.y), new(rect.HalfExtents.x, rect.HalfExtents.y), new(-rect.HalfExtents.x, rect.HalfExtents.y) }[index];
-            return rect.Center + new Vector2(local.x * cos - local.y * sin, local.x * sin + local.y * cos);
-        }
+        static Vector2 GetRectCorner(MatchMinimapRect rect, int index) =>
+            rect.GetWorldCorner(index);
     }
 }
