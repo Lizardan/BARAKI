@@ -1,9 +1,11 @@
+using System;
 using UnityEngine;
 
 namespace Game.Gameplay.Networking
 {
     /// <summary>
-    /// Single owner of <see cref="Time.timeScale"/> for host migration and disconnect hold.
+    /// Single owner of <see cref="Time.timeScale"/> for user pause, host migration
+    /// and disconnect hold.
     /// </summary>
     public static class MatchPauseGate
     {
@@ -15,7 +17,24 @@ namespace Game.Gameplay.Networking
         /// </summary>
         public static bool IsMigrationPaused { get; private set; }
 
-        public static bool IsPaused => IsMigrationPaused || IsDisconnectHoldPaused;
+        /// <summary>Pause requested by any player via the pause menu (synchronized by RPC).</summary>
+        public static bool IsUserPaused { get; private set; }
+
+        public static bool IsPaused => IsUserPaused || IsMigrationPaused || IsDisconnectHoldPaused;
+
+        public static event Action PausedChanged;
+
+        public static void SetUserPaused(bool paused)
+        {
+            if (IsUserPaused == paused)
+            {
+                return;
+            }
+
+            IsUserPaused = paused;
+            RefreshTimeScale();
+            PausedChanged?.Invoke();
+        }
 
         public static void SetDisconnectHoldPaused(bool paused)
         {
@@ -39,6 +58,7 @@ namespace Game.Gameplay.Networking
         {
             IsDisconnectHoldPaused = false;
             IsMigrationPaused = false;
+            IsUserPaused = false;
             Time.timeScale = 1f;
         }
     }

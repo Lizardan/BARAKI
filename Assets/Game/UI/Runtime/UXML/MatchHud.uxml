@@ -2,6 +2,7 @@
     <Style src="../USS/BarakiTheme.uss" />
     <Style src="../USS/MatchHud.uss" />
     <Style src="../USS/MatchBottomDock.uss" />
+    <Style src="../USS/PauseMenu.uss" />
     <ui:VisualElement name="MatchHudRoot" class="match-hud" picking-mode="Ignore">
         <ui:VisualElement name="TopBar" class="match-hud__top-bar match-hud-chrome" picking-mode="Position">
             <ui:Label name="PhaseLabel" text="—" class="match-hud__phase" />
@@ -15,27 +16,6 @@
             <ui:Label name="StartCountdownLabel" text="" class="match-hud__start-countdown" />
         </ui:VisualElement>
         <ui:VisualElement name="CameraPad" class="match-hud__camera-pad" picking-mode="Position">
-            <ui:VisualElement class="match-hud__camera-pad-cross" picking-mode="Ignore">
-                <ui:VisualElement class="match-hud__camera-pad-row">
-                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
-                    <ui:Button name="CameraPadUpButton" text="^" class="ui-btn match-hud__camera-pad-btn" />
-                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
-                </ui:VisualElement>
-                <ui:VisualElement class="match-hud__camera-pad-row">
-                    <ui:Button name="CameraPadLeftButton" text="&lt;" class="ui-btn match-hud__camera-pad-btn" />
-                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
-                    <ui:Button name="CameraPadRightButton" text="&gt;" class="ui-btn match-hud__camera-pad-btn" />
-                </ui:VisualElement>
-                <ui:VisualElement class="match-hud__camera-pad-row">
-                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
-                    <ui:Button name="CameraPadDownButton" text="v" class="ui-btn match-hud__camera-pad-btn" />
-                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
-                </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:Label name="CameraPadHint"
-                      text="Ориентация базы"
-                      class="match-hud__camera-pad-hint"
-                      picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:VisualElement name="MigrationOverlay" class="match-hud__migration match-hud__migration--hidden" picking-mode="Position">
             <ui:VisualElement class="ui-dialog match-hud__disconnect-panel">
@@ -136,6 +116,44 @@
         </ui:VisualElement>
         <ui:VisualElement name="CommandTooltip" class="match-command-tooltip match-command-tooltip--hidden" picking-mode="Ignore">
             <ui:Label name="CommandTooltipLabel" text="" class="match-command-tooltip__label" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="PauseOverlay" class="match-hud__pause match-hud__pause--hidden" picking-mode="Position">
+            <ui:VisualElement class="match-hud__pause-dim" picking-mode="Ignore" />
+            <ui:VisualElement class="ui-dialog match-hud__pause-panel">
+                <ui:Label text="ПАУЗА" class="ui-dialog__title match-hud__pause-title" picking-mode="Ignore" />
+                <ui:VisualElement class="match-hud__pause-body">
+                    <ui:Button name="PauseToggleButton" text="Пауза" class="ui-btn ui-btn--primary match-hud__pause-toggle" />
+                    <ui:VisualElement class="match-hud__pause-camera" picking-mode="Ignore">
+                        <ui:Label text="Ориентация базы" class="match-hud__pause-camera-label" picking-mode="Ignore" />
+                        <ui:VisualElement class="match-hud__pause-camera-body">
+                            <ui:VisualElement class="match-hud__camera-pad-cross" picking-mode="Ignore">
+                                <ui:VisualElement class="match-hud__camera-pad-row">
+                                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                                    <ui:Button name="CameraPadUpButton" text="^" class="ui-btn match-hud__camera-pad-btn" />
+                                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="match-hud__camera-pad-row">
+                                    <ui:Button name="CameraPadLeftButton" text="&lt;" class="ui-btn match-hud__camera-pad-btn" />
+                                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                                    <ui:Button name="CameraPadRightButton" text="&gt;" class="ui-btn match-hud__camera-pad-btn" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="match-hud__camera-pad-row">
+                                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                                    <ui:Button name="CameraPadDownButton" text="v" class="ui-btn match-hud__camera-pad-btn" />
+                                    <ui:VisualElement class="match-hud__camera-pad-spacer" picking-mode="Ignore" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:Label name="CameraPadHint"
+                                      text="Нажми, чтобы повернуть базу к краю экрана"
+                                      class="match-hud__camera-pad-hint"
+                                      picking-mode="Ignore" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Button name="QuitMatchButton" text="Выход из матча" class="ui-btn match-hud__pause-quit" />
+                    <ui:Button name="QuitGameButton" text="Выход из игры" class="ui-btn match-hud__pause-quit match-hud__pause-quit--muted" />
+                    <ui:Label text="Esc — закрыть" class="ui-meta match-hud__pause-hint" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

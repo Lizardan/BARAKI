@@ -25,6 +25,22 @@ namespace Game.Gameplay.Networking
             remove => MatchNetworkAuthority.CommandResultReceived -= value;
         }
 
+        /// <summary>
+        /// Any player may pause/resume the whole match. Falls back to the local pause
+        /// gate when no network authority is present (offline/local-dev play).
+        /// </summary>
+        public static void RequestSetPaused(bool paused)
+        {
+            var authority = MatchNetworkAuthority.Instance;
+            if (authority == null || !authority.IsSpawned)
+            {
+                MatchPauseGate.SetUserPaused(paused);
+                return;
+            }
+
+            authority.RequestSetPaused(paused);
+        }
+
         public static void RequestStartResearch(int buildingInstanceId, string upgradeId) =>
             MatchNetworkAuthority.Instance?.RequestStartResearch(buildingInstanceId, upgradeId);
 

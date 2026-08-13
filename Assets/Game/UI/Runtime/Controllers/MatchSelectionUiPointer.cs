@@ -65,11 +65,13 @@ namespace Game.UI.Controllers
             VisualElement bottomDock,
             VisualElement topBar,
             VisualElement debugHudPanel = null,
-            VisualElement cameraPad = null) =>
+            VisualElement cameraPad = null,
+            VisualElement pauseOverlay = null) =>
             picked != null
             && (IsDescendantOf(bottomDock, picked)
                 || IsDescendantOf(topBar, picked)
                 || IsDescendantOf(debugHudPanel, picked)
-                || IsDescendantOf(cameraPad, picked));
+                || IsDescendantOf(cameraPad, picked)
+                || IsDescendantOf(pauseOverlay, picked));
     }
 }

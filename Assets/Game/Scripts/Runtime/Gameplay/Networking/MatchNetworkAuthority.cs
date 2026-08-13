@@ -156,6 +156,44 @@ namespace Game.Gameplay.Networking
             RequestManualCallServerRpc(barracksBuildingInstanceId, (byte)role);
         }
 
+        /// <summary>
+        /// User pause toggle: any player may pause/resume. Never blocked by the pause
+        /// itself (a paused game must still be resumable).
+        /// </summary>
+        public void RequestSetPaused(bool paused)
+        {
+            if (IsServer)
+            {
+                ApplyUserPauseLocal(paused);
+                return;
+            }
+
+            RequestSetPausedServerRpc(paused);
+        }
+
+        void ApplyUserPauseLocal(bool paused)
+        {
+            MatchPauseGate.SetUserPaused(paused);
+            SetUserPausedClientRpc(paused);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void RequestSetPausedServerRpc(bool paused, RpcParams rpcParams = default)
+        {
+            ApplyUserPauseLocal(paused);
+        }
+
+        [ClientRpc]
+        void SetUserPausedClientRpc(bool paused)
+        {
+            if (IsServer)
+            {
+                return;
+            }
+
+            MatchPauseGate.SetUserPaused(paused);
+        }
+
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
         public void RequestStartResearchServerRpc(
             int buildingInstanceId,

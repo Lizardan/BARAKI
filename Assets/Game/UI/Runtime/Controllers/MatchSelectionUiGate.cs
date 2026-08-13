@@ -14,6 +14,7 @@ namespace Game.UI.Controllers
         VisualElement _topBar;
         VisualElement _debugHudPanel;
         VisualElement _cameraPad;
+        VisualElement _pauseOverlay;
         MatchSelectionBridge _bridge;
         MatchSelectionInput _boundInput;
 
@@ -29,6 +30,7 @@ namespace Game.UI.Controllers
             _topBar = root.Q<VisualElement>("TopBar");
             _debugHudPanel = root.Q<VisualElement>("DebugHudPanel");
             _cameraPad = root.Q<VisualElement>("CameraPad");
+            _pauseOverlay = root.Q<VisualElement>("PauseOverlay");
         }
 
         void OnEnable()
@@ -98,7 +100,8 @@ namespace Game.UI.Controllers
                     _bottomDock,
                     _topBar,
                     _debugHudPanel,
-                    _cameraPad))
+                    _cameraPad,
+                    _pauseOverlay))
             {
                 return true;
             }
@@ -107,7 +110,8 @@ namespace Game.UI.Controllers
             return ContainsPanelPoint(_bottomDock, panelPosition)
                    || ContainsPanelPoint(_topBar, panelPosition)
                    || ContainsPanelPoint(_debugHudPanel, panelPosition)
-                   || ContainsPanelPoint(_cameraPad, panelPosition);
+                   || ContainsPanelPoint(_cameraPad, panelPosition)
+                   || ContainsPanelPoint(_pauseOverlay, panelPosition);
         }
 
         static bool ContainsPanelPoint(VisualElement element, Vector2 panelPosition) =>

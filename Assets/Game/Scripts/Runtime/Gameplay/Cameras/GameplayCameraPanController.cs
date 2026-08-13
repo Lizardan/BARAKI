@@ -278,7 +278,9 @@ namespace Game.Gameplay.Cameras
                 _yawDegrees,
                 _targetYawDegrees,
                 ref _yawVelocity,
-                Mathf.Max(0.01f, _yawSmoothTime));
+                Mathf.Max(0.01f, _yawSmoothTime),
+                float.PositiveInfinity,
+                Time.unscaledDeltaTime);
             ApplyZoom();
         }
 

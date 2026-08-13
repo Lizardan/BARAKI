@@ -234,6 +234,7 @@ namespace Game.Gameplay.Networking
             HostMigrationSession.Clear();
             MatchLobbyHeartbeat.Ensure().Bind(null);
             MatchPauseGate.SetDisconnectHoldPaused(false);
+            MatchPauseGate.SetUserPaused(false);
             // Leaving a cleared session must not leave stale joinable lobby presence.
             SessionFlowTracker.NotifyChanged();
         }
