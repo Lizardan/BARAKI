@@ -31,6 +31,7 @@
 
 ## CI / Release (не сломать)
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
+- Версия: Editor `bundleVersion` = последний GitHub tag + 1 patch. Смена линии (`0.1.*` → `0.2.*`) — выставить `X.Y.1`; CI снимет следующий релиз в `vX.Y.0`.
 - **Теги:** `v*` — полный клиент (единственный `/releases/latest`).
 - CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
 - Билд: `Game.Editor.WindowsCiBuild.Build`; playtest-токен — `Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1` (XOR-встраивание).

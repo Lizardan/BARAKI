@@ -43,7 +43,7 @@ namespace Game.Core
 
         /// <summary>
         /// Parses tag from a GitHub release URL after redirects, e.g.
-        /// https://github.com/Lizardan/BARAKI/releases/tag/v0.1.3
+        /// https://github.com/Lizardan/BARAKI/releases/tag/v0.2.0
         /// </summary>
         public static bool TryParseTagFromReleaseUrl(string url, out string tag)
         {

@@ -88,7 +88,7 @@ mvp: true
 Канал (публичный репо):
 
 1. `git push` в `main` (изменения в Assets/Packages/ProjectSettings/…)
-2. Actions сам делает `patch` bump (`v0.1.0` → `v0.1.1`), собирает Windows, создаёт Release
+2. Actions сам делает `patch` bump (`v0.2.0` → `v0.2.1`), собирает Windows, создаёт Release. Смена линии: `PlayerSettings.bundleVersion` = `X.Y.1` (Editor всегда GitHub+1) → следующий релиз `vX.Y.0`.
 3. Клиент: `GET …/releases/latest` (redirect → tag) → сравнить с `Application.version` → скачать `BARAKI-{tag}.zip`
 4. Ручной major/minor: Actions → **Deploy Windows** → bump = minor/major
 5. Пропуск релиза: commit message содержит `[skip release]`

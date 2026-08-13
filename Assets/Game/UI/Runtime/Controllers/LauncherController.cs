@@ -37,8 +37,8 @@ namespace Game.UI.Controllers
         [Header("Editor preview")]
         [SerializeField] private LauncherProgressPhase _previewPhase = LauncherProgressPhase.Downloading;
         [SerializeField] [Range(0f, 1f)] private float _previewProgress = 0.34f;
-        [SerializeField] private string _previewLocalVersion = "0.1.2";
-        [SerializeField] private string _previewRemoteVersion = "0.1.4";
+        [SerializeField] private string _previewLocalVersion = "0.2.0";
+        [SerializeField] private string _previewRemoteVersion = "0.2.2";
         [SerializeField] private string _previewWarmingDetail = "Авторизация";
         [SerializeField] private string _previewError = "";
 #endif

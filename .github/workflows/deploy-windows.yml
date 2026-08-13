@@ -78,8 +78,17 @@ jobs:
           BUMP="${{ github.event.inputs.bump || 'patch' }}"
           LATEST="$(git tag -l 'v*' --sort=-v:refname | head -n 1 || true)"
 
+          # Editor bundleVersion is always GitHub latest + 1 patch. Its major.minor
+          # is the current series; a manual bump (0.1.x → 0.2.1) floors the next
+          # GitHub release at X.Y.0 (mirrors EditorLocalVersionRules.TrySeriesStart).
+          EDITOR_VER="$(grep -E '^\s*bundleVersion:' ProjectSettings/ProjectSettings.asset | head -n 1 | awk '{print $2}' | tr -d '\r')"
+          IFS='.' read -r SERIES_MAJOR SERIES_MINOR _SERIES_PATCH <<< "${EDITOR_VER:-0.2.0}"
+          SERIES_MAJOR="${SERIES_MAJOR:-0}"
+          SERIES_MINOR="${SERIES_MINOR:-0}"
+          SERIES="${SERIES_MAJOR}.${SERIES_MINOR}.0"
+
           if [ -z "$LATEST" ]; then
-            V="0.1.0"
+            V="$SERIES"
           else
             RAW="${LATEST#v}"
             IFS='.' read -r MAJOR MINOR PATCH <<< "$RAW"
@@ -92,6 +101,10 @@ jobs:
               *)     PATCH=$((PATCH + 1)) ;;
             esac
             V="${MAJOR}.${MINOR}.${PATCH}"
+            if [ "$MAJOR" -lt "$SERIES_MAJOR" ] ||
+               { [ "$MAJOR" -eq "$SERIES_MAJOR" ] && [ "$MINOR" -lt "$SERIES_MINOR" ]; }; then
+              V="$SERIES"
+            fi
           fi
 
           TAG="v${V}"

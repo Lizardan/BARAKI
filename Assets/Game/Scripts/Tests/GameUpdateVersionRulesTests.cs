@@ -21,6 +21,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void IsUpdateRequired_TreatsNewMinorAsNewerThanOldPatchLine()
+        {
+            Assert.IsTrue(GameUpdateVersionRules.IsUpdateRequired("0.1.61", "0.2.0"));
+            Assert.IsFalse(GameUpdateVersionRules.IsUpdateRequired("0.2.1", "0.1.61"));
+            Assert.IsFalse(GameUpdateVersionRules.IsUpdateRequired("0.2.1", "0.2.0"));
+            Assert.IsTrue(GameUpdateVersionRules.CanPlay("0.2.0", "0.2.0"));
+        }
+
+        [Test]
         public void TryParseSemVer_AcceptsVPrefix()
         {
             Assert.IsTrue(GameUpdateVersionRules.TryParseSemVer("v1.2.3", out var version));

@@ -33,10 +33,32 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Resolve_PrefersNewerFallbackOnSeriesBump()
+        {
+            Assert.AreEqual("0.2.1", EditorLocalVersionRules.Resolve("v0.1.61", "0.2.1"));
+        }
+
+        [Test]
+        public void Resolve_KeepsTagPlusOneOnceGitHubCatchesUp()
+        {
+            Assert.AreEqual("0.2.1", EditorLocalVersionRules.Resolve("v0.2.0", "0.2.1"));
+            Assert.AreEqual("0.2.2", EditorLocalVersionRules.Resolve("v0.2.1", "0.2.1"));
+        }
+
+        [Test]
         public void Resolve_FallsBackWhenTagMissing()
         {
             Assert.AreEqual("0.0.1", EditorLocalVersionRules.Resolve(null, "0.0.1"));
             Assert.AreEqual("0.0.1", EditorLocalVersionRules.Resolve("   ", "v0.0.1"));
+        }
+
+        [Test]
+        public void TrySeriesStart_DropsPatchToZero()
+        {
+            Assert.IsTrue(EditorLocalVersionRules.TrySeriesStart("0.2.1", out var start));
+            Assert.AreEqual("0.2.0", start);
+            Assert.IsTrue(EditorLocalVersionRules.TrySeriesStart("v0.2.1", out start));
+            Assert.AreEqual("0.2.0", start);
         }
     }
 }

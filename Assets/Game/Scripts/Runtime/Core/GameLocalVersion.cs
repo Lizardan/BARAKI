@@ -5,7 +5,7 @@ namespace Game.Core
     /// <summary>
     /// Local app version for UI / update checks.
     /// Player builds: <see cref="Application.version"/> (CI-stamped).
-    /// Editor: latest git tag +1, without mutating PlayerSettings.
+    /// Editor: latest git tag +1, or a newer PlayerSettings fallback on series bump.
     /// </summary>
     public static class GameLocalVersion
     {
