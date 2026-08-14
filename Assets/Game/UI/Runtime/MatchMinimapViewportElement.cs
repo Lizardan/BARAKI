@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -7,8 +8,7 @@ namespace Game.UI
     {
         static readonly Color s_stroke = new(0.92f, 0.94f, 0.98f, 0.9f);
 
-        readonly Vector2[] _corners = new Vector2[4];
-        bool _hasCorners;
+        readonly List<Vector2> _polygon = new(8);
 
         public MatchMinimapViewportElement()
         {
@@ -16,34 +16,41 @@ namespace Game.UI
             generateVisualContent += OnGenerateVisualContent;
         }
 
-        public void ClearCorners()
+        public void ClearPolygon()
         {
-            if (!_hasCorners)
+            if (_polygon.Count == 0)
             {
                 return;
             }
 
-            _hasCorners = false;
+            _polygon.Clear();
             MarkDirtyRepaint();
         }
 
         /// <summary>
-        /// Draws the exact 4 ground hits as a trapezoid. Do not AABB these points —
-        /// that re-inflates left/right past the real view.
+        /// Closed frustum polygon already clipped to the map square.
+        /// Variable vertex count: a quad becomes 3..8 verts at the map edge.
         /// </summary>
-        public void SetCorners(Vector2 c0, Vector2 c1, Vector2 c2, Vector2 c3)
+        public void SetPolygon(IReadOnlyList<Vector2> vertices)
         {
-            _corners[0] = c0;
-            _corners[1] = c1;
-            _corners[2] = c2;
-            _corners[3] = c3;
-            _hasCorners = true;
+            _polygon.Clear();
+            if (vertices == null || vertices.Count < 3)
+            {
+                MarkDirtyRepaint();
+                return;
+            }
+
+            for (var i = 0; i < vertices.Count; i++)
+            {
+                _polygon.Add(vertices[i]);
+            }
+
             MarkDirtyRepaint();
         }
 
         void OnGenerateVisualContent(MeshGenerationContext context)
         {
-            if (!_hasCorners)
+            if (_polygon.Count < 3)
             {
                 return;
             }
@@ -59,10 +66,12 @@ namespace Game.UI
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
             painter.BeginPath();
-            painter.MoveTo(_corners[0]);
-            painter.LineTo(_corners[1]);
-            painter.LineTo(_corners[2]);
-            painter.LineTo(_corners[3]);
+            painter.MoveTo(_polygon[0]);
+            for (var i = 1; i < _polygon.Count; i++)
+            {
+                painter.LineTo(_polygon[i]);
+            }
+
             painter.ClosePath();
             painter.Stroke();
         }

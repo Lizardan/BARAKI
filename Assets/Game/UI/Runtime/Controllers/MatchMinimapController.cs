@@ -33,6 +33,9 @@ namespace Game.UI.Controllers
         MatchController _topologyController;
         readonly Dictionary<string, VisualElement> _blips = new();
         readonly Vector3[] _groundCorners = new Vector3[4];
+        readonly List<Vector2> _viewportClip = new(8);
+        readonly List<Vector2> _viewportClipScratch = new(8);
+        readonly List<Vector2> _viewportPanel = new(8);
         float _panelWidth = 350f;
         float _panelHeight = 350f;
         float _lastGeometryWidth;
@@ -126,7 +129,7 @@ namespace Game.UI.Controllers
                 _topology = null;
                 _topologyController = null;
                 UpdateGeometry();
-                _viewportElement?.ClearCorners();
+                _viewportElement?.ClearPolygon();
                 return;
             }
 
@@ -343,28 +346,38 @@ namespace Game.UI.Controllers
             if (camera == null
                 || !GameplayCameraGroundView.TryGetGroundFrustumCorners(camera, _groundCorners))
             {
-                _viewportElement.ClearCorners();
+                _viewportElement.ClearPolygon();
                 return;
             }
 
-            // Exact frustum trapezoid (no AABB). Unclamped panel mapping avoids edge pull-in.
-            var c0 = WorldToPanel(_groundCorners[0], arenaRadius);
-            var c1 = WorldToPanel(_groundCorners[1], arenaRadius);
-            var c2 = WorldToPanel(_groundCorners[2], arenaRadius);
-            var c3 = WorldToPanel(_groundCorners[3], arenaRadius);
-            _viewportElement.SetCorners(c0, c1, c2, c3);
-        }
-
-        Vector2 WorldToPanel(Vector3 worldPosition, float arenaRadius)
-        {
-            // Unclamped: far frustum corners past the arena must not be pulled onto the map
-            // edge (that artificially inflates the viewport overlay).
+            var halfExtent = MatchMinimapProjection.MapHalfExtent(arenaRadius);
             var yaw = GetViewYawDegrees();
-            var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(
-                worldPosition,
-                MatchMinimapProjection.MapHalfExtent(arenaRadius),
-                yaw);
-            return MatchMinimapProjection.NormalizedToPanel(normalized, _panelWidth, _panelHeight);
+            var n0 = MatchMinimapProjection.WorldToNormalizedUnclamped(_groundCorners[0], halfExtent, yaw);
+            var n1 = MatchMinimapProjection.WorldToNormalizedUnclamped(_groundCorners[1], halfExtent, yaw);
+            var n2 = MatchMinimapProjection.WorldToNormalizedUnclamped(_groundCorners[2], halfExtent, yaw);
+            var n3 = MatchMinimapProjection.WorldToNormalizedUnclamped(_groundCorners[3], halfExtent, yaw);
+            if (!MatchMinimapViewportClip.TryClipToUnitSquare(
+                    n0,
+                    n1,
+                    n2,
+                    n3,
+                    _viewportClip,
+                    _viewportClipScratch))
+            {
+                _viewportElement.ClearPolygon();
+                return;
+            }
+
+            _viewportPanel.Clear();
+            for (var i = 0; i < _viewportClip.Count; i++)
+            {
+                _viewportPanel.Add(MatchMinimapProjection.NormalizedToPanel(
+                    _viewportClip[i],
+                    _panelWidth,
+                    _panelHeight));
+            }
+
+            _viewportElement.SetPolygon(_viewportPanel);
         }
 
         static float GetViewYawDegrees() =>
