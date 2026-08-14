@@ -51,7 +51,7 @@ note: Каркас; реализация PRE-001
 | 7 | `BONUS_SLOT_HERO_1` | Герой слот 1 | Тот же слот, другой def (усиленный) |
 | 8 | `BONUS_SLOT_HERO_2` | Герой слот 2 | То же |
 | 9 | `BONUS_SLOT_HERO_3` | Герой слот 3 | То же |
-| 10 | `BONUS_SLOT_TITAN` | Титан | Усиленный титан при покупке |
+| 10 | `BONUS_SLOT_TITAN` | Титан | Усиленный титан при summon |
 | 11 | `BONUS_SLOT_RACE_UNIQUE_1` | Уникальный #1 | Не замена юнита; per race |
 | 12 | `BONUS_SLOT_RACE_UNIQUE_2` | Уникальный #2 | Не замена юнита; per race |
 

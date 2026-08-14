@@ -102,8 +102,8 @@ Level ↑ также **ускоряет** spawn. Уничтоженный barrac
 | Main magic | ✓ (до `main_level` слотов; race spells) |
 | Divine Blessing + main extra ability | PRE-RACE2 |
 | Hire hero (main) | ✓ (500g; cap = main level) |
-| Hire titan (main, after 3 heroes) | PRE-RACE2 |
-| Deploy hero / titan (barracks) | hero ✓; titan PRE-RACE2 |
+| Research titan (main, 180s, 3 героя на базе) | ✓ (PRE-002) |
+| Summon hero / titan (barracks) | hero ✓; titan ✓ (PRE-002, 2500g) |
 | Tower target mode + race upgrades | ✓ |
 
 ## Failure spectrum

@@ -1,6 +1,6 @@
 ---
 doc_id: units
-version: 0.4
+version: 0.5
 status: locked
 depends_on: [core_gameplay, balance, races]
 provides: [unit_types, stats_schema, combat_behavior, bounties, squad_compositions]
@@ -52,9 +52,14 @@ mvp: true
 id: UNIT_TYPE_TITAN
 combat_role: elite_hero_scale
 targets: nearest_enemy_in_lane
-unlock: hired_from_main_after_3_heroes
-note: Отдельный тип (не 4-й hero slot); hire/deploy/XP как герой; см. Heroes.md
-mvp: false
+unlock: titan_research_complete    # пассивное изучение 180s в main (main L3 + 3 героя на базе)
+summon_building: BUILDING_BARRACKS
+summon_gold: 2500
+cooldown_after_death: 300
+stat_multiplier_vs_hero: 3.0
+xp_leveling: same_as_hero
+note: Отдельный тип (не 4-й hero slot); пассивное изучение, summon за 2500g, CD 300s; см. Heroes.md
+mvp: true
 ```
 
 ## Stat schema (ScriptableObject)
@@ -62,7 +67,7 @@ mvp: false
 ```yaml
 id: string              # UNIT_HUMAN_MELEE
 race_id: string         # RACE_HUMAN
-unit_type: enum         # Melee | Ranged | Caster | Siege | Flying | Super
+unit_type: enum         # Melee | Ranged | Caster | Siege | Flying | Super | Titan
 
 # Combat
 max_hp: float
@@ -248,5 +253,5 @@ note: Сильный осадный дальний бой; приоритет �
 | Super (MVP) | **Сильный осадный дальний** юнит; приоритет зданий |
 | MVP расы | **Идентичны** по статам и механикам |
 | Стартовые расы | **1:** `RACE_HUMAN` (+2 слота TBD) |
-| Титан | Отдельный тип `UNIT_TYPE_TITAN`; каркас PRE-002 |
+| Титан | Отдельный тип `UNIT_TYPE_TITAN`; пассивное изучение 180s, summon 2500g, CD 300s, статы 3× героя |
 | Бонусы | 12 слотов per race; см. `Bonuses.md` |

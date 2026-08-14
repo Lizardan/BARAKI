@@ -1,6 +1,6 @@
 ---
 doc_id: heroes
-version: 0.5
+version: 0.6
 status: draft
 depends_on: [units, economy, core_gameplay, races, buildings]
 provides: [hero_hire, hero_deploy, hero_morale, hero_ai, hero_roster]
@@ -255,20 +255,53 @@ mvp: true
 ```entity
 id: TITAN_RULES
 unit_type: UNIT_TYPE_TITAN
-hire_building: BUILDING_MAIN
-hire_gate: all_3_heroes_hired    # фактически main L3
-hire_gold: tbd                   # ориентир = hero hire 500g
-deploy_building: BUILDING_BARRACKS
-deploy_gold: tbd                 # ориентир = hero deploy 1000g
-deploy_cast_time: 0
-cooldown_after_death: tbd        # ориентир = hero 300s
+research_building: BUILDING_MAIN
+research_sec: 180
+research_gates:
+  main_level: 3
+  heroes_hired: all_3
+  heroes_idle_at_base: all_3    # только пока все 3 героя одновременно на базе
+freeze_on: [hero_deployed, hero_dead]   # прогресс замораживается, не сбрасывается
+research_gold: 0               # пассивное изучение, без оплаты
+summon_building: BUILDING_BARRACKS
+summon_gold: 2500
+summon_cast_time: 0            # мгновенный spawn у rally barracks
+cooldown_after_death: 300
+redeploy_cost_again: true      # повторный summon после CD снова 2500g
 xp_leveling: same_as_hero
+stat_multiplier_vs_hero: 3.0
 bonus_slot: BONUS_SLOT_TITAN
-mvp: false
-note: Каркас PRE-002; числа TBD
+mvp: true
 ```
 
-Flow как у героя: hire в main → idle на базе → deploy из **живого** barracks; XP/уровни; CD после смерти. Покупка только когда наняты **все 3 героя**.
+Титан **не нанимается за золото** — он **пассивно изучается** в `BUILDING_MAIN`. Прогресс растёт (до **180 с**) только пока **одновременно**: `main_level >= 3`, наняты **все 3 героя** и **все 3 героя в моменте `IdleAtBase`**. Как только любой герой ушёл на линию (deployed) или мёртв (dead) — прогресс **замораживается** на текущем значении (не сбрасывается); когда все 3 снова на базе — изучение продолжается.
+
+После завершения изучения титан **готов к summon**: выпускается из **живого** barracks **мгновенно за 2500g** (как hero deploy). Смерть → CD **300 s** per barracks; повторный summon после CD — **снова 2500g**. XP/уровни и рост статов — **как у героя** (`HERO_LEVELING`), уровень титана переживает смерть/redeploy; базовые статы **3× от статов героя**.
+
+## Titan research flow
+
+```
+1. main_level >= 3 + все 3 героя наняты + все 3 IdleAtBase → прогресс идёт
+2. Любой герой deployed/dead → прогресс ЗАМОРОЖЕН (значение сохраняется)
+3. Все 3 снова на базе → прогресс продолжается
+4. progress >= 180 s → титан Ready (summon доступен)
+```
+
+### Summon — **живой** barracks
+
+```
+1. Player selects barracks → "Summon titan"
+2. Pay 2500 gold
+3. Титан **мгновенно** spawns у rally этого barracks → lane barracks
+4. Пока summoned — повторный summon недоступен
+```
+
+### Death
+
+```
+1. Титан dies → CD 300 s per barracks (как hero death)
+2. Summon снова из любого **живого** barracks (2500g)
+```
 
 ## Locked decisions (confirmed)
 
@@ -281,7 +314,7 @@ Flow как у героя: hire в main → idle на базе → deploy из *
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
 | XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10 |
-| Титан | Отдельный тип; hire после 3 героев; deploy/XP как герой; PRE-002 |
+| Титан | Отдельный тип; **пассивное изучение 180 s** (main L3 + все 3 героя на базе; deployed/dead → заморозка); summon 2500g из живого barracks; CD 300 s; XP/статы как герой; статы 3× героя; PRE-002 |
 
 ## Open
 

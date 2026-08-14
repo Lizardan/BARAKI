@@ -1,6 +1,6 @@
 ---
 doc_id: buildings
-version: 1.1
+version: 1.2
 status: draft
 depends_on: [core_gameplay, economy, match_flow, units]
 provides: [building_types, hp, player_controls, destruction_effects, barracks_levels]
@@ -174,8 +174,8 @@ main_level: 1
 max_level: 3
 max_hp: 2000
 armor: 5
-abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC, UPG_MAIN_DIVINE_BLESSING, MAIN_EXTRA_ABILITY_MENU, TITAN_HIRE]
-player_actions: [hire_hero, hire_titan, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
+abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC, UPG_MAIN_DIVINE_BLESSING, MAIN_EXTRA_ABILITY_MENU, TITAN_SUMMON]
+player_actions: [hire_hero, summon_titan, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
 upgrade_costs: [2000, 3000]
 gates:
   stat_upgrade_max: main_level * 3
@@ -288,9 +288,9 @@ mvp: true
 
 | Building | Player can |
 |----------|------------|
-| Main (alive) | Upgrade main level, passive gold, **stat tracks**, **magic**, hire heroes, hire titan (after 3 heroes), Divine Blessing / extra ability |
+| Main (alive) | Upgrade main level, passive gold, **stat tracks**, **magic**, hire heroes, **titan research** (main L3 + 3 героя на базе), Divine Blessing / extra ability |
 | Main (ruins) | **Ничего** |
-| Barracks (alive) | Upgrade level, **manual call**, **Deploy hero/titan** (1000g, instant) |
+| Barracks (alive) | Upgrade level, **manual call**, **Deploy hero** (1000g) / **Summon titan** (2500g, instant) |
 | Barracks (ruins) | **Ничего** |
 | Tower (alive) | Target mode + **race tower upgrades** |
 | Tower (ruins) | **Ничего** |
@@ -298,11 +298,20 @@ mvp: true
 Stat research — через **живой** `BUILDING_MAIN` (global для расы).
 
 ```entity
-id: TITAN_HIRE
+id: TITAN_SUMMON
 building: BUILDING_MAIN
-requires: all_3_heroes_hired
-hire_gold: tbd
-mvp: false
+research_gold: 0
+research_sec: 180
+gates:
+  main_level: 3
+  heroes_hired: all_3
+  heroes_idle_at_base: all_3
+freeze_on: [hero_deployed, hero_dead]
+summon_building: BUILDING_BARRACKS
+summon_gold: 2500
+cooldown_after_death: 300
+mvp: true
+note: Пассивное изучение в main; summon из живого barracks за 2500g. См. Heroes.md
 
 id: UPG_MAIN_DIVINE_BLESSING
 building: BUILDING_MAIN

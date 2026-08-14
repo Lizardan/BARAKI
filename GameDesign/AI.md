@@ -76,8 +76,8 @@ mvp: true
 
 id: TITAN_AI
 behavior: Как герой (targeting/priority TBD)
-mvp: false
-note: PRE-002
+mvp: true
+note: Приоритеты как у героя (HERO_AI_TOWER_DRAW и ближайший враг)
 ```
 
 ---
