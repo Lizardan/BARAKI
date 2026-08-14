@@ -447,6 +447,8 @@ namespace Game.Gameplay.Match
                     animator.applyRootMotion = false;
                 }
 
+                scale *= UnitGreyboxVisuals.GetChampionVisualScale(unit.Role);
+
                 // Keep authored prefab normalize and apply presenter scale on top.
                 instance.transform.localScale = prefab.transform.localScale * scale;
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));

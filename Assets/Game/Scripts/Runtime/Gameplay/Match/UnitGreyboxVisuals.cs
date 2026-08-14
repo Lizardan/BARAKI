@@ -29,6 +29,21 @@ namespace Game.Gameplay.Match
         /// <summary>Hero model is raised slightly so its status bar sits above the crown.</summary>
         public const float HeroVisualHeight = 0.15f;
 
+        /// <summary>Hero world scale relative to a regular creep (melee baseline).</summary>
+        public const float HeroVsCreepScale = 1.15f;
+
+        /// <summary>Titan world scale relative to a regular creep (melee baseline).</summary>
+        public const float TitanVsCreepScale = 1.5f;
+
+        /// <summary>Extra multiplier on top of shared Human animated scale for champions.</summary>
+        public static float GetChampionVisualScale(UnitRole role) =>
+            role switch
+            {
+                UnitRole.Hero => HeroVsCreepScale,
+                UnitRole.Titan => TitanVsCreepScale,
+                _ => 1f,
+            };
+
         /// <summary>
         /// Authored meshes face +X; match locomotion faces +Z. Prefab yaw aligns model forward.
         /// </summary>

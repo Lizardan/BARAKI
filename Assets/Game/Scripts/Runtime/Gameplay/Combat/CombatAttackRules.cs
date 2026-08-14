@@ -14,11 +14,20 @@ namespace Game.Gameplay.Combat
         public static bool UsesMeleeStrike(UnitRole role) =>
             role is UnitRole.Melee or UnitRole.Siege;
 
+        public static bool UsesMeleeStrike(UnitRole role, bool isHero, int heroSlot) =>
+            !(isHero && heroSlot == HeroAbilityRules.PriestSlot)
+            && UsesMeleeStrike(role);
+
         public static bool UsesProjectile(UnitRole role) =>
             role is UnitRole.Ranged
                 or UnitRole.Caster
                 or UnitRole.Flying
                 or UnitRole.Super;
+
+        /// <summary>Priest (hero slot 3) shoots like a caster; other heroes stay melee.</summary>
+        public static bool UsesProjectile(UnitRole role, bool isHero, int heroSlot) =>
+            (isHero && heroSlot == HeroAbilityRules.PriestSlot)
+            || UsesProjectile(role);
 
         public static bool UsesParabolicArc(UnitRole role) =>
             role is UnitRole.Ranged or UnitRole.Flying;

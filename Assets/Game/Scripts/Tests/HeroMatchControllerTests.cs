@@ -49,6 +49,31 @@ namespace Game.Tests
         }
 
         [Test]
+        public void TryHireHero_SlotTwo_AtMainLevelTwo_DoesNotRequireSlotOne()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].MainLevel = 2;
+            controller.Players[0].Gold = 500;
+
+            Assert.IsTrue(controller.TryHireHero(0, 2));
+            Assert.AreEqual(HeroLifecycleState.None, controller.GetHeroRoster(0).Get(1).State);
+            Assert.AreEqual(HeroLifecycleState.None, controller.GetHeroRoster(0).Get(2).State);
+
+            controller.Tick(HeroRules.HireResearchSeconds);
+
+            Assert.AreEqual(HeroLifecycleState.None, controller.GetHeroRoster(0).Get(1).State);
+            Assert.AreEqual(HeroLifecycleState.IdleAtBase, controller.GetHeroRoster(0).Get(2).State);
+        }
+
+        [Test]
+        public void TryHireHero_SlotTwo_BlockedAtMainLevelOne()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Players[0].Gold = 500;
+            Assert.IsFalse(controller.TryHireHero(0, 2));
+        }
+
+        [Test]
         public void TryDeployHero_SpawnsHeroUnit()
         {
             var controller = CreateEarlyMatch();
@@ -87,9 +112,22 @@ namespace Game.Tests
             controller.Combat.ApplyExternalDamage(heroId, 100000f, killerOwnerSlot: 1);
 
             var slotState = controller.GetHeroRoster(0).Get(1);
-            Assert.AreEqual(HeroLifecycleState.Dead, slotState.State);
+            Assert.AreEqual(HeroLifecycleState.IdleAtBase, slotState.State);
             Assert.Greater(slotState.GetDeathCooldown(left.InstanceId), 0f);
             Assert.AreEqual(0f, slotState.GetDeathCooldown(right.InstanceId));
+
+            MatchUnitState parked = null;
+            foreach (var unit in controller.Combat.Units)
+            {
+                if (unit.IsHero && unit.HeroSlot == 1 && unit.IsParkedAtBase)
+                {
+                    parked = unit;
+                    break;
+                }
+            }
+
+            Assert.IsNotNull(parked, "Dead hero should return to the base park so titan research can resume.");
+            Assert.AreEqual(parked.UnitId, slotState.DeployedUnitId);
 
             Assert.IsFalse(controller.TryDeployHero(0, left.InstanceId, 1));
 

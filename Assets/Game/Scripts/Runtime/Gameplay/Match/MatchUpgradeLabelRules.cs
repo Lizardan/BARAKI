@@ -37,11 +37,32 @@ namespace Game.Gameplay.Match
         public static string FormatHeroHireTooltip(int heroSlot, int cost, float seconds) =>
             $"Найм героя {heroSlot}\n{cost}g · {seconds:0}с исследования";
 
+        public static string FormatHeroDeployButton(int heroSlot, int cost) =>
+            $"Герой {heroSlot}\n{cost}g";
+
+        public static string FormatHeroDeployCooldownButton(int heroSlot, int remainingSeconds) =>
+            $"Герой {heroSlot}\n{remainingSeconds}с";
+
+        public static string FormatHeroDeployTooltip(string heroName, int cost) =>
+            $"Выпуск {heroName}\n{cost}g · мгновенно";
+
+        public static string FormatHeroDeployCooldownTooltip(string heroName, int remainingSeconds) =>
+            $"{heroName} — перезарядка казарм\n{remainingSeconds}с";
+
         public static string FormatTitanDeployButton(int cost) =>
             $"Титан\n{cost}g";
 
         public static string FormatTitanDeployTooltip(int cost) =>
             $"Выпуск титана\n{cost}g · мгновенно";
+
+        public static string FormatTitanDeployCooldownButton(int remainingSeconds) =>
+            $"Титан\n{remainingSeconds}с";
+
+        public static string FormatTitanDeployCooldownTooltip(int remainingSeconds) =>
+            $"Титан — перезарядка казарм\n{remainingSeconds}с";
+
+        public static int CeilRemainingSeconds(float remaining) =>
+            remaining <= 0f ? 0 : (int)System.Math.Ceiling(remaining);
 
         public static string GetStatTrackTitle(string trackId) => trackId switch
         {

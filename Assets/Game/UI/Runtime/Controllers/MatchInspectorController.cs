@@ -15,7 +15,7 @@ namespace Game.UI.Controllers
     public sealed class MatchInspectorController : MonoBehaviour
     {
         const int CommandSlotCount = 12;
-        /// <summary>3-col grid: rows 0–1 upgrades; rows 2–3 manual calls (see <see cref="MatchBarracksCallSlotRules"/>).</summary>
+        /// <summary>3-col grid: upgrade/titan, calls, heroes (see <see cref="MatchBarracksCallSlotRules"/>).</summary>
         const string EmptyOverlayHiddenClass = "match-panel__empty-overlay--hidden";
         const string InspectorEmptyClass = "match-inspector--empty";
         const string PanelActiveClass = "match-dock-panel__inner--active";
@@ -46,9 +46,15 @@ namespace Game.UI.Controllers
         readonly Action[] _commandActions = new Action[CommandSlotCount];
         readonly string[] _commandTooltips = new string[CommandSlotCount];
         readonly MatchCommandRegenFrameElement[] _callRegenFrames = new MatchCommandRegenFrameElement[CommandSlotCount];
+        readonly VisualElement[] _commandPortraits = new VisualElement[CommandSlotCount];
+        readonly Label[] _chargeBadges = new Label[CommandSlotCount];
         readonly UnitRole?[] _callSlotRoles = new UnitRole?[CommandSlotCount];
+        readonly int?[] _heroDeploySlots = new int?[CommandSlotCount];
+        readonly bool[] _titanDeploySlots = new bool[CommandSlotCount];
         int _hoveredCommandIndex = -1;
         string _commandsFingerprint;
+        UnitVisualCatalog _visualCatalog;
+        MatchCombatPresenter _combatPresenter;
 
         void Awake()
         {
@@ -82,7 +88,9 @@ namespace Game.UI.Controllers
                     button.clicked += () => OnCommandClicked(index);
                     button.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(index));
                     button.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
+                    EnsureCommandPortrait(button, index);
                     EnsureCallRegenFrame(button, index);
+                    EnsureChargeBadge(button, index);
                 }
             }
         }
@@ -95,6 +103,7 @@ namespace Game.UI.Controllers
             }
 
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
+            ResolveVisualCatalog();
             SubscribeSelection();
         }
 
@@ -111,6 +120,7 @@ namespace Game.UI.Controllers
             }
 
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
+            ResolveVisualCatalog();
             if (_selection == null)
             {
                 SubscribeSelection();
@@ -308,16 +318,36 @@ namespace Game.UI.Controllers
             }
 
             var heroKey = 0;
+            var heroCdKey = 0;
             var roster = controller?.GetHeroRoster(_localPlayerSlot);
             if (roster != null)
             {
                 for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
                 {
-                    heroKey = (heroKey * 10) + (int)roster.Get(slot).State;
+                    var hero = roster.Get(slot);
+                    heroKey = (heroKey * 10) + (int)hero.State;
+                    var cd = MatchInspectorFormatting.IsBarracksBuilding(building.BuildingId)
+                        ? MatchUpgradeLabelRules.CeilRemainingSeconds(
+                            hero.GetDeathCooldown(building.InstanceId))
+                        : 0;
+                    heroCdKey = (heroCdKey * 1000) + cd;
                 }
             }
 
-            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}";
+            var titanKey = 0;
+            var titanCd = 0;
+            var titan = controller?.GetTitanState(_localPlayerSlot);
+            if (titan != null)
+            {
+                titanKey = (int)titan.State;
+                if (MatchInspectorFormatting.IsBarracksBuilding(building.BuildingId))
+                {
+                    titanCd = MatchUpgradeLabelRules.CeilRemainingSeconds(
+                        titan.GetDeathCooldown(building.InstanceId));
+                }
+            }
+
+            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}";
         }
 
         void PopulateBuildingCommands(BuildingState building)
@@ -406,21 +436,7 @@ namespace Game.UI.Controllers
                         ? MatchUpgradeLabelRules.FormatMagicTooltip(nextMagicLevel, magicCost, magicDuration)
                         : "Магия — требуется уровень главного здания");
 
-                var nextSlot = PeekNextHireSlot();
-                var canHire = nextSlot > 0 && !queueFull && CanHireNextHero();
-                SetCommand(
-                    6,
-                    nextSlot > 0
-                        ? MatchUpgradeLabelRules.FormatHeroHireButton(nextSlot, HeroRules.HireGold)
-                        : $"Герой\n{HeroRules.HireGold}g",
-                    canHire,
-                    HireNextHero,
-                    nextSlot > 0
-                        ? MatchUpgradeLabelRules.FormatHeroHireTooltip(
-                            nextSlot,
-                            HeroRules.HireGold,
-                            HeroRules.HireResearchSeconds)
-                        : "Нет доступного слота героя");
+                PopulateHeroHireCommands(player, building, queueFull);
                 return;
             }
 
@@ -441,7 +457,7 @@ namespace Game.UI.Controllers
                     && player.Gold >= cost;
                 var nextLevel = MatchUpgradeLabelRules.GetNextLevel(barracks?.Level ?? 0, queuedLevels);
                 SetCommand(
-                    0,
+                    MatchBarracksCallSlotRules.BarracksUpgradeSlot,
                     hasUpgradeStep
                         ? MatchUpgradeLabelRules.FormatBarracksLevelButton(nextLevel, cost)
                         : "Макс. ур.",
@@ -451,14 +467,7 @@ namespace Game.UI.Controllers
                         ? MatchUpgradeLabelRules.FormatBarracksLevelTooltip(nextLevel, cost, duration)
                         : "Казармы уже максимального уровня");
 
-                var canDeploy = CanDeployAnyHero();
-                SetCommand(
-                    1,
-                    $"Герой\n{HeroRules.DeployGold}g",
-                    canDeploy,
-                    DeployReadyHero,
-                    $"Выпуск героя в lane\n{HeroRules.DeployGold}g · мгновенно");
-
+                PopulateHeroDeployCommands(player);
                 PopulateTitanCommand();
 
                 if (barracks != null && building.IsIntact && !barracks.IsRuins)
@@ -579,7 +588,9 @@ namespace Game.UI.Controllers
                     $"{roleLabel}\n{goldCost}g {charges}/{max}",
                     canCall,
                     () => RequestManualCall(capturedRole),
-                    $"{roleLabel}: {goldCost}g · заряд {charges}/{max}\nВосстановление заряда: {BarracksManualCallRules.RegenSeconds:0}с");
+                    $"{roleLabel}: {goldCost}g · заряд {charges}/{max}\nВосстановление заряда: {BarracksManualCallRules.RegenSeconds:0}с",
+                    ResolveUnitPortrait(role),
+                    charges);
                 _callSlotRoles[slotIndex] = role;
             }
         }
@@ -595,6 +606,114 @@ namespace Game.UI.Controllers
             frame.style.display = DisplayStyle.None;
             button.Add(frame);
             _callRegenFrames[index] = frame;
+        }
+
+        void EnsureChargeBadge(Button button, int index)
+        {
+            if (button == null || _chargeBadges[index] != null)
+            {
+                return;
+            }
+
+            var badge = new Label();
+            badge.AddToClassList("match-command-charge");
+            badge.pickingMode = PickingMode.Ignore;
+            badge.style.display = DisplayStyle.None;
+            button.Add(badge);
+            _chargeBadges[index] = badge;
+        }
+
+        void ApplyChargeBadge(int index, int? charges)
+        {
+            var badge = _chargeBadges[index];
+            if (badge == null)
+            {
+                return;
+            }
+
+            if (!charges.HasValue)
+            {
+                badge.text = string.Empty;
+                badge.style.display = DisplayStyle.None;
+                return;
+            }
+
+            badge.text = charges.Value.ToString();
+            badge.style.display = DisplayStyle.Flex;
+        }
+
+        void EnsureCommandPortrait(Button button, int index)
+        {
+            if (button == null || _commandPortraits[index] != null)
+            {
+                return;
+            }
+
+            var portrait = new VisualElement();
+            portrait.AddToClassList("match-command-portrait");
+            portrait.pickingMode = PickingMode.Ignore;
+            portrait.style.display = DisplayStyle.None;
+            button.Insert(0, portrait);
+            _commandPortraits[index] = portrait;
+        }
+
+        void ApplyCommandPortrait(int index, Texture2D portrait)
+        {
+            var element = _commandPortraits[index];
+            if (element == null)
+            {
+                return;
+            }
+
+            if (portrait == null)
+            {
+                element.style.backgroundImage = new StyleBackground();
+                element.style.display = DisplayStyle.None;
+                return;
+            }
+
+            element.style.backgroundImage = new StyleBackground(portrait);
+            element.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover);
+            element.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Center);
+            element.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top);
+            element.style.display = DisplayStyle.Flex;
+        }
+
+        void ResolveVisualCatalog()
+        {
+            if (_visualCatalog != null)
+            {
+                return;
+            }
+
+            var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
+            if (controller != null && controller.UnitVisualCatalog != null)
+            {
+                _visualCatalog = controller.UnitVisualCatalog;
+                return;
+            }
+
+            if (_combatPresenter == null)
+            {
+                _combatPresenter = MatchCombatPresenter.Current;
+            }
+
+            _visualCatalog = _combatPresenter != null ? _combatPresenter.VisualCatalog : null;
+        }
+
+        Texture2D ResolveUnitPortrait(UnitRole role, int heroSlot = 0)
+        {
+            ResolveVisualCatalog();
+            var player = FindLocalPlayer(_matchRuntime?.Controller);
+            var raceId = player != null ? player.RaceId : GameIds.Races.Human;
+            if (_visualCatalog != null
+                && _visualCatalog.TryGetPortrait(raceId, role, heroSlot, out var portrait)
+                && portrait != null)
+            {
+                return portrait;
+            }
+
+            return null;
         }
 
         void UpdateCallRegenFrames()
@@ -619,38 +738,128 @@ namespace Game.UI.Controllers
                 }
 
                 var role = _callSlotRoles[i];
-                if (barracks == null || !role.HasValue)
+                if (barracks != null && role.HasValue)
                 {
-                    frame.SetRegenerating(false, 0f);
+                    UpdateManualCallRegenFrame(i, frame, barracks, role.Value);
                     continue;
                 }
 
-                if (!barracks.CallCharges.TryGetNextRegenRemaining(role.Value, out var remaining))
+                if (TryUpdateChampionDeployRegenFrame(i, frame, controller))
                 {
-                    frame.SetRegenerating(false, 0f);
                     continue;
                 }
 
-                var fill = MatchCommandRegenFrameRules.GetFill01(
-                    remaining,
-                    BarracksManualCallRules.RegenSeconds);
-                frame.SetRegenerating(true, fill);
+                frame.SetRegenerating(false, 0f);
+            }
+        }
 
-                if (_commandTooltips[i] != null && _callSlotRoles[i].HasValue)
+        void UpdateManualCallRegenFrame(
+            int index,
+            MatchCommandRegenFrameElement frame,
+            BarracksWaveState barracks,
+            UnitRole role)
+        {
+            if (!barracks.CallCharges.TryGetNextRegenRemaining(role, out var remaining))
+            {
+                frame.SetRegenerating(false, 0f);
+                ApplyChargeBadge(index, barracks.CallCharges.GetCharges(role));
+                return;
+            }
+
+            var fill = MatchCommandRegenFrameRules.GetFill01(
+                remaining,
+                BarracksManualCallRules.RegenSeconds);
+            frame.SetRegenerating(true, fill);
+
+            if (_commandTooltips[index] == null)
+            {
+                return;
+            }
+
+            var roleLabel = FormatCallRole(role);
+            var charges = barracks.CallCharges.GetCharges(role);
+            var max = barracks.CallCharges.GetMaxCharges(role);
+            var goldCost = BarracksManualCallRules.GetGoldCost(role);
+            _commandTooltips[index] =
+                $"{roleLabel}: {goldCost}g · заряд {charges}/{max}\n" +
+                $"Заряд через: {remaining:0}с / {BarracksManualCallRules.RegenSeconds:0}с";
+            ApplyChargeBadge(index, charges);
+            if (_hoveredCommandIndex == index)
+            {
+                ShowTooltip(index);
+            }
+        }
+
+        bool TryUpdateChampionDeployRegenFrame(
+            int index,
+            MatchCommandRegenFrameElement frame,
+            MatchController controller)
+        {
+            if (controller == null || _selectedBuildingInstanceId < 0)
+            {
+                return false;
+            }
+
+            float remaining;
+            float duration;
+            if (_heroDeploySlots[index].HasValue)
+            {
+                var hero = controller.GetHeroRoster(_localPlayerSlot)?.Get(_heroDeploySlots[index].Value);
+                if (hero == null)
                 {
-                    var roleLabel = FormatCallRole(_callSlotRoles[i].Value);
-                    var charges = barracks.CallCharges.GetCharges(_callSlotRoles[i].Value);
-                    var max = barracks.CallCharges.GetMaxCharges(_callSlotRoles[i].Value);
-                    var goldCost = BarracksManualCallRules.GetGoldCost(_callSlotRoles[i].Value);
-                    _commandTooltips[i] =
-                        $"{roleLabel}: {goldCost}g · заряд {charges}/{max}\n" +
-                        $"Заряд через: {remaining:0}с / {BarracksManualCallRules.RegenSeconds:0}с";
-                    if (_hoveredCommandIndex == i)
+                    return false;
+                }
+
+                remaining = hero.GetDeathCooldown(_selectedBuildingInstanceId);
+                duration = HeroRules.DeathCooldownSeconds;
+                if (remaining > 0f)
+                {
+                    var seconds = MatchUpgradeLabelRules.CeilRemainingSeconds(remaining);
+                    var heroName = MatchInspectorFormatting.FormatHeroName(_heroDeploySlots[index].Value);
+                    _commandTooltips[index] =
+                        MatchUpgradeLabelRules.FormatHeroDeployCooldownTooltip(heroName, seconds);
+                    if (_hoveredCommandIndex == index)
                     {
-                        ShowTooltip(i);
+                        ShowTooltip(index);
                     }
                 }
             }
+            else if (_titanDeploySlots[index])
+            {
+                var titan = controller.GetTitanState(_localPlayerSlot);
+                if (titan == null)
+                {
+                    return false;
+                }
+
+                remaining = titan.GetDeathCooldown(_selectedBuildingInstanceId);
+                duration = TitanRules.DeathCooldownSeconds;
+                if (remaining > 0f)
+                {
+                    var seconds = MatchUpgradeLabelRules.CeilRemainingSeconds(remaining);
+                    _commandTooltips[index] =
+                        MatchUpgradeLabelRules.FormatTitanDeployCooldownTooltip(seconds);
+                    if (_hoveredCommandIndex == index)
+                    {
+                        ShowTooltip(index);
+                    }
+                }
+            }
+            else
+            {
+                return false;
+            }
+
+            if (remaining <= 0f)
+            {
+                frame.SetRegenerating(false, 0f);
+                return true;
+            }
+
+            frame.SetRegenerating(
+                true,
+                MatchCommandRegenFrameRules.GetFill01(remaining, duration));
+            return true;
         }
 
         static string FormatCallRole(UnitRole role) => role switch
@@ -702,95 +911,129 @@ namespace Game.UI.Controllers
                 upgradeId);
         }
 
-        bool CanHireNextHero() => PeekNextHireSlot() > 0;
-
-        void HireNextHero()
-        {
-            var slot = PeekNextHireSlot();
-            if (slot <= 0)
-            {
-                return;
-            }
-
-            StartResearch(HeroRules.BuildHireUpgradeId(slot));
-        }
-
-        int PeekNextHireSlot()
+        void PopulateHeroHireCommands(MatchPlayerState player, BuildingState building, bool queueFull)
         {
             var controller = _matchRuntime?.Controller;
             var roster = controller?.GetHeroRoster(_localPlayerSlot);
-            var player = FindLocalPlayer(controller);
-            if (roster == null || player == null || _selectedBuildingInstanceId < 0)
-            {
-                return -1;
-            }
-
-            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
-            {
-                var hireId = HeroRules.BuildHireUpgradeId(slot);
-                if (controller.Research.CountUpgrade(_selectedBuildingInstanceId, hireId) > 0)
-                {
-                    continue;
-                }
-
-                if (HeroRules.CanHire(roster.Get(slot).State, slot, player.MainLevel, player.Gold))
-                {
-                    return slot;
-                }
-            }
-
-            return -1;
-        }
-
-        bool CanDeployAnyHero()
-        {
-            var controller = _matchRuntime?.Controller;
-            var roster = controller?.GetHeroRoster(_localPlayerSlot);
-            var player = FindLocalPlayer(controller);
             if (roster == null || player == null)
             {
-                return false;
-            }
-
-            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
-            {
-                if (HeroRules.CanDeploy(roster.Get(slot).State, roster.Get(slot).GetDeathCooldown(_selectedBuildingInstanceId), player.Gold, true))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        void DeployReadyHero()
-        {
-            var controller = _matchRuntime?.Controller;
-            var roster = controller?.GetHeroRoster(_localPlayerSlot);
-            var player = FindLocalPlayer(controller);
-            if (roster == null || player == null || _selectedBuildingInstanceId < 0)
-            {
                 return;
             }
 
-            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+            for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
             {
-                var state = roster.Get(slot);
-                if (!HeroRules.CanDeploy(state.State, state.GetDeathCooldown(_selectedBuildingInstanceId), player.Gold, true))
+                if (!MatchMainHireSlotRules.TryGetHeroHireSlot(heroSlot, out var commandIndex))
                 {
                     continue;
                 }
 
-                if (MatchNetworkCommands.IsAvailable)
+                var state = roster.Get(heroSlot);
+                if (!HeroRules.ShouldShowHire(state.State, heroSlot, player.MainLevel))
                 {
-                    MatchNetworkCommands.RequestDeployHero(_selectedBuildingInstanceId, slot);
+                    continue;
+                }
+
+                var hireId = HeroRules.BuildHireUpgradeId(heroSlot);
+                var queued = controller.Research.CountUpgrade(building.InstanceId, hireId) > 0;
+                var canHire = !queued
+                    && !queueFull
+                    && HeroRules.CanHire(state.State, heroSlot, player.MainLevel, player.Gold);
+                var capturedSlot = heroSlot;
+                SetCommand(
+                    commandIndex,
+                    MatchUpgradeLabelRules.FormatHeroHireButton(heroSlot, HeroRules.HireGold),
+                    canHire,
+                    () => HireHero(capturedSlot),
+                    MatchUpgradeLabelRules.FormatHeroHireTooltip(
+                        heroSlot,
+                        HeroRules.HireGold,
+                        HeroRules.HireResearchSeconds),
+                    ResolveUnitPortrait(UnitRole.Hero, heroSlot));
+            }
+        }
+
+        void HireHero(int heroSlot)
+        {
+            if (!HeroRules.IsValidHeroSlot(heroSlot))
+            {
+                return;
+            }
+
+            StartResearch(HeroRules.BuildHireUpgradeId(heroSlot));
+        }
+
+        void PopulateHeroDeployCommands(MatchPlayerState player)
+        {
+            var controller = _matchRuntime?.Controller;
+            var roster = controller?.GetHeroRoster(_localPlayerSlot);
+            if (roster == null || _selectedBuildingInstanceId < 0)
+            {
+                return;
+            }
+
+            for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
+            {
+                if (!MatchBarracksCallSlotRules.TryGetHeroDeploySlot(heroSlot, out var commandIndex))
+                {
+                    continue;
+                }
+
+                var state = roster.Get(heroSlot);
+                if (!HeroRules.ShouldShowDeploy(state.State))
+                {
+                    continue;
+                }
+
+                var cooldown = state.GetDeathCooldown(_selectedBuildingInstanceId);
+                var cooldownSeconds = MatchUpgradeLabelRules.CeilRemainingSeconds(cooldown);
+                var canDeploy = player != null
+                    && HeroRules.CanDeploy(
+                        state.State,
+                        cooldown,
+                        player.Gold,
+                        barracksIntact: true);
+                var heroName = MatchInspectorFormatting.FormatHeroName(heroSlot);
+                var capturedSlot = heroSlot;
+                if (cooldownSeconds > 0)
+                {
+                    SetCommand(
+                        commandIndex,
+                        MatchUpgradeLabelRules.FormatHeroDeployCooldownButton(heroSlot, cooldownSeconds),
+                        enabled: false,
+                        () => DeployHero(capturedSlot),
+                        MatchUpgradeLabelRules.FormatHeroDeployCooldownTooltip(heroName, cooldownSeconds),
+                        ResolveUnitPortrait(UnitRole.Hero, heroSlot));
                 }
                 else
                 {
-                    controller.TryDeployHero(_localPlayerSlot, _selectedBuildingInstanceId, slot);
+                    SetCommand(
+                        commandIndex,
+                        MatchUpgradeLabelRules.FormatHeroDeployButton(heroSlot, HeroRules.DeployGold),
+                        canDeploy,
+                        () => DeployHero(capturedSlot),
+                        MatchUpgradeLabelRules.FormatHeroDeployTooltip(heroName, HeroRules.DeployGold),
+                        ResolveUnitPortrait(UnitRole.Hero, heroSlot));
                 }
 
+                _heroDeploySlots[commandIndex] = heroSlot;
+            }
+        }
+
+        void DeployHero(int heroSlot)
+        {
+            var controller = _matchRuntime?.Controller;
+            if (controller == null || _selectedBuildingInstanceId < 0)
+            {
                 return;
+            }
+
+            if (MatchNetworkCommands.IsAvailable)
+            {
+                MatchNetworkCommands.RequestDeployHero(_selectedBuildingInstanceId, heroSlot);
+            }
+            else
+            {
+                controller.TryDeployHero(_localPlayerSlot, _selectedBuildingInstanceId, heroSlot);
             }
         }
 
@@ -799,17 +1042,36 @@ namespace Game.UI.Controllers
             var controller = _matchRuntime?.Controller;
             var titan = controller?.GetTitanState(_localPlayerSlot);
             if (titan == null
-                || titan.State is not (TitanLifecycleState.IdleAtBase or TitanLifecycleState.Dead))
+                || !TitanRules.ShouldShowDeploy(titan.State)
+                || !MatchBarracksCallSlotRules.TryGetTitanDeploySlot(out var commandIndex))
             {
                 return;
             }
 
-            SetCommand(
-                2,
-                MatchUpgradeLabelRules.FormatTitanDeployButton(TitanRules.DeployGold),
-                CanDeployTitan(),
-                DeployTitan,
-                MatchUpgradeLabelRules.FormatTitanDeployTooltip(TitanRules.DeployGold));
+            var cooldown = titan.GetDeathCooldown(_selectedBuildingInstanceId);
+            var cooldownSeconds = MatchUpgradeLabelRules.CeilRemainingSeconds(cooldown);
+            if (cooldownSeconds > 0)
+            {
+                SetCommand(
+                    commandIndex,
+                    MatchUpgradeLabelRules.FormatTitanDeployCooldownButton(cooldownSeconds),
+                    enabled: false,
+                    DeployTitan,
+                    MatchUpgradeLabelRules.FormatTitanDeployCooldownTooltip(cooldownSeconds),
+                    ResolveUnitPortrait(UnitRole.Titan));
+            }
+            else
+            {
+                SetCommand(
+                    commandIndex,
+                    MatchUpgradeLabelRules.FormatTitanDeployButton(TitanRules.DeployGold),
+                    CanDeployTitan(),
+                    DeployTitan,
+                    MatchUpgradeLabelRules.FormatTitanDeployTooltip(TitanRules.DeployGold),
+                    ResolveUnitPortrait(UnitRole.Titan));
+            }
+
+            _titanDeploySlots[commandIndex] = true;
         }
 
         bool CanDeployTitan()
@@ -872,17 +1134,27 @@ namespace Game.UI.Controllers
             return null;
         }
 
-        void SetCommand(int index, string label, bool enabled, Action action, string tooltip = null)
+        void SetCommand(
+            int index,
+            string label,
+            bool enabled,
+            Action action,
+            string tooltip = null,
+            Texture2D portrait = null,
+            int? charges = null)
         {
             if (index < 0 || index >= CommandSlotCount || _commandSlots[index] == null)
             {
                 return;
             }
 
-            _commandSlots[index].text = label;
+            var hasPortrait = portrait != null;
+            _commandSlots[index].text = hasPortrait ? string.Empty : (label ?? string.Empty);
             _commandSlots[index].SetEnabled(enabled && action != null);
             _commandActions[index] = action;
-            _commandTooltips[index] = tooltip ?? string.Empty;
+            _commandTooltips[index] = string.IsNullOrEmpty(tooltip) ? (label ?? string.Empty) : tooltip;
+            ApplyCommandPortrait(index, portrait);
+            ApplyChargeBadge(index, charges);
         }
 
         void ShowTooltip(int index)
@@ -953,7 +1225,11 @@ namespace Game.UI.Controllers
                 _commandActions[i] = null;
                 _commandTooltips[i] = string.Empty;
                 _callSlotRoles[i] = null;
+                _heroDeploySlots[i] = null;
+                _titanDeploySlots[i] = false;
                 _callRegenFrames[i]?.SetRegenerating(false, 0f);
+                ApplyCommandPortrait(i, null);
+                ApplyChargeBadge(i, null);
                 if (_commandSlots[i] == null)
                 {
                     continue;

@@ -30,6 +30,27 @@ namespace Game.Tests
         }
 
         [Test]
+        public void DebugCompleteResearchForOwner_CompletesTitanBar()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.MainLevel = TitanRules.RequiredMainLevel;
+            HireAllHeroes(controller);
+
+            var titan = controller.GetTitanState(0);
+            titan.ResearchProgressSeconds = 0f;
+            Assert.AreEqual(TitanLifecycleState.Locked, titan.State);
+
+            controller.DebugCompleteResearchForOwner(0);
+
+            Assert.AreEqual(TitanLifecycleState.IdleAtBase, titan.State);
+            Assert.AreEqual(TitanRules.ResearchSeconds, titan.ResearchProgressSeconds, 0.01f);
+            var parked = GetParkedTitan(controller, 0);
+            Assert.IsTrue(parked.IsParkedAtBase);
+            Assert.AreEqual(parked.UnitId, titan.DeployedUnitId);
+        }
+
+        [Test]
         public void Research_RequiresMainLevelThree()
         {
             var controller = CreateEarlyMatch();
@@ -68,6 +89,46 @@ namespace Game.Tests
 
             controller.Tick(60f);
             Assert.AreEqual(60f, titan.ResearchProgressSeconds, 0.01f);
+            Assert.AreEqual(TitanLifecycleState.Locked, titan.State);
+        }
+
+        [Test]
+        public void Research_ResumesAfterHeroDeathWhenReturnedToBase()
+        {
+            var controller = CreateEarlyMatch();
+            var player = controller.Players[0];
+            player.MainLevel = TitanRules.RequiredMainLevel;
+            HireAllHeroes(controller);
+
+            var titan = controller.GetTitanState(0);
+            titan.ResearchProgressSeconds = 0f;
+            controller.Tick(60f);
+            Assert.AreEqual(60f, titan.ResearchProgressSeconds, 0.01f);
+
+            player.Gold = 5000;
+            var barracks = FindBuilding(controller, 0, GameIds.Buildings.BarracksLeft);
+            Assert.IsTrue(controller.TryDeployHero(0, barracks.InstanceId, 1));
+
+            MatchUnitState deployed = null;
+            foreach (var unit in controller.Combat.Units)
+            {
+                if (unit.IsHero && unit.HeroSlot == 1 && !unit.IsParkedAtBase)
+                {
+                    deployed = unit;
+                    break;
+                }
+            }
+
+            Assert.IsNotNull(deployed);
+
+            controller.Tick(60f);
+            Assert.AreEqual(60f, titan.ResearchProgressSeconds, 0.01f);
+
+            controller.Combat.ApplyExternalDamage(deployed.UnitId, 100000f, killerOwnerSlot: 1);
+            Assert.AreEqual(HeroLifecycleState.IdleAtBase, controller.GetHeroRoster(0).Get(1).State);
+
+            controller.Tick(60f);
+            Assert.AreEqual(120f, titan.ResearchProgressSeconds, 0.01f);
             Assert.AreEqual(TitanLifecycleState.Locked, titan.State);
         }
 

@@ -246,6 +246,25 @@
 .match-command-grid__slot {
     /* size from ui-btn--square */
     overflow: hidden;
+    position: relative;
+}
+
+.ui-btn--square.match-command-grid__slot {
+    overflow: hidden;
+}
+
+.match-command-portrait {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    right: 6px;
+    bottom: 6px;
+    picking-mode: ignore;
+    background-color: rgba(0, 0, 0, 0);
+    background-size: cover;
+    -unity-background-scale-mode: scale-and-crop;
+    background-position-x: 50%;
+    background-position-y: 0%;
 }
 
 .match-command-regen-frame {
@@ -255,6 +274,18 @@
     right: 0;
     bottom: 0;
     picking-mode: ignore;
+}
+
+.match-command-charge {
+    position: absolute;
+    right: 4px;
+    bottom: 1px;
+    picking-mode: ignore;
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(239, 228, 207);
+    -unity-text-align: lower-right;
+    text-shadow: 1px 1px 2px rgb(0, 0, 0);
 }
 
 .match-unit-info {

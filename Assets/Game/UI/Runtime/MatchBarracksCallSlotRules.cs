@@ -1,26 +1,48 @@
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 
 namespace Game.UI
 {
     /// <summary>
-    /// Barracks call buttons on the 3-col command grid (12 slots).
-    /// Last row = first three roles; second-to-last row = the next three.
+    /// Barracks command buttons on the 3-col grid (12 slots, 1-based UI order):
+    /// 1 upgrade, 2 empty, 3 titan, 4–6 siege/flying/super, 7–9 melee/ranged/caster, 10–12 heroes.
     /// </summary>
     public static class MatchBarracksCallSlotRules
     {
-        public const int PredLastRowStart = 6;
-        public const int LastRowStart = 9;
+        public const int BarracksUpgradeSlot = 0;
+        public const int TitanDeploySlot = 2;
+        public const int SiegeRowStart = 3;
+        public const int MeleeRowStart = 6;
+        public const int HeroDeploySlotStart = 9;
+
+        public static bool TryGetHeroDeploySlot(int heroSlot, out int slotIndex)
+        {
+            if (!HeroRules.IsValidHeroSlot(heroSlot))
+            {
+                slotIndex = -1;
+                return false;
+            }
+
+            slotIndex = HeroDeploySlotStart + heroSlot - 1;
+            return true;
+        }
+
+        public static bool TryGetTitanDeploySlot(out int slotIndex)
+        {
+            slotIndex = TitanDeploySlot;
+            return true;
+        }
 
         public static bool TryGetCommandSlot(UnitRole role, out int slotIndex)
         {
             slotIndex = role switch
             {
-                UnitRole.Melee => LastRowStart,
-                UnitRole.Ranged => LastRowStart + 1,
-                UnitRole.Caster => LastRowStart + 2,
-                UnitRole.Siege => PredLastRowStart,
-                UnitRole.Flying => PredLastRowStart + 1,
-                UnitRole.Super => PredLastRowStart + 2,
+                UnitRole.Siege => SiegeRowStart,
+                UnitRole.Flying => SiegeRowStart + 1,
+                UnitRole.Super => SiegeRowStart + 2,
+                UnitRole.Melee => MeleeRowStart,
+                UnitRole.Ranged => MeleeRowStart + 1,
+                UnitRole.Caster => MeleeRowStart + 2,
                 _ => -1,
             };
             return slotIndex >= 0;

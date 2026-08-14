@@ -93,6 +93,20 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CreateProjectileVisual_Hero_BuildsFireballLikeCaster()
+        {
+            var projectile = BuildProjectile(UnitRole.Hero, ownerSlot: 2);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            Assert.IsNotNull(visual.transform.Find("Core"), "Priest shot should use the caster fireball");
+            Assert.IsNotNull(visual.GetComponent<TrailRenderer>(), "Priest shot should carry a TrailRenderer");
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
         public void CreateProjectileVisual_BuildingShot_IsSmallOwnerColoredBolt()
         {
             var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 3, fromBuilding: true, sourceBuildingId: "BUILDING_TOWER");

@@ -70,6 +70,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ShouldShowDeploy_IdleOrDeadOnly()
+        {
+            Assert.IsTrue(TitanRules.ShouldShowDeploy(TitanLifecycleState.IdleAtBase));
+            Assert.IsTrue(TitanRules.ShouldShowDeploy(TitanLifecycleState.Dead));
+            Assert.IsFalse(TitanRules.ShouldShowDeploy(TitanLifecycleState.Locked));
+            Assert.IsFalse(TitanRules.ShouldShowDeploy(TitanLifecycleState.Deployed));
+        }
+
+        [Test]
         public void ShouldShowResearchBar_WhileLockedWithProgressOrGates()
         {
             Assert.IsTrue(TitanRules.ShouldShowResearchBar(TitanLifecycleState.Locked, 0f, gatesMet: true));

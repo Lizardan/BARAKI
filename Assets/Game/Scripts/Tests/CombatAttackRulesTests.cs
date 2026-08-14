@@ -36,6 +36,28 @@ namespace Game.Tests
             Assert.IsTrue(CombatAttackRules.UsesProjectile(UnitRole.Super));
             Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Siege));
             Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Melee));
+            Assert.IsFalse(CombatAttackRules.UsesProjectile(UnitRole.Hero));
+        }
+
+        [Test]
+        public void UsesProjectile_PriestHero_ShootsLikeCaster()
+        {
+            Assert.IsTrue(CombatAttackRules.UsesProjectile(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.PriestSlot));
+            Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.PriestSlot));
+            Assert.IsFalse(CombatAttackRules.UsesProjectile(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.KingSlot));
+            Assert.IsFalse(CombatAttackRules.UsesProjectile(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.PaladinSlot));
         }
 
         [Test]
@@ -203,6 +225,73 @@ namespace Game.Tests
                     combat.Tick(0.05f);
                 }
             });
+        }
+
+        [Test]
+        public void Tick_PriestHeroAttack_AppliesDamageOnProjectileImpact()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph);
+
+            var priestStats = new UnitCombatStats(
+                UnitRole.Hero,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 40f,
+                damageMax: 40f,
+                attackSpeed: 10f,
+                attackRange: 30f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            var victimStats = new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 0.1f,
+                attackRange: 1f,
+                moveSpeed: 0f,
+                goldBounty: 1);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane0);
+            var meet = lane0.Path.ProjectDistance(Vector3.zero);
+            combat.SpawnUnit(
+                0,
+                GameIds.Lanes.Center,
+                UnitRole.Hero,
+                priestStats,
+                meet,
+                formationOffset: new Vector3(0f, 0f, -4f),
+                isHero: true,
+                heroSlot: HeroAbilityRules.PriestSlot);
+            var victim = combat.SpawnUnit(
+                1,
+                GameIds.Lanes.Center,
+                UnitRole.Melee,
+                victimStats,
+                meet,
+                formationOffset: new Vector3(0f, 0f, 4f));
+
+            for (var i = 0; i < 40; i++)
+            {
+                combat.Tick(0.05f);
+                if (combat.Projectiles.Count > 0)
+                {
+                    break;
+                }
+            }
+
+            Assert.Greater(combat.Projectiles.Count, 0);
+            var hpWhenFired = victim.CurrentHp;
+            combat.Tick(0.04f);
+            Assert.AreEqual(hpWhenFired, victim.CurrentHp, 0.01f, "Damage should not apply before projectile impact");
+            combat.Tick(1f);
+            Assert.Less(victim.CurrentHp, hpWhenFired);
         }
     }
 }

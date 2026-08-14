@@ -218,7 +218,10 @@ namespace Game.Gameplay.Match
         public bool TryGetResearch(int buildingInstanceId, out BuildingResearchState research) =>
             _research.TryGet(buildingInstanceId, out research);
 
-        /// <summary>Editor/debug: complete all queued research for an owner immediately.</summary>
+        /// <summary>
+        /// Editor/debug: complete all queued building research for an owner immediately,
+        /// and finish the titan research bar if it is still locked.
+        /// </summary>
         public void DebugCompleteResearchForOwner(int ownerSlot)
         {
             if (ownerSlot < 0 || ownerSlot >= _players.Count)
@@ -247,6 +250,32 @@ namespace Game.Gameplay.Match
                 // MatchResearchQueue.Tick ignores non-positive delta; use a tiny step to flush.
                 TickResearch(0.001f);
             }
+
+            DebugCompleteTitanResearch(ownerSlot);
+        }
+
+        void DebugCompleteTitanResearch(int ownerSlot)
+        {
+            if (ownerSlot < 0 || ownerSlot >= _titanStates.Count)
+            {
+                return;
+            }
+
+            var titan = _titanStates[ownerSlot];
+            if (titan.State != TitanLifecycleState.Locked)
+            {
+                return;
+            }
+
+            var gatesMet = TitanRules.AreResearchGatesMet(_players[ownerSlot], _heroRosters[ownerSlot]);
+            if (!TitanRules.ShouldShowResearchBar(titan.State, titan.ResearchProgressSeconds, gatesMet))
+            {
+                return;
+            }
+
+            titan.ResearchProgressSeconds = TitanRules.ResearchSeconds;
+            titan.State = TitanLifecycleState.IdleAtBase;
+            SpawnParkedTitan(ownerSlot);
         }
 
         /// <summary>
@@ -1383,9 +1412,10 @@ namespace Game.Gameplay.Match
                         continue;
                     }
 
-                    state.State = HeroLifecycleState.Dead;
-                    state.DeployedUnitId = null;
                     state.StartDeathCooldown(HeroRules.DeathCooldownSeconds);
+                    state.State = HeroLifecycleState.IdleAtBase;
+                    state.DeployedUnitId = null;
+                    SpawnParkedHero(slot, heroSlot);
                     return;
                 }
             }
@@ -1418,8 +1448,9 @@ namespace Game.Gameplay.Match
 
         /// <summary>
         /// Passive titan research bar: advances while Main lvl 3 is met, all 3 heroes are
-        /// hired and every hero idles at base. Freezes (no reset) otherwise. Completes at 180s
-        /// → IdleAtBase with a parked titan.
+        /// hired and every hero idles at base. Freezes (no reset) while any hero is deployed.
+        /// Death returns the hero to IdleAtBase (parked) so the bar can continue. Completes at
+        /// 180s → IdleAtBase with a parked titan.
         /// </summary>
         void TickTitans(float deltaTime)
         {

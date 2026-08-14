@@ -18,13 +18,16 @@ namespace Game.Gameplay.Match
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
-            var visual = projectile.AttackerRole == UnitRole.Caster
+            var visual = UsesFireballVisual(projectile.AttackerRole)
                 ? CreateFireball(projectile)
                 : CreateBolt(projectile, ResolveBoltScale(projectile));
 
             visual.transform.SetParent(parent, false);
             return visual;
         }
+
+        static bool UsesFireballVisual(UnitRole role) =>
+            role is UnitRole.Caster or UnitRole.Hero;
 
         static float ResolveBoltScale(CombatProjectileState projectile)
         {

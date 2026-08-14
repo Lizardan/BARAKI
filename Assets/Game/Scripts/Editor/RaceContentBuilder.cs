@@ -138,7 +138,7 @@ namespace Game.Editor
             so.FindProperty("_damageMin").floatValue = 35f;
             so.FindProperty("_damageMax").floatValue = 45f;
             so.FindProperty("_attackSpeed").floatValue = 1f;
-            so.FindProperty("_attackRange").floatValue = 1.5f;
+            so.FindProperty("_attackRange").floatValue = slot == 3 ? 12f : 1.5f;
             so.FindProperty("_moveSpeed").floatValue = 4f;
             so.FindProperty("_goldBounty").intValue = 80;
             so.ApplyModifiedPropertiesWithoutUndo();

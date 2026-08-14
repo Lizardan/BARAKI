@@ -58,6 +58,15 @@ namespace Game.Gameplay.Match
             && gold >= HireGold;
 
         /// <summary>
+        /// Main hire button is visible for each unlocked slot that is not yet hired.
+        /// Slot N unlocks at main level N — previous slots do not have to be hired first.
+        /// </summary>
+        public static bool ShouldShowHire(HeroLifecycleState state, int heroSlot, int mainLevel) =>
+            state == HeroLifecycleState.None
+            && IsValidHeroSlot(heroSlot)
+            && heroSlot <= GetMaxHiredHeroes(mainLevel);
+
+        /// <summary>
         /// Can the hero be deployed from a specific barracks? Death cooldown is per-barracks:
         /// only the barracks the hero last fought from is blocked until its cooldown expires.
         /// </summary>
@@ -72,5 +81,9 @@ namespace Game.Gameplay.Match
                 or HeroLifecycleState.Dead
             && barracksDeathCooldownRemaining <= 0f
             && state != HeroLifecycleState.Deployed;
+
+        /// <summary>Barracks deploy button is visible while the hero is idle at base or dead (CD).</summary>
+        public static bool ShouldShowDeploy(HeroLifecycleState state) =>
+            state is HeroLifecycleState.IdleAtBase or HeroLifecycleState.Dead;
     }
 }

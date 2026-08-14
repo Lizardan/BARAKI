@@ -1743,8 +1743,8 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMax,
                 _random);
 
-            if (CombatAttackRules.UsesMeleeStrike(attacker.Role)
-                || !CombatAttackRules.UsesProjectile(attacker.Role))
+            if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot)
+                || !CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -2008,7 +2008,7 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMax,
                 _random);
 
-            if (CombatAttackRules.UsesMeleeStrike(attacker.Role))
+            if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -2018,7 +2018,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            if (!CombatAttackRules.UsesProjectile(attacker.Role))
+            if (!CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
                 ApplyDamage(attacker, target, rawDamage, attacker.OwnerSlot);
                 return;

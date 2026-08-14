@@ -66,6 +66,10 @@ namespace Game.Gameplay.Match
             && state is TitanLifecycleState.IdleAtBase or TitanLifecycleState.Dead
             && barracksDeathCooldownRemaining <= 0f;
 
+        /// <summary>Barracks deploy button is visible while the titan is idle at base or dead (CD).</summary>
+        public static bool ShouldShowDeploy(TitanLifecycleState state) =>
+            state is TitanLifecycleState.IdleAtBase or TitanLifecycleState.Dead;
+
         public static UnitCombatStats ScaleForTitan(UnitCombatStats baseStats)
         {
             return new UnitCombatStats(

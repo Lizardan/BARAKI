@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Game.Gameplay.Match
 {
@@ -10,7 +9,7 @@ namespace Game.Gameplay.Match
         /// <summary>Barracks this hero was last deployed from (death cooldown is per-barracks).</summary>
         public int? LastDeployBarracksInstanceId { get; set; }
         /// <summary>Per-barracks death cooldown: barracks instance id → remaining seconds.</summary>
-        readonly Dictionary<int, float> _barracksDeathCooldowns = new();
+        readonly BarracksCooldownMap _barracksDeathCooldowns = new();
         public int? DeployedUnitId { get; set; }
         /// <summary>Hero level (per-match, survives death/redeploy). Starts at 1.</summary>
         public int Level { get; set; } = HeroLevelRules.StartingLevel;
@@ -24,9 +23,7 @@ namespace Game.Gameplay.Match
 
         /// <summary>Remaining death cooldown for a specific barracks. 0 = deploy allowed there.</summary>
         public float GetDeathCooldown(int barracksInstanceId) =>
-            _barracksDeathCooldowns.TryGetValue(barracksInstanceId, out var remaining)
-                ? remaining
-                : 0f;
+            _barracksDeathCooldowns.Get(barracksInstanceId);
 
         public float GetLastBarracksDeathCooldown() =>
             LastDeployBarracksInstanceId.HasValue
@@ -43,10 +40,7 @@ namespace Game.Gameplay.Match
             }
 
             LastDeployBarracksInstanceId = barracksInstanceId;
-            if (remainingSeconds > 0f)
-            {
-                _barracksDeathCooldowns[barracksInstanceId] = remainingSeconds;
-            }
+            _barracksDeathCooldowns.Set(barracksInstanceId, remainingSeconds);
         }
 
         public void MarkDeployedFrom(int barracksInstanceId)
@@ -59,36 +53,11 @@ namespace Game.Gameplay.Match
         {
             if (LastDeployBarracksInstanceId.HasValue)
             {
-                _barracksDeathCooldowns[LastDeployBarracksInstanceId.Value] = seconds;
+                _barracksDeathCooldowns.Set(LastDeployBarracksInstanceId.Value, seconds);
             }
         }
 
-        public void TickCooldowns(float deltaTime)
-        {
-            var expired = default(List<int>);
-            foreach (var pair in _barracksDeathCooldowns)
-            {
-                var remaining = pair.Value - deltaTime;
-                if (remaining <= 0f)
-                {
-                    (expired ??= new List<int>()).Add(pair.Key);
-                }
-                else
-                {
-                    _barracksDeathCooldowns[pair.Key] = remaining;
-                }
-            }
-
-            if (expired == null)
-            {
-                return;
-            }
-
-            foreach (var barracksId in expired)
-            {
-                _barracksDeathCooldowns.Remove(barracksId);
-            }
-        }
+        public void TickCooldowns(float deltaTime) => _barracksDeathCooldowns.Tick(deltaTime);
 
         /// <summary>
         /// Grants XP and applies any level-ups (handles multi-level jumps).

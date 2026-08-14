@@ -93,7 +93,7 @@ namespace Game.Tests
             controller.Combat.ResolveMeleeImpact(
                 new CombatMeleeStrikeState(enemyKiller.UnitId, hero.UnitId, 5000f, 0.1f));
 
-            Assert.AreEqual(HeroLifecycleState.Dead, slot.State);
+            Assert.AreEqual(HeroLifecycleState.IdleAtBase, slot.State);
             Assert.AreEqual(40, slot.Xp);
         }
 

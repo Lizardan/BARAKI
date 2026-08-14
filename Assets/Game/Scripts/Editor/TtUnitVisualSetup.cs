@@ -91,7 +91,7 @@ namespace Game.Editor
                 UnitRole.Ranged),
             UnitSetup("Human_Caster", UnitVisualPrefabBuilder.HumanCasterPath, "Human_Caster",
                 "TT_Mage", "animation_infantry/Staff",
-                "staff_01_idle", "staff_03_run", "staff_04_attack_A", "staff_06_death_A",
+                "staff_01_idle", "staff_03_run", "staff_07_cast_A", "staff_06_death_A",
                 UnitRole.Caster),
             UnitSetup("Human_Siege", UnitVisualPrefabBuilder.HumanSiegePath, "Human_Siege",
                 "TT_Mounted_Knight", "animation_cavalry/cavalry_spear_A",
@@ -137,7 +137,7 @@ namespace Game.Editor
                 "animation_cavalry/cavalry_staff",
                 "cav_staff_01_idle",
                 "cav_staff_03_run",
-                "cav_staff_04_attack",
+                "cav_staff_07_cast_A",
                 "cav_staff_06_death_A",
                 UnitRole.Hero,
                 heroSlot: 3),
@@ -348,6 +348,7 @@ namespace Game.Editor
             var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             if (existing != null)
             {
+                SyncControllerClips(existing, setup);
                 return existing;
             }
 
@@ -372,6 +373,33 @@ namespace Game.Editor
 
             EditorUtility.SetDirty(controller);
             return controller;
+        }
+
+        static void SyncControllerClips(AnimatorController controller, VisualSetup setup)
+        {
+            var sm = controller.layers[0].stateMachine;
+            foreach (var child in sm.states)
+            {
+                var state = child.state;
+                if (state.name == UnitCombatAnimatorDriver.StandState)
+                {
+                    state.motion = LoadClip(setup, setup.IdleClip);
+                }
+                else if (state.name == UnitCombatAnimatorDriver.WalkState)
+                {
+                    state.motion = LoadClip(setup, setup.WalkClip);
+                }
+                else if (state.name == UnitCombatAnimatorDriver.AttackState)
+                {
+                    state.motion = LoadClip(setup, setup.AttackClip);
+                }
+                else if (state.name == UnitCombatAnimatorDriver.DeathState)
+                {
+                    state.motion = LoadClip(setup, setup.DeathClip);
+                }
+            }
+
+            EditorUtility.SetDirty(controller);
         }
 
         static AnimatorState AddState(AnimatorStateMachine sm, string name, AnimationClip clip)
