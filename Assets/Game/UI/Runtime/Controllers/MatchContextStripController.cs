@@ -275,7 +275,7 @@ namespace Game.UI.Controllers
             }
 
             if (_visualCatalog != null
-                && _visualCatalog.TryGetPortrait(raceId, unit.Role, out var portrait)
+                && _visualCatalog.TryGetPortrait(raceId, unit.Role, unit.HeroSlot, out var portrait)
                 && portrait != null
                 && _portrait != null)
             {

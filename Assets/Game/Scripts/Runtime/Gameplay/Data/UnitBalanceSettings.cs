@@ -50,5 +50,44 @@ namespace Game.Gameplay.Data
             _maxMana = definition.MaxMana;
             _marchSpeedOverride = definition.MarchSpeedOverride;
         }
+
+        public void CopyFrom(HeroDefinition definition, float hpArmorDamageMultiplier = 1f)
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            var scale = hpArmorDamageMultiplier > 0f ? hpArmorDamageMultiplier : 1f;
+            _maxHp = definition.MaxHp * scale;
+            _armor = definition.Armor * scale;
+            _damageMin = definition.DamageMin * scale;
+            _damageMax = definition.DamageMax * scale;
+            _attackSpeed = definition.AttackSpeed;
+            _attackRange = definition.AttackRange;
+            _moveSpeed = definition.MoveSpeed;
+            _goldBounty = definition.GoldBounty;
+            _maxMana = 0f;
+            _marchSpeedOverride = 0f;
+        }
+
+        public void CopyFrom(UnitBalanceSettings other)
+        {
+            if (other == null)
+            {
+                return;
+            }
+
+            _maxHp = other._maxHp;
+            _armor = other._armor;
+            _damageMin = other._damageMin;
+            _damageMax = other._damageMax;
+            _attackSpeed = other._attackSpeed;
+            _attackRange = other._attackRange;
+            _moveSpeed = other._moveSpeed;
+            _goldBounty = other._goldBounty;
+            _maxMana = other._maxMana;
+            _marchSpeedOverride = other._marchSpeedOverride;
+        }
     }
 }

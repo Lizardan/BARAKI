@@ -4,6 +4,7 @@ using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
+using Game.UI;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -472,6 +473,130 @@ namespace Game.Tests
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
             Assert.GreaterOrEqual(UnitVisualAccent.CountAccents(prefab.transform), 4,
                 "Human_Melee should expose the four TT team-color textures.");
+        }
+
+        [Test]
+        public void TryGetPrefab_HumanHeroSlots_ReturnCanonicalHeroPaths()
+        {
+            AssertHeroPrefab(1, "Human_Hero1", UnitVisualPrefabBuilder.HumanHero1Path);
+            AssertHeroPrefab(2, "Human_Hero2", UnitVisualPrefabBuilder.HumanHero2Path);
+            AssertHeroPrefab(3, "Human_Hero3", UnitVisualPrefabBuilder.HumanHero3Path);
+        }
+
+        [Test]
+        public void TryGetPrefab_HumanTitan_ReturnsCanonicalUnitsPath()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, out var prefab));
+            Assert.IsNotNull(prefab);
+            Assert.AreEqual("Human_Titan", prefab.name);
+            Assert.AreEqual(UnitVisualPrefabBuilder.HumanTitanPath, AssetDatabase.GetAssetPath(prefab));
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Hero, 1, out var hero1));
+            Assert.AreNotEqual(hero1, prefab);
+        }
+
+        [Test]
+        public void HumanHero1Prefab_UsesOwnControllerNotMelee()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Hero, 1, out var prefab));
+            var animator = prefab.GetComponentInChildren<Animator>();
+            Assert.IsNotNull(animator);
+            Assert.IsNotNull(animator.runtimeAnimatorController);
+            Assert.AreEqual("Human_Hero1", animator.runtimeAnimatorController.name);
+            Assert.AreEqual(
+                TtUnitVisualSetup.HeroControllersFolder + "/Human_Hero1.controller",
+                AssetDatabase.GetAssetPath(animator.runtimeAnimatorController));
+        }
+
+        [Test]
+        public void HumanChampionPrefabs_HaveCombatAnimatorAndTeamColor()
+        {
+            var cases = new[]
+            {
+                (UnitRole.Hero, 1),
+                (UnitRole.Hero, 2),
+                (UnitRole.Hero, 3),
+                (UnitRole.Titan, 0),
+            };
+            foreach (var (role, slot) in cases)
+            {
+                Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, slot, out var prefab), $"{role}:{slot}");
+                var animator = prefab.GetComponentInChildren<Animator>();
+                Assert.IsNotNull(animator, $"{prefab.name} Animator");
+                var controller = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+                Assert.IsNotNull(controller, $"{prefab.name} controller");
+                var names = new System.Collections.Generic.HashSet<string>();
+                foreach (var parameter in controller.parameters)
+                {
+                    names.Add(parameter.name);
+                }
+
+                Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.SpeedParam), $"{prefab.name} Speed");
+                Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.AttackParam), $"{prefab.name} Attack");
+                Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.DeathParam), $"{prefab.name} Death");
+
+                var tt = prefab.GetComponentInChildren<TtUnitTeamColor>(true);
+                Assert.IsNotNull(tt, $"{prefab.name} TtUnitTeamColor");
+                Assert.AreEqual(4, tt.TeamTextures.Length, $"{prefab.name} team textures");
+            }
+        }
+
+        [Test]
+        public void HumanChampionPrefabs_HaveUnitBalanceSettings()
+        {
+            AssertBalance("Human_Hero1", UnitRole.Hero, 1, 600f);
+            AssertBalance("Human_Hero2", UnitRole.Hero, 2, 600f);
+            AssertBalance("Human_Hero3", UnitRole.Hero, 3, 600f);
+            AssertBalance("Human_Titan", UnitRole.Titan, 0, 1800f);
+        }
+
+        [Test]
+        public void ResolveBase_TitanPrefab_DoesNotApplyScaleForTitanAgain()
+        {
+            RaceContentBuilder.EnsureContent();
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, out var prefab));
+            var settings = prefab.GetComponentInChildren<UnitBalanceSettings>(true);
+            Assert.IsNotNull(settings);
+            var stats = UnitStatsResolver.ResolveBase(
+                new RaceCatalogCombatCatalog(raceCatalog),
+                _catalog,
+                GameIds.Races.Human,
+                UnitRole.Titan);
+            Assert.AreEqual(settings.MaxHp, stats.MaxHp, 0.001f);
+            Assert.AreEqual(settings.Armor, stats.Armor, 0.001f);
+        }
+
+        void AssertHeroPrefab(int slot, string name, string path)
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Hero, slot, out var prefab));
+            Assert.IsNotNull(prefab);
+            Assert.AreEqual(name, prefab.name);
+            Assert.AreEqual(path, AssetDatabase.GetAssetPath(prefab));
+        }
+
+        void AssertBalance(string name, UnitRole role, int heroSlot, float expectedHp)
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, out var prefab), name);
+            var settings = prefab.GetComponentInChildren<UnitBalanceSettings>(true);
+            Assert.IsNotNull(settings, $"{name} UnitBalanceSettings");
+            Assert.AreEqual(expectedHp, settings.MaxHp, 0.001f, $"{name} MaxHp");
+        }
+    }
+
+    public sealed class MatchInspectorFormattingHeroTests
+    {
+        [Test]
+        public void FormatHeroName_UsesTtModelNames()
+        {
+            Assert.AreEqual("TT_King", MatchInspectorFormatting.FormatHeroName(1));
+            Assert.AreEqual("TT_Mounted_Paladin", MatchInspectorFormatting.FormatHeroName(2));
+            Assert.AreEqual("TT_Mounted_Priest", MatchInspectorFormatting.FormatHeroName(3));
+        }
+
+        [Test]
+        public void FormatRole_Titan_IsRussian()
+        {
+            Assert.AreEqual("Титан", MatchInspectorFormatting.FormatRole(UnitRole.Titan));
         }
     }
 

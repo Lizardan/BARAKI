@@ -990,7 +990,7 @@ namespace Game.Gameplay.Combat
         {
             if (role == UnitRole.Hero || role == UnitRole.Titan)
             {
-                return ResolveChampionSnapshotStats(role, ownerSlot, level, heroSlot, catalog, snapshotHp);
+                return ResolveChampionSnapshotStats(role, ownerSlot, level, heroSlot, catalog);
             }
 
             if (catalog != null && ownerSlot >= 0 && ownerSlot < _players.Count)
@@ -1021,46 +1021,17 @@ namespace Game.Gameplay.Combat
             int ownerSlot,
             int level,
             int heroSlot,
-            ICombatUnitCatalog catalog,
-            float snapshotHp)
+            ICombatUnitCatalog catalog)
         {
-            var slot = heroSlot >= 1 ? heroSlot : 1;
-            UnitCombatStats stats;
             var player = ownerSlot >= 0 && ownerSlot < _players.Count ? _players[ownerSlot] : null;
-            var race = player != null ? catalog?.GetRace(player.RaceId) : null;
-            var hero = race?.GetHeroBySlot(slot);
-            if (hero != null)
-            {
-                stats = new UnitCombatStats(
-                    role,
-                    hero.MaxHp,
-                    hero.Armor,
-                    hero.DamageMin,
-                    hero.DamageMax,
-                    hero.AttackSpeed,
-                    hero.AttackRange,
-                    hero.MoveSpeed,
-                    hero.GoldBounty);
-            }
-            else
-            {
-                stats = new UnitCombatStats(
-                    role,
-                    600f,
-                    4f,
-                    35f,
-                    45f,
-                    1f,
-                    1.5f,
-                    4f,
-                    80);
-            }
-
-            if (role == UnitRole.Titan)
-            {
-                stats = TitanRules.ScaleForTitan(stats);
-            }
-
+            var raceId = player != null ? player.RaceId : GameIds.Races.Human;
+            var slot = role == UnitRole.Hero && heroSlot >= 1 ? heroSlot : 0;
+            var stats = UnitStatsResolver.ResolveBase(
+                catalog,
+                UnitVisualCatalog,
+                raceId,
+                role,
+                slot);
             stats = HeroLevelRules.ApplyLevelGrowth(stats, Math.Max(1, level));
             return RaceUpgradeStatsRules.Apply(stats, player);
         }

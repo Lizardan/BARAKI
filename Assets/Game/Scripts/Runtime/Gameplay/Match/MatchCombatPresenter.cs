@@ -434,7 +434,7 @@ namespace Game.Gameplay.Match
             Transform model = null;
             Animator animator = null;
             if (_visualCatalog != null
-                && _visualCatalog.TryGetPrefab(raceId, unit.Role, out var prefab)
+                && _visualCatalog.TryGetPrefab(raceId, unit.Role, unit.HeroSlot, out var prefab)
                 && prefab != null)
             {
                 var instance = Instantiate(prefab, root);

@@ -49,7 +49,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| HERO-001 | TT_King = слот 1 (HERO_HUMAN_1) | done | GDD Heroes.md; UnitVisualCatalog hero prefab = Human_Hero (nested TT_King + TtUnitTeamColor + Human_Melee.controller) |
+| HERO-001 | TT_King = слот 1 (HERO_HUMAN_1) | done | GDD Heroes.md; UnitVisualCatalog hero1 prefab = Human_Hero1 (TT_King + TtUnitTeamColor + Human_Hero1.controller) |
 | HERO-002 | XP/Level: HeroLevelRules, слот-уровень, XP за килл героем и за здания | done | HeroLevelRulesTests, HeroMatchControllerTests |
 | HERO-003 | Рост статов с уровнем + редеплой с сохранённым уровнем | done | ResolveHeroStats tests |
 | HERO-004 | Снапшот v11: HeroLevel/HeroXp/HeroXpNext | done | snapshot tests |
@@ -95,9 +95,9 @@ provides: [backlog, priorities, acceptance_criteria]
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | PRE-001 | Бонус-оверлей 60с + random timeout + скрытость | done | Каркас UI; 12 пустых слотов; матч не паузится; скрытность = UI-only (чужие пики не отображаются, данные технически у всех), пики в снапшоте v13 (reconnect/migration-safe); см. `Bonuses.md` |
-| PRE-002 | Титан: полоска над main + выпуск как герой | done | Полоска **180 s** над main (main L3 + все 3 героя IdleAtBase; deployed/dead → заморозка без сброса) → титан появляется на базе; выпуск из живого barracks **2500g**; CD после смерти **300 s** как герой (без повторной полоски); XP/статы как герой (**3×** базовых); снапшот v15 (титан + ростер героев); см. `Heroes.md` |
+| PRE-002 | Титан: полоска над main + выпуск как герой | done | Полоска **180 s** над main (main L3 + все 3 героя IdleAtBase; deployed/dead → заморозка без сброса) → титан появляется на базе; выпуск из живого barracks **2500g**; CD после смерти **300 s** как герой (без повторной полоски); XP как герой; статы сид **3×** на префаб `Human_Titan`; снапшот v15 (титан + ростер героев); см. `Heroes.md` |
 | PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | pending | Research main L2+; FoW off для себя; отложенный выбор 1 ability; см. `Upgrades.md` |
-| PRE-004 | Контент героев слот 2–3 (baseline) | pending | Имена/статы/визуал; иначе 3 hero-бонуса пустые |
+| PRE-004 | Контент героев слот 2–3 (baseline) | done | Имена TT_Mounted_Paladin / TT_Mounted_Priest; визуал Human_Hero2/3; статы baseline на префабе (`UnitBalanceSettings`); 3 hero-бонуса больше не пустые по контенту |
 | PRE-005 | Наполнение умений бонусов + blessing abilities | pending | 10 replacement + 2 unique + список blessing — постепенно, отдельными задачами |
 
 ---
@@ -117,6 +117,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-14 | PRE-004: герои 2–3 (TT_Mounted_Paladin / TT_Mounted_Priest) и титан (TT_Peasant); префабы Human_Hero1/2/3 + Human_Titan; баланс на UnitBalanceSettings; каталог по слоту |
 | 2026-08-14 | PRE-002: титан — полоска 180s над main (3 героя IdleAtBase) → idle на базе; выпуск 2500g с казарм как герой; CD 300s без повторной полоски; снапшот v15 (ростер героев + titan level/xp/CD + HeroSlot/IsParkedAtBase) |
 | 2026-08-14 | Titan механика финализирована: пассивное изучение 180s (main L3 + 3 героя на базе, заморозка при deployed/dead) вместо hire; summon 2500g из barracks, CD 300s, статы 3× героя; GDD обновлён (Heroes/Buildings/Economy/Units/Bonuses/AI/Core/Upgrades) |
 | 2026-08-14 | GDD hygiene + каркас Bonuses/Titan/Divine Blessing; Phase PRE-RACE2 |

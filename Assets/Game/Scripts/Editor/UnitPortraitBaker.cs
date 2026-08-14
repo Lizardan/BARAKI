@@ -62,7 +62,30 @@ namespace Game.Editor
                 set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
             }
 
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1Portrait", $"{PortraitFolder}/{prefix}_Hero1.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2Portrait", $"{PortraitFolder}/{prefix}_Hero2.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3Portrait", $"{PortraitFolder}/{prefix}_Hero3.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait", $"{PortraitFolder}/{prefix}_Titan.png");
+
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void BakeChampion(
+            UnitVisualCatalog catalog,
+            SerializedProperty set,
+            string raceId,
+            UnitRole role,
+            int heroSlot,
+            string portraitProperty,
+            string assetPath)
+        {
+            if (!catalog.TryGetPrefab(raceId, role, heroSlot, out var prefab) || prefab == null)
+            {
+                return;
+            }
+
+            var texture = RenderPrefabThumbnail(prefab, assetPath);
+            set.FindPropertyRelative(portraitProperty).objectReferenceValue = texture;
         }
 
         static Texture2D RenderPrefabThumbnail(GameObject prefab, string assetPath)

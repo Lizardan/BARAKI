@@ -36,6 +36,7 @@ namespace Game.UI
             UnitRole.Siege => "Осадный",
             UnitRole.Flying => "Летающий",
             UnitRole.Super => "Супер",
+            UnitRole.Titan => "Титан",
             _ => role.ToString(),
         };
 
@@ -46,8 +47,8 @@ namespace Game.UI
         public static string FormatHeroName(int heroSlot) => heroSlot switch
         {
             1 => "TT_King",
-            2 => "Герой 2",
-            3 => "Герой 3",
+            2 => "TT_Mounted_Paladin",
+            3 => "TT_Mounted_Priest",
             _ => $"Герой {heroSlot}",
         };
 

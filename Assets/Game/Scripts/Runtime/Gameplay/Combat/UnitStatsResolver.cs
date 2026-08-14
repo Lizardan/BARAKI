@@ -6,7 +6,7 @@ namespace Game.Gameplay.Combat
     /// <summary>
     /// Resolves a combat unit's stats. Prefab-based <see cref="UnitBalanceSettings"/> are
     /// authoritative when present (balance lives on the prefab); otherwise falls back to the
-    /// race's <see cref="UnitDefinition"/> ScriptableObject.
+    /// race's <see cref="UnitDefinition"/> / <see cref="HeroDefinition"/>.
     /// </summary>
     public static class UnitStatsResolver
     {
@@ -15,29 +15,58 @@ namespace Game.Gameplay.Combat
             UnitVisualCatalog visualCatalog,
             string raceId,
             UnitRole role,
-            MatchPlayerState player = null)
+            MatchPlayerState player = null,
+            int heroSlot = 0)
         {
-            UnitCombatStats stats;
+            var stats = ResolveBase(catalog, visualCatalog, raceId, role, heroSlot);
+            return RaceUpgradeStatsRules.Apply(stats, player);
+        }
+
+        /// <summary>
+        /// Prefab or definition stats without race upgrades or hero level growth.
+        /// Titan prefab settings are used as-is; missing titan settings fall back to 3× hero slot 1.
+        /// </summary>
+        public static UnitCombatStats ResolveBase(
+            ICombatUnitCatalog catalog,
+            UnitVisualCatalog visualCatalog,
+            string raceId,
+            UnitRole role,
+            int heroSlot = 0)
+        {
             if (visualCatalog != null
-                && visualCatalog.TryGetPrefab(raceId, role, out var prefab)
+                && visualCatalog.TryGetPrefab(raceId, role, heroSlot, out var prefab)
                 && prefab != null)
             {
                 var settings = prefab.GetComponentInChildren<UnitBalanceSettings>();
                 if (settings != null)
                 {
-                    stats = BuildFromSettings(settings, role);
-                    return RaceUpgradeStatsRules.Apply(stats, player);
+                    return BuildFromSettings(settings, role);
                 }
+            }
+
+            if (role == UnitRole.Hero)
+            {
+                var slot = heroSlot >= 1 ? heroSlot : 1;
+                var hero = catalog?.GetRace(raceId)?.GetHeroBySlot(slot);
+                return hero != null ? FromHero(hero, UnitRole.Hero) : ChampionFallback(UnitRole.Hero);
+            }
+
+            if (role == UnitRole.Titan)
+            {
+                var hero = catalog?.GetRace(raceId)?.GetHeroBySlot(1);
+                var baseStats = hero != null
+                    ? FromHero(hero, UnitRole.Titan)
+                    : ChampionFallback(UnitRole.Titan);
+                return TitanRules.ScaleForTitan(baseStats);
             }
 
             var definition = catalog?.GetRace(raceId)?.GetUnit(role);
             if (definition != null)
             {
-                stats = UnitCombatStats.FromDefinition(definition);
-                return RaceUpgradeStatsRules.Apply(stats, player);
+                return UnitCombatStats.FromDefinition(definition);
             }
 
-            return RaceUpgradeStatsRules.Apply(DefaultStats(role), player);
+            return DefaultStats(role);
         }
 
         public static UnitCombatStats BuildFromSettings(UnitBalanceSettings settings, UnitRole role)
@@ -59,6 +88,21 @@ namespace Game.Gameplay.Combat
                 settings.GoldBounty,
                 ResolveMaxMana(settings, role));
         }
+
+        static UnitCombatStats FromHero(HeroDefinition hero, UnitRole role) =>
+            new(
+                role,
+                hero.MaxHp,
+                hero.Armor,
+                hero.DamageMin,
+                hero.DamageMax,
+                hero.AttackSpeed,
+                hero.AttackRange,
+                hero.MoveSpeed,
+                hero.GoldBounty);
+
+        static UnitCombatStats ChampionFallback(UnitRole role) =>
+            new(role, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);
 
         static float ResolveMaxMana(UnitBalanceSettings settings, UnitRole role)
         {

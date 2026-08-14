@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEditor;
@@ -9,10 +10,11 @@ using UnityEngine;
 namespace Game.Editor
 {
     /// <summary>
-    /// Builds the six Human combat unit prefabs from ToonyTinyPeople TT_RTS assets:
+    /// Builds Human combat unit, hero, and titan prefabs from ToonyTinyPeople TT_RTS assets:
     /// copies the matched TT prefab, points its Animator at a generated controller built
     /// from TT clips (Stand/Walk/Attack/Death), zeroes root transform (native TT scale, yaw 0),
-    /// and attaches <see cref="TtUnitTeamColor"/> with the four slot-color texture variants.
+    /// attaches <see cref="TtUnitTeamColor"/> with the four slot-color texture variants,
+    /// and preserves or seeds <see cref="UnitBalanceSettings"/>.
     /// Run via menu BARAKI/Units/Rebuild TT Prefabs.
     /// </summary>
     public static class TtUnitVisualSetup
@@ -21,7 +23,9 @@ namespace Game.Editor
         const string TtAnimationRoot = "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/animation";
         const string TtTextureFolder =
             "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/models/materials/color/Units/Textures";
+        const string LegacyHumanHeroPath = "Assets/Game/Prefabs/Races/Humans/Heroes/Human_Hero.prefab";
         public const string ControllersFolder = "Assets/Game/Prefabs/Races/Humans/Units/Controllers";
+        public const string HeroControllersFolder = "Assets/Game/Prefabs/Races/Humans/Heroes/Controllers";
 
         static readonly string[] TeamTextureFiles =
         {
@@ -31,39 +35,148 @@ namespace Game.Editor
             "TT_RTS_Units_yellow.tga",
         };
 
-        readonly struct RoleSetup
+        readonly struct VisualSetup
         {
-            public readonly UnitRole Role;
+            public readonly string PrefabName;
+            public readonly string DestinationPath;
+            public readonly string ControllerPath;
             public readonly string TtPrefab;
             public readonly string AnimSubfolder;
             public readonly string IdleClip;
             public readonly string WalkClip;
             public readonly string AttackClip;
             public readonly string DeathClip;
+            public readonly UnitRole Role;
+            public readonly int HeroSlot;
+            public readonly bool SeedTitanStats;
 
-            public RoleSetup(
-                UnitRole role, string ttPrefab, string animSubfolder,
-                string idleClip, string walkClip, string attackClip, string deathClip)
+            public VisualSetup(
+                string prefabName,
+                string destinationPath,
+                string controllerPath,
+                string ttPrefab,
+                string animSubfolder,
+                string idleClip,
+                string walkClip,
+                string attackClip,
+                string deathClip,
+                UnitRole role,
+                int heroSlot = 0,
+                bool seedTitanStats = false)
             {
-                Role = role;
+                PrefabName = prefabName;
+                DestinationPath = destinationPath;
+                ControllerPath = controllerPath;
                 TtPrefab = ttPrefab;
                 AnimSubfolder = animSubfolder;
                 IdleClip = idleClip;
                 WalkClip = walkClip;
                 AttackClip = attackClip;
                 DeathClip = deathClip;
+                Role = role;
+                HeroSlot = heroSlot;
+                SeedTitanStats = seedTitanStats;
             }
         }
 
-        static readonly RoleSetup[] RoleSetups =
+        static readonly VisualSetup[] Setups =
         {
-            new(UnitRole.Melee, "TT_Heavy_Infantry", "animation_infantry/Infantry", "infantry_01_idle", "infantry_03_run", "infantry_04_attack_A", "infantry_06_death_A"),
-            new(UnitRole.Ranged, "TT_Archer", "animation_infantry/Archer", "archer_01_idle", "archer_03_run", "archer_04_attack_A", "archer_06_death_A"),
-            new(UnitRole.Caster, "TT_Mage", "animation_infantry/Staff", "staff_01_idle", "staff_03_run", "staff_04_attack_A", "staff_06_death_A"),
-            new(UnitRole.Siege, "TT_Mounted_Knight", "animation_cavalry/cavalry_spear_A", "cav_spear_A_01_idle", "cav_spear_A_03_run", "cav_spear_A_04_attack", "cav_spear_A_06_death_A"),
-            new(UnitRole.Flying, "Fly_Hors", "animation_cavalry/cavalry", "cavalry_01_idle", "cavalry_03_run", "cavalry_04_attack", "cavalry_06_death_A"),
-            new(UnitRole.Super, "machines/TT_Ballista_lvl3", "animation_machines/Ballista", "ballista_01_idle", "ballista_02_move", "ballista_03_attack", "ballista_05_death"),
+            UnitSetup("Human_Melee", UnitVisualPrefabBuilder.HumanMeleePath, "Human_Melee",
+                "TT_Heavy_Infantry", "animation_infantry/Infantry",
+                "infantry_01_idle", "infantry_03_run", "infantry_04_attack_A", "infantry_06_death_A",
+                UnitRole.Melee),
+            UnitSetup("Human_Ranged", UnitVisualPrefabBuilder.HumanRangedPath, "Human_Ranged",
+                "TT_Archer", "animation_infantry/Archer",
+                "archer_01_idle", "archer_03_run", "archer_04_attack_A", "archer_06_death_A",
+                UnitRole.Ranged),
+            UnitSetup("Human_Caster", UnitVisualPrefabBuilder.HumanCasterPath, "Human_Caster",
+                "TT_Mage", "animation_infantry/Staff",
+                "staff_01_idle", "staff_03_run", "staff_04_attack_A", "staff_06_death_A",
+                UnitRole.Caster),
+            UnitSetup("Human_Siege", UnitVisualPrefabBuilder.HumanSiegePath, "Human_Siege",
+                "TT_Mounted_Knight", "animation_cavalry/cavalry_spear_A",
+                "cav_spear_A_01_idle", "cav_spear_A_03_run", "cav_spear_A_04_attack", "cav_spear_A_06_death_A",
+                UnitRole.Siege),
+            UnitSetup("Human_Flying", UnitVisualPrefabBuilder.HumanFlyingPath, "Human_Flying",
+                "Fly_Hors", "animation_cavalry/cavalry",
+                "cavalry_01_idle", "cavalry_03_run", "cavalry_04_attack", "cavalry_06_death_A",
+                UnitRole.Flying),
+            UnitSetup("Human_Super", UnitVisualPrefabBuilder.HumanSuperPath, "Human_Super",
+                "machines/TT_Ballista_lvl3", "animation_machines/Ballista",
+                "ballista_01_idle", "ballista_02_move", "ballista_03_attack", "ballista_05_death",
+                UnitRole.Super),
+            new(
+                "Human_Hero1",
+                UnitVisualPrefabBuilder.HumanHero1Path,
+                HeroControllersFolder + "/Human_Hero1.controller",
+                "TT_King",
+                "animation_infantry/Infantry",
+                "infantry_01_idle",
+                "infantry_03_run",
+                "infantry_04_attack_A",
+                "infantry_06_death_A",
+                UnitRole.Hero,
+                heroSlot: 1),
+            new(
+                "Human_Hero2",
+                UnitVisualPrefabBuilder.HumanHero2Path,
+                HeroControllersFolder + "/Human_Hero2.controller",
+                "TT_Mounted_Paladin",
+                "animation_cavalry/cavalry_shield",
+                "cav_shield_01_idle",
+                "cav_shield_03_run",
+                "cav_shield_04_attack",
+                "cav_shield_06_death_A",
+                UnitRole.Hero,
+                heroSlot: 2),
+            new(
+                "Human_Hero3",
+                UnitVisualPrefabBuilder.HumanHero3Path,
+                HeroControllersFolder + "/Human_Hero3.controller",
+                "TT_Mounted_Priest",
+                "animation_cavalry/cavalry_staff",
+                "cav_staff_01_idle",
+                "cav_staff_03_run",
+                "cav_staff_04_attack",
+                "cav_staff_06_death_A",
+                UnitRole.Hero,
+                heroSlot: 3),
+            new(
+                "Human_Titan",
+                UnitVisualPrefabBuilder.HumanTitanPath,
+                ControllersFolder + "/Human_Titan.controller",
+                "TT_Peasant",
+                "animation_infantry/Infantry",
+                "infantry_01_idle",
+                "infantry_03_run",
+                "infantry_04_attack_A",
+                "infantry_06_death_A",
+                UnitRole.Titan,
+                seedTitanStats: true),
         };
+
+        static VisualSetup UnitSetup(
+            string prefabName,
+            string destinationPath,
+            string controllerName,
+            string ttPrefab,
+            string animSubfolder,
+            string idleClip,
+            string walkClip,
+            string attackClip,
+            string deathClip,
+            UnitRole role) =>
+            new(
+                prefabName,
+                destinationPath,
+                ControllersFolder + "/" + controllerName + ".controller",
+                ttPrefab,
+                animSubfolder,
+                idleClip,
+                walkClip,
+                attackClip,
+                deathClip,
+                role);
 
         [MenuItem("BARAKI/Units/Rebuild TT Prefabs")]
         public static void RebuildFromMenu()
@@ -74,69 +187,163 @@ namespace Game.Editor
         public static void RebuildAll()
         {
             EnsureFolder(ControllersFolder);
+            EnsureFolder(HeroControllersFolder);
             EnsureFolder(UnitVisualPrefabBuilder.HumanPath);
+            EnsureFolder(UnitVisualPrefabBuilder.HumanHeroesPath);
+            RenameLegacyHeroPrefab();
 
-            foreach (var setup in RoleSetups)
+            foreach (var setup in Setups)
             {
-                DeleteStaleController(setup.Role);
+                DeleteStaleController(setup.ControllerPath);
                 BuildPrefab(setup);
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             UnitVisualPrefabBuilder.EnsureContent();
-            Debug.Log("TtUnitVisualSetup: rebuilt " + RoleSetups.Length + " Human TT prefabs.");
+            Debug.Log("TtUnitVisualSetup: rebuilt " + Setups.Length + " Human TT prefabs.");
         }
 
-        static void DeleteStaleController(UnitRole role)
+        static void RenameLegacyHeroPrefab()
         {
-            var path = GetControllerPath(role);
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(LegacyHumanHeroPath) == null)
+            {
+                return;
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(UnitVisualPrefabBuilder.HumanHero1Path) != null)
+            {
+                return;
+            }
+
+            var error = AssetDatabase.RenameAsset(LegacyHumanHeroPath, "Human_Hero1");
+            if (!string.IsNullOrEmpty(error))
+            {
+                throw new InvalidOperationException(
+                    "Failed to rename Human_Hero.prefab to Human_Hero1: " + error);
+            }
+        }
+
+        static void DeleteStaleController(string path)
+        {
             if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null)
             {
                 AssetDatabase.DeleteAsset(path);
             }
         }
 
-        static void BuildPrefab(RoleSetup setup)
+        static void BuildPrefab(VisualSetup setup)
         {
-            var dstPath = GetDestinationPath(setup.Role);
-            var controllerPath = GetControllerPath(setup.Role);
-            var controller = GetOrCreateController(controllerPath, setup);
-
-            var root = PrefabUtility.LoadPrefabContents(TtPrefabFolder + "/" + setup.TtPrefab + ".prefab");
+            UnitBalanceSettings preserved = null;
             try
             {
-                root.name = "Human_" + setup.Role;
-                root.transform.localScale = Vector3.one;
-                root.transform.localRotation = Quaternion.identity;
-                root.transform.localPosition = Vector3.zero;
+                preserved = CaptureBalance(setup.DestinationPath);
+                var controller = GetOrCreateController(setup.ControllerPath, setup);
 
-                var animator = root.GetComponentInChildren<Animator>(true);
-                if (animator == null)
+                var root = PrefabUtility.LoadPrefabContents(TtPrefabFolder + "/" + setup.TtPrefab + ".prefab");
+                try
                 {
-                    throw new InvalidOperationException(setup.TtPrefab + " has no Animator");
+                    root.name = setup.PrefabName;
+                    root.transform.localScale = Vector3.one;
+                    root.transform.localRotation = Quaternion.identity;
+                    root.transform.localPosition = Vector3.zero;
+
+                    var animator = root.GetComponentInChildren<Animator>(true);
+                    if (animator == null)
+                    {
+                        throw new InvalidOperationException(setup.TtPrefab + " has no Animator");
+                    }
+
+                    animator.runtimeAnimatorController = controller;
+                    animator.applyRootMotion = false;
+
+                    var ttColor = root.GetComponent<TtUnitTeamColor>();
+                    if (ttColor == null)
+                    {
+                        ttColor = root.AddComponent<TtUnitTeamColor>();
+                    }
+
+                    ttColor.TeamTextures = LoadTeamTextures();
+
+                    var settings = root.GetComponent<UnitBalanceSettings>();
+                    if (settings == null)
+                    {
+                        settings = root.AddComponent<UnitBalanceSettings>();
+                    }
+
+                    if (preserved != null)
+                    {
+                        settings.CopyFrom(preserved);
+                    }
+                    else
+                    {
+                        SeedBalance(settings, setup);
+                    }
+
+                    PrefabUtility.SaveAsPrefabAsset(root, setup.DestinationPath);
                 }
-
-                animator.runtimeAnimatorController = controller;
-                animator.applyRootMotion = false;
-
-                var ttColor = root.GetComponent<TtUnitTeamColor>();
-                if (ttColor == null)
+                finally
                 {
-                    ttColor = root.AddComponent<TtUnitTeamColor>();
+                    PrefabUtility.UnloadPrefabContents(root);
                 }
-
-                ttColor.TeamTextures = LoadTeamTextures();
-
-                PrefabUtility.SaveAsPrefabAsset(root, dstPath);
             }
             finally
             {
-                PrefabUtility.UnloadPrefabContents(root);
+                if (preserved != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(preserved.gameObject);
+                }
             }
         }
 
-        static AnimatorController GetOrCreateController(string path, RoleSetup setup)
+        static UnitBalanceSettings CaptureBalance(string dstPath)
+        {
+            var destPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(dstPath);
+            var existing = destPrefab != null
+                ? destPrefab.GetComponentInChildren<UnitBalanceSettings>(true)
+                : null;
+            if (existing == null)
+            {
+                return null;
+            }
+
+            var temp = new GameObject("TtBalanceCapture");
+            temp.hideFlags = HideFlags.HideAndDontSave;
+            var copy = temp.AddComponent<UnitBalanceSettings>();
+            copy.CopyFrom(existing);
+            return copy;
+        }
+
+        static void SeedBalance(UnitBalanceSettings settings, VisualSetup setup)
+        {
+            var race = LoadHumanRace();
+            if (race == null)
+            {
+                return;
+            }
+
+            if (setup.Role == UnitRole.Hero)
+            {
+                settings.CopyFrom(race.GetHeroBySlot(setup.HeroSlot));
+                return;
+            }
+
+            if (setup.SeedTitanStats)
+            {
+                settings.CopyFrom(race.GetHeroBySlot(1), TitanRules.BaseStatMultiplier);
+                return;
+            }
+
+            settings.CopyFrom(race.GetUnit(setup.Role));
+        }
+
+        static RaceDefinition LoadHumanRace()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(UnitBalanceSetup.RaceCatalogPath);
+            return catalog?.GetRace(GameIds.Races.Human);
+        }
+
+        static AnimatorController GetOrCreateController(string path, VisualSetup setup)
         {
             var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             if (existing != null)
@@ -201,7 +408,7 @@ namespace Game.Editor
             };
         }
 
-        static AnimationClip LoadClip(RoleSetup setup, string clipName)
+        static AnimationClip LoadClip(VisualSetup setup, string clipName)
         {
             var fbxPath = TtAnimationRoot + "/" + setup.AnimSubfolder + "/" + clipName + ".FBX";
             foreach (var obj in AssetDatabase.LoadAllAssetsAtPath(fbxPath))
@@ -230,21 +437,6 @@ namespace Game.Editor
 
             return textures;
         }
-
-        static string GetDestinationPath(UnitRole role) =>
-            role switch
-            {
-                UnitRole.Melee => UnitVisualPrefabBuilder.HumanMeleePath,
-                UnitRole.Ranged => UnitVisualPrefabBuilder.HumanRangedPath,
-                UnitRole.Caster => UnitVisualPrefabBuilder.HumanCasterPath,
-                UnitRole.Siege => UnitVisualPrefabBuilder.HumanSiegePath,
-                UnitRole.Flying => UnitVisualPrefabBuilder.HumanFlyingPath,
-                UnitRole.Super => UnitVisualPrefabBuilder.HumanSuperPath,
-                _ => throw new ArgumentOutOfRangeException(nameof(role), role, null),
-            };
-
-        static string GetControllerPath(UnitRole role) =>
-            ControllersFolder + "/Human_" + role + ".controller";
 
         static void EnsureFolder(string path)
         {

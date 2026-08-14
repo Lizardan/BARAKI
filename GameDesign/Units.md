@@ -56,9 +56,11 @@ unlock: titan_research_complete    # полоска 180s над main (main L3 + 
 deploy_building: BUILDING_BARRACKS
 deploy_gold: 2500
 cooldown_after_death: 300
-stat_multiplier_vs_hero: 3.0
+stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan; рантайм не множит снова
 xp_leveling: same_as_hero
-note: Отдельный тип (не 4-й hero slot); полоска над main, появление на базе, выпуск 2500g как герой; CD 300s без повторной полоски; см. Heroes.md
+visual: TT_Peasant
+visual_prefab: Human_Titan
+note: Отдельный тип (не 4-й hero slot); полоска над main, появление на базе, выпуск 2500g как герой; CD 300s без повторной полоски; баланс на префабе; см. Heroes.md
 mvp: true
 ```
 
@@ -253,5 +255,5 @@ note: Сильный осадный дальний бой; приоритет �
 | Super (MVP) | **Сильный осадный дальний** юнит; приоритет зданий |
 | MVP расы | **Идентичны** по статам и механикам |
 | Стартовые расы | **1:** `RACE_HUMAN` (+2 слота TBD) |
-| Титан | Отдельный тип `UNIT_TYPE_TITAN`; полоска 180s над main → idle на базе; выпуск 2500g; CD 300s как герой; статы 3× героя |
+| Титан | Отдельный тип `UNIT_TYPE_TITAN`; полоска 180s над main → idle на базе; выпуск 2500g; CD 300s как герой; визуал `TT_Peasant`; статы сид 3× на префаб, дальше баланс на префабе |
 | Бонусы | 12 слотов per race; см. `Bonuses.md` |

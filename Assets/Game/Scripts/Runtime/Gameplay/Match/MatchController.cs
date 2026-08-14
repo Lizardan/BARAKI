@@ -1621,73 +1621,23 @@ namespace Game.Gameplay.Match
 
         UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
-            var race = CombatCatalog?.GetRace(player.RaceId);
-            var hero = race?.GetHeroBySlot(heroSlot);
-            UnitCombatStats stats;
-            if (hero != null)
-            {
-                stats = new UnitCombatStats(
-                    UnitRole.Hero,
-                    hero.MaxHp,
-                    hero.Armor,
-                    hero.DamageMin,
-                    hero.DamageMax,
-                    hero.AttackSpeed,
-                    hero.AttackRange,
-                    hero.MoveSpeed,
-                    hero.GoldBounty);
-            }
-            else
-            {
-                stats = new UnitCombatStats(
-                    UnitRole.Hero,
-                    600f,
-                    4f,
-                    35f,
-                    45f,
-                    1f,
-                    1.5f,
-                    4f,
-                    80);
-            }
-
+            var stats = UnitStatsResolver.ResolveBase(
+                CombatCatalog,
+                UnitVisualCatalog,
+                player.RaceId,
+                UnitRole.Hero,
+                heroSlot);
             stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
             return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
         UnitCombatStats ResolveTitanStats(MatchPlayerState player, int level = HeroLevelRules.StartingLevel)
         {
-            var race = CombatCatalog?.GetRace(player.RaceId);
-            var hero = race?.GetHeroBySlot(1);
-            UnitCombatStats stats;
-            if (hero != null)
-            {
-                stats = new UnitCombatStats(
-                    UnitRole.Titan,
-                    hero.MaxHp,
-                    hero.Armor,
-                    hero.DamageMin,
-                    hero.DamageMax,
-                    hero.AttackSpeed,
-                    hero.AttackRange,
-                    hero.MoveSpeed,
-                    hero.GoldBounty);
-            }
-            else
-            {
-                stats = new UnitCombatStats(
-                    UnitRole.Titan,
-                    600f,
-                    4f,
-                    35f,
-                    45f,
-                    1f,
-                    1.5f,
-                    4f,
-                    80);
-            }
-
-            stats = TitanRules.ScaleForTitan(stats);
+            var stats = UnitStatsResolver.ResolveBase(
+                CombatCatalog,
+                UnitVisualCatalog,
+                player.RaceId,
+                UnitRole.Titan);
             stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
             return RaceUpgradeStatsRules.Apply(stats, player);
         }
