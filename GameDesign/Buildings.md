@@ -175,7 +175,7 @@ max_level: 3
 max_hp: 2000
 armor: 5
 abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC, UPG_MAIN_DIVINE_BLESSING, MAIN_EXTRA_ABILITY_MENU, TITAN_SUMMON]
-player_actions: [hire_hero, summon_titan, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
+player_actions: [hire_hero, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
 upgrade_costs: [2000, 3000]
 gates:
   stat_upgrade_max: main_level * 3
@@ -288,9 +288,9 @@ mvp: true
 
 | Building | Player can |
 |----------|------------|
-| Main (alive) | Upgrade main level, passive gold, **stat tracks**, **magic**, hire heroes, **titan research** (main L3 + 3 героя на базе), Divine Blessing / extra ability |
+| Main (alive) | Upgrade main level, passive gold, **stat tracks**, **magic**, hire heroes; **полоска титана** над зданием (main L3 + 3 героя на базе, не кнопка hire), Divine Blessing / extra ability |
 | Main (ruins) | **Ничего** |
-| Barracks (alive) | Upgrade level, **manual call**, **Deploy hero** (1000g) / **Summon titan** (2500g, instant) |
+| Barracks (alive) | Upgrade level, **manual call**, **Deploy hero** (1000g) / **Deploy titan** (2500g, instant, после появления на базе) |
 | Barracks (ruins) | **Ничего** |
 | Tower (alive) | Target mode + **race tower upgrades** |
 | Tower (ruins) | **Ничего** |
@@ -302,16 +302,19 @@ id: TITAN_SUMMON
 building: BUILDING_MAIN
 research_gold: 0
 research_sec: 180
+research_bar: above_main_building
 gates:
   main_level: 3
   heroes_hired: all_3
   heroes_idle_at_base: all_3
 freeze_on: [hero_deployed, hero_dead]
-summon_building: BUILDING_BARRACKS
-summon_gold: 2500
+appears_at_base_on_complete: true
+deploy_building: BUILDING_BARRACKS
+deploy_gold: 2500
 cooldown_after_death: 300
+re_research_after_death: false
 mvp: true
-note: Пассивное изучение в main; summon из живого barracks за 2500g. См. Heroes.md
+note: Полоска над main (не hire); титан появляется на базе; выпуск из живого barracks за 2500g. См. Heroes.md
 
 id: UPG_MAIN_DIVINE_BLESSING
 building: BUILDING_MAIN

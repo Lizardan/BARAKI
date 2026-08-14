@@ -52,13 +52,13 @@ mvp: true
 id: UNIT_TYPE_TITAN
 combat_role: elite_hero_scale
 targets: nearest_enemy_in_lane
-unlock: titan_research_complete    # пассивное изучение 180s в main (main L3 + 3 героя на базе)
-summon_building: BUILDING_BARRACKS
-summon_gold: 2500
+unlock: titan_research_complete    # полоска 180s над main (main L3 + 3 героя на базе) → idle на базе
+deploy_building: BUILDING_BARRACKS
+deploy_gold: 2500
 cooldown_after_death: 300
 stat_multiplier_vs_hero: 3.0
 xp_leveling: same_as_hero
-note: Отдельный тип (не 4-й hero slot); пассивное изучение, summon за 2500g, CD 300s; см. Heroes.md
+note: Отдельный тип (не 4-й hero slot); полоска над main, появление на базе, выпуск 2500g как герой; CD 300s без повторной полоски; см. Heroes.md
 mvp: true
 ```
 
@@ -253,5 +253,5 @@ note: Сильный осадный дальний бой; приоритет �
 | Super (MVP) | **Сильный осадный дальний** юнит; приоритет зданий |
 | MVP расы | **Идентичны** по статам и механикам |
 | Стартовые расы | **1:** `RACE_HUMAN` (+2 слота TBD) |
-| Титан | Отдельный тип `UNIT_TYPE_TITAN`; пассивное изучение 180s, summon 2500g, CD 300s, статы 3× героя |
+| Титан | Отдельный тип `UNIT_TYPE_TITAN`; полоска 180s над main → idle на базе; выпуск 2500g; CD 300s как герой; статы 3× героя |
 | Бонусы | 12 слотов per race; см. `Bonuses.md` |

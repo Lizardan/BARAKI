@@ -459,6 +459,8 @@ namespace Game.UI.Controllers
                     DeployReadyHero,
                     $"Выпуск героя в lane\n{HeroRules.DeployGold}g · мгновенно");
 
+                PopulateTitanCommand();
+
                 if (barracks != null && building.IsIntact && !barracks.IsRuins)
                 {
                     PopulateManualCallCommands(barracks, player);
@@ -789,6 +791,65 @@ namespace Game.UI.Controllers
                 }
 
                 return;
+            }
+        }
+
+        void PopulateTitanCommand()
+        {
+            var controller = _matchRuntime?.Controller;
+            var titan = controller?.GetTitanState(_localPlayerSlot);
+            if (titan == null
+                || titan.State is not (TitanLifecycleState.IdleAtBase or TitanLifecycleState.Dead))
+            {
+                return;
+            }
+
+            SetCommand(
+                2,
+                MatchUpgradeLabelRules.FormatTitanDeployButton(TitanRules.DeployGold),
+                CanDeployTitan(),
+                DeployTitan,
+                MatchUpgradeLabelRules.FormatTitanDeployTooltip(TitanRules.DeployGold));
+        }
+
+        bool CanDeployTitan()
+        {
+            var controller = _matchRuntime?.Controller;
+            var titan = controller?.GetTitanState(_localPlayerSlot);
+            var player = FindLocalPlayer(controller);
+            if (titan == null || player == null || _selectedBuildingInstanceId < 0)
+            {
+                return false;
+            }
+
+            var building = controller.Buildings.GetByInstanceId(_selectedBuildingInstanceId);
+            if (building == null || !building.IsIntact || building.OwnerSlot != _localPlayerSlot)
+            {
+                return false;
+            }
+
+            return TitanRules.CanDeploy(
+                titan.State,
+                titan.GetDeathCooldown(_selectedBuildingInstanceId),
+                player.Gold,
+                barracksIntact: true);
+        }
+
+        void DeployTitan()
+        {
+            var controller = _matchRuntime?.Controller;
+            if (controller == null || _selectedBuildingInstanceId < 0)
+            {
+                return;
+            }
+
+            if (MatchNetworkCommands.IsAvailable)
+            {
+                MatchNetworkCommands.RequestDeployTitan(_selectedBuildingInstanceId);
+            }
+            else
+            {
+                controller.TryDeployTitan(_localPlayerSlot, _selectedBuildingInstanceId);
             }
         }
 

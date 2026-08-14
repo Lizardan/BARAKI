@@ -53,7 +53,8 @@ namespace Game.Gameplay.Combat
             return attackerRole is UnitRole.Ranged
                 or UnitRole.Flying
                 or UnitRole.Caster
-                or UnitRole.Hero;
+                or UnitRole.Hero
+                or UnitRole.Titan;
         }
 
         public static float GetAttackIntervalSeconds(float attackSpeed)

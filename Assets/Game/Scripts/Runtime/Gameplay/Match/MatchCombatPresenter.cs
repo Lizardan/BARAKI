@@ -189,6 +189,8 @@ namespace Game.Gameplay.Match
                         Time.deltaTime);
                 }
 
+                visual.IsParkedAtBase = unit.IsParkedAtBase;
+
                 var facing = unit.FacingDirection;
                 facing.y = 0f;
                 if (facing.sqrMagnitude > 0.0001f)

@@ -35,6 +35,7 @@ namespace Game.Gameplay.Match
             [SerializeField] private GameObject _flying;
             [SerializeField] private GameObject _super;
             [SerializeField] private GameObject _hero;
+            [SerializeField] private GameObject _titan;
 
             [SerializeField] private Texture2D _meleePortrait;
             [SerializeField] private Texture2D _rangedPortrait;
@@ -43,6 +44,7 @@ namespace Game.Gameplay.Match
             [SerializeField] private Texture2D _flyingPortrait;
             [SerializeField] private Texture2D _superPortrait;
             [SerializeField] private Texture2D _heroPortrait;
+            [SerializeField] private Texture2D _titanPortrait;
 
             public GameObject Melee => _melee;
             public GameObject Ranged => _ranged;
@@ -61,6 +63,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Flying => _flying,
                 UnitRole.Super => _super,
                 UnitRole.Hero => _hero,
+                UnitRole.Titan => _titan != null ? _titan : _hero,
                 _ => null,
             };
 
@@ -73,6 +76,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Flying => _flyingPortrait,
                 UnitRole.Super => _superPortrait,
                 UnitRole.Hero => _heroPortrait,
+                UnitRole.Titan => _titanPortrait != null ? _titanPortrait : _heroPortrait,
                 _ => null,
             };
         }

@@ -28,6 +28,27 @@ namespace Game.Gameplay.Match
                 ? remaining
                 : 0f;
 
+        public float GetLastBarracksDeathCooldown() =>
+            LastDeployBarracksInstanceId.HasValue
+                ? GetDeathCooldown(LastDeployBarracksInstanceId.Value)
+                : 0f;
+
+        public void RestoreDeathCooldown(int barracksInstanceId, float remainingSeconds)
+        {
+            _barracksDeathCooldowns.Clear();
+            if (barracksInstanceId <= 0)
+            {
+                LastDeployBarracksInstanceId = null;
+                return;
+            }
+
+            LastDeployBarracksInstanceId = barracksInstanceId;
+            if (remainingSeconds > 0f)
+            {
+                _barracksDeathCooldowns[barracksInstanceId] = remainingSeconds;
+            }
+        }
+
         public void MarkDeployedFrom(int barracksInstanceId)
         {
             LastDeployBarracksInstanceId = barracksInstanceId;

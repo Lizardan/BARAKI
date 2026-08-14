@@ -258,6 +258,200 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V14_PreservesTitanFields()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        TitanResearchProgressSeconds = 90.5f,
+                        TitanUnlocked = true,
+                        TitanState = (int)TitanLifecycleState.IdleAtBase,
+                    },
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 1,
+                        TitanResearchProgressSeconds = 0f,
+                        TitanUnlocked = false,
+                        TitanState = (int)TitanLifecycleState.Locked,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(90.5f, restored.Players[0].TitanResearchProgressSeconds, 0.01f);
+            Assert.IsTrue(restored.Players[0].TitanUnlocked);
+            Assert.AreEqual((int)TitanLifecycleState.IdleAtBase, restored.Players[0].TitanState);
+            Assert.AreEqual(0f, restored.Players[1].TitanResearchProgressSeconds, 0.01f);
+            Assert.IsFalse(restored.Players[1].TitanUnlocked);
+            Assert.AreEqual((int)TitanLifecycleState.Locked, restored.Players[1].TitanState);
+        }
+
+        [Test]
+        public void Capture_RoundTrip_PreservesTitanFields()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var titan = controller.GetTitanState(0);
+            titan.ResearchProgressSeconds = 120f;
+            titan.State = TitanLifecycleState.IdleAtBase;
+
+            var restored = MatchSnapshotCodec.Deserialize(
+                MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(controller)));
+
+            Assert.AreEqual(120f, restored.Players[0].TitanResearchProgressSeconds, 0.01f);
+            Assert.IsTrue(restored.Players[0].TitanUnlocked);
+            Assert.AreEqual((int)TitanLifecycleState.IdleAtBase, restored.Players[0].TitanState);
+            Assert.AreEqual((int)TitanLifecycleState.Locked, restored.Players[1].TitanState);
+        }
+
+        [Test]
+        public void RoundTrip_V15_PreservesHeroRosterAndTitanProgression()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        TitanResearchProgressSeconds = 180f,
+                        TitanUnlocked = true,
+                        TitanState = (int)TitanLifecycleState.Dead,
+                        TitanLevel = 4,
+                        TitanXp = 40,
+                        TitanLastBarracksInstanceId = 7,
+                        TitanDeathCooldownRemaining = 120.5f,
+                    },
+                    new MatchPlayerSnapshot { Slot = 1 },
+                },
+                Heroes = new[]
+                {
+                    new MatchHeroSlotSnapshot
+                    {
+                        OwnerSlot = 0,
+                        HeroSlot = 1,
+                        State = (int)HeroLifecycleState.IdleAtBase,
+                        Level = 5,
+                        Xp = 20,
+                        LastDeployBarracksInstanceId = 3,
+                        DeathCooldownRemaining = 10f,
+                    },
+                    new MatchHeroSlotSnapshot
+                    {
+                        OwnerSlot = 0,
+                        HeroSlot = 2,
+                        State = (int)HeroLifecycleState.Dead,
+                        Level = 2,
+                        Xp = 0,
+                    },
+                },
+                Units = new[]
+                {
+                    new MatchUnitSnapshot
+                    {
+                        UnitId = 11,
+                        OwnerSlot = 0,
+                        UnitDefId = "Hero",
+                        LaneId = GameIds.Lanes.Center,
+                        Health = 600f,
+                        IsAlive = true,
+                        Level = 5,
+                        Xp = 20,
+                        HeroSlot = 1,
+                        IsParkedAtBase = true,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(4, restored.Players[0].TitanLevel);
+            Assert.AreEqual(40, restored.Players[0].TitanXp);
+            Assert.AreEqual(7, restored.Players[0].TitanLastBarracksInstanceId);
+            Assert.AreEqual(120.5f, restored.Players[0].TitanDeathCooldownRemaining, 0.01f);
+            Assert.AreEqual(2, restored.Heroes.Length);
+            Assert.AreEqual((int)HeroLifecycleState.IdleAtBase, restored.Heroes[0].State);
+            Assert.AreEqual(5, restored.Heroes[0].Level);
+            Assert.AreEqual(20, restored.Heroes[0].Xp);
+            Assert.AreEqual(3, restored.Heroes[0].LastDeployBarracksInstanceId);
+            Assert.AreEqual(10f, restored.Heroes[0].DeathCooldownRemaining, 0.01f);
+            Assert.AreEqual(1, restored.Units[0].HeroSlot);
+            Assert.IsTrue(restored.Units[0].IsParkedAtBase);
+        }
+
+        [Test]
+        public void Capture_Apply_RestoresHeroRosterAndTitanOnFreshController()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            host.Players[0].Gold = 5000;
+            host.Players[0].MainLevel = 3;
+            Assert.IsTrue(host.TryHireHero(0, 1));
+            host.Tick(HeroRules.HireResearchSeconds);
+            host.GetHeroRoster(0).Get(1).AddXp(HeroLevelRules.XpToNext(1));
+
+            var titan = host.GetTitanState(0);
+            titan.ResearchProgressSeconds = 90f;
+            titan.Level = 3;
+            titan.Xp = 15;
+            titan.State = TitanLifecycleState.Dead;
+            titan.MarkSummonedFrom(FindBuilding(host, 0, GameIds.Buildings.BarracksLeft).InstanceId);
+            titan.StartDeathCooldown(200f);
+
+            var bytes = MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(host));
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(MatchSnapshotCodec.Deserialize(bytes));
+
+            var restoredHero = client.GetHeroRoster(0).Get(1);
+            Assert.AreEqual(HeroLifecycleState.IdleAtBase, restoredHero.State);
+            Assert.AreEqual(2, restoredHero.Level);
+            Assert.AreEqual(0, restoredHero.Xp);
+            Assert.IsTrue(restoredHero.DeployedUnitId.HasValue);
+
+            var parked = client.Combat.GetUnit(restoredHero.DeployedUnitId.Value);
+            Assert.IsNotNull(parked);
+            Assert.IsTrue(parked.IsParkedAtBase);
+            Assert.AreEqual(1, parked.HeroSlot);
+
+            var restoredTitan = client.GetTitanState(0);
+            Assert.AreEqual(TitanLifecycleState.Dead, restoredTitan.State);
+            Assert.AreEqual(3, restoredTitan.Level);
+            Assert.AreEqual(15, restoredTitan.Xp);
+            Assert.AreEqual(90f, restoredTitan.ResearchProgressSeconds, 0.01f);
+            var left = FindBuilding(client, 0, GameIds.Buildings.BarracksLeft);
+            Assert.Greater(restoredTitan.GetDeathCooldown(left.InstanceId), 0f);
+        }
+
+        static BuildingState FindBuilding(MatchController controller, int ownerSlot, string buildingId)
+        {
+            foreach (var building in controller.Buildings.Buildings)
+            {
+                if (building.OwnerSlot == ownerSlot && building.BuildingId == buildingId)
+                {
+                    return building;
+                }
+            }
+
+            Assert.Fail($"Building {buildingId} not found.");
+            return null;
+        }
+
+        [Test]
         public void Capture_RoundTrip_PreservesBarracksTimerAndUnitAttackAnim()
         {
             var controller = new MatchController();

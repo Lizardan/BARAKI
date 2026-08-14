@@ -51,6 +51,9 @@ namespace Game.Gameplay.Networking
         public static void RequestDeployHero(int buildingInstanceId, int heroSlot) =>
             MatchNetworkAuthority.Instance?.RequestDeployHero(buildingInstanceId, heroSlot);
 
+        public static void RequestDeployTitan(int buildingInstanceId) =>
+            MatchNetworkAuthority.Instance?.RequestDeployTitan(buildingInstanceId);
+
         public static void RequestSetTowerTarget(int towerInstanceId, int unitId) =>
             MatchNetworkAuthority.Instance?.RequestSetTowerTarget(towerInstanceId, unitId);
 

@@ -936,6 +936,7 @@ namespace Game.Gameplay.Combat
                 existing.FacingDirection = facing;
                 existing.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
                 existing.AttackSwingSerial = snap.AttackSwingSerial;
+                existing.IsParkedAtBase = snap.IsParkedAtBase;
                 existing.MarchProgressDistance = _routes != null
                     && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
                     ? route.ProjectDistance(position)
@@ -949,7 +950,7 @@ namespace Game.Gameplay.Combat
                 _units.Remove(existing);
             }
 
-            var stats = ResolveSnapshotStats(role, snap.OwnerSlot, snap.Health, catalog);
+            var stats = ResolveSnapshotStats(role, snap.OwnerSlot, snap.Health, snap.Level, snap.HeroSlot, catalog);
             var unit = new MatchUnitState(
                 snap.UnitId,
                 snap.OwnerSlot,
@@ -959,12 +960,15 @@ namespace Game.Gameplay.Combat
                 Mathf.Max(0.01f, snap.Health),
                 position,
                 marchSpawnDistance: 0f,
-                isHero: role == UnitRole.Hero);
+                isHero: role == UnitRole.Hero,
+                heroSlot: snap.HeroSlot,
+                level: Math.Max(1, snap.Level));
             unit.CurrentHp = Mathf.Max(0f, snap.Health);
             unit.CurrentMana = Mathf.Max(0f, snap.Mana);
             unit.FacingDirection = facing;
             unit.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
             unit.AttackSwingSerial = snap.AttackSwingSerial;
+            unit.IsParkedAtBase = snap.IsParkedAtBase;
             if (_routes != null && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var spawnRoute))
             {
                 unit.MarchProgressDistance = spawnRoute.ProjectDistance(position);
@@ -980,8 +984,15 @@ namespace Game.Gameplay.Combat
             UnitRole role,
             int ownerSlot,
             float snapshotHp,
+            int level,
+            int heroSlot,
             ICombatUnitCatalog catalog)
         {
+            if (role == UnitRole.Hero || role == UnitRole.Titan)
+            {
+                return ResolveChampionSnapshotStats(role, ownerSlot, level, heroSlot, catalog, snapshotHp);
+            }
+
             if (catalog != null && ownerSlot >= 0 && ownerSlot < _players.Count)
             {
                 return UnitStatsResolver.Resolve(
@@ -1003,6 +1014,55 @@ namespace Game.Gameplay.Combat
                 attackRange: 1.5f,
                 moveSpeed: 4f,
                 goldBounty: 1);
+        }
+
+        UnitCombatStats ResolveChampionSnapshotStats(
+            UnitRole role,
+            int ownerSlot,
+            int level,
+            int heroSlot,
+            ICombatUnitCatalog catalog,
+            float snapshotHp)
+        {
+            var slot = heroSlot >= 1 ? heroSlot : 1;
+            UnitCombatStats stats;
+            var player = ownerSlot >= 0 && ownerSlot < _players.Count ? _players[ownerSlot] : null;
+            var race = player != null ? catalog?.GetRace(player.RaceId) : null;
+            var hero = race?.GetHeroBySlot(slot);
+            if (hero != null)
+            {
+                stats = new UnitCombatStats(
+                    role,
+                    hero.MaxHp,
+                    hero.Armor,
+                    hero.DamageMin,
+                    hero.DamageMax,
+                    hero.AttackSpeed,
+                    hero.AttackRange,
+                    hero.MoveSpeed,
+                    hero.GoldBounty);
+            }
+            else
+            {
+                stats = new UnitCombatStats(
+                    role,
+                    600f,
+                    4f,
+                    35f,
+                    45f,
+                    1f,
+                    1.5f,
+                    4f,
+                    80);
+            }
+
+            if (role == UnitRole.Titan)
+            {
+                stats = TitanRules.ScaleForTitan(stats);
+            }
+
+            stats = HeroLevelRules.ApplyLevelGrowth(stats, Math.Max(1, level));
+            return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
         public void ApplyExternalDamage(int targetUnitId, float rawDamage, int killerOwnerSlot)
@@ -2075,7 +2135,7 @@ namespace Game.Gameplay.Combat
                 ClearTarget(attacker);
             }
 
-            var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty, target.IsHero);
+            var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty, target.IsChampion);
             GrantGold(killerOwnerSlot, bounty);
             _corpses.Add(new CombatCorpseState(target));
             RemoveUnit(target);

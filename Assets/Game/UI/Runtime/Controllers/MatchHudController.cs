@@ -53,6 +53,7 @@ namespace Game.UI.Controllers
         private VisualElement _passiveGoldLayer;
         private readonly Dictionary<string, Label> _barracksLabels = new();
         private readonly Dictionary<int, VisualElement> _passiveRings = new();
+        private readonly Dictionary<int, VisualElement> _titanRings = new();
         private int _trackedBarracksCount = -1;
         private int _trackedBarracksLocalSlot = -1;
         private bool _resultsShown;
@@ -177,6 +178,7 @@ namespace Game.UI.Controllers
             {
                 ClearBarracksLabels();
                 ClearPassiveRings();
+                ClearTitanRings();
                 UpdateMigrationOverlay();
                 UpdateCommandFeedback();
                 return;
@@ -185,6 +187,7 @@ namespace Game.UI.Controllers
             UpdateTopBar(controller);
             UpdateBarracksTimers(controller);
             UpdatePassiveGoldRings(controller);
+            UpdateTitanRings(controller);
             UpdateMigrationOverlay();
             UpdateCommandFeedback();
         }
@@ -469,6 +472,7 @@ namespace Game.UI.Controllers
             _startCountdownLabel.AddToClassList(StartCountdownHiddenClass);
             ClearBarracksLabels();
             ClearPassiveRings();
+            ClearTitanRings();
         }
 
         private void ClearBarracksLabels()
@@ -614,6 +618,148 @@ namespace Game.UI.Controllers
             }
 
             _passiveRings.Clear();
+        }
+
+        void UpdateTitanRings(MatchController controller)
+        {
+            if (controller.Phase == MatchPhase.Start)
+            {
+                ClearTitanRings();
+                return;
+            }
+
+            if (_camera == null || _passiveGoldLayer == null || _passiveGoldLayer.panel == null)
+            {
+                return;
+            }
+
+            var layout = controller.Layout;
+            if (layout == null)
+            {
+                return;
+            }
+
+            var activeSlots = new HashSet<int>();
+            foreach (var player in controller.Players)
+            {
+                var titan = controller.GetTitanState(player.SlotIndex);
+                var roster = controller.GetHeroRoster(player.SlotIndex);
+                var gatesMet = TitanRules.AreResearchGatesMet(player, roster);
+                if (player.IsEliminated
+                    || titan == null
+                    || !TitanRules.ShouldShowResearchBar(
+                        titan.State,
+                        titan.ResearchProgressSeconds,
+                        gatesMet))
+                {
+                    continue;
+                }
+
+                activeSlots.Add(player.SlotIndex);
+                if (!_titanRings.TryGetValue(player.SlotIndex, out var ring))
+                {
+                    ring = CreateTitanRing();
+                    _passiveGoldLayer.Add(ring);
+                    _titanRings[player.SlotIndex] = ring;
+                }
+
+                if (player.SlotIndex >= layout.Slots.Count)
+                {
+                    ring.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                var worldPosition = layout.Slots[player.SlotIndex]
+                    .GetBuildingWorldPosition(GameIds.Buildings.Main);
+                worldPosition.y += _passiveRingWorldOffsetY * 2f;
+                var screenPoint = _camera.WorldToScreenPoint(worldPosition);
+                if (screenPoint.z <= 0f)
+                {
+                    ring.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                var panelPosition = RuntimePanelUtils.CameraTransformWorldToPanel(
+                    _passiveGoldLayer.panel,
+                    worldPosition,
+                    _camera);
+                ring.style.display = DisplayStyle.Flex;
+                ring.style.left = panelPosition.x;
+                ring.style.top = panelPosition.y;
+                ring.userData = Mathf.Clamp01(
+                    titan.ResearchProgressSeconds / TitanRules.ResearchSeconds);
+                ring.MarkDirtyRepaint();
+            }
+
+            var remove = new List<int>();
+            foreach (var pair in _titanRings)
+            {
+                if (!activeSlots.Contains(pair.Key))
+                {
+                    pair.Value.RemoveFromHierarchy();
+                    remove.Add(pair.Key);
+                }
+            }
+
+            for (var i = 0; i < remove.Count; i++)
+            {
+                _titanRings.Remove(remove[i]);
+            }
+        }
+
+        static VisualElement CreateTitanRing()
+        {
+            var ring = new VisualElement { pickingMode = PickingMode.Ignore };
+            ring.AddToClassList("match-hud__titan-ring");
+            ring.generateVisualContent += DrawTitanRing;
+            return ring;
+        }
+
+        static void DrawTitanRing(MeshGenerationContext ctx)
+        {
+            var element = ctx.visualElement;
+            var fill = element.userData is float f ? Mathf.Clamp01(f) : 0f;
+            var rect = element.contentRect;
+            if (rect.width < 1f || rect.height < 1f)
+            {
+                return;
+            }
+
+            var painter = ctx.painter2D;
+            painter.fillColor = new Color(34f / 255f, 34f / 255f, 36f / 255f, 0.85f);
+            painter.BeginPath();
+            painter.MoveTo(rect.min);
+            painter.LineTo(new Vector2(rect.xMax, rect.yMin));
+            painter.LineTo(rect.max);
+            painter.LineTo(new Vector2(rect.xMin, rect.yMax));
+            painter.ClosePath();
+            painter.Fill();
+
+            if (fill <= 0f)
+            {
+                return;
+            }
+
+            var filled = rect.width * fill;
+            painter.fillColor = new Color(155f / 255f, 93f / 255f, 229f / 255f, 1f);
+            painter.BeginPath();
+            painter.MoveTo(rect.min);
+            painter.LineTo(new Vector2(rect.xMin + filled, rect.yMin));
+            painter.LineTo(new Vector2(rect.xMin + filled, rect.yMax));
+            painter.LineTo(new Vector2(rect.xMin, rect.yMax));
+            painter.ClosePath();
+            painter.Fill();
+        }
+
+        void ClearTitanRings()
+        {
+            foreach (var ring in _titanRings.Values)
+            {
+                ring.generateVisualContent -= DrawTitanRing;
+                ring.RemoveFromHierarchy();
+            }
+
+            _titanRings.Clear();
         }
 
         private void UnsubscribeFromController()

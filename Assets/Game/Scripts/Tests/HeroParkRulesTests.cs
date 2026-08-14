@@ -13,13 +13,23 @@ namespace Game.Tests
             var layout = MatchArenaGenerator.Generate(2);
             var main = layout.Slots[0].GetBuildingWorldPosition(GameIds.Buildings.Main);
             var center = layout.Slots[0].GetBuildingWorldPosition(GameIds.Buildings.BarracksCenter);
-            var park = HeroParkRules.GetParkWorldPosition(layout, 0, 1, layout.MainToTowerDistance);
+            var             park = HeroParkRules.GetParkWorldPosition(layout, 0, 1, layout.MainToTowerDistance);
 
             var toCenter = center - main;
             var toPark = park - main;
             toCenter.y = 0f;
             toPark.y = 0f;
             Assert.Less(Vector3.Dot(toCenter.normalized, toPark.normalized), 0f);
+        }
+
+        [Test]
+        public void GetTitanParkWorldPosition_IsFurtherBehindThanHeroPark()
+        {
+            var layout = MatchArenaGenerator.Generate(2);
+            var main = layout.Slots[0].GetBuildingWorldPosition(GameIds.Buildings.Main);
+            var heroPark = HeroParkRules.GetParkWorldPosition(layout, 0, 2, layout.MainToTowerDistance);
+            var titanPark = HeroParkRules.GetTitanParkWorldPosition(layout, 0, layout.MainToTowerDistance);
+            Assert.Greater(Vector3.Distance(titanPark, main), Vector3.Distance(heroPark, main));
         }
     }
 }

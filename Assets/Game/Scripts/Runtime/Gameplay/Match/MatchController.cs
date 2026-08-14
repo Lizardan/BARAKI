@@ -12,6 +12,7 @@ namespace Game.Gameplay.Match
     {
         private readonly List<MatchPlayerState> _players = new();
         private readonly List<HeroRosterState> _heroRosters = new();
+        private readonly List<TitanState> _titanStates = new();
         private readonly BarracksWaveScheduler _waveScheduler = new();
         private readonly MatchCombatSystem _combat = new();
         private readonly BuildingRegistry _buildings = new();
@@ -58,6 +59,9 @@ namespace Game.Gameplay.Match
         public HeroRosterState GetHeroRoster(int ownerSlot) =>
             ownerSlot >= 0 && ownerSlot < _heroRosters.Count ? _heroRosters[ownerSlot] : null;
 
+        public TitanState GetTitanState(int ownerSlot) =>
+            ownerSlot >= 0 && ownerSlot < _titanStates.Count ? _titanStates[ownerSlot] : null;
+
         public void StartMatch(MatchConfig config)
         {
             if (config == null)
@@ -90,12 +94,14 @@ namespace Game.Gameplay.Match
 
             _players.Clear();
             _heroRosters.Clear();
+            _titanStates.Clear();
             for (var slot = 0; slot < config.PlayerCount; slot++)
             {
                 var raceId = config.GetRaceId(slot);
                 var startingGold = MatchRules.GetStartingGold(raceId);
                 _players.Add(new MatchPlayerState(slot, raceId, startingGold));
                 _heroRosters.Add(new HeroRosterState());
+                _titanStates.Add(new TitanState());
             }
 
             _bonusPicks = new int[config.PlayerCount];
@@ -161,6 +167,7 @@ namespace Game.Gameplay.Match
             TickResearch(deltaTime);
             TickPassiveGold(deltaTime);
             TickHeroRosters(deltaTime);
+            TickTitans(deltaTime);
             TickBarracksCallCharges(deltaTime);
             _waveScheduler.Tick(deltaTime);
             // Towers first so building shots advance in the same combat tick.
@@ -403,8 +410,26 @@ namespace Game.Gameplay.Match
                 {
                     _bonusPicks[p.Slot] = p.BonusPickSlot;
                 }
+
+                if (p.Slot < _titanStates.Count)
+                {
+                    var titan = _titanStates[p.Slot];
+                    titan.ResearchProgressSeconds = Math.Max(
+                        0f,
+                        Math.Min(TitanRules.ResearchSeconds, p.TitanResearchProgressSeconds));
+                    if (Enum.IsDefined(typeof(TitanLifecycleState), p.TitanState))
+                    {
+                        titan.State = (TitanLifecycleState)p.TitanState;
+                    }
+
+                    titan.Level = Math.Max(HeroLevelRules.StartingLevel, p.TitanLevel);
+                    titan.Xp = Math.Max(0, p.TitanXp);
+                    titan.RestoreDeathCooldown(p.TitanLastBarracksInstanceId, p.TitanDeathCooldownRemaining);
+                    titan.DeployedUnitId = null;
+                }
             }
 
+            ApplyAuthoritativeHeroes(snapshot.Heroes);
             ApplyAuthoritativeBuildings(snapshot.Buildings);
             ApplyAuthoritativeBarracks(snapshot.Barracks);
             ApplyAuthoritativeResearch(snapshot.Research);
@@ -414,6 +439,7 @@ namespace Game.Gameplay.Match
                 snapshot.SpellCasts,
                 CombatCatalog,
                 snapshot.Projectiles);
+            LinkChampionUnitsFromCombat();
 
             MatchTimeSeconds = snapshot.MatchTimeSeconds;
             _bonusPickDeadlineSeconds = Math.Max(0f, snapshot.BonusPickDeadlineSeconds);
@@ -439,6 +465,58 @@ namespace Game.Gameplay.Match
                 {
                     _clientEndedRaised = true;
                     MatchEnded?.Invoke(snapshot.WinnerSlot);
+                }
+            }
+        }
+
+        void ApplyAuthoritativeHeroes(MatchHeroSlotSnapshot[] heroes)
+        {
+            if (heroes == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < heroes.Length; i++)
+            {
+                var snap = heroes[i];
+                if (snap.OwnerSlot < 0 || snap.OwnerSlot >= _heroRosters.Count
+                    || !HeroRules.IsValidHeroSlot(snap.HeroSlot))
+                {
+                    continue;
+                }
+
+                var slot = _heroRosters[snap.OwnerSlot].Get(snap.HeroSlot);
+                if (Enum.IsDefined(typeof(HeroLifecycleState), snap.State))
+                {
+                    slot.State = (HeroLifecycleState)snap.State;
+                }
+
+                slot.Level = Math.Max(HeroLevelRules.StartingLevel, snap.Level);
+                slot.Xp = Math.Max(0, snap.Xp);
+                slot.RestoreDeathCooldown(snap.LastDeployBarracksInstanceId, snap.DeathCooldownRemaining);
+                slot.DeployedUnitId = null;
+            }
+        }
+
+        void LinkChampionUnitsFromCombat()
+        {
+            foreach (var unit in _combat.Units)
+            {
+                if (unit.IsHero && HeroRules.IsValidHeroSlot(unit.HeroSlot))
+                {
+                    var roster = GetHeroRoster(unit.OwnerSlot);
+                    if (roster != null)
+                    {
+                        roster.Get(unit.HeroSlot).DeployedUnitId = unit.UnitId;
+                    }
+                }
+                else if (unit.Role == UnitRole.Titan)
+                {
+                    var titan = GetTitanState(unit.OwnerSlot);
+                    if (titan != null)
+                    {
+                        titan.DeployedUnitId = unit.UnitId;
+                    }
                 }
             }
         }
@@ -676,6 +754,55 @@ namespace Game.Gameplay.Match
             slotState.State = HeroLifecycleState.Deployed;
             slotState.DeployedUnitId = unit.UnitId;
             slotState.MarkDeployedFrom(buildingInstanceId);
+            return true;
+        }
+
+        public bool TryDeployTitan(int ownerSlot, int buildingInstanceId)
+        {
+            if (!IsRunning || Phase == MatchPhase.Start)
+            {
+                return false;
+            }
+
+            if (ownerSlot < 0 || ownerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            var player = _players[ownerSlot];
+            if (player.IsEliminated)
+            {
+                return false;
+            }
+
+            var building = _buildings.GetByInstanceId(buildingInstanceId);
+            if (building == null
+                || !building.IsIntact
+                || building.OwnerSlot != ownerSlot
+                || !BuildingRules.IsBarracks(building.BuildingId))
+            {
+                return false;
+            }
+
+            var titan = _titanStates[ownerSlot];
+            if (!TitanRules.CanDeploy(
+                    titan.State,
+                    titan.GetDeathCooldown(buildingInstanceId),
+                    player.Gold,
+                    barracksIntact: true))
+            {
+                return false;
+            }
+
+            DespawnParkedTitan(ownerSlot);
+            var stats = ResolveTitanStats(player, titan.Level);
+            var laneId = BuildingRules.GetLaneBinding(building.BuildingId);
+            var unit = _combat.SpawnUnit(ownerSlot, laneId, UnitRole.Titan, stats, level: titan.Level);
+
+            player.Gold -= TitanRules.DeployGold;
+            titan.State = TitanLifecycleState.Deployed;
+            titan.DeployedUnitId = unit.UnitId;
+            titan.MarkSummonedFrom(buildingInstanceId);
             return true;
         }
 
@@ -1214,10 +1341,11 @@ namespace Game.Gameplay.Match
         {
             HandleKillXp(killEvent);
             HandleHeroDeath(killEvent);
+            HandleTitanDeath(killEvent);
             UnitKilled?.Invoke(killEvent);
         }
 
-        /// <summary>Grants XP to the hero slot that landed the kill (XP = victim gold bounty).</summary>
+        /// <summary>Grants XP to the champion (hero slot or titan) that landed the kill (XP = victim gold bounty).</summary>
         void HandleKillXp(UnitKillEvent killEvent)
         {
             if (killEvent.KillerUnitId <= 0)
@@ -1226,13 +1354,20 @@ namespace Game.Gameplay.Match
             }
 
             var killer = _combat.GetUnit(killEvent.KillerUnitId);
-            if (killer == null || !killer.IsHero)
+            if (killer == null || !killer.IsChampion)
             {
                 return;
             }
 
+            var xp = HeroLevelRules.GetKillXp(killEvent.GoldGranted);
+            if (killer.Role == UnitRole.Titan)
+            {
+                GetTitanState(killer.OwnerSlot)?.AddXp(xp);
+                return;
+            }
+
             var roster = GetHeroRoster(killer.OwnerSlot);
-            roster?.Get(killer.HeroSlot).AddXp(HeroLevelRules.GetKillXp(killEvent.GoldGranted));
+            roster?.Get(killer.HeroSlot).AddXp(xp);
         }
 
         void HandleHeroDeath(UnitKillEvent killEvent)
@@ -1256,11 +1391,66 @@ namespace Game.Gameplay.Match
             }
         }
 
+        void HandleTitanDeath(UnitKillEvent killEvent)
+        {
+            for (var slot = 0; slot < _titanStates.Count; slot++)
+            {
+                var titan = _titanStates[slot];
+                if (titan.DeployedUnitId != killEvent.VictimUnitId)
+                {
+                    continue;
+                }
+
+                titan.State = TitanLifecycleState.Dead;
+                titan.DeployedUnitId = null;
+                titan.StartDeathCooldown(TitanRules.DeathCooldownSeconds);
+                return;
+            }
+        }
+
         void TickHeroRosters(float deltaTime)
         {
             for (var i = 0; i < _heroRosters.Count; i++)
             {
                 _heroRosters[i].Tick(deltaTime);
+            }
+        }
+
+        /// <summary>
+        /// Passive titan research bar: advances while Main lvl 3 is met, all 3 heroes are
+        /// hired and every hero idles at base. Freezes (no reset) otherwise. Completes at 180s
+        /// → IdleAtBase with a parked titan.
+        /// </summary>
+        void TickTitans(float deltaTime)
+        {
+            for (var i = 0; i < _players.Count; i++)
+            {
+                var player = _players[i];
+                if (player.IsEliminated)
+                {
+                    continue;
+                }
+
+                var titan = _titanStates[i];
+                titan.TickCooldowns(deltaTime);
+                if (titan.State != TitanLifecycleState.Locked)
+                {
+                    continue;
+                }
+
+                if (!TitanRules.AreResearchGatesMet(player, _heroRosters[i]))
+                {
+                    continue;
+                }
+
+                titan.ResearchProgressSeconds = Math.Min(
+                    TitanRules.ResearchSeconds,
+                    titan.ResearchProgressSeconds + deltaTime);
+                if (titan.ResearchProgressSeconds >= TitanRules.ResearchSeconds)
+                {
+                    titan.State = TitanLifecycleState.IdleAtBase;
+                    SpawnParkedTitan(i);
+                }
             }
         }
 
@@ -1372,6 +1562,63 @@ namespace Game.Gameplay.Match
             slotState.DeployedUnitId = null;
         }
 
+        void SpawnParkedTitan(int ownerSlot)
+        {
+            if (Layout == null || ownerSlot < 0 || ownerSlot >= _players.Count)
+            {
+                return;
+            }
+
+            var titan = _titanStates[ownerSlot];
+            if (titan.DeployedUnitId.HasValue)
+            {
+                var existing = _combat.GetUnit(titan.DeployedUnitId.Value);
+                if (existing != null)
+                {
+                    return;
+                }
+            }
+
+            var player = _players[ownerSlot];
+            var stats = ResolveTitanStats(player, titan.Level);
+            var park = HeroParkRules.GetTitanParkWorldPosition(
+                Layout,
+                ownerSlot,
+                Layout.MainToTowerDistance);
+            var unit = _combat.SpawnUnit(
+                ownerSlot,
+                GameIds.Lanes.Center,
+                UnitRole.Titan,
+                stats,
+                level: titan.Level);
+            unit.WorldPosition = park;
+            unit.IsParkedAtBase = true;
+            unit.BehaviorState = UnitBehaviorState.Move;
+            titan.DeployedUnitId = unit.UnitId;
+        }
+
+        void DespawnParkedTitan(int ownerSlot)
+        {
+            if (ownerSlot < 0 || ownerSlot >= _titanStates.Count)
+            {
+                return;
+            }
+
+            var titan = _titanStates[ownerSlot];
+            if (!titan.DeployedUnitId.HasValue)
+            {
+                return;
+            }
+
+            var unit = _combat.GetUnit(titan.DeployedUnitId.Value);
+            if (unit != null && unit.IsParkedAtBase)
+            {
+                _combat.DespawnUnit(unit.UnitId);
+            }
+
+            titan.DeployedUnitId = null;
+        }
+
         UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
             var race = CombatCatalog?.GetRace(player.RaceId);
@@ -1408,6 +1655,43 @@ namespace Game.Gameplay.Match
             return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
+        UnitCombatStats ResolveTitanStats(MatchPlayerState player, int level = HeroLevelRules.StartingLevel)
+        {
+            var race = CombatCatalog?.GetRace(player.RaceId);
+            var hero = race?.GetHeroBySlot(1);
+            UnitCombatStats stats;
+            if (hero != null)
+            {
+                stats = new UnitCombatStats(
+                    UnitRole.Titan,
+                    hero.MaxHp,
+                    hero.Armor,
+                    hero.DamageMin,
+                    hero.DamageMax,
+                    hero.AttackSpeed,
+                    hero.AttackRange,
+                    hero.MoveSpeed,
+                    hero.GoldBounty);
+            }
+            else
+            {
+                stats = new UnitCombatStats(
+                    UnitRole.Titan,
+                    600f,
+                    4f,
+                    35f,
+                    45f,
+                    1f,
+                    1.5f,
+                    4f,
+                    80);
+            }
+
+            stats = TitanRules.ScaleForTitan(stats);
+            stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
+            return RaceUpgradeStatsRules.Apply(stats, player);
+        }
+
         /// <summary>Grants fixed XP to every hired hero of the destroying owner when an enemy building falls.</summary>
         void HandleBuildingKillXp(BuildingDestroyedEvent destroyed)
         {
@@ -1429,6 +1713,12 @@ namespace Game.Gameplay.Match
                 {
                     slot.AddXp(HeroLevelRules.GetBuildingKillXp());
                 }
+            }
+
+            var titan = GetTitanState(destroyed.AttackerOwnerSlot);
+            if (titan != null && titan.IsUnlocked)
+            {
+                titan.AddXp(HeroLevelRules.GetBuildingKillXp());
             }
         }
 

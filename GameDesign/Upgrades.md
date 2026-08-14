@@ -222,8 +222,8 @@ mvp: true
 
 ## UI
 
-- **Main:** upgrade main level, passive gold, stat tracks, **magic**, hire heroes, **titan research** (main L3 + 3 героя на базе), Divine Blessing / extra ability menu
-- **Barracks (alive):** barracks level + manual call + deploy hero (1000g) / summon titan (2500g)
+- **Main:** upgrade main level, passive gold, stat tracks, **magic**, hire heroes; полоска титана над зданием (main L3 + 3 героя на базе, не кнопка), Divine Blessing / extra ability menu
+- **Barracks (alive):** barracks level + manual call + deploy hero (1000g) / deploy titan (2500g, после появления на базе)
 - **Tower (alive):** target mode + **race tower upgrades**
 
 ## Locked decisions (confirmed)

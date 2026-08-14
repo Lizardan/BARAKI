@@ -121,6 +121,24 @@ namespace Game.Gameplay.Networking
             RequestDeployHeroServerRpc(buildingInstanceId, heroSlot);
         }
 
+        public void RequestDeployTitan(int buildingInstanceId)
+        {
+            if (IsCommandsBlocked())
+            {
+                PublishCommandResult(MatchCommandResult.HostMigrating);
+                return;
+            }
+
+            if (IsServer)
+            {
+                PublishCommandResult(
+                    TryDeployTitanLocal(MatchNetworkSession.LocalSlot, buildingInstanceId));
+                return;
+            }
+
+            RequestDeployTitanServerRpc(buildingInstanceId);
+        }
+
         public void RequestSetTowerTarget(int towerInstanceId, int unitId)
         {
             if (IsCommandsBlocked())
@@ -290,6 +308,17 @@ namespace Game.Gameplay.Networking
                 ResolveSenderSlot(rpcParams),
                 buildingInstanceId,
                 heroSlot);
+            SendCommandResult(result, rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestDeployTitanServerRpc(
+            int buildingInstanceId,
+            RpcParams rpcParams = default)
+        {
+            var result = TryDeployTitanLocal(
+                ResolveSenderSlot(rpcParams),
+                buildingInstanceId);
             SendCommandResult(result, rpcParams.Receive.SenderClientId);
         }
 
@@ -500,6 +529,32 @@ namespace Game.Gameplay.Networking
             }
 
             var ok = controller.TryDeployHero(slot, buildingInstanceId, heroSlot);
+            return MatchCommandResultRules.FromTrySuccess(ok);
+        }
+
+        MatchCommandResult TryDeployTitanLocal(int slot, int buildingInstanceId)
+        {
+            if (IsCommandsBlocked())
+            {
+                return MatchCommandResult.HostMigrating;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null)
+            {
+                return MatchCommandResult.NotAllowed;
+            }
+
+            var player = slot >= 0 && slot < controller.Players.Count
+                ? controller.Players[slot]
+                : null;
+            if (player != null && player.Gold < TitanRules.DeployGold)
+            {
+                return MatchCommandResult.NotEnoughGold;
+            }
+
+            var ok = controller.TryDeployTitan(slot, buildingInstanceId);
             return MatchCommandResultRules.FromTrySuccess(ok);
         }
 

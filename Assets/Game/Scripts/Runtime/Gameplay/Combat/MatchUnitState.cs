@@ -47,6 +47,8 @@ namespace Game.Gameplay.Combat
         public UnitRole Role { get; }
         public UnitCombatStats Stats { get; }
         public bool IsHero { get; }
+        /// <summary>True for heroes and titans: kills grant their owner XP and double bounty.</summary>
+        public bool IsChampion => IsHero || Role == UnitRole.Titan;
         public int HeroSlot { get; }
         /// <summary>Hero level this unit was spawned with (per-match slot level).</summary>
         public int Level { get; }

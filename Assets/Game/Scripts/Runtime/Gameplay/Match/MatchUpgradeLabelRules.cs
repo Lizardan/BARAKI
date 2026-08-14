@@ -37,6 +37,12 @@ namespace Game.Gameplay.Match
         public static string FormatHeroHireTooltip(int heroSlot, int cost, float seconds) =>
             $"Найм героя {heroSlot}\n{cost}g · {seconds:0}с исследования";
 
+        public static string FormatTitanDeployButton(int cost) =>
+            $"Титан\n{cost}g";
+
+        public static string FormatTitanDeployTooltip(int cost) =>
+            $"Выпуск титана\n{cost}g · мгновенно";
+
         public static string GetStatTrackTitle(string trackId) => trackId switch
         {
             GameIds.Upgrades.MeleeDamage => "Урон мили",

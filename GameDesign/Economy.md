@@ -88,8 +88,8 @@ mvp: true
 | `UPG_ARMOR` L1…L9 | **60…220** | **6…22 s** |
 | `HERO_HIRE` | 500 | **25 s** research |
 | `HERO_DEPLOY` | 1000 | instant |
-| `TITAN_SUMMON` (research) | **0** (пассивно) | **180 s** |
-| `TITAN_SUMMON` (summon) | **2500** | instant |
+| `TITAN_SUMMON` (полоска над main) | **0** (пассивно) | **180 s** |
+| `TITAN_DEPLOY` (barracks) | **2500** | instant |
 | `UPG_MAIN_DIVINE_BLESSING` | TBD | TBD |
 
 ## Spending rules

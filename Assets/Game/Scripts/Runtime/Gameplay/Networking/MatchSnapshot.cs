@@ -33,6 +33,8 @@ namespace Game.Gameplay.Networking
         /// Not a continuous in-flight list — clients advance flight locally after apply.
         /// </summary>
         public MatchProjectileSnapshot[] Projectiles = Array.Empty<MatchProjectileSnapshot>();
+        /// <summary>Per-slot hero roster. Empty on pre-v15 snapshots.</summary>
+        public MatchHeroSlotSnapshot[] Heroes = Array.Empty<MatchHeroSlotSnapshot>();
         /// <summary>Debug hash (0 = unset). Host fills via <see cref="MatchSnapshotChecksum"/>.</summary>
         public uint Checksum;
     }
@@ -54,6 +56,33 @@ namespace Game.Gameplay.Networking
         public int HpArmorLevel;
         /// <summary>Chosen bonus slot (1..12), 0 = none yet. 0 on pre-v13 snapshots.</summary>
         public int BonusPickSlot;
+        /// <summary>Completed titan research seconds. 0 on pre-v14 snapshots.</summary>
+        public float TitanResearchProgressSeconds;
+        /// <summary>Titan unlocked (research complete). False on pre-v14 snapshots.</summary>
+        public bool TitanUnlocked;
+        /// <summary><see cref="TitanLifecycleState"/> as int. 0 on pre-v14 snapshots.</summary>
+        public int TitanState;
+        /// <summary>Titan level. 1 default on pre-v15 snapshots.</summary>
+        public int TitanLevel;
+        /// <summary>Titan XP toward next level. 0 on pre-v15 snapshots.</summary>
+        public int TitanXp;
+        /// <summary>Barracks instance id of last titan deploy. 0 = none. Pre-v15 = 0.</summary>
+        public int TitanLastBarracksInstanceId;
+        /// <summary>Death cooldown remaining on that barracks. 0 on pre-v15 snapshots.</summary>
+        public float TitanDeathCooldownRemaining;
+    }
+
+    public struct MatchHeroSlotSnapshot
+    {
+        public int OwnerSlot;
+        public int HeroSlot;
+        /// <summary><see cref="HeroLifecycleState"/> as int.</summary>
+        public int State;
+        public int Level;
+        public int Xp;
+        /// <summary>0 = none.</summary>
+        public int LastDeployBarracksInstanceId;
+        public float DeathCooldownRemaining;
     }
 
     public struct MatchBuildingSnapshot
@@ -87,6 +116,10 @@ namespace Game.Gameplay.Networking
         public byte BehaviorState;
         /// <summary>Increments on each attack swing. 0 on pre-v6 snapshots.</summary>
         public int AttackSwingSerial;
+        /// <summary>Hero slot 1..3. 0 on pre-v15 or non-heroes.</summary>
+        public int HeroSlot;
+        /// <summary>Parked idle champion at base. False on pre-v15 snapshots.</summary>
+        public bool IsParkedAtBase;
     }
 
     public struct MatchResearchSnapshot
@@ -162,7 +195,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 13;
+        public const int CurrentVersion = 15;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -194,6 +227,13 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.RangedDamageLevel);
                     writer.Write(p.HpArmorLevel);
                     writer.Write(p.BonusPickSlot);
+                    writer.Write(p.TitanResearchProgressSeconds);
+                    writer.Write(p.TitanUnlocked);
+                    writer.Write(p.TitanState);
+                    writer.Write(p.TitanLevel);
+                    writer.Write(p.TitanXp);
+                    writer.Write(p.TitanLastBarracksInstanceId);
+                    writer.Write(p.TitanDeathCooldownRemaining);
                 }
             }
 
@@ -230,6 +270,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(u.Mana);
                     writer.Write(u.Level);
                     writer.Write(u.Xp);
+                    writer.Write(u.HeroSlot);
+                    writer.Write(u.IsParkedAtBase);
                 }
             }
 
@@ -315,6 +357,21 @@ namespace Game.Gameplay.Networking
             }
 
             writer.Write(snapshot.BonusPickDeadlineSeconds);
+            writer.Write(snapshot.Heroes?.Length ?? 0);
+            if (snapshot.Heroes != null)
+            {
+                foreach (var h in snapshot.Heroes)
+                {
+                    writer.Write(h.OwnerSlot);
+                    writer.Write(h.HeroSlot);
+                    writer.Write(h.State);
+                    writer.Write(h.Level);
+                    writer.Write(h.Xp);
+                    writer.Write(h.LastDeployBarracksInstanceId);
+                    writer.Write(h.DeathCooldownRemaining);
+                }
+            }
+
             writer.Write(snapshot.Checksum);
 
             return stream.ToArray();
@@ -330,7 +387,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -366,6 +423,25 @@ namespace Game.Gameplay.Networking
                 if (version >= 13)
                 {
                     snapshot.Players[i].BonusPickSlot = reader.ReadInt32();
+                }
+
+                if (version >= 14)
+                {
+                    snapshot.Players[i].TitanResearchProgressSeconds = reader.ReadSingle();
+                    snapshot.Players[i].TitanUnlocked = reader.ReadBoolean();
+                    snapshot.Players[i].TitanState = reader.ReadInt32();
+                }
+
+                if (version >= 15)
+                {
+                    snapshot.Players[i].TitanLevel = reader.ReadInt32();
+                    snapshot.Players[i].TitanXp = reader.ReadInt32();
+                    snapshot.Players[i].TitanLastBarracksInstanceId = reader.ReadInt32();
+                    snapshot.Players[i].TitanDeathCooldownRemaining = reader.ReadSingle();
+                }
+                else if (snapshot.Players[i].TitanLevel <= 0)
+                {
+                    snapshot.Players[i].TitanLevel = 1;
                 }
             }
 
@@ -433,6 +509,12 @@ namespace Game.Gameplay.Networking
                 else
                 {
                     unit.Level = 1;
+                }
+
+                if (version >= 15)
+                {
+                    unit.HeroSlot = reader.ReadInt32();
+                    unit.IsParkedAtBase = reader.ReadBoolean();
                 }
 
                 snapshot.Units[i] = unit;
@@ -552,6 +634,25 @@ namespace Game.Gameplay.Networking
                 snapshot.BonusPickDeadlineSeconds = reader.ReadSingle();
             }
 
+            if (version >= 15)
+            {
+                var heroCount = reader.ReadInt32();
+                snapshot.Heroes = new MatchHeroSlotSnapshot[heroCount];
+                for (var i = 0; i < heroCount; i++)
+                {
+                    snapshot.Heroes[i] = new MatchHeroSlotSnapshot
+                    {
+                        OwnerSlot = reader.ReadInt32(),
+                        HeroSlot = reader.ReadInt32(),
+                        State = reader.ReadInt32(),
+                        Level = reader.ReadInt32(),
+                        Xp = reader.ReadInt32(),
+                        LastDeployBarracksInstanceId = reader.ReadInt32(),
+                        DeathCooldownRemaining = reader.ReadSingle(),
+                    };
+                }
+            }
+
             if (version >= 4 && reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 snapshot.Checksum = reader.ReadUInt32();
@@ -570,6 +671,7 @@ namespace Game.Gameplay.Networking
             var players = new List<MatchPlayerSnapshot>();
             foreach (var p in controller.Players)
             {
+                var titan = controller.GetTitanState(p.SlotIndex);
                 players.Add(new MatchPlayerSnapshot
                 {
                     Slot = p.SlotIndex,
@@ -582,6 +684,13 @@ namespace Game.Gameplay.Networking
                     RangedDamageLevel = p.RangedDamageLevel,
                     HpArmorLevel = p.HpArmorLevel,
                     BonusPickSlot = controller.GetBonusPickSlot(p.SlotIndex),
+                    TitanResearchProgressSeconds = titan?.ResearchProgressSeconds ?? 0f,
+                    TitanUnlocked = titan?.IsUnlocked ?? false,
+                    TitanState = titan == null ? 0 : (int)titan.State,
+                    TitanLevel = titan?.Level ?? HeroLevelRules.StartingLevel,
+                    TitanXp = titan?.Xp ?? 0,
+                    TitanLastBarracksInstanceId = titan?.LastSummonBarracksInstanceId ?? 0,
+                    TitanDeathCooldownRemaining = titan?.GetLastBarracksDeathCooldown() ?? 0f,
                 });
             }
 
@@ -612,6 +721,15 @@ namespace Game.Gameplay.Networking
                         xp = hero.Xp;
                     }
                 }
+                else if (u.Role == UnitRole.Titan)
+                {
+                    var titan = controller.GetTitanState(u.OwnerSlot);
+                    if (titan != null)
+                    {
+                        level = titan.Level;
+                        xp = titan.Xp;
+                    }
+                }
 
                 units.Add(new MatchUnitSnapshot
                 {
@@ -630,6 +748,8 @@ namespace Game.Gameplay.Networking
                     IsAlive = u.IsAlive,
                     BehaviorState = (byte)u.BehaviorState,
                     AttackSwingSerial = u.AttackSwingSerial,
+                    HeroSlot = u.HeroSlot,
+                    IsParkedAtBase = u.IsParkedAtBase,
                 });
             }
 
@@ -749,6 +869,31 @@ namespace Game.Gameplay.Networking
 
             controller.Combat.ClearNetworkProjectileSpawns();
 
+            var heroes = new List<MatchHeroSlotSnapshot>();
+            for (var owner = 0; owner < controller.Players.Count; owner++)
+            {
+                var roster = controller.GetHeroRoster(owner);
+                if (roster == null)
+                {
+                    continue;
+                }
+
+                for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+                {
+                    var hero = roster.Get(slot);
+                    heroes.Add(new MatchHeroSlotSnapshot
+                    {
+                        OwnerSlot = owner,
+                        HeroSlot = slot,
+                        State = (int)hero.State,
+                        Level = hero.Level,
+                        Xp = hero.Xp,
+                        LastDeployBarracksInstanceId = hero.LastDeployBarracksInstanceId ?? 0,
+                        DeathCooldownRemaining = hero.GetLastBarracksDeathCooldown(),
+                    });
+                }
+            }
+
             var snapshot = new MatchSnapshot
             {
                 PlayerCount = controller.Players.Count,
@@ -764,6 +909,7 @@ namespace Game.Gameplay.Networking
                 CenterLanes = centerLanes.ToArray(),
                 SpellCasts = spellCasts.ToArray(),
                 Projectiles = projectiles.ToArray(),
+                Heroes = heroes.ToArray(),
             };
             snapshot.Checksum = MatchSnapshotChecksum.Compute(snapshot);
             return snapshot;

@@ -9,5 +9,6 @@ namespace Game.Gameplay.Data
         Flying,
         Super,
         Hero,
+        Titan,
     }
 }

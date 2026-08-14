@@ -26,6 +26,23 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, snapshot.Players[i].Gold);
                         Mix(ref hash, snapshot.Players[i].BonusPickSlot);
                         Mix(ref hash, snapshot.Players[i].IsEliminated ? 1 : 0);
+                        Mix(ref hash, (int)snapshot.Players[i].TitanResearchProgressSeconds);
+                        Mix(ref hash, snapshot.Players[i].TitanState);
+                        Mix(ref hash, snapshot.Players[i].TitanUnlocked ? 1 : 0);
+                        Mix(ref hash, snapshot.Players[i].TitanLevel);
+                        Mix(ref hash, snapshot.Players[i].TitanXp);
+                    }
+                }
+
+                if (snapshot.Heroes != null)
+                {
+                    for (var i = 0; i < snapshot.Heroes.Length; i++)
+                    {
+                        Mix(ref hash, snapshot.Heroes[i].OwnerSlot);
+                        Mix(ref hash, snapshot.Heroes[i].HeroSlot);
+                        Mix(ref hash, snapshot.Heroes[i].State);
+                        Mix(ref hash, snapshot.Heroes[i].Level);
+                        Mix(ref hash, snapshot.Heroes[i].Xp);
                     }
                 }
 
