@@ -33,6 +33,15 @@ namespace Game.Tests
             Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Aura, 7));
             Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 9));
             Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 10));
+
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Smite, 1));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.HolyNova, 1));
+            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Shield, 3));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Shield, 4));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.GreaterHeal, 4));
+            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Consecration, 9));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Consecration, 10));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Revive, 10));
         }
 
         [Test]

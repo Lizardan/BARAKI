@@ -74,6 +74,8 @@ namespace Game.Gameplay.Combat
         public float UltimateCooldownRemaining { get; set; }
         /// <summary>Remaining self-buff seconds from the Ultimate (+damage). Transient host state.</summary>
         public float UltimateBuffRemaining { get; set; }
+        /// <summary>Remaining Paladin Shield armor-buff seconds. Transient host state.</summary>
+        public float ArmorBuffRemaining { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>

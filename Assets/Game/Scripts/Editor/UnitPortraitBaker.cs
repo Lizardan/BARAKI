@@ -12,6 +12,11 @@ namespace Game.Editor
     {
         public const string PortraitFolder = "Assets/Game/Art/UI/UnitPortraits";
         public const int Size = 128;
+        const int RenderSize = 256;
+        const int PaddingPx = 2;
+        const float YawDegrees = 145f;
+        static readonly Color KeyColor = new(1f, 0f, 1f, 1f);
+        static readonly Color32 BackdropColor = new(0x52, 0x52, 0x52, 255);
 
         public static void BakeIntoCatalog(UnitVisualCatalog catalog)
         {
@@ -93,33 +98,23 @@ namespace Game.Editor
             var preview = new PreviewRenderUtility();
             try
             {
-                preview.cameraFieldOfView = 30f;
-                preview.camera.nearClipPlane = 0.01f;
-                preview.camera.farClipPlane = 50f;
                 preview.lights[0].intensity = 1.2f;
                 preview.lights[0].transform.rotation = Quaternion.Euler(40f, -30f, 0f);
                 preview.lights[1].intensity = 0.55f;
 
                 var instance = preview.InstantiatePrefabInScene(prefab);
                 instance.transform.position = Vector3.zero;
-                instance.transform.rotation = Quaternion.Euler(0f, 35f, 0f);
+                instance.transform.rotation = Quaternion.Euler(0f, YawDegrees, 0f);
 
                 var bounds = CalculateBounds(instance);
-                var center = bounds.center;
-                var radius = Mathf.Max(bounds.extents.magnitude, 0.35f);
-                var distance = radius / Mathf.Sin(preview.cameraFieldOfView * 0.5f * Mathf.Deg2Rad);
-                preview.camera.transform.position = center + new Vector3(0.35f, 0.45f, -1f).normalized * distance;
-                preview.camera.transform.LookAt(center);
-
-                var rect = new Rect(0f, 0f, Size, Size);
-                preview.BeginStaticPreview(rect);
-                preview.Render(true);
-                var result = preview.EndStaticPreview();
-
+                var captured = CapturePreview(preview, bounds);
                 Object.DestroyImmediate(instance);
 
-                var png = result.EncodeToPNG();
-                Object.DestroyImmediate(result);
+                var fitted = FitToPortrait(captured);
+                Object.DestroyImmediate(captured);
+
+                var png = fitted.EncodeToPNG();
+                Object.DestroyImmediate(fitted);
                 File.WriteAllBytes(Path.GetFullPath(assetPath), png);
                 AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
 
@@ -140,6 +135,157 @@ namespace Game.Editor
                 preview.Cleanup();
             }
         }
+
+        static Texture2D CapturePreview(PreviewRenderUtility preview, Bounds bounds)
+        {
+            var rect = new Rect(0f, 0f, RenderSize, RenderSize);
+            preview.BeginStaticPreview(rect);
+
+            var camera = preview.camera;
+            camera.orthographic = true;
+            camera.nearClipPlane = 0.01f;
+            camera.farClipPlane = 50f;
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = KeyColor;
+            camera.allowMSAA = false;
+            camera.aspect = 1f;
+
+            var center = bounds.center;
+            var radius = Mathf.Max(bounds.extents.magnitude, 0.35f);
+            camera.transform.position =
+                center + new Vector3(0.35f, 0.45f, -1f).normalized * (radius * 2.5f);
+            camera.transform.LookAt(center);
+            FrameOrthographic(camera, bounds);
+
+            preview.Render(true);
+            return preview.EndStaticPreview();
+        }
+
+        static void FrameOrthographic(Camera camera, Bounds bounds)
+        {
+            GetCameraLocalExtents(camera, bounds, out var minX, out var maxX, out var minY, out var maxY);
+            var cx = (minX + maxX) * 0.5f;
+            var cy = (minY + maxY) * 0.5f;
+            camera.transform.position += camera.transform.right * cx + camera.transform.up * cy;
+
+            var half = Mathf.Max(maxX - minX, maxY - minY) * 0.5f;
+            camera.orthographicSize = Mathf.Max(half * 1.08f, 0.05f);
+        }
+
+        static void GetCameraLocalExtents(
+            Camera camera,
+            Bounds bounds,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            minX = minY = float.PositiveInfinity;
+            maxX = maxY = float.NegativeInfinity;
+            var min = bounds.min;
+            var max = bounds.max;
+            var corners = new[]
+            {
+                new Vector3(min.x, min.y, min.z),
+                new Vector3(min.x, min.y, max.z),
+                new Vector3(min.x, max.y, min.z),
+                new Vector3(min.x, max.y, max.z),
+                new Vector3(max.x, min.y, min.z),
+                new Vector3(max.x, min.y, max.z),
+                new Vector3(max.x, max.y, min.z),
+                new Vector3(max.x, max.y, max.z),
+            };
+
+            for (var i = 0; i < corners.Length; i++)
+            {
+                var local = camera.transform.InverseTransformPoint(corners[i]);
+                minX = Mathf.Min(minX, local.x);
+                maxX = Mathf.Max(maxX, local.x);
+                minY = Mathf.Min(minY, local.y);
+                maxY = Mathf.Max(maxY, local.y);
+            }
+        }
+
+        static Texture2D FitToPortrait(Texture2D source)
+        {
+            var pixels = source.GetPixels32();
+            var width = source.width;
+            var height = source.height;
+            var minX = width;
+            var minY = height;
+            var maxX = -1;
+            var maxY = -1;
+
+            for (var y = 0; y < height; y++)
+            {
+                var row = y * width;
+                for (var x = 0; x < width; x++)
+                {
+                    if (IsKey(pixels[row + x]))
+                    {
+                        continue;
+                    }
+
+                    if (x < minX)
+                    {
+                        minX = x;
+                    }
+
+                    if (x > maxX)
+                    {
+                        maxX = x;
+                    }
+
+                    if (y < minY)
+                    {
+                        minY = y;
+                    }
+
+                    if (y > maxY)
+                    {
+                        maxY = y;
+                    }
+                }
+            }
+
+            var dest = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+            var destPixels = new Color32[Size * Size];
+            for (var i = 0; i < destPixels.Length; i++)
+            {
+                destPixels[i] = BackdropColor;
+            }
+
+            if (maxX >= minX)
+            {
+                var contentW = maxX - minX + 1;
+                var contentH = maxY - minY + 1;
+                var inner = Size - PaddingPx * 2;
+                var scale = inner / (float)Mathf.Max(contentW, contentH);
+                var destW = Mathf.Max(1, Mathf.RoundToInt(contentW * scale));
+                var destH = Mathf.Max(1, Mathf.RoundToInt(contentH * scale));
+                var ox = (Size - destW) / 2;
+                var oy = (Size - destH) / 2;
+
+                for (var y = 0; y < destH; y++)
+                {
+                    var srcY = minY + Mathf.Clamp(y * contentH / destH, 0, contentH - 1);
+                    var srcRow = srcY * width;
+                    var destRow = (oy + y) * Size + ox;
+                    for (var x = 0; x < destW; x++)
+                    {
+                        var srcX = minX + Mathf.Clamp(x * contentW / destW, 0, contentW - 1);
+                        var pixel = pixels[srcRow + srcX];
+                        destPixels[destRow + x] = IsKey(pixel) ? BackdropColor : pixel;
+                    }
+                }
+            }
+
+            dest.SetPixels32(destPixels);
+            dest.Apply(false, false);
+            return dest;
+        }
+
+        static bool IsKey(Color32 pixel) => pixel.r >= 240 && pixel.g <= 20 && pixel.b >= 240;
 
         static Bounds CalculateBounds(GameObject root)
         {

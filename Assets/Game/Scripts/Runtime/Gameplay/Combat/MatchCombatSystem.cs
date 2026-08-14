@@ -1229,6 +1229,11 @@ namespace Game.Gameplay.Combat
 
         void TickUnit(MatchUnitState unit, float deltaTime)
         {
+            if (unit.ArmorBuffRemaining > 0f)
+            {
+                unit.ArmorBuffRemaining = Mathf.Max(0f, unit.ArmorBuffRemaining - deltaTime);
+            }
+
             if (unit.IsParkedAtBase)
             {
                 return;
@@ -1421,7 +1426,7 @@ namespace Game.Gameplay.Combat
             if (unit.AttackCooldownRemaining <= 0f)
             {
                 BeginAttack(unit, target);
-                unit.AttackCooldownRemaining = CombatRules.GetAttackIntervalSeconds(unit.Stats.AttackSpeed);
+                unit.AttackCooldownRemaining = GetUnitAttackInterval(unit);
             }
 
             if (target == null || !target.IsAlive)
@@ -1721,7 +1726,7 @@ namespace Game.Gameplay.Combat
             if (unit.AttackCooldownRemaining <= 0f)
             {
                 BeginBuildingAttack(unit, building);
-                unit.AttackCooldownRemaining = CombatRules.GetAttackIntervalSeconds(unit.Stats.AttackSpeed);
+                unit.AttackCooldownRemaining = GetUnitAttackInterval(unit);
             }
         }
 
@@ -2087,7 +2092,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var damage = CombatRules.ApplyArmor(rawDamage, target.Stats.Armor);
+            var damage = CombatRules.ApplyArmor(rawDamage, GetEffectiveArmor(target));
             damage *= GetArmyDamageMultiplier(attacker);
             if (attacker != null && attacker.UltimateBuffRemaining > 0f)
             {
@@ -2126,7 +2131,7 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// Aura (passive, hero level ≥ <see cref="HeroLevelRules.AuraUnlockLevel"/>): army of the
+        /// King aura (passive, hero slot 1, level ≥ <see cref="HeroLevelRules.AuraUnlockLevel"/>): army of the
         /// hero's owner deals +<see cref="HeroAbilityRules.AuraDamageBonusPercent"/> damage while
         /// that hero is alive.
         /// </summary>
@@ -2137,25 +2142,68 @@ namespace Game.Gameplay.Combat
                 return 1f;
             }
 
-            var ownerSlot = attacker.OwnerSlot;
+            return HasLivingHero(attacker.OwnerSlot, HeroAbilityRules.KingSlot, HeroLevelRules.AuraUnlockLevel)
+                ? 1f + HeroAbilityRules.AuraDamageBonusPercent
+                : 1f;
+        }
+
+        float GetArmyAttackSpeedMultiplier(MatchUnitState attacker)
+        {
+            if (attacker == null || !attacker.IsAlive)
+            {
+                return 1f;
+            }
+
+            return HasLivingHero(attacker.OwnerSlot, HeroAbilityRules.PaladinSlot, HeroLevelRules.AuraUnlockLevel)
+                ? 1f + HeroAbilityRules.AuraAttackSpeedBonusPercent
+                : 1f;
+        }
+
+        float GetEffectiveArmor(MatchUnitState target)
+        {
+            if (target == null)
+            {
+                return 0f;
+            }
+
+            var armor = target.Stats.Armor;
+            if (HasLivingHero(target.OwnerSlot, HeroAbilityRules.PriestSlot, HeroLevelRules.AuraUnlockLevel))
+            {
+                armor *= 1f + HeroAbilityRules.AuraArmorBonusPercent;
+            }
+
+            if (target.ArmorBuffRemaining > 0f)
+            {
+                armor += HeroAbilityRules.ShieldArmorBonus;
+            }
+
+            return armor;
+        }
+
+        float GetUnitAttackInterval(MatchUnitState unit) =>
+            CombatRules.GetAttackIntervalSeconds(unit.Stats.AttackSpeed * GetArmyAttackSpeedMultiplier(unit));
+
+        bool HasLivingHero(int ownerSlot, int heroSlot, int minLevel)
+        {
             for (var i = 0; i < _units.Count; i++)
             {
                 var candidate = _units[i];
                 if (candidate == null
                     || !candidate.IsAlive
                     || !candidate.IsHero
-                    || candidate.OwnerSlot != ownerSlot)
+                    || candidate.OwnerSlot != ownerSlot
+                    || candidate.HeroSlot != heroSlot)
                 {
                     continue;
                 }
 
-                if (candidate.Level >= HeroLevelRules.AuraUnlockLevel)
+                if (candidate.Level >= minLevel)
                 {
-                    return 1f + HeroAbilityRules.AuraDamageBonusPercent;
+                    return true;
                 }
             }
 
-            return 1f;
+            return false;
         }
 
         string GetPlayerRaceId(int ownerSlot)
@@ -2361,8 +2409,9 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// Hero ability AI: ticks cooldowns, then casts by priority Heal → Ultimate → Strike
-        /// when unlocked and a valid target is in range. Falls through to baseline attack otherwise.
+        /// Hero ability AI: ticks cooldowns, then casts the slot kit by priority
+        /// (support → ultimate → opener) when unlocked and a valid target is in range.
+        /// Falls through to baseline attack otherwise.
         /// </summary>
         bool TryCastHeroAbility(MatchUnitState unit, float deltaTime)
         {
@@ -2371,7 +2420,16 @@ namespace Game.Gameplay.Combat
             unit.UltimateCooldownRemaining = Mathf.Max(0f, unit.UltimateCooldownRemaining - deltaTime);
             unit.UltimateBuffRemaining = Mathf.Max(0f, unit.UltimateBuffRemaining - deltaTime);
 
-            var level = unit.Level;
+            return unit.HeroSlot switch
+            {
+                HeroAbilityRules.PaladinSlot => TryCastPaladinAbilities(unit, unit.Level),
+                HeroAbilityRules.PriestSlot => TryCastPriestAbilities(unit, unit.Level),
+                _ => TryCastKingAbilities(unit, unit.Level),
+            };
+        }
+
+        bool TryCastKingAbilities(MatchUnitState unit, int level)
+        {
             if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, level)
                 && unit.HealCooldownRemaining <= 0f
                 && TryCastHeroHeal(unit))
@@ -2389,6 +2447,58 @@ namespace Game.Gameplay.Combat
             if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Strike, level)
                 && unit.StrikeCooldownRemaining <= 0f
                 && TryCastHeroStrike(unit))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryCastPaladinAbilities(MatchUnitState unit, int level)
+        {
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Shield, level)
+                && unit.HealCooldownRemaining <= 0f
+                && TryCastPaladinShield(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Consecration, level)
+                && unit.UltimateCooldownRemaining <= 0f
+                && TryCastPaladinConsecration(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Smite, level)
+                && unit.StrikeCooldownRemaining <= 0f
+                && TryCastPaladinSmite(unit))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryCastPriestAbilities(MatchUnitState unit, int level)
+        {
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.GreaterHeal, level)
+                && unit.HealCooldownRemaining <= 0f
+                && TryCastPriestGreaterHeal(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Revive, level)
+                && unit.UltimateCooldownRemaining <= 0f
+                && TryCastPriestRevive(unit))
+            {
+                return true;
+            }
+
+            if (HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.HolyNova, level)
+                && unit.StrikeCooldownRemaining <= 0f
+                && TryCastPriestNova(unit))
             {
                 return true;
             }
@@ -2469,6 +2579,194 @@ namespace Game.Gameplay.Combat
                 caster.WorldPosition,
                 HeroAbilityRules.UltimateRadius,
                 targetUnitId: 0,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPaladinSmite(MatchUnitState caster)
+        {
+            var target = HeroAbilityRules.FindNearestEnemy(caster, _units, HeroAbilityRules.SmiteRadius);
+            if (target == null)
+            {
+                return false;
+            }
+
+            ApplyDamage(caster, target, HeroAbilityRules.SmiteDamage, caster.OwnerSlot);
+            caster.StrikeCooldownRemaining = HeroAbilityRules.SmiteCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Smite,
+                target.WorldPosition,
+                0.8f,
+                target.UnitId,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPaladinShield(MatchUnitState caster)
+        {
+            if (caster.ArmorBuffRemaining > 0f)
+            {
+                return false;
+            }
+
+            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, HeroAbilityRules.ShieldRadius);
+            if (enemies.Count == 0)
+            {
+                return false;
+            }
+
+            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, HeroAbilityRules.ShieldRadius);
+            for (var i = 0; i < allies.Count; i++)
+            {
+                allies[i].ArmorBuffRemaining = Mathf.Max(
+                    allies[i].ArmorBuffRemaining,
+                    HeroAbilityRules.ShieldDurationSeconds);
+            }
+
+            caster.HealCooldownRemaining = HeroAbilityRules.ShieldCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Shield,
+                caster.WorldPosition,
+                HeroAbilityRules.ShieldRadius,
+                caster.UnitId,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPaladinConsecration(MatchUnitState caster)
+        {
+            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, HeroAbilityRules.ConsecrationRadius);
+            if (enemies.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                ApplyDamage(caster, enemies[i], HeroAbilityRules.ConsecrationDamage, caster.OwnerSlot);
+                if (enemies[i].IsAlive)
+                {
+                    enemies[i].FrozenRemainingSeconds = Mathf.Max(
+                        enemies[i].FrozenRemainingSeconds,
+                        HeroAbilityRules.ConsecrationStunSeconds);
+                }
+            }
+
+            caster.UltimateCooldownRemaining = HeroAbilityRules.ConsecrationCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Consecration,
+                caster.WorldPosition,
+                HeroAbilityRules.ConsecrationRadius,
+                targetUnitId: 0,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPriestNova(MatchUnitState caster)
+        {
+            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, HeroAbilityRules.NovaRadius);
+            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, HeroAbilityRules.NovaRadius);
+            var injured = FindMostInjuredAlly(allies);
+            if (enemies.Count == 0 && injured == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                ApplyDamage(caster, enemies[i], HeroAbilityRules.NovaDamage, caster.OwnerSlot);
+            }
+
+            for (var i = 0; i < allies.Count; i++)
+            {
+                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
+                    allies[i].CurrentHp,
+                    allies[i].Stats.MaxHp,
+                    HeroAbilityRules.NovaHealAmount);
+            }
+
+            caster.StrikeCooldownRemaining = HeroAbilityRules.NovaCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.HolyNova,
+                caster.WorldPosition,
+                HeroAbilityRules.NovaRadius,
+                injured?.UnitId ?? 0,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPriestGreaterHeal(MatchUnitState caster)
+        {
+            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, HeroAbilityRules.GreaterHealRadius);
+            var target = FindMostInjuredAlly(allies);
+            if (target == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < allies.Count; i++)
+            {
+                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
+                    allies[i].CurrentHp,
+                    allies[i].Stats.MaxHp,
+                    HeroAbilityRules.GreaterHealAmount);
+            }
+
+            caster.HealCooldownRemaining = HeroAbilityRules.GreaterHealCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.GreaterHeal,
+                caster.WorldPosition,
+                HeroAbilityRules.GreaterHealRadius,
+                target.UnitId,
+                ++_spellCastSerial));
+            return true;
+        }
+
+        bool TryCastPriestRevive(MatchUnitState caster)
+        {
+            var corpse = CasterSpellRules.PickResurrectCorpse(
+                caster,
+                _corpses,
+                HeroAbilityRules.ReviveRadius,
+                CasterSpellRules.ResurrectCorpseMaxAgeSeconds);
+            if (corpse == null)
+            {
+                return false;
+            }
+
+            var revived = ResurrectUnit(corpse);
+            if (revived == null)
+            {
+                return false;
+            }
+
+            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, HeroAbilityRules.ReviveHealRadius);
+            for (var i = 0; i < allies.Count; i++)
+            {
+                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
+                    allies[i].CurrentHp,
+                    allies[i].Stats.MaxHp,
+                    HeroAbilityRules.ReviveHealAmount);
+            }
+
+            caster.UltimateCooldownRemaining = HeroAbilityRules.ReviveCooldownSeconds;
+            EmitHeroAbilityCast(new HeroAbilityCastEvent(
+                caster.UnitId,
+                caster.OwnerSlot,
+                HeroAbilityType.Revive,
+                revived.WorldPosition,
+                HeroAbilityRules.ReviveHealRadius,
+                revived.UnitId,
                 ++_spellCastSerial));
             return true;
         }

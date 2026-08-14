@@ -623,11 +623,13 @@ namespace Game.Gameplay.Match
             switch (cast.Ability)
             {
                 case HeroAbilityType.Heal:
+                case HeroAbilityType.GreaterHeal:
                     if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
                     {
                         SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
                     }
 
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, color, 0.85f);
                     break;
                 case HeroAbilityType.Strike:
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, StrikeFxColor, 0.75f);
@@ -636,6 +638,28 @@ namespace Game.Gameplay.Match
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, UltimateFxColor, 1.2f);
                     SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 1.4f, UltimateFxColor, 1.2f, 0.7f);
                     break;
+                case HeroAbilityType.Smite:
+                    SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor);
+                    break;
+                case HeroAbilityType.Shield:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.0f);
+                    break;
+                case HeroAbilityType.Consecration:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.3f);
+                    SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor, 2.8f);
+                    break;
+                case HeroAbilityType.HolyNova:
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PriestFxColor, 0.9f);
+                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var novaHealTop))
+                    {
+                        SpellFxFactory.CreatePlus(_root, novaHealTop, HealFxColor);
+                    }
+
+                    break;
+                case HeroAbilityType.Revive:
+                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 0.6f, ResurrectFxColor);
+                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PriestFxColor, 1.1f);
+                    break;
             }
         }
 
@@ -643,9 +667,11 @@ namespace Game.Gameplay.Match
         {
             return ability switch
             {
-                HeroAbilityType.Heal => HealFxColor,
+                HeroAbilityType.Heal or HeroAbilityType.GreaterHeal => HealFxColor,
                 HeroAbilityType.Strike => StrikeFxColor,
                 HeroAbilityType.Ultimate => UltimateFxColor,
+                HeroAbilityType.Smite or HeroAbilityType.Shield or HeroAbilityType.Consecration => PaladinFxColor,
+                HeroAbilityType.HolyNova or HeroAbilityType.Revive => PriestFxColor,
                 _ => Color.white,
             };
         }
@@ -874,5 +900,7 @@ namespace Game.Gameplay.Match
         static readonly Color ResurrectFxColor = new Color(1f, 0.85f, 0.25f, 1f);
         static readonly Color StrikeFxColor = new Color(1f, 0.55f, 0.2f, 1f);
         static readonly Color UltimateFxColor = new Color(1f, 0.3f, 0.2f, 1f);
+        static readonly Color PaladinFxColor = new Color(1f, 0.84f, 0.28f, 1f);
+        static readonly Color PriestFxColor = new Color(0.78f, 0.92f, 1f, 1f);
     }
 }

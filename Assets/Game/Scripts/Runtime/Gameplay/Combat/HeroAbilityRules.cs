@@ -6,11 +6,15 @@ namespace Game.Gameplay.Combat
 {
     /// <summary>
     /// Combat tuning + cast event for hero abilities.
-    /// GDD baseline: HERO_ABILITY_UNLOCK_LEVELS (Strike 1 / Heal 4 / Aura 7 / Ultimate 10).
-    /// Active abilities are CD-only (no mana); Aura is a global owner buff while the hero is alive.
+    /// GDD: HERO_ABILITY_UNLOCK_LEVELS (1 / 4 / 7 / 10), unique kit per hero slot.
+    /// Active abilities are CD-only (no mana). Slot-3 auras are global owner buffs while that hero is alive.
     /// </summary>
     public static class HeroAbilityRules
     {
+        public const int KingSlot = 1;
+        public const int PaladinSlot = 2;
+        public const int PriestSlot = 3;
+
         public const float StrikeRadius = 4f;
         public const float StrikeDamage = 60f;
         public const float StrikeCooldownSeconds = 6f;
@@ -19,7 +23,7 @@ namespace Game.Gameplay.Combat
         public const float HealAmount = 120f;
         public const float HealCooldownSeconds = 10f;
 
-        /// <summary>Global damage bonus to the owner's army while the hero is alive (unlock lvl 7).</summary>
+        /// <summary>King aura: global damage bonus to the owner's army while the hero is alive (unlock lvl 7).</summary>
         public const float AuraDamageBonusPercent = 0.1f;
 
         public const float UltimateRadius = 6f;
@@ -27,6 +31,40 @@ namespace Game.Gameplay.Combat
         public const float UltimateCooldownSeconds = 30f;
         public const float UltimateSelfDamageBonusPercent = 0.5f;
         public const float UltimateSelfBuffSeconds = 8f;
+
+        public const float SmiteRadius = 5f;
+        public const float SmiteDamage = 90f;
+        public const float SmiteCooldownSeconds = 6f;
+
+        public const float ShieldRadius = 6f;
+        public const float ShieldArmorBonus = 8f;
+        public const float ShieldDurationSeconds = 6f;
+        public const float ShieldCooldownSeconds = 10f;
+
+        /// <summary>Paladin aura: global attack-speed bonus to the owner's army while the hero is alive.</summary>
+        public const float AuraAttackSpeedBonusPercent = 0.1f;
+
+        public const float ConsecrationRadius = 6f;
+        public const float ConsecrationDamage = 120f;
+        public const float ConsecrationStunSeconds = 1.5f;
+        public const float ConsecrationCooldownSeconds = 30f;
+
+        public const float NovaRadius = 4f;
+        public const float NovaDamage = 35f;
+        public const float NovaHealAmount = 50f;
+        public const float NovaCooldownSeconds = 6f;
+
+        public const float GreaterHealRadius = 7f;
+        public const float GreaterHealAmount = 180f;
+        public const float GreaterHealCooldownSeconds = 10f;
+
+        /// <summary>Priest aura: global armor bonus to the owner's army while the hero is alive.</summary>
+        public const float AuraArmorBonusPercent = 0.1f;
+
+        public const float ReviveRadius = 8f;
+        public const float ReviveHealAmount = 150f;
+        public const float ReviveHealRadius = 6f;
+        public const float ReviveCooldownSeconds = 30f;
 
         /// <summary>All living enemies within <paramref name="radius"/> of the hero.</summary>
         public static List<MatchUnitState> GatherEnemiesInRadius(
@@ -93,7 +131,53 @@ namespace Game.Gameplay.Combat
         }
 
         public static float ApplyHeal(float currentHp, float maxHp) =>
-            Mathf.Min(maxHp, currentHp + HealAmount);
+            ApplyHeal(currentHp, maxHp, HealAmount);
+
+        public static float ApplyHeal(float currentHp, float maxHp, float amount) =>
+            Mathf.Min(maxHp, currentHp + amount);
+
+        /// <summary>Nearest living enemy within <paramref name="radius"/>, or null.</summary>
+        public static MatchUnitState FindNearestEnemy(
+            MatchUnitState caster,
+            IReadOnlyList<MatchUnitState> units,
+            float radius)
+        {
+            var enemies = GatherEnemiesInRadius(caster, units, radius);
+            MatchUnitState nearest = null;
+            var bestSq = float.MaxValue;
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                var sq = HorizontalDistanceSq(caster.WorldPosition, enemies[i].WorldPosition);
+                if (sq < bestSq)
+                {
+                    bestSq = sq;
+                    nearest = enemies[i];
+                }
+            }
+
+            return nearest;
+        }
+
+        /// <summary>Active ability for a hero slot (1..4). Slot 3 (aura) is <see cref="HeroAbilityType.Aura"/> for every kit.</summary>
+        public static HeroAbilityType GetAbilityType(int heroSlot, int abilitySlot)
+        {
+            return (heroSlot, abilitySlot) switch
+            {
+                (KingSlot, 1) => HeroAbilityType.Strike,
+                (KingSlot, 2) => HeroAbilityType.Heal,
+                (KingSlot, 3) => HeroAbilityType.Aura,
+                (KingSlot, 4) => HeroAbilityType.Ultimate,
+                (PaladinSlot, 1) => HeroAbilityType.Smite,
+                (PaladinSlot, 2) => HeroAbilityType.Shield,
+                (PaladinSlot, 3) => HeroAbilityType.Aura,
+                (PaladinSlot, 4) => HeroAbilityType.Consecration,
+                (PriestSlot, 1) => HeroAbilityType.HolyNova,
+                (PriestSlot, 2) => HeroAbilityType.GreaterHeal,
+                (PriestSlot, 3) => HeroAbilityType.Aura,
+                (PriestSlot, 4) => HeroAbilityType.Revive,
+                _ => HeroAbilityType.None,
+            };
+        }
 
         /// <summary>Floating label shown above the hero when the ability is fired.</summary>
         public static string GetDisplayName(HeroAbilityType ability)
@@ -104,6 +188,12 @@ namespace Game.Gameplay.Combat
                 HeroAbilityType.Heal => "Heal",
                 HeroAbilityType.Aura => "Aura",
                 HeroAbilityType.Ultimate => "Ultimate",
+                HeroAbilityType.Smite => "Smite",
+                HeroAbilityType.Shield => "Shield",
+                HeroAbilityType.Consecration => "Consecration",
+                HeroAbilityType.HolyNova => "Holy Nova",
+                HeroAbilityType.GreaterHeal => "Greater Heal",
+                HeroAbilityType.Revive => "Revive",
                 _ => ability.ToString(),
             };
         }

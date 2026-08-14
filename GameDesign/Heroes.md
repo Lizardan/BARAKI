@@ -1,6 +1,6 @@
 ---
 doc_id: heroes
-version: 0.6
+version: 0.7
 status: draft
 depends_on: [units, economy, core_gameplay, races, buildings]
 provides: [hero_hire, hero_deploy, hero_morale, hero_ai, hero_roster]
@@ -112,14 +112,7 @@ mvp: true
 
 ## Hero abilities
 
-Каждый герой — **4 способности**, открываются по уровню (авто-каст, игрок не микроит):
-
-| Slot | Unlock | Ability | Механика |
-|------|--------|---------|----------|
-| 1 | lvl 1 | Удар (AoE) | Урон по врагам вокруг героя, CD |
-| 2 | lvl 4 | Хил | Лечение героя + союзников в радиусе, CD |
-| 3 | lvl 7 | Аура | Пассив, пока герой жив: +% урона армии владельца |
-| 4 | lvl 10 | Ульта | Большой AoE урон + самоусиление, длинный CD |
+Каждый герой — **4 способности**, открываются на **одних и тех же** уровнях (авто-каст, игрок не микроит). Кит уникален per slot.
 
 ```entity
 id: HERO_ABILITY_UNLOCK_LEVELS
@@ -130,7 +123,64 @@ ability_4: 10
 mvp: true
 ```
 
-> Активки — CD-only (без маны). Аура — глобальный бафф владельца (без радиуса).
+> Активки — CD-only (без маны). Аура слота 3 — глобальный бафф владельца (без радиуса), пока герой жив. Ауры разных героев **стакаются** (разные статы).
+
+### Slot 1 — TT_King
+
+| Unlock | Ability | Механика |
+|--------|---------|----------|
+| lvl 1 | Strike | AoE урон вокруг героя, CD |
+| lvl 4 | Heal | Лечение героя + союзников в радиусе, CD |
+| lvl 7 | Aura | Пассив: **+10% урона** армии владельца |
+| lvl 10 | Ultimate | Большой AoE урон + самоусиление (+50% урона, 8 с), длинный CD |
+
+```entity
+id: HERO_HUMAN_1_ABILITIES
+hero_id: HERO_HUMAN_1
+ability_1: strike_aoe
+ability_2: heal_aoe
+ability_3: aura_damage_percent
+ability_4: ultimate_aoe_self_buff
+mvp: true
+```
+
+### Slot 2 — TT_Mounted_Paladin
+
+| Unlock | Ability | Механика |
+|--------|---------|----------|
+| lvl 1 | Smite | Кара: высокий урон по **ближайшему** врагу, CD |
+| lvl 4 | Shield | Щит: +броня герою и союзникам в радиусе на время, CD |
+| lvl 7 | Aura | Пассив: **+10% attack speed** армии владельца |
+| lvl 10 | Consecration | Освящение: AoE урон + краткий stun врагов, длинный CD |
+
+```entity
+id: HERO_HUMAN_2_ABILITIES
+hero_id: HERO_HUMAN_2
+ability_1: smite_single
+ability_2: shield_armor_buff
+ability_3: aura_attack_speed_percent
+ability_4: consecration_aoe_stun
+mvp: true
+```
+
+### Slot 3 — TT_Mounted_Priest
+
+| Unlock | Ability | Механика |
+|--------|---------|----------|
+| lvl 1 | Holy Nova | Вспышка: небольшой урон врагам **и** хил союзникам вокруг, CD |
+| lvl 4 | Greater Heal | Сильное лечение героя + союзников в радиусе, CD |
+| lvl 7 | Aura | Пассив: **+10% armor** армии владельца |
+| lvl 10 | Revive | Возрождение ближайшего союзного трупа + хил-пульс, длинный CD |
+
+```entity
+id: HERO_HUMAN_3_ABILITIES
+hero_id: HERO_HUMAN_3
+ability_1: holy_nova
+ability_2: greater_heal
+ability_3: aura_armor_percent
+ability_4: revive_corpse_heal
+mvp: true
+```
 
 ## Morale bonus (боевой дух)
 
@@ -303,7 +353,7 @@ mvp: true
 | Deployed / dead | Morale **нет**; re-hire **не нужен** |
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
-| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10 |
+| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10, кит уникален per hero slot |
 | Титан | Отдельный тип; **не hire в main**; полоска **180 s** над main (L3 + все 3 героя на базе; deployed/dead → заморозка) → появляется на базе; выпуск **2500g** из живого barracks; CD 300 s как герой (без повторной полоски); XP как герой; визуал `TT_Peasant` / `Human_Titan`; статы сид 3× на префаб, дальше баланс на `UnitBalanceSettings`; PRE-002 |
 
 ## Open

@@ -10,6 +10,12 @@ namespace Game.Gameplay.Match
         Heal = 2,
         Aura = 3,
         Ultimate = 4,
+        Smite = 5,
+        Shield = 6,
+        Consecration = 7,
+        HolyNova = 8,
+        GreaterHeal = 9,
+        Revive = 10,
     }
 
     /// <summary>
@@ -52,10 +58,13 @@ namespace Game.Gameplay.Match
         public static int GetAbilityUnlockLevel(HeroAbilityType ability) =>
             ability switch
             {
-                HeroAbilityType.Strike => StrikeUnlockLevel,
-                HeroAbilityType.Heal => HealUnlockLevel,
+                HeroAbilityType.Strike or HeroAbilityType.Smite or HeroAbilityType.HolyNova
+                    => StrikeUnlockLevel,
+                HeroAbilityType.Heal or HeroAbilityType.Shield or HeroAbilityType.GreaterHeal
+                    => HealUnlockLevel,
                 HeroAbilityType.Aura => AuraUnlockLevel,
-                HeroAbilityType.Ultimate => UltimateUnlockLevel,
+                HeroAbilityType.Ultimate or HeroAbilityType.Consecration or HeroAbilityType.Revive
+                    => UltimateUnlockLevel,
                 _ => int.MaxValue,
             };
 

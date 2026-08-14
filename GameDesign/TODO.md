@@ -55,6 +55,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | HERO-004 | Снапшот v11: HeroLevel/HeroXp/HeroXpNext | done | snapshot tests |
 | HERO-005 | 4 способности (1/4/7/10): авто-каст + VFX + аура + самобафф ульта | done | HeroAbilityRulesTests |
 | HERO-006 | UI ContextStrip: уровень + XP-прогресс | done | hero strip shows TT_King, level, XP progress; formatting tests |
+| HERO-007 | Уникальные киты героев 2–3 + VFX | done | Paladin Smite/Shield/AS aura/Consecration; Priest Nova/GreaterHeal/armor aura/Revive; те же unlock 1/4/7/10 |
 
 ---
 
@@ -117,6 +118,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-14 | HERO-007: уникальные способности слотов 2–3 (Paladin Smite/Shield/AS aura/Consecration, Priest Nova/Greater Heal/armor aura/Revive) на тех же уровнях 1/4/7/10 + VFX |
 | 2026-08-14 | PRE-004: герои 2–3 (TT_Mounted_Paladin / TT_Mounted_Priest) и титан (TT_Peasant); префабы Human_Hero1/2/3 + Human_Titan; баланс на UnitBalanceSettings; каталог по слоту |
 | 2026-08-14 | PRE-002: титан — полоска 180s над main (3 героя IdleAtBase) → idle на базе; выпуск 2500g с казарм как герой; CD 300s без повторной полоски; снапшот v15 (ростер героев + titan level/xp/CD + HeroSlot/IsParkedAtBase) |
 | 2026-08-14 | Titan механика финализирована: пассивное изучение 180s (main L3 + 3 героя на базе, заморозка при deployed/dead) вместо hire; summon 2500g из barracks, CD 300s, статы 3× героя; GDD обновлён (Heroes/Buildings/Economy/Units/Bonuses/AI/Core/Upgrades) |

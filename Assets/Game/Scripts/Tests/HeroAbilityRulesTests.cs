@@ -53,6 +53,52 @@ namespace Game.Tests
             Assert.AreEqual(10f + HeroAbilityRules.HealAmount, low);
         }
 
+        [Test]
+        public void ApplyHeal_CustomAmount_ClampsToMaxHp()
+        {
+            Assert.AreEqual(80f, HeroAbilityRules.ApplyHeal(30f, 80f, 100f));
+            Assert.AreEqual(80f, HeroAbilityRules.ApplyHeal(30f, 200f, 50f));
+        }
+
+        [Test]
+        public void FindNearestEnemy_PicksClosestOpponent()
+        {
+            var hero = MakeUnit(0, UnitRole.Hero, new Vector3(0f, 0f, 0f));
+            var near = MakeUnit(1, UnitRole.Melee, new Vector3(2f, 0f, 0f));
+            var far = MakeUnit(1, UnitRole.Melee, new Vector3(4f, 0f, 0f));
+            var ally = MakeUnit(0, UnitRole.Melee, new Vector3(1f, 0f, 0f));
+            var units = new List<MatchUnitState> { hero, near, far, ally };
+
+            var found = HeroAbilityRules.FindNearestEnemy(hero, units, 5f);
+
+            Assert.AreEqual(near.UnitId, found.UnitId);
+        }
+
+        [Test]
+        public void GetAbilityType_MapsUniqueKitsPerSlot()
+        {
+            Assert.AreEqual(HeroAbilityType.Strike, HeroAbilityRules.GetAbilityType(1, 1));
+            Assert.AreEqual(HeroAbilityType.Smite, HeroAbilityRules.GetAbilityType(2, 1));
+            Assert.AreEqual(HeroAbilityType.HolyNova, HeroAbilityRules.GetAbilityType(3, 1));
+            Assert.AreEqual(HeroAbilityType.Shield, HeroAbilityRules.GetAbilityType(2, 2));
+            Assert.AreEqual(HeroAbilityType.GreaterHeal, HeroAbilityRules.GetAbilityType(3, 2));
+            Assert.AreEqual(HeroAbilityType.Consecration, HeroAbilityRules.GetAbilityType(2, 4));
+            Assert.AreEqual(HeroAbilityType.Revive, HeroAbilityRules.GetAbilityType(3, 4));
+            Assert.AreEqual(HeroAbilityType.Aura, HeroAbilityRules.GetAbilityType(2, 3));
+            Assert.AreEqual(HeroAbilityType.Aura, HeroAbilityRules.GetAbilityType(3, 3));
+        }
+
+        [Test]
+        public void GetDisplayName_CoversPaladinAndPriestAbilities()
+        {
+            Assert.AreEqual("Smite", HeroAbilityRules.GetDisplayName(HeroAbilityType.Smite));
+            Assert.AreEqual("Shield", HeroAbilityRules.GetDisplayName(HeroAbilityType.Shield));
+            Assert.AreEqual("Consecration", HeroAbilityRules.GetDisplayName(HeroAbilityType.Consecration));
+            Assert.AreEqual("Holy Nova", HeroAbilityRules.GetDisplayName(HeroAbilityType.HolyNova));
+            Assert.AreEqual("Greater Heal", HeroAbilityRules.GetDisplayName(HeroAbilityType.GreaterHeal));
+            Assert.AreEqual("Revive", HeroAbilityRules.GetDisplayName(HeroAbilityType.Revive));
+        }
+
         static MatchUnitState MakeUnit(int ownerSlot, UnitRole role, Vector3 position)
         {
             var stats = new UnitCombatStats(role, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);

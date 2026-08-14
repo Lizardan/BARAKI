@@ -202,6 +202,38 @@ namespace Game.Gameplay.Match
             return root;
         }
 
+        /// <summary>Vertical holy column at a point (Smite / Consecration), rises then fades.</summary>
+        public static GameObject CreateBurst(
+            Transform parent,
+            Vector3 position,
+            Color color,
+            float height = 2.4f,
+            float duration = 0.7f)
+        {
+            var root = new GameObject("SpellBurst");
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+
+            var columnColor = color;
+            columnColor.a *= 0.85f;
+            var column = CreatePrimitiveCylinder(root.transform, "Column", 0.5f, height, columnColor);
+            column.localPosition = Vector3.up * (height * 0.5f);
+
+            var capColor = color;
+            capColor.a *= 0.55f;
+            var cap = CreatePrimitiveCylinder(root.transform, "Cap", 1.1f, 0.08f, capColor);
+            cap.localPosition = Vector3.up * 0.04f;
+
+            var component = root.AddComponent<SpellFxRiseFade>();
+            component.Configure(
+                new[] { column.GetComponent<Renderer>(), cap.GetComponent<Renderer>() },
+                columnColor,
+                duration,
+                riseSpeed: 1.4f,
+                billboard: false);
+            return root;
+        }
+
         /// <summary>Spell name label above the caster's bars, rises then fades.</summary>
         public static GameObject CreateLabel(
             Transform parent,

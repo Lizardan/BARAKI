@@ -171,6 +171,300 @@ namespace Game.Tests
                 0.001f);
         }
 
+        [Test]
+        public void PaladinCastsSmite_OnNearestEnemy()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.SmiteDamage, enemy.CurrentHp, 0.001f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.Smite, casts[0].Ability);
+            Assert.AreEqual(enemy.UnitId, casts[0].TargetUnitId);
+        }
+
+        [Test]
+        public void PaladinDoesNotCastKingStrike()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(HeroAbilityType.Smite, casts[0].Ability);
+            Assert.AreNotEqual(MeleeMaxHp - HeroAbilityRules.StrikeDamage, enemy.CurrentHp);
+        }
+
+        [Test]
+        public void PaladinCastsShield_BuffsAlliesWhenEnemyNearby()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 4);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(3f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.Greater(ally.ArmorBuffRemaining, HeroAbilityRules.ShieldDurationSeconds - 0.15f);
+            Assert.Greater(hero.ArmorBuffRemaining, HeroAbilityRules.ShieldDurationSeconds - 0.15f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.Shield, casts[0].Ability);
+
+            controller.Combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
+                enemy.UnitId, ally.UnitId, 100f, 0.1f));
+            Assert.AreEqual(MeleeMaxHp - CombatRules.ApplyArmor(100f, HeroAbilityRules.ShieldArmorBonus), ally.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void PaladinBelowShieldLevel_DoesNotCastShield()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(0f, hero.ArmorBuffRemaining, 0.001f);
+            Assert.AreEqual(HeroAbilityType.Smite, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+        }
+
+        [Test]
+        public void PaladinCastsConsecration_DamagesAndStuns()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 10);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(3f, 0f, 0f);
+            hero.ArmorBuffRemaining = 1f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.ConsecrationDamage, enemy.CurrentHp, 0.001f);
+            Assert.Greater(enemy.FrozenRemainingSeconds, HeroAbilityRules.ConsecrationStunSeconds - 0.15f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.Consecration, casts[0].Ability);
+        }
+
+        [Test]
+        public void PaladinAura_BoostsOwnerArmyAttackSpeed()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 5f, isHero: true, heroSlot: 2, level: 7);
+            var warrior = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 25f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 30f);
+            warrior.WorldPosition = enemy.WorldPosition + new Vector3(1f, 0f, 0f);
+            warrior.CurrentTargetId = enemy.UnitId;
+            warrior.AttackCooldownRemaining = 0f;
+
+            controller.Combat.Tick(0.05f);
+
+            var expected = CombatRules.GetAttackIntervalSeconds(
+                1f * (1f + HeroAbilityRules.AuraAttackSpeedBonusPercent));
+            Assert.AreEqual(expected, warrior.AttackCooldownRemaining, 0.001f);
+        }
+
+        [Test]
+        public void PaladinAura_DoesNotGrantKingDamageAura()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 7);
+            var warrior = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 25f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 30f);
+
+            controller.Combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
+                warrior.UnitId, enemy.UnitId, 100f, 0.1f));
+
+            Assert.AreEqual(MeleeMaxHp - 100f, enemy.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void PriestCastsHolyNova_DamagesEnemiesAndHealsAllies()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 1);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2.5f, 0f, 0f);
+            ally.CurrentHp = MeleeMaxHp - 200f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - 200f + HeroAbilityRules.NovaHealAmount, ally.CurrentHp, 0.001f);
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, enemy.CurrentHp, 0.001f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.HolyNova, casts[0].Ability);
+        }
+
+        [Test]
+        public void PriestCastsGreaterHeal_OnInjuredAlly()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 4);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(3f, 0f, 0f);
+            ally.CurrentHp = MeleeMaxHp - 200f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(
+                MeleeMaxHp - 200f + HeroAbilityRules.GreaterHealAmount,
+                ally.CurrentHp,
+                0.001f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.GreaterHeal, casts[0].Ability);
+        }
+
+        [Test]
+        public void PriestBelowGreaterHealLevel_DoesNotCastGreaterHeal()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 1);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+            ally.CurrentHp = MeleeMaxHp - 200f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - 200f + HeroAbilityRules.NovaHealAmount, ally.CurrentHp, 0.001f);
+            Assert.AreEqual(HeroAbilityType.HolyNova, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+        }
+
+        [Test]
+        public void PriestAura_BoostsOwnerArmyArmor()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 5f, isHero: true, heroSlot: 3, level: 7);
+            var warrior = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, ArmoredMeleeStats(),
+                distanceAlongLane: 25f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 30f);
+
+            controller.Combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
+                enemy.UnitId, warrior.UnitId, 100f, 0.1f));
+
+            var expectedArmor = 10f * (1f + HeroAbilityRules.AuraArmorBonusPercent);
+            Assert.AreEqual(600f - CombatRules.ApplyArmor(100f, expectedArmor), warrior.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void PriestCastsRevive_OnAlliedCorpse()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 10);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.ApplyExternalDamage(ally.UnitId, 1000f, killerOwnerSlot: 1);
+            Assert.AreEqual(1, controller.Combat.Corpses.Count);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(0, controller.Combat.Corpses.Count);
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(HeroAbilityType.Revive, casts[0].Ability);
+
+            var revived = controller.Combat.GetUnit(casts[0].TargetUnitId);
+            Assert.IsNotNull(revived);
+            Assert.AreEqual(UnitRole.Melee, revived.Role);
+            Assert.AreEqual(MeleeMaxHp, revived.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void PriestDoesNotCastKingStrike()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(HeroAbilityType.HolyNova, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, enemy.CurrentHp, 0.001f);
+        }
+
         static MatchController CreateEarlyMatch()
         {
             var controller = new MatchController();
@@ -186,5 +480,8 @@ namespace Game.Tests
 
         static UnitCombatStats MeleeStats() =>
             new UnitCombatStats(UnitRole.Melee, MeleeMaxHp, 0f, 35f, 45f, 1f, 1.5f, 4f, 80);
+
+        static UnitCombatStats ArmoredMeleeStats() =>
+            new UnitCombatStats(UnitRole.Melee, MeleeMaxHp, 10f, 35f, 45f, 1f, 1.5f, 4f, 80);
     }
 }
