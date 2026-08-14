@@ -53,9 +53,11 @@ namespace Game.Gameplay.Combat
         public const float NovaDamage = 35f;
         public const float NovaHealAmount = 50f;
         public const float NovaCooldownSeconds = 6f;
+        public const float NovaCastRange = 10f;
 
-        public const float GreaterHealRadius = 7f;
-        public const float GreaterHealAmount = 180f;
+        public const float GreaterHealRadius = 10f;
+        public const float GreaterHealHealPerSecond = 20f;
+        public const float GreaterHealDurationSeconds = 10f;
         public const float GreaterHealCooldownSeconds = 10f;
 
         /// <summary>Priest aura: global armor bonus to the owner's army while the hero is alive.</summary>
@@ -66,14 +68,45 @@ namespace Game.Gameplay.Combat
         public const float ReviveHealRadius = 6f;
         public const float ReviveCooldownSeconds = 30f;
 
+        public const float SlamRadius = 6f;
+        public const float SlamDamage = 180f;
+        public const float SlamCooldownSeconds = 6f;
+
+        public const float RallyRadius = 8f;
+        public const float RallyArmorBonus = 12f;
+        public const float RallyDurationSeconds = 6f;
+        public const float RallyCooldownSeconds = 10f;
+
+        /// <summary>Titan Colossus: global max-HP bonus to the owner's army while the titan is alive.</summary>
+        public const float AuraMaxHpBonusPercent = 0.15f;
+
+        public const float StompRadius = 8f;
+        public const float StompDamage = 360f;
+        public const float StompStunSeconds = 2f;
+        public const float StompCooldownSeconds = 30f;
+
         /// <summary>All living enemies within <paramref name="radius"/> of the hero.</summary>
         public static List<MatchUnitState> GatherEnemiesInRadius(
             MatchUnitState caster,
             IReadOnlyList<MatchUnitState> units,
             float radius)
         {
+            if (caster == null)
+            {
+                return new List<MatchUnitState>();
+            }
+
+            return GatherEnemiesAround(caster.OwnerSlot, caster.WorldPosition, units, radius);
+        }
+
+        public static List<MatchUnitState> GatherEnemiesAround(
+            int ownerSlot,
+            Vector3 center,
+            IReadOnlyList<MatchUnitState> units,
+            float radius)
+        {
             var victims = new List<MatchUnitState>();
-            if (caster == null || units == null || radius <= 0f)
+            if (units == null || radius <= 0f)
             {
                 return victims;
             }
@@ -84,12 +117,12 @@ namespace Game.Gameplay.Combat
                 var candidate = units[i];
                 if (candidate == null
                     || !candidate.IsAlive
-                    || candidate.OwnerSlot == caster.OwnerSlot)
+                    || candidate.OwnerSlot == ownerSlot)
                 {
                     continue;
                 }
 
-                if (HorizontalDistanceSq(caster.WorldPosition, candidate.WorldPosition) <= radiusSq)
+                if (HorizontalDistanceSq(center, candidate.WorldPosition) <= radiusSq)
                 {
                     victims.Add(candidate);
                 }
@@ -104,8 +137,22 @@ namespace Game.Gameplay.Combat
             IReadOnlyList<MatchUnitState> units,
             float radius)
         {
+            if (caster == null)
+            {
+                return new List<MatchUnitState>();
+            }
+
+            return GatherAlliesAround(caster.OwnerSlot, caster.WorldPosition, units, radius);
+        }
+
+        public static List<MatchUnitState> GatherAlliesAround(
+            int ownerSlot,
+            Vector3 center,
+            IReadOnlyList<MatchUnitState> units,
+            float radius)
+        {
             var allies = new List<MatchUnitState>();
-            if (caster == null || units == null || radius <= 0f)
+            if (units == null || radius <= 0f)
             {
                 return allies;
             }
@@ -116,12 +163,12 @@ namespace Game.Gameplay.Combat
                 var candidate = units[i];
                 if (candidate == null
                     || !candidate.IsAlive
-                    || candidate.OwnerSlot != caster.OwnerSlot)
+                    || candidate.OwnerSlot != ownerSlot)
                 {
                     continue;
                 }
 
-                if (HorizontalDistanceSq(caster.WorldPosition, candidate.WorldPosition) <= radiusSq)
+                if (HorizontalDistanceSq(center, candidate.WorldPosition) <= radiusSq)
                 {
                     allies.Add(candidate);
                 }
@@ -158,22 +205,111 @@ namespace Game.Gameplay.Combat
             return nearest;
         }
 
-        /// <summary>Active ability for a hero slot (1..4). Slot 3 (aura) is <see cref="HeroAbilityType.Aura"/> for every kit.</summary>
+        /// <summary>
+        /// Ally in <paramref name="castRange"/> whose nova best heals injured allies and hits enemies.
+        /// Prefers anchors that do both; ties go to the most injured anchor. Includes the caster.
+        /// </summary>
+        public static MatchUnitState PickHolyNovaAnchor(
+            MatchUnitState caster,
+            IReadOnlyList<MatchUnitState> units,
+            float castRange,
+            float novaRadius)
+        {
+            if (caster == null || units == null || castRange <= 0f || novaRadius <= 0f)
+            {
+                return null;
+            }
+
+            var castRangeSq = castRange * castRange;
+            MatchUnitState best = null;
+            var bestHasBoth = false;
+            var bestScore = -1;
+            var bestFraction = float.MaxValue;
+            for (var i = 0; i < units.Count; i++)
+            {
+                var candidate = units[i];
+                if (candidate == null
+                    || !candidate.IsAlive
+                    || candidate.OwnerSlot != caster.OwnerSlot)
+                {
+                    continue;
+                }
+
+                if (HorizontalDistanceSq(caster.WorldPosition, candidate.WorldPosition) > castRangeSq)
+                {
+                    continue;
+                }
+
+                var injured = 0;
+                var enemies = 0;
+                var novaRadiusSq = novaRadius * novaRadius;
+                for (var j = 0; j < units.Count; j++)
+                {
+                    var other = units[j];
+                    if (other == null || !other.IsAlive)
+                    {
+                        continue;
+                    }
+
+                    if (HorizontalDistanceSq(candidate.WorldPosition, other.WorldPosition) > novaRadiusSq)
+                    {
+                        continue;
+                    }
+
+                    if (other.OwnerSlot == caster.OwnerSlot)
+                    {
+                        if (other.CurrentHp < other.Stats.MaxHp - 0.001f)
+                        {
+                            injured++;
+                        }
+                    }
+                    else
+                    {
+                        enemies++;
+                    }
+                }
+
+                if (injured == 0 && enemies == 0)
+                {
+                    continue;
+                }
+
+                var hasBoth = injured > 0 && enemies > 0;
+                var score = injured + enemies;
+                var fraction = candidate.Stats.MaxHp > 0f
+                    ? candidate.CurrentHp / candidate.Stats.MaxHp
+                    : 1f;
+                if (best == null
+                    || (hasBoth && !bestHasBoth)
+                    || (hasBoth == bestHasBoth && score > bestScore)
+                    || (hasBoth == bestHasBoth && score == bestScore && fraction < bestFraction))
+                {
+                    best = candidate;
+                    bestHasBoth = hasBoth;
+                    bestScore = score;
+                    bestFraction = fraction;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>Active ability for a hero slot (1..4).</summary>
         public static HeroAbilityType GetAbilityType(int heroSlot, int abilitySlot)
         {
             return (heroSlot, abilitySlot) switch
             {
                 (KingSlot, 1) => HeroAbilityType.Strike,
                 (KingSlot, 2) => HeroAbilityType.Heal,
-                (KingSlot, 3) => HeroAbilityType.Aura,
+                (KingSlot, 3) => HeroAbilityType.AuraDamagePercent,
                 (KingSlot, 4) => HeroAbilityType.Ultimate,
                 (PaladinSlot, 1) => HeroAbilityType.Smite,
                 (PaladinSlot, 2) => HeroAbilityType.Shield,
-                (PaladinSlot, 3) => HeroAbilityType.Aura,
+                (PaladinSlot, 3) => HeroAbilityType.AuraAttackSpeedPercent,
                 (PaladinSlot, 4) => HeroAbilityType.Consecration,
                 (PriestSlot, 1) => HeroAbilityType.HolyNova,
                 (PriestSlot, 2) => HeroAbilityType.GreaterHeal,
-                (PriestSlot, 3) => HeroAbilityType.Aura,
+                (PriestSlot, 3) => HeroAbilityType.AuraArmorPercent,
                 (PriestSlot, 4) => HeroAbilityType.Revive,
                 _ => HeroAbilityType.None,
             };
@@ -186,7 +322,10 @@ namespace Game.Gameplay.Combat
             {
                 HeroAbilityType.Strike => "Strike",
                 HeroAbilityType.Heal => "Heal",
-                HeroAbilityType.Aura => "Aura",
+                HeroAbilityType.AuraDamagePercent
+                    or HeroAbilityType.AuraAttackSpeedPercent
+                    or HeroAbilityType.AuraArmorPercent
+                    or HeroAbilityType.AuraMaxHpPercent => "Aura",
                 HeroAbilityType.Ultimate => "Ultimate",
                 HeroAbilityType.Smite => "Smite",
                 HeroAbilityType.Shield => "Shield",
@@ -194,6 +333,9 @@ namespace Game.Gameplay.Combat
                 HeroAbilityType.HolyNova => "Holy Nova",
                 HeroAbilityType.GreaterHeal => "Greater Heal",
                 HeroAbilityType.Revive => "Revive",
+                HeroAbilityType.Slam => "Slam",
+                HeroAbilityType.Rally => "Rally",
+                HeroAbilityType.Stomp => "Stomp",
                 _ => ability.ToString(),
             };
         }
@@ -234,5 +376,16 @@ namespace Game.Gameplay.Combat
         public float Radius { get; }
         public int TargetUnitId { get; }
         public int Serial { get; }
+    }
+
+    /// <summary>Stationary ally heal field created by Greater Heal.</summary>
+    public sealed class HeroHealZoneState
+    {
+        public int CasterUnitId;
+        public int OwnerSlot;
+        public Vector3 Center;
+        public float Radius;
+        public float RemainingSeconds;
+        public float HealPerSecond;
     }
 }

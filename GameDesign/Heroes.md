@@ -167,16 +167,16 @@ mvp: true
 
 | Unlock | Ability | Механика |
 |--------|---------|----------|
-| lvl 1 | Holy Nova | Вспышка: небольшой урон врагам **и** хил союзникам вокруг, CD |
-| lvl 4 | Greater Heal | Сильное лечение героя + союзников в радиусе, CD |
+| lvl 1 | Holy Nova | Вспышка вокруг **выбранного союзника**: хил союзников и урон врагам в радиусе, CD |
+| lvl 4 | Greater Heal | Большая **зона на 10 с**: союзники внутри лечатся (HoT), CD |
 | lvl 7 | Aura | Пассив: **+10% armor** армии владельца |
 | lvl 10 | Revive | Возрождение ближайшего союзного трупа + хил-пульс, длинный CD |
 
 ```entity
 id: HERO_HUMAN_3_ABILITIES
 hero_id: HERO_HUMAN_3
-ability_1: holy_nova
-ability_2: greater_heal
+ability_1: holy_nova_on_ally
+ability_2: greater_heal_zone
 ability_3: aura_armor_percent
 ability_4: revive_corpse_heal
 mvp: true
@@ -316,7 +316,26 @@ mvp: true
 
 Титан **не нанимается в main как герой**. Пока **одновременно** `main_level >= 3`, наняты **все 3 героя** и все трое `IdleAtBase` — над главным зданием идёт **полоска 180 с**. Любой герой deployed/dead — прогресс **замораживается** (не сбрасывается); когда все 3 снова на базе — полоска продолжается.
 
-По заполнении титан **появляется на базе** (`IdleAtBase`, parked). Выпуск из **живого** barracks **мгновенно за 2500g** (как hero deploy). Смерть → CD **300 s** per barracks, как у героя; повторный выпуск после CD — **снова 2500g**, **без** новой полоски 180 с. XP/уровни — как у героя (`HERO_LEVELING`). Базовые статы сидятся как **3× героя** на префаб `Human_Titan` (`UnitBalanceSettings`); дальше титан балансится на префабе независимо (рантайм **не** умножает снова).
+По заполнении титан **появляется на базе** (`IdleAtBase`, parked). Выпуск из **живого** barracks **мгновенно за 2500g** (как hero deploy). Смерть → CD **300 s** per barracks, как у героя; повторный выпуск после CD — **снова 2500g**, **без** новой полоски 180 с. XP/уровни — как у героя (`HERO_LEVELING`). Базовые статы сидятся как **3× героя** на префаб `Human_Titan` (`UnitBalanceSettings`); дальше титан балансится на префабе независимо (рантайм **не** умножает снова). Способности — `UnitAbilityKit` на префабе, unlock 1/4/7/10 как у героя.
+
+### Titan abilities — Human (`TT_Peasant`)
+
+| Unlock | Ability | Механика |
+|--------|---------|----------|
+| lvl 1 | Slam | Удар вокруг себя, CD |
+| lvl 4 | Rally | Клич: +броня титану и союзникам в радиусе на время, CD |
+| lvl 7 | Colossus | Пассив: **+15% max HP** армии владельца, пока титан жив |
+| lvl 10 | Stomp | Топот: AoE урон + stun врагов, длинный CD |
+
+```entity
+id: TITAN_HUMAN_ABILITIES
+unit_type: UNIT_TYPE_TITAN
+ability_1: slam_aoe
+ability_2: rally_armor_buff
+ability_3: aura_max_hp_percent
+ability_4: stomp_aoe_stun
+mvp: true
+```
 
 ## Titan research flow
 
@@ -353,8 +372,8 @@ mvp: true
 | Deployed / dead | Morale **нет**; re-hire **не нужен** |
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
-| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10, кит уникален per hero slot |
-| Титан | Отдельный тип; **не hire в main**; полоска **180 s** над main (L3 + все 3 героя на базе; deployed/dead → заморозка) → появляется на базе; выпуск **2500g** из живого barracks; CD 300 s как герой (без повторной полоски); XP как герой; визуал `TT_Peasant` / `Human_Titan`; статы сид 3× на префаб, дальше баланс на `UnitBalanceSettings`; PRE-002 |
+| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10, кит на префабе (`UnitAbilityKit`) |
+| Титан | Отдельный тип; **не hire в main**; полоска **180 s** над main (L3 + все 3 героя на базе; deployed/dead → заморозка) → появляется на базе; выпуск **2500g** из живого barracks; CD 300 s как герой (без повторной полоски); XP как герой; визуал `TT_Peasant` / `Human_Titan`; статы сид 3× на префаб, дальше баланс на `UnitBalanceSettings`; кит Slam/Rally/Colossus/Stomp на префабе (1/4/7/10); PRE-002 |
 
 ## Open
 

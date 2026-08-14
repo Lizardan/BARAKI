@@ -625,7 +625,6 @@ namespace Game.Gameplay.Match
             switch (cast.Ability)
             {
                 case HeroAbilityType.Heal:
-                case HeroAbilityType.GreaterHeal:
                     if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
                     {
                         SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
@@ -633,7 +632,22 @@ namespace Game.Gameplay.Match
 
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, color, 0.85f);
                     break;
+                case HeroAbilityType.GreaterHeal:
+                    if (TryGetUnitBarTop(cast.TargetUnitId, out var zoneHealTop))
+                    {
+                        SpellFxFactory.CreatePlus(_root, zoneHealTop, HealFxColor);
+                    }
+
+                    SpellFxFactory.CreateRing(
+                        _root,
+                        cast.CenterPosition,
+                        cast.Radius,
+                        color,
+                        HeroAbilityRules.GreaterHealDurationSeconds,
+                        fadeOutNormalized: 0.88f);
+                    break;
                 case HeroAbilityType.Strike:
+                case HeroAbilityType.Slam:
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, StrikeFxColor, 0.75f);
                     break;
                 case HeroAbilityType.Ultimate:
@@ -644,9 +658,11 @@ namespace Game.Gameplay.Match
                     SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor);
                     break;
                 case HeroAbilityType.Shield:
+                case HeroAbilityType.Rally:
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.0f);
                     break;
                 case HeroAbilityType.Consecration:
+                case HeroAbilityType.Stomp:
                     SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.3f);
                     SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor, 2.8f);
                     break;
@@ -670,9 +686,13 @@ namespace Game.Gameplay.Match
             return ability switch
             {
                 HeroAbilityType.Heal or HeroAbilityType.GreaterHeal => HealFxColor,
-                HeroAbilityType.Strike => StrikeFxColor,
+                HeroAbilityType.Strike or HeroAbilityType.Slam => StrikeFxColor,
                 HeroAbilityType.Ultimate => UltimateFxColor,
-                HeroAbilityType.Smite or HeroAbilityType.Shield or HeroAbilityType.Consecration => PaladinFxColor,
+                HeroAbilityType.Smite
+                    or HeroAbilityType.Shield
+                    or HeroAbilityType.Consecration
+                    or HeroAbilityType.Rally
+                    or HeroAbilityType.Stomp => PaladinFxColor,
                 HeroAbilityType.HolyNova or HeroAbilityType.Revive => PriestFxColor,
                 _ => Color.white,
             };

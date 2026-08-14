@@ -29,8 +29,11 @@ namespace Game.Tests
             Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Strike, 1));
             Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, 3));
             Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, 4));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Aura, 6));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Aura, 7));
+            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraDamagePercent, 6));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraDamagePercent, 7));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraMaxHpPercent, 7));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Slam, 1));
+            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Stomp, 10));
             Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 9));
             Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 10));
 

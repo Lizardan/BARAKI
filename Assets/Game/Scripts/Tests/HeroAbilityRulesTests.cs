@@ -84,8 +84,8 @@ namespace Game.Tests
             Assert.AreEqual(HeroAbilityType.GreaterHeal, HeroAbilityRules.GetAbilityType(3, 2));
             Assert.AreEqual(HeroAbilityType.Consecration, HeroAbilityRules.GetAbilityType(2, 4));
             Assert.AreEqual(HeroAbilityType.Revive, HeroAbilityRules.GetAbilityType(3, 4));
-            Assert.AreEqual(HeroAbilityType.Aura, HeroAbilityRules.GetAbilityType(2, 3));
-            Assert.AreEqual(HeroAbilityType.Aura, HeroAbilityRules.GetAbilityType(3, 3));
+            Assert.AreEqual(HeroAbilityType.AuraAttackSpeedPercent, HeroAbilityRules.GetAbilityType(2, 3));
+            Assert.AreEqual(HeroAbilityType.AuraArmorPercent, HeroAbilityRules.GetAbilityType(3, 3));
         }
 
         [Test]
@@ -97,13 +97,44 @@ namespace Game.Tests
             Assert.AreEqual("Holy Nova", HeroAbilityRules.GetDisplayName(HeroAbilityType.HolyNova));
             Assert.AreEqual("Greater Heal", HeroAbilityRules.GetDisplayName(HeroAbilityType.GreaterHeal));
             Assert.AreEqual("Revive", HeroAbilityRules.GetDisplayName(HeroAbilityType.Revive));
+            Assert.AreEqual("Slam", HeroAbilityRules.GetDisplayName(HeroAbilityType.Slam));
+            Assert.AreEqual("Stomp", HeroAbilityRules.GetDisplayName(HeroAbilityType.Stomp));
         }
+
+        [Test]
+        public void PickHolyNovaAnchor_PrefersAllyThatHealsAndHitsEnemies()
+        {
+            var priest = MakeUnit(0, UnitRole.Hero, new Vector3(0f, 0f, 0f));
+            var farAlly = MakeUnit(0, UnitRole.Melee, new Vector3(8f, 0f, 0f));
+            farAlly.CurrentHp = 200f;
+            var enemyAtAlly = MakeUnit(1, UnitRole.Melee, new Vector3(8.5f, 0f, 0f));
+            var enemyAtPriest = MakeUnit(1, UnitRole.Melee, new Vector3(1f, 0f, 0f));
+            var units = new List<MatchUnitState> { priest, farAlly, enemyAtAlly, enemyAtPriest };
+
+            var anchor = HeroAbilityRules.PickHolyNovaAnchor(priest, units, 10f, 4f);
+
+            Assert.AreEqual(farAlly.UnitId, anchor.UnitId);
+        }
+
+        [Test]
+        public void GatherAlliesAround_UsesCenterNotCaster()
+        {
+            var priest = MakeUnit(0, UnitRole.Hero, Vector3.zero);
+            var ally = MakeUnit(0, UnitRole.Melee, new Vector3(8f, 0f, 0f));
+            var units = new List<MatchUnitState> { priest, ally };
+
+            var aroundAlly = HeroAbilityRules.GatherAlliesAround(0, ally.WorldPosition, units, 4f);
+            Assert.AreEqual(1, aroundAlly.Count);
+            Assert.AreEqual(ally.UnitId, aroundAlly[0].UnitId);
+        }
+
+        static int _nextId = 1;
 
         static MatchUnitState MakeUnit(int ownerSlot, UnitRole role, Vector3 position)
         {
             var stats = new UnitCombatStats(role, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);
             var unit = new MatchUnitState(
-                0,
+                _nextId++,
                 ownerSlot,
                 GameIds.Lanes.Center,
                 role,

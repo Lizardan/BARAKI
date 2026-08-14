@@ -39,6 +39,8 @@ namespace Game.Gameplay.Combat
             HeroSlot = heroSlot;
             Level = level;
             IsParkedAtBase = false;
+            Abilities = System.Array.Empty<UnitAbilitySlot>();
+            AbilityCooldownRemaining = System.Array.Empty<float>();
         }
 
         public int UnitId { get; }
@@ -52,6 +54,12 @@ namespace Game.Gameplay.Combat
         public int HeroSlot { get; }
         /// <summary>Hero level this unit was spawned with (per-match slot level).</summary>
         public int Level { get; }
+        /// <summary>Copied ability kit. Empty = no spells.</summary>
+        public UnitAbilitySlot[] Abilities { get; set; }
+
+        /// <summary>Per-slot cooldown remaining, parallel to <see cref="Abilities"/>.</summary>
+        public float[] AbilityCooldownRemaining { get; set; }
+
         /// <summary>Hired hero waiting behind base — no march/combat AI.</summary>
         public bool IsParkedAtBase { get; set; }
         public float CurrentHp { get; set; }
@@ -76,6 +84,10 @@ namespace Game.Gameplay.Combat
         public float UltimateBuffRemaining { get; set; }
         /// <summary>Remaining Paladin Shield armor-buff seconds. Transient host state.</summary>
         public float ArmorBuffRemaining { get; set; }
+        /// <summary>Flat armor added while <see cref="ArmorBuffRemaining"/> &gt; 0.</summary>
+        public float ArmorBuffBonus { get; set; }
+        /// <summary>Self-buff damage percent from Ultimate while <see cref="UltimateBuffRemaining"/> &gt; 0.</summary>
+        public float UltimateBuffPercent { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>

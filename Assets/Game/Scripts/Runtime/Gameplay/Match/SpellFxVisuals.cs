@@ -22,7 +22,13 @@ namespace Game.Gameplay.Match
         bool _billboard;
 
         /// <summary>Static fade-out for cube/cylinder primitives (MaterialPropertyBlock colors).</summary>
-        public void Configure(Renderer[] renderers, Color color, float duration, float riseSpeed, bool billboard)
+        public void Configure(
+            Renderer[] renderers,
+            Color color,
+            float duration,
+            float riseSpeed,
+            bool billboard,
+            float fadeOutNormalized = 0.55f)
         {
             _renderers = renderers;
             _baseColors = new Color[renderers.Length];
@@ -34,7 +40,7 @@ namespace Game.Gameplay.Match
             _duration = Mathf.Max(0.05f, duration);
             _riseSpeed = riseSpeed;
             _billboard = billboard;
-            _fadeOutStart = _duration * 0.55f;
+            _fadeOutStart = _duration * Mathf.Clamp01(fadeOutNormalized);
         }
 
         /// <summary>Fade-out for a legacy TextMesh label (vertex colors, not property blocks).</summary>
@@ -169,7 +175,8 @@ namespace Game.Gameplay.Match
             Vector3 position,
             float radius,
             Color color,
-            float duration = 0.9f)
+            float duration = 0.9f,
+            float fadeOutNormalized = 0.55f)
         {
             var root = new GameObject("FrostRing");
             root.transform.SetParent(parent, false);
@@ -198,7 +205,7 @@ namespace Game.Gameplay.Match
             }
 
             var component = root.AddComponent<SpellFxRiseFade>();
-            component.Configure(renderers, rimColor, duration, riseSpeed: 0f, billboard: false);
+            component.Configure(renderers, rimColor, duration, riseSpeed: 0f, billboard: false, fadeOutNormalized);
             return root;
         }
 

@@ -352,6 +352,41 @@ namespace Game.Tests
             var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(HeroAbilityType.HolyNova, casts[0].Ability);
+            Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
+            Assert.AreEqual(ally.WorldPosition.x, casts[0].CenterPosition.x, 0.01f);
+            Assert.AreEqual(ally.WorldPosition.z, casts[0].CenterPosition.z, 0.01f);
+        }
+
+        [Test]
+        public void PriestCastsHolyNova_OnDistantAlly_DoesNotHitEnemyAtFeet()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 1);
+            var ally = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            var farEnemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            var nearEnemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 22f);
+            ally.WorldPosition = hero.WorldPosition + new Vector3(8f, 0f, 0f);
+            farEnemy.WorldPosition = hero.WorldPosition + new Vector3(8.5f, 0f, 0f);
+            nearEnemy.WorldPosition = hero.WorldPosition + new Vector3(1f, 0f, 0f);
+            ally.CurrentHp = MeleeMaxHp - 200f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - 200f + HeroAbilityRules.NovaHealAmount, ally.CurrentHp, 0.001f);
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, farEnemy.CurrentHp, 0.001f);
+            Assert.AreEqual(MeleeMaxHp, nearEnemy.CurrentHp, 0.001f);
+
+            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            Assert.AreEqual(HeroAbilityType.HolyNova, casts[0].Ability);
+            Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
         }
 
         [Test]
@@ -370,13 +405,44 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(
-                MeleeMaxHp - 200f + HeroAbilityRules.GreaterHealAmount,
+                MeleeMaxHp - 200f + HeroAbilityRules.GreaterHealHealPerSecond * 0.1f,
                 ally.CurrentHp,
                 0.001f);
 
             var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(HeroAbilityType.GreaterHeal, casts[0].Ability);
+
+            hero.AbilityCooldownRemaining[2] = 99f;
+            controller.Combat.Tick(1f);
+            Assert.AreEqual(
+                MeleeMaxHp - 200f + HeroAbilityRules.GreaterHealHealPerSecond * 1.1f,
+                ally.CurrentHp,
+                0.05f);
+        }
+
+        [Test]
+        public void PriestGreaterHeal_DoesNotHealAllyOutsideZone()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 3, level: 4);
+            var inside = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            var outside = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 30f);
+            inside.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+            outside.WorldPosition = hero.WorldPosition + new Vector3(20f, 0f, 0f);
+            inside.CurrentHp = MeleeMaxHp - 200f;
+            outside.CurrentHp = MeleeMaxHp - 200f;
+
+            controller.Combat.Tick(0.5f);
+
+            Assert.Greater(inside.CurrentHp, MeleeMaxHp - 200f);
+            Assert.AreEqual(MeleeMaxHp - 200f, outside.CurrentHp, 0.001f);
         }
 
         [Test]
@@ -465,6 +531,80 @@ namespace Game.Tests
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, enemy.CurrentHp, 0.001f);
         }
 
+        [Test]
+        public void TitanCastsSlam_OnEnemyInRange()
+        {
+            var controller = CreateEarlyMatch();
+            var titan = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Titan, TitanStats(),
+                distanceAlongLane: 20f, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = titan.WorldPosition + new Vector3(3f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.SlamDamage, enemy.CurrentHp, 0.001f);
+            Assert.AreEqual(HeroAbilityType.Slam, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+        }
+
+        [Test]
+        public void TitanColossus_RaisesArmyMaxHpWhileAlive()
+        {
+            var controller = CreateEarlyMatch();
+            controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Titan, TitanStats(),
+                distanceAlongLane: 5f, level: 7);
+            var warrior = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 25f);
+            warrior.CurrentHp = 800f;
+
+            controller.Combat.Tick(0.01f);
+
+            var expectedMax = MeleeMaxHp * (1f + HeroAbilityRules.AuraMaxHpBonusPercent);
+            Assert.AreEqual(expectedMax, warrior.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void TitanCastsStomp_DamagesAndStuns()
+        {
+            var controller = CreateEarlyMatch();
+            var titan = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Titan, TitanStats(),
+                distanceAlongLane: 20f, level: 10);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = titan.WorldPosition + new Vector3(3f, 0f, 0f);
+            titan.ArmorBuffRemaining = 1f;
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.StompDamage, enemy.CurrentHp, 0.001f);
+            Assert.Greater(enemy.FrozenRemainingSeconds, HeroAbilityRules.StompStunSeconds - 0.15f);
+            Assert.AreEqual(HeroAbilityType.Stomp, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+        }
+
+        [Test]
+        public void MeleeWithoutKit_DoesNotCastAbilities()
+        {
+            var controller = CreateEarlyMatch();
+            var melee = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 20f);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = melee.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+
+            Assert.AreEqual(0, controller.Combat.ConsumePendingHeroAbilityCasts().Count);
+            Assert.AreEqual(0, melee.Abilities.Length);
+        }
+
         static MatchController CreateEarlyMatch()
         {
             var controller = new MatchController();
@@ -477,6 +617,9 @@ namespace Game.Tests
 
         static UnitCombatStats HeroStats() =>
             new UnitCombatStats(UnitRole.Hero, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);
+
+        static UnitCombatStats TitanStats() =>
+            new UnitCombatStats(UnitRole.Titan, 1800f, 12f, 105f, 135f, 1f, 1.5f, 4f, 80);
 
         static UnitCombatStats MeleeStats() =>
             new UnitCombatStats(UnitRole.Melee, MeleeMaxHp, 0f, 35f, 45f, 1f, 1.5f, 4f, 80);

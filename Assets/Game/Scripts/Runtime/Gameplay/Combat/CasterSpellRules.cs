@@ -93,7 +93,8 @@ namespace Game.Gameplay.Combat
         public static MatchUnitState PickHealTarget(
             MatchUnitState caster,
             IReadOnlyList<MatchUnitState> units,
-            float range)
+            float range,
+            System.Func<MatchUnitState, float> getMaxHp = null)
         {
             if (caster == null || units == null || units.Count == 0 || range <= 0f)
             {
@@ -108,8 +109,13 @@ namespace Game.Gameplay.Combat
                 var candidate = units[i];
                 if (candidate == null
                     || !candidate.IsAlive
-                    || candidate.OwnerSlot != caster.OwnerSlot
-                    || candidate.CurrentHp >= candidate.Stats.MaxHp - 0.001f)
+                    || candidate.OwnerSlot != caster.OwnerSlot)
+                {
+                    continue;
+                }
+
+                var maxHp = getMaxHp != null ? getMaxHp(candidate) : candidate.Stats.MaxHp;
+                if (candidate.CurrentHp >= maxHp - 0.001f)
                 {
                     continue;
                 }
@@ -119,7 +125,7 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                var fraction = candidate.CurrentHp / candidate.Stats.MaxHp;
+                var fraction = maxHp > 0f ? candidate.CurrentHp / maxHp : 1f;
                 if (fraction < bestFraction)
                 {
                     bestFraction = fraction;

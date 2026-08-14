@@ -3,21 +3,6 @@ using Game.Gameplay.Combat;
 
 namespace Game.Gameplay.Match
 {
-    public enum HeroAbilityType
-    {
-        None = 0,
-        Strike = 1,
-        Heal = 2,
-        Aura = 3,
-        Ultimate = 4,
-        Smite = 5,
-        Shield = 6,
-        Consecration = 7,
-        HolyNova = 8,
-        GreaterHeal = 9,
-        Revive = 10,
-    }
-
     /// <summary>
     /// Hero leveling: XP curve, ability unlock levels and per-level stat growth.
     /// GDD baseline: HERO_LEVELING (XpToNext = level * 100, max 10), HERO_ABILITY_UNLOCK_LEVELS (1/4/7/10),
@@ -56,19 +41,29 @@ namespace Game.Gameplay.Match
             level < MaxLevel && xp >= XpToNext(level);
 
         public static int GetAbilityUnlockLevel(HeroAbilityType ability) =>
+            GetAbilityUnlockLevel((AbilityType)(int)ability);
+
+        public static int GetAbilityUnlockLevel(AbilityType ability) =>
             ability switch
             {
-                HeroAbilityType.Strike or HeroAbilityType.Smite or HeroAbilityType.HolyNova
+                AbilityType.Strike or AbilityType.Smite or AbilityType.HolyNova or AbilityType.Slam
                     => StrikeUnlockLevel,
-                HeroAbilityType.Heal or HeroAbilityType.Shield or HeroAbilityType.GreaterHeal
+                AbilityType.Heal or AbilityType.Shield or AbilityType.GreaterHeal or AbilityType.Rally
                     => HealUnlockLevel,
-                HeroAbilityType.Aura => AuraUnlockLevel,
-                HeroAbilityType.Ultimate or HeroAbilityType.Consecration or HeroAbilityType.Revive
+                AbilityType.AuraDamagePercent
+                    or AbilityType.AuraAttackSpeedPercent
+                    or AbilityType.AuraArmorPercent
+                    or AbilityType.AuraMaxHpPercent
+                    => AuraUnlockLevel,
+                AbilityType.Ultimate or AbilityType.Consecration or AbilityType.Revive or AbilityType.Stomp
                     => UltimateUnlockLevel,
                 _ => int.MaxValue,
             };
 
         public static bool IsAbilityUnlocked(HeroAbilityType ability, int level) =>
+            level >= GetAbilityUnlockLevel(ability);
+
+        public static bool IsAbilityUnlocked(AbilityType ability, int level) =>
             level >= GetAbilityUnlockLevel(ability);
 
         public static UnitCombatStats ApplyLevelGrowth(UnitCombatStats baseStats, int level)
