@@ -10,7 +10,7 @@ provides: [race_definitions, original_factions, content_pipeline, roster, race_a
 
 ## Принцип
 
-Все фракции — **оригинальные**: свой лор, визуал, **асимметричные** бонусы и апгрейды. WC3 — только жанровый референс.
+Все фракции — **оригинальные**: свой лор, визуал, **асимметричные** бонусы и апгрейды.
 
 Архитектура **data-driven**: новая раса = assets + SO + запись здесь, без правок combat core.
 
@@ -24,6 +24,7 @@ provides: [race_definitions, original_factions, content_pipeline, roster, race_a
 | **Tower upgrades** | Уникальные для расы улучшения **в башнях** → статы или способности юнитам |
 | **Маги (casters)** | В отряде; **уникальные заклинания** per race |
 | **Magic upgrades (main)** | Прокачка **в главном здании** → открывает/усиливает заклинания магов |
+| **Match bonus** | **12 слотов** per race (10 replacement + 2 unique); см. `Bonuses.md` |
 
 ```entity
 id: RACE_START_PASSIVES
@@ -271,6 +272,7 @@ units:
   flying: UNIT_HUMAN_FLYING
   super: UNIT_HUMAN_SUPER
 heroes: [HERO_HUMAN_1, HERO_HUMAN_2, HERO_HUMAN_3]
+bonus_slots: 12               # BONUS_SLOT_*; 2 unique TBD per race
 buildings: BUILDING_SET_HUMAN
 upgrades: UPGRADE_TREE_HUMAN
 tower_tracks: [UPG_TOWER_HUMAN_STEEL_TEMPER, UPG_TOWER_HUMAN_HOLD_THE_LINE, UPG_TOWER_HUMAN_BALLISTA_OVERDRAW, UPG_TOWER_HUMAN_ARCANE_RELAY, UPG_TOWER_HUMAN_LAST_STAND]
@@ -321,6 +323,7 @@ mvp: false
 | Base layout | **8 зданий**; **3 lane**; тыл **к краю карты**, перед **к центру** |
 | Маги | **Casters** в волне; **уникальные заклинания** per race |
 | Magic (main) | **1 / 2 / 3** слота = main level; **800/1500/2500g**; **60/90/135s** |
+| Match bonus | **12** слотов per race; см. `Bonuses.md` |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
 | MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
 

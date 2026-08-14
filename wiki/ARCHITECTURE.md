@@ -1,6 +1,6 @@
 # BARAKI — Architecture
 
-RTS-ремейк WC3-карты SurvivalChaos: FFA 2–5, игрок строит базу, юниты автономны.
+Мультиплеерная FFA-стратегия BARAKI: 2–5 игроков, игрок строит базу, юниты автономны.
 listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
 
 ## Tech stack

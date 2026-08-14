@@ -1,7 +1,7 @@
 # AGENTS.md — BARAKI (Unity)
 
 ## Проект
-- RTS-ремейк WC3-карты SurvivalChaos: FFA 2–5, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
+- Мультиплеерная FFA-стратегия BARAKI: 2–5 игроков, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
 - Unity `6000.5.5f1` (`F:\Unity\Editor\6000.5.5f1`), C# 12, URP 17.5, Cinemachine 3, Input System 1.19.
 - Асинхронность: `Awaitable` — только в bootstrap (`Game.Core`); Gameplay/UI — `UniTask`/`UniTaskVoid`. **Никогда** `Task`/`async void`.
 
@@ -27,7 +27,6 @@
 ## GameDesign (GDD)
 - AI-ready формат: YAML front matter (`status`, `mvp`), сущности ` ```entity id=SCREAMING_SNAKE `. Индекс — `GameDesign/README.md`.
 - **Не реализовывать** `status: deferred` / `mvp: false` без обновления `TODO.md`.
-- `wc3_*` — справочные референсы; `GameDesign/wc3_source/*.w3x` **не трекаются** (в `.gitignore`) — в коммиты не добавлять.
 
 ## CI / Release (не сломать)
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.

@@ -174,8 +174,8 @@ main_level: 1
 max_level: 3
 max_hp: 2000
 armor: 5
-abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC]
-player_actions: [hire_hero, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic]
+abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC, UPG_MAIN_DIVINE_BLESSING, MAIN_EXTRA_ABILITY_MENU, TITAN_HIRE]
+player_actions: [hire_hero, hire_titan, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
 upgrade_costs: [2000, 3000]
 gates:
   stat_upgrade_max: main_level * 3
@@ -288,14 +288,28 @@ mvp: true
 
 | Building | Player can |
 |----------|------------|
-| Main (alive) | Upgrade main level, passive gold, **magic**, hire heroes |
+| Main (alive) | Upgrade main level, passive gold, **stat tracks**, **magic**, hire heroes, hire titan (after 3 heroes), Divine Blessing / extra ability |
 | Main (ruins) | **Ничего** |
-| Barracks (alive) | Upgrade level, stat research, **Deploy hero** (1000g, instant) |
+| Barracks (alive) | Upgrade level, **manual call**, **Deploy hero/titan** (1000g, instant) |
 | Barracks (ruins) | **Ничего** |
 | Tower (alive) | Target mode + **race tower upgrades** |
 | Tower (ruins) | **Ничего** |
 
-Stat research — только через **живой** barracks.
+Stat research — через **живой** `BUILDING_MAIN` (global для расы).
+
+```entity
+id: TITAN_HIRE
+building: BUILDING_MAIN
+requires: all_3_heroes_hired
+hire_gold: tbd
+mvp: false
+
+id: UPG_MAIN_DIVINE_BLESSING
+building: BUILDING_MAIN
+requires_main_level: 2
+mvp: false
+note: См. Upgrades.md — FoW off + меню extra ability
+```
 
 ## Destruction effects (summary)
 
@@ -311,11 +325,11 @@ Stat research — только через **живой** barracks.
 | Решение | Значение |
 |---------|----------|
 | Barracks upgrade cost | **1000 / 1500 / 2500** gold (L1→2→3→4) |
-| Barracks upgrade time | **5 s** на каждый уровень (L1→2→3→4) |
+| Barracks upgrade time | **3 s** на каждый уровень (код) |
 | Base spawn interval | **35 s** (level 1) |
 | Spawn speed per level | **+5%** за каждый level barracks |
 | Tower destroyed | **Ruins** (подножье); без функций; не чинится |
-| Main hall abilities (MVP) | **Нет** — Phase 2 |
+| Main hall extra ability | **Divine Blessing** (L2+) → меню 1 способности; PRE-003 |
 | Main building levels | **1–3**; gates stat cap, hero hire & passive gold cap |
 | Main passive gold | **+0/30s** без прокачки; **+25g/level**; max **9** |
 | Main magic | **1/2/3** slots = main level; unlocks **race caster spells** |

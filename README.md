@@ -2,7 +2,7 @@
 
 Мультиплеерная FFA-стратегия для Windows: строй базу, нанимай армии, которые сами идут в бой. 2–5 игроков, только PvP, без ботов.
 
-Ремейк WC3-карты [Survival Chaos](https://www.w3sur5al.com/Home/surchaos) на Unity 6.5.
+Оригинальная игра на Unity 6.5 в духе Tug of War / Castle Fight.
 
 ## Скачать
 

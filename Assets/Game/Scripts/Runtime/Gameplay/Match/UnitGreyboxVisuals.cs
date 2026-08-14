@@ -8,7 +8,7 @@ namespace Game.Gameplay.Match
     {
         public const float Scale = 2f;
 
-        /// <summary>Animated Human (WC3-derived) models are authored larger than greybox capsules.</summary>
+        /// <summary>Animated Human models are authored larger than greybox capsules.</summary>
         public const float AnimatedHumanScaleFactor = 0.625f;
 
         /// <summary>Melee is slightly under baseline greybox height.</summary>
@@ -30,7 +30,7 @@ namespace Game.Gameplay.Match
         public const float HeroVisualHeight = 0.15f;
 
         /// <summary>
-        /// WC3 meshes face +X; match locomotion faces +Z. Prefab yaw aligns model forward.
+        /// Authored meshes face +X; match locomotion faces +Z. Prefab yaw aligns model forward.
         /// </summary>
         public const float AnimatedHumanModelYawDegrees = 90f;
 

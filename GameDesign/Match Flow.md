@@ -50,7 +50,7 @@ Main Menu → Play → Create / Join
   → Create: Mode Select (N=2..5 tiles; MVP selectable: 2, 3, 4)
   → Join: Unity Lobby join code (online) / room code (LocalDev Editor)
   → Lobby: N slot rows, Ready per player, Host Start when all occupied+ready
-  → Load Game.unity → Race pick (each human) → match
+  → Load Game.unity → Race pick → bonus overlay (60s) → match
 ```
 
 > **Race pick** — на сцене `Game.unity` после Start из лобби (не в Lobby).
@@ -75,8 +75,20 @@ mvp: true
 
 ```entity
 id: PHASE_LOBBY
-actions: [pick_race, ready_check]
+actions: [ready_check]
 mvp: true
+
+id: PHASE_RACE_PICK
+scene: Game.unity
+actions: [pick_race]
+mvp: true
+
+id: PHASE_BONUS_PICK
+duration: 60s
+actions: [pick_bonus_overlay]
+match_runs: true
+mvp: false
+note: Каркас; см. Bonuses.md, PRE-001
 
 id: PHASE_START
 duration: 5s
@@ -161,21 +173,21 @@ mvp: true
 
 ## Surrender / disconnect
 
-| Case | MVP | Early Access / Phase 2 |
-|------|-----|------------------------|
-| Surrender | Немедленная elimination | — |
-| Disconnect | Пауза, оверлей (ник + кик); reconnect или кик | **Reconnect** в окне grace |
-| Reconnect | Лаунчер/меню «Вернуться в матч» | Восстановление слота, state sync |
+| Case | Поведение |
+|------|-----------|
+| Surrender | Немедленная elimination |
+| Disconnect | Пауза, оверлей (ник + кик); reconnect или кик |
+| Reconnect | Лаунчер/меню «Вернуться в матч»; восстановление слота |
 
 ```entity
-id: DISCONNECT_POLICY_EA
+id: DISCONNECT_POLICY
 grace_seconds: 90
 global_pause: true
 reconnect: true
 kick_disconnected: true
 overlay_read_delay_s: 1
 eliminate_on_kick_or_expiry: true
-mvp: false
+mvp: true
 ```
 
 - Любой disconnect mid-match ставит матч на паузу (`Time.timeScale = 0`) и показывает оверлей с ником и кнопкой «Кикнуть».
@@ -185,7 +197,7 @@ mvp: false
 
 ## Рейтинг (не в MVP)
 
-Только для **N=2** (дуэль) и **N=4** (FFA). Режимы 3, 5, 6, 7, 8 — **casual only**, без рейтинга.
+Только для **N=2** (дуэль) и **N=4** (FFA). Режимы 3 и 5 — **casual only**, без рейтинга.
 
 ```entity
 id: QUEUE_RANKED_DUEL
@@ -220,8 +232,8 @@ Lobby → Countdown → GenerateArena → InProgress → Ended
 ## UI flow
 
 1. Main Menu → **Play Online**
-2. Lobby: **создать/войти** в лобби с фиксированным N, race pick, Ready
-3. Match HUD
+2. Lobby: **создать/войти** в лобби с фиксированным N, Ready
+3. `Game.unity`: race pick → bonus overlay → Match HUD
 4. Results → rematch / lobby
 
 ## Locked decisions
@@ -234,6 +246,6 @@ Lobby → Countdown → GenerateArena → InProgress → Ended
 | Spectator (eliminated) | **Да** — FoW **off**, свободная камера, смотреть за всеми |
 | Win condition | **Last standing** — без time cap |
 | Elimination | **Все 8 зданий** (main + 3 barracks + **4 towers**); main alone **не** выбывание |
-| Баланс по N | **Одинаковый** для N=2…8 (статы, economy, spawn); меняется только **карта** |
-| Networking (MVP) | **Dedicated server** + WebGL; **FREE-2** infra |
+| Баланс по N | **Одинаковый** для N=2…5 (статы, economy, spawn); меняется только **карта** |
+| Networking | **Listen-host** + Unity Lobby + Relay |
 | MMR decay / seasons | **Deferred Phase 2** — первый ranked season без decay; seasons TBD |

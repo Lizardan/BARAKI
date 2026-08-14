@@ -344,7 +344,7 @@ namespace Game.Tests
                 var settings = AnimationUtility.GetAnimationClipSettings(walk);
                 Assert.IsTrue(settings.loopTime, $"{role} Walk must loop");
                 Assert.Greater(walk.length, 0.3f, $"{role} Walk too short");
-                Assert.Less(walk.length, 8f, $"{role} Walk too long (likely unscaled WC3 ms): {walk.length}");
+                Assert.Less(walk.length, 8f, $"{role} Walk too long (likely unscaled clip ms): {walk.length}");
             }
         }
 

@@ -48,6 +48,13 @@ targets: enemy_buildings_in_lane
 unlock: barracks_level_4
 note: MVP — усиленный дальний осадный юнит
 mvp: true
+
+id: UNIT_TYPE_TITAN
+combat_role: elite_hero_scale
+targets: nearest_enemy_in_lane
+unlock: hired_from_main_after_3_heroes
+note: Отдельный тип (не 4-й hero slot); hire/deploy/XP как герой; см. Heroes.md
+mvp: false
 ```
 
 ## Stat schema (ScriptableObject)
@@ -210,6 +217,10 @@ note: Сильный осадный дальний бой; приоритет �
 
 > **MVP baseline:** одинаковые **базовые** статы юнитов; **асимметрия** — passives, magic, tower tracks (`Races.md`).
 
+## Bonus-enhanced variants
+
+При выборе бонуса replacement-слоты (1–10) подменяют def на `*_BONUS` — те же роли, усиленные статы + способности TBD. Уже вышедшие юниты не меняются. См. `Bonuses.md`.
+
 ## Combat resolution (MVP)
 
 - Target: ближайший валидный враг в том же `lane_id` (scan **0.2 s**, sticky target), иначе **Move** по маршруту lane.
@@ -230,10 +241,12 @@ note: Сильный осадный дальний бой; приоритет �
 | Решение | Значение |
 |---------|----------|
 | Движение по lane | **Route follow** (lookahead по `LaneRoute`) + **local ally avoidance**; NavMesh **не** используется (MVP) |
-| Толпа / anti-merge | **Spread:** formation spawn + **ally avoidance** (WC3-style); **server-authoritative** |
+| Толпа / anti-merge | **Spread:** formation spawn + **ally avoidance**; **server-authoritative** |
 | Ближний бой | **Classic RTS:** в радиусе атаки — **стоит и бьёт**; вне радиуса — **прямой chase** к цели (без attack slots) |
 | Состав волны | **Кумулятивный** по `barracks_level` 1→4; см. таблицу выше |
 | Flying | **Только ranged/flying/super/towers** могут атаковать flying; melee/siege — нет |
 | Super (MVP) | **Сильный осадный дальний** юнит; приоритет зданий |
 | MVP расы | **Идентичны** по статам и механикам |
 | Стартовые расы | **1:** `RACE_HUMAN` (+2 слота TBD) |
+| Титан | Отдельный тип `UNIT_TYPE_TITAN`; каркас PRE-002 |
+| Бонусы | 12 слотов per race; см. `Bonuses.md` |

@@ -1,6 +1,6 @@
 ---
 doc_id: platform
-version: 1.0
+version: 1.1
 status: locked
 depends_on: [vision, technical, match_flow]
 provides: [windows_hub, ugs_lobby_relay, friends_cloudsave, distribution_github_releases, host_migration]
@@ -8,7 +8,7 @@ provides: [windows_hub, ugs_lobby_relay, friends_cloudsave, distribution_github_
 
 # Platform
 
-> **Primary ship:** Windows x64 Standalone. Один Unity-проект. Discord Activity / WebGL — **non-goals**.
+> **Primary ship:** Windows x64 Standalone. Один Unity-проект.
 
 ## Целевой UX
 
@@ -44,22 +44,17 @@ mvp_online: Auth_Lobby_Relay
 mvp_social: Friends_CloudSave
 ```
 
-### Почему host-as-server
+### Host-as-server
 
-Windows native client может быть listen-server. Dedicated server per match **не** нужен для friends play / MVP.
+Windows native client = listen-server. Один процесс хоста симулирует матч и рендерит локального клиента.
 
 ```entity
 id: HOST_MIGRATION
 trigger: host_process_exit_or_disconnect
 flow: pause_all → elect_new_host → relay_rebind → full_state_transfer → unpause
 reconnect: session_token_rejoin
-mvp: false
-post_mvp: true
+mvp: true
 ```
-
-**MVP:** хост вылетел → матч завершается. Reconnect нет.
-
-**Post-MVP:** полный перенос состояния + reconnect вылетевшего клиента.
 
 ## Main Menu hub
 
@@ -99,9 +94,6 @@ Prune: workflow держит последние 2 полноценных рел�
 
 ## Non-goals
 
-- Discord Activity / Embedded App SDK
-- Unity WebGL ship client
-- Dedicated server per match (production)
 - Отдельный launcher exe
 - Cloudflare R2 (требует карту на аккаунте)
 
@@ -114,4 +106,3 @@ Prune: workflow держит последние 2 полноценных рел�
 | Social | **UGS Friends + Cloud Save** |
 | Builds | **GHA → GitHub Releases → in-game force update** |
 | Host migration / reconnect | **Required** (listen-host peer model) |
-| Dedicated server | **Rejected** |

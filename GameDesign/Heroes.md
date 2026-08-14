@@ -48,6 +48,7 @@ description: Убит — morale **нет**; после CD можно deploy с�
 id: HERO_HIRE
 building: BUILDING_MAIN
 hire_gold: 500
+hire_research_sec: 25
 once_per_hero: true
 mvp: true
 
@@ -66,7 +67,7 @@ mvp: true
 
 ```
 1. Player picks hero slot (1..3) → "Hire"
-2. Pay 500 gold (per hero, once per match)
+2. Pay 500 gold (per hero, once per match); research **25 s**
 3. Hero → IDLE_AT_BASE; morale active (если есть для слота)
 ```
 
@@ -243,19 +244,44 @@ idle_morale: HERO_MORALE_SLOT_3
 mvp: true
 ```
 
-> MVP: слоты 2–3 — placeholder до контента.
+> MVP: слоты 2–3 — placeholder до контента (PRE-004).
+
+## Bonus hero variants
+
+Слоты бонусов 7–9 (`BONUS_SLOT_HERO_*`) — тот же hero slot, другой `HeroDefinition` (`*_BONUS`). Умения TBD. См. `Bonuses.md`.
+
+## Titan (отдельный тип, не 4-й hero slot)
+
+```entity
+id: TITAN_RULES
+unit_type: UNIT_TYPE_TITAN
+hire_building: BUILDING_MAIN
+hire_gate: all_3_heroes_hired    # фактически main L3
+hire_gold: tbd                   # ориентир = hero hire 500g
+deploy_building: BUILDING_BARRACKS
+deploy_gold: tbd                 # ориентир = hero deploy 1000g
+deploy_cast_time: 0
+cooldown_after_death: tbd        # ориентир = hero 300s
+xp_leveling: same_as_hero
+bonus_slot: BONUS_SLOT_TITAN
+mvp: false
+note: Каркас PRE-002; числа TBD
+```
+
+Flow как у героя: hire в main → idle на базе → deploy из **живого** barracks; XP/уровни; CD после смерти. Покупка только когда наняты **все 3 героя**.
 
 ## Locked decisions (confirmed)
 
 | Решение | Значение |
 |---------|----------|
-| Героев на расу | Max **3**; hire cap = **main level** (1/2/3); 500g each |
+| Героев на расу | Max **3**; hire cap = **main level** (1/2/3); 500g each; research **25 s** |
 | Deploy | **1000g**; **мгновенно** из выбранного **живого** barracks |
 | CD после смерти | **300 s** |
 | Deployed / dead | Morale **нет**; re-hire **не нужен** |
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
 | XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10 |
+| Титан | Отдельный тип; hire после 3 героев; deploy/XP как герой; PRE-002 |
 
 ## Open
 

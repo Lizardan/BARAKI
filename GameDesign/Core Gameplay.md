@@ -31,7 +31,7 @@ provides: [core_loop, lanes, player_actions, unit_autonomy]
               └───────────────────────────────┘
 ```
 
-**Игрок никогда не выделяет юнитов.** Влияние только через здания, апгрейды, героев, оборону.
+**Игрок никогда не выделяет юнитов.** Влияние через здания, апгрейды, героев, титана, бонус после race pick, оборону.
 
 ## Карта и lanes (2–5 игроков)
 
@@ -96,11 +96,14 @@ Level ↑ также **ускоряет** spawn. Уничтоженный barrac
 | Действие | MVP |
 |----------|-----|
 | Research upgrade | ✓ |
+| Pick match bonus (overlay 60s) | PRE-RACE2 |
 | Upgrade barracks level | ✓ (1→4, per lane) |
 | Upgrade main level | ✓ (2000g → L2, 3000g → L3) |
 | Main magic | ✓ (до `main_level` слотов; race spells) |
+| Divine Blessing + main extra ability | PRE-RACE2 |
 | Hire hero (main) | ✓ (500g; cap = main level) |
-| Deploy hero (barracks) | ✓ |
+| Hire titan (main, after 3 heroes) | PRE-RACE2 |
+| Deploy hero / titan (barracks) | hero ✓; titan PRE-RACE2 |
 | Tower target mode + race upgrades | ✓ |
 
 ## Failure spectrum

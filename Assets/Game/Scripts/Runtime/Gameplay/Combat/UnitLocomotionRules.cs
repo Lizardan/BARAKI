@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    /// <summary>WC3-style movement: desired direction + local ally avoidance + walkable surface clamp.</summary>
+    /// <summary>Movement: desired direction + local ally avoidance + walkable surface clamp.</summary>
     public static class UnitLocomotionRules
     {
         public const float TargetScanInterval = 0.2f;

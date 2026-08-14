@@ -20,9 +20,10 @@
 | [Core Gameplay.md](Core%20Gameplay.md) | Петля, lanes, автобой | Любая геймплейная задача |
 | [Map Topology.md](Map%20Topology.md) | Карта 2–5 игроков, LaneGraph | Карта / lanes |
 | [Match Flow.md](Match%20Flow.md) | Фазы матча, лобби, disconnect | GameSession |
+| [Bonuses.md](Bonuses.md) | Выбор бонуса после race pick | PRE-RACE2 / бонусы |
 | [Economy.md](Economy.md) | Золото, доход | Экономика |
 | [Units.md](Units.md) | Типы юнитов, статы | Combat |
-| [Heroes.md](Heroes.md) | Герои, summon | Hero system |
+| [Heroes.md](Heroes.md) | Герои, титан, summon | Hero system |
 | [Races.md](Races.md) | 4 расы EA, пайплайн | Race select |
 | [Buildings.md](Buildings.md) | Структуры базы | Buildings |
 | [Upgrades.md](Upgrades.md) | Дерево исследований | Tech tree |
@@ -31,12 +32,10 @@
 | [Technical.md](Technical.md) | Unity, netcode | Реализация |
 | [Platform.md](Platform.md) | Windows hub, UGS, GitHub Releases/Pages | Платформа / дистрибуция |
 | [TODO.md](TODO.md) | Backlog | Планирование |
-| [WC3 Reference - Unit Stats.md](WC3%20Reference%20-%20Unit%20Stats.md) | Статы юнитов из Survival Chaos v1.58c | Референс баланса |
-| [WC3 Reference - Wave Mechanics.md](WC3%20Reference%20-%20Wave%20Mechanics.md) | Механики волн/экономики из WC3 | Референс баланса |
 
 ## MVP
 
-**Windows Standalone**, **2–5** игроков, **2 расы**, host-as-server + Unity Lobby + Relay. См. `TODO.md`, `Platform.md`.
+**Windows Standalone**, **2–5** игроков, **1 раса** (Люди), host-as-server + Unity Lobby + Relay. См. `TODO.md`, `Platform.md`.
 
 ## Открытые вопросы
 

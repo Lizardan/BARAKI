@@ -73,6 +73,11 @@ id: HERO_AI_TOWER_DRAW
 behavior: Если башня ведёт огонь по герою, повысить приоритет атаки этой башни
 weight: 0.8
 mvp: true
+
+id: TITAN_AI
+behavior: Как герой (targeting/priority TBD)
+mvp: false
+note: PRE-002
 ```
 
 ---

@@ -81,13 +81,16 @@ mvp: true
 | `UPG_MAIN_BUILDING_LEVEL` | **2000 / 3000** | **120 / 180 s** |
 | `UPG_MAIN_PASSIVE_GOLD` (per level) | **200** | **25 s** |
 | `UPG_MAIN_MAGIC` slot 1/2/3 | **800 / 1500 / 2500** | **60 / 90 / 135 s** |
-| `UPG_BARRACKS_LEVEL` | **1000 / 1500 / 2500** | **45 / 90 / 135 s** |
+| `UPG_BARRACKS_LEVEL` | **1000 / 1500 / 2500** | **3 / 3 / 3 s** |
 | `UPG_TOWER_*` (per track level) | **500 / 800 / 1200** | **45 / 90 / 135 s** |
 | `UPG_MELEE_DMG` L1…L9 | **75…275** (см. `Upgrades.md`) | **8…24 s** |
 | `UPG_RANGED_DMG` L1…L9 | **75…275** | **8…24 s** |
 | `UPG_ARMOR` L1…L9 | **60…220** | **6…22 s** |
-| `HERO_HIRE` | 500 | per hero, once |
+| `HERO_HIRE` | 500 | **25 s** research |
 | `HERO_DEPLOY` | 1000 | instant |
+| `TITAN_HIRE` | TBD | TBD |
+| `TITAN_DEPLOY` | TBD | instant |
+| `UPG_MAIN_DIVINE_BLESSING` | TBD | TBD |
 
 ## Spending rules
 
@@ -116,6 +119,6 @@ mvp: true
 | Passive gold upgrade | **200g**, **25s** per level |
 | Magic unlock | **800 / 1500 / 2500g**; **60 / 90 / 135 s** |
 | Main level upgrade | **2000 / 3000g**; **120 / 180 s** |
-| Barracks level | **1000 / 1500 / 2500g**; **45 / 90 / 135 s** |
+| Barracks level | **1000 / 1500 / 2500g**; **3 / 3 / 3 s** |
 | Tower upgrade (per level) | **500 / 800 / 1200g**; **45 / 90 / 135 s** |
 | Stat upgrades | **+3%** per level; см. `Upgrades.md` |

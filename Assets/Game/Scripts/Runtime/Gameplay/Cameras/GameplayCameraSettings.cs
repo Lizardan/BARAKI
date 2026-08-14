@@ -13,17 +13,15 @@ namespace Game.Gameplay.Cameras
         Left = 3,
     }
 
-    /// <summary>
-    /// Shared RTS camera tuning matched to Warcraft 3 defaults (AoA 304°, FOV 70°).
-    /// </summary>
+    /// <summary>Shared RTS camera tuning (pitch 56°, FOV 70°).</summary>
     public static class GameplayCameraSettings
     {
         /// <summary>
-        /// Pitch from horizontal in degrees. WC3 Angle of Attack 304° → 360 − 304 = 56°.
+        /// Pitch from horizontal in degrees.
         /// </summary>
         public const float DefaultPitchDegrees = 56f;
 
-        /// <summary>Vertical FOV matching WC3 <c>bj_CAMERA_DEFAULT_FOV</c> / MiscData FOV=70.</summary>
+        /// <summary>Vertical FOV (70°).</summary>
         public const float DefaultFieldOfViewDegrees = 70f;
 
         /// <summary>Unit direction for pitch-only follow at yaw 0 (camera south of target).</summary>

@@ -30,14 +30,14 @@ provides: [unity_architecture, assemblies, scenes, networking, data_pipeline, ag
 |-------|---------|
 | `Bootstrap.unity` | Persistent |
 | `MainMenu.unity` | Info hub (profile, friends, create/join, updates) |
-| `Lobby.unity` | Match lobby, ready, race pick |
+| `Lobby.unity` | Match lobby, ready |
 | `Game.unity` | Gameplay (arena generated at runtime) |
 
 ## Runtime architecture
 
 **Implemented (local MVP):** `MatchController`, `MatchArenaGenerator`, `LaneGraph`, `BarracksWaveScheduler`, `MatchCombatSystem`, `BuildingRegistry`, `EliminationService`, `MatchRuntime`.
 
-**Online path:** listen-host + snapshots — `MatchNetworkAuthority` (fixed 30 Hz host tick), `NetworkLobbyState`, `IMatchSessionBackend` → Unity Lobby/Relay. **Host migration required** (peer-only). Dedicated server and WC3-style lockstep are **rejected**.
+**Online path:** listen-host + snapshots — `MatchNetworkAuthority` (fixed 30 Hz host tick), `NetworkLobbyState`, `IMatchSessionBackend` → Unity Lobby/Relay. **Host migration required** (peer-only).
 
 ```
 MatchController (server tick via MatchNetworkAuthority)
@@ -120,7 +120,6 @@ MVP / playtest netcode:
 - Host migration: host-loss grace → elect new host → state transfer → Relay rebind → apply → resume
 - Reconnect: `room:slot:playerId` reconnect token (UGS PlayerId), slot claim rules, disconnect grace
 - LocalDev offline path retained
-- **Not in scope:** dedicated server, full lockstep / shared RNG peer sim
 
 ### Host migration (implemented)
 
@@ -132,7 +131,7 @@ client_rejoin_timeout_s: 5
 min_client_rejoin_wait_s: 0.5
 host_loss_detect: ngo_callback
 state_source: last_good_snapshot
-mvp: false
+mvp: true
 ```
 
 - Потеря хоста детектится NGO-коллбэком + debounce-грейс `HostMigrationRules.HostLossGraceSeconds` (1.5 c) — паника на коротких обрывах исключена. Клиенты паузятся сразу.
@@ -149,7 +148,7 @@ format: room:slot:playerId
 player_id: UGS_PlayerId
 slot_claim: CanClaimSlot
 anti_squatting: true
-mvp: false
+mvp: true
 ```
 
 - Токен `room:slot:playerId`; legacy-форматы без PlayerId парсятся для обратной совместимости.
@@ -180,16 +179,15 @@ void Generate(int playerCount, IReadOnlyList<PlayerSlot> slots)
 
 | Test | Как |
 |------|-----|
-| LaneGraph N=2,4,8 | Edit Mode |
+| LaneGraph N=2..5 | Edit Mode |
 | Session / lobby / update / migration rules | Edit Mode pure C# |
 | Full match | 2 Windows builds / ParrelSync + Relay |
 
 ## Agent rules
 
 1. Не реализовывать bot opponents.
-2. Не возвращать Discord Activity / WebGL ship path.
-3. `MatchArenaGenerator` + `LaneGraph` — единый путь для всех N.
-4. Любой геймплейный тест multiplayer — минимум 2 human connections.
+2. `MatchArenaGenerator` + `LaneGraph` — единый путь для всех N.
+3. Любой геймплейный тест multiplayer — минимум 2 human connections.
 
 ## Locked decisions
 
@@ -198,9 +196,6 @@ void Generate(int playerCount, IReadOnlyList<PlayerSlot> slots)
 | Ship client | **Windows x64 Standalone** |
 | Listen-host + snapshots | **Production path** |
 | Host migration | **Required** (peer-only survival) |
-| Dedicated server | **Rejected** |
-| WC3 lockstep | **Rejected** |
-| Discord / WebGL | **Non-goals** |
 | Transport (online) | **UTP via Unity Relay** (UDP) |
 | Netcode tick rate | **30 Hz** |
 | Unit authority | **Server/host sim** — clients render only |

@@ -106,7 +106,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void FollowOffsetFromZoomDistance_UsesWarcraft3Pitch()
+        public void FollowOffsetFromZoomDistance_UsesDefaultIsometricPitch()
         {
             var offset = GameplayCameraSettings.FollowOffsetFromZoomDistance(100f);
             var pitchDegrees = Mathf.Atan2(offset.y, -offset.z) * Mathf.Rad2Deg;

@@ -445,7 +445,7 @@ namespace Game.Gameplay.Match
                     animator.applyRootMotion = false;
                 }
 
-                // Keep authored prefab normalize (WC3 meshes) and apply presenter scale on top.
+                // Keep authored prefab normalize and apply presenter scale on top.
                 instance.transform.localScale = prefab.transform.localScale * scale;
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));
                 model = instance.transform;
