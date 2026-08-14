@@ -15,6 +15,7 @@ namespace Game.Gameplay.Networking
                 uint hash = 2166136261u;
                 Mix(ref hash, snapshot.PlayerCount);
                 Mix(ref hash, snapshot.Phase);
+                Mix(ref hash, (int)snapshot.BonusPickDeadlineSeconds);
                 Mix(ref hash, snapshot.Units?.Length ?? 0);
 
                 if (snapshot.Players != null)
@@ -23,6 +24,7 @@ namespace Game.Gameplay.Networking
                     {
                         Mix(ref hash, snapshot.Players[i].Slot);
                         Mix(ref hash, snapshot.Players[i].Gold);
+                        Mix(ref hash, snapshot.Players[i].BonusPickSlot);
                         Mix(ref hash, snapshot.Players[i].IsEliminated ? 1 : 0);
                     }
                 }

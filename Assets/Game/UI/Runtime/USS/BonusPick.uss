@@ -1,0 +1,66 @@
+.bonus-pick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(15, 15, 16, 0.45);
+}
+
+.bonus-pick__center {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+}
+
+.bonus-pick__panel {
+    width: 560px;
+    max-width: 92%;
+    padding: 16px 18px 14px;
+}
+
+.bonus-pick__inner {
+    flex-grow: 1;
+    justify-content: flex-start;
+}
+
+.bonus-pick__title {
+    font-size: 13px;
+    letter-spacing: 4px;
+}
+
+.bonus-pick__timer {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(125, 117, 104);
+    letter-spacing: 2px;
+    min-width: 48px;
+    -unity-text-align: middle-right;
+}
+
+.bonus-pick__status {
+    margin-bottom: 10px;
+}
+
+.bonus-pick__grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.bonus-pick__slot {
+    width: 31%;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.bonus-pick__slot--picked {
+    opacity: 0.6;
+    background-color: rgb(86, 103, 122);
+    border-color: rgb(125, 117, 104);
+}
+
+.bonus-pick--hidden {
+    display: none;
+}

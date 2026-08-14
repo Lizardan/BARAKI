@@ -20,6 +20,9 @@ namespace Game.Gameplay.Match
         private readonly TowerDefenseSystem _towers = new();
         private int? _winnerSlot;
         private bool _clientEndedRaised;
+        private int[] _bonusPicks = Array.Empty<int>();
+        private float _bonusPickDeadlineSeconds;
+        private readonly Random _bonusRandom = new();
 
         public event Action<MatchPhase, MatchPhase> PhaseChanged;
         public event Action MatchStarted;
@@ -42,6 +45,15 @@ namespace Game.Gameplay.Match
         public UnitVisualCatalog UnitVisualCatalog { get; set; }
         public int? WinnerSlot => _winnerSlot;
         public bool IsRunning => Phase is not MatchPhase.Lobby and not MatchPhase.End;
+
+        /// <summary>Seconds left for the bonus pick overlay (0 = window closed).</summary>
+        public float BonusPickDeadlineSeconds => _bonusPickDeadlineSeconds;
+
+        /// <summary>Chosen bonus slot for a player; <see cref="BonusPickRules.NoneSlot"/> when not picked.</summary>
+        public int GetBonusPickSlot(int playerSlot) =>
+            playerSlot >= 0 && playerSlot < _bonusPicks.Length
+                ? _bonusPicks[playerSlot]
+                : BonusPickRules.NoneSlot;
 
         public HeroRosterState GetHeroRoster(int ownerSlot) =>
             ownerSlot >= 0 && ownerSlot < _heroRosters.Count ? _heroRosters[ownerSlot] : null;
@@ -85,6 +97,9 @@ namespace Game.Gameplay.Match
                 _players.Add(new MatchPlayerState(slot, raceId, startingGold));
                 _heroRosters.Add(new HeroRosterState());
             }
+
+            _bonusPicks = new int[config.PlayerCount];
+            _bonusPickDeadlineSeconds = BonusPickRules.OverlayDurationSeconds;
 
             _waveScheduler.WaveFired -= OnWaveFired;
             _combat.UnitKilled -= OnUnitKilled;
@@ -134,6 +149,9 @@ namespace Game.Gameplay.Match
                 return;
             }
 
+            // Bonus pick window counts down from match start while the match runs (no pause).
+            TickBonusPickDeadline(deltaTime);
+
             if (Phase == MatchPhase.Start)
             {
                 return;
@@ -177,6 +195,17 @@ namespace Game.Gameplay.Match
             _waveScheduler.Deactivate();
             SetPhase(MatchPhase.End);
             MatchEnded?.Invoke(winnerSlot);
+        }
+
+        /// <summary>Applies the player's bonus pick (PRE-001). Server/offline authoritative.</summary>
+        public bool TrySetBonusPick(int playerSlot, int bonusSlot)
+        {
+            if (!IsRunning || _bonusPickDeadlineSeconds <= 0f)
+            {
+                return false;
+            }
+
+            return BonusPickNetworkRules.TryApplyPick(_bonusPicks, playerSlot, bonusSlot);
         }
 
         public bool TryGetResearch(int buildingInstanceId, out BuildingResearchState research) =>
@@ -370,6 +399,10 @@ namespace Game.Gameplay.Match
                 _players[p.Slot].MeleeDamageLevel = Math.Max(0, p.MeleeDamageLevel);
                 _players[p.Slot].RangedDamageLevel = Math.Max(0, p.RangedDamageLevel);
                 _players[p.Slot].HpArmorLevel = Math.Max(0, p.HpArmorLevel);
+                if (p.Slot < _bonusPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
+                {
+                    _bonusPicks[p.Slot] = p.BonusPickSlot;
+                }
             }
 
             ApplyAuthoritativeBuildings(snapshot.Buildings);
@@ -383,6 +416,7 @@ namespace Game.Gameplay.Match
                 snapshot.Projectiles);
 
             MatchTimeSeconds = snapshot.MatchTimeSeconds;
+            _bonusPickDeadlineSeconds = Math.Max(0f, snapshot.BonusPickDeadlineSeconds);
 
             if (Enum.IsDefined(typeof(MatchPhase), snapshot.Phase)
                 && snapshot.Phase != (int)MatchPhase.End
@@ -1125,6 +1159,20 @@ namespace Game.Gameplay.Match
 
             player.Gold = remaining;
             return true;
+        }
+
+        void TickBonusPickDeadline(float deltaTime)
+        {
+            if (_bonusPickDeadlineSeconds <= 0f)
+            {
+                return;
+            }
+
+            _bonusPickDeadlineSeconds = Math.Max(0f, _bonusPickDeadlineSeconds - deltaTime);
+            if (_bonusPickDeadlineSeconds <= 0f)
+            {
+                BonusPickNetworkRules.FillTimeoutPicks(_bonusPicks, _bonusRandom);
+            }
         }
 
         void TickPassiveGold(float deltaTime)

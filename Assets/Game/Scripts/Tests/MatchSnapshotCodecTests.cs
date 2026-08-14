@@ -234,6 +234,30 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V13_PreservesBonusPickFields()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                BonusPickDeadlineSeconds = 42.5f,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot { Slot = 0, BonusPickSlot = 3 },
+                    new MatchPlayerSnapshot { Slot = 1, BonusPickSlot = 11 },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(42.5f, restored.BonusPickDeadlineSeconds, 0.01f);
+            Assert.AreEqual(3, restored.Players[0].BonusPickSlot);
+            Assert.AreEqual(11, restored.Players[1].BonusPickSlot);
+        }
+
+        [Test]
         public void Capture_RoundTrip_PreservesBarracksTimerAndUnitAttackAnim()
         {
             var controller = new MatchController();

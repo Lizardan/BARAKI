@@ -358,6 +358,11 @@ namespace Game.Gameplay.Networking
                 {
                     instance.AddComponent<NetworkRacePickState>();
                 }
+
+                if (behaviourType == typeof(MatchNetworkAuthority))
+                {
+                    instance.AddComponent<NetworkBonusPickState>();
+                }
             }
 
             var networkObject = instance.GetComponent<NetworkObject>();

@@ -72,6 +72,22 @@ namespace Game.Core
             public const string Human3 = "HERO_HUMAN_3";
         }
 
+        public static class Bonuses
+        {
+            public const string Melee = "BONUS_SLOT_MELEE";
+            public const string Ranged = "BONUS_SLOT_RANGED";
+            public const string Caster = "BONUS_SLOT_CASTER";
+            public const string Siege = "BONUS_SLOT_SIEGE";
+            public const string Flying = "BONUS_SLOT_FLYING";
+            public const string Super = "BONUS_SLOT_SUPER";
+            public const string Hero1 = "BONUS_SLOT_HERO_1";
+            public const string Hero2 = "BONUS_SLOT_HERO_2";
+            public const string Hero3 = "BONUS_SLOT_HERO_3";
+            public const string Titan = "BONUS_SLOT_TITAN";
+            public const string RaceUnique1 = "BONUS_SLOT_RACE_UNIQUE_1";
+            public const string RaceUnique2 = "BONUS_SLOT_RACE_UNIQUE_2";
+        }
+
         public static class Passives
         {
             public const string HumanSteelArms = "PASSIVE_HUMAN_STEEL_ARMS";

@@ -94,7 +94,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| PRE-001 | Бонус-оверлей 60с + random timeout + скрытость | pending | Каркас UI; 12 пустых слотов; матч не паузится; см. `Bonuses.md` |
+| PRE-001 | Бонус-оверлей 60с + random timeout + скрытость | done | Каркас UI; 12 пустых слотов; матч не паузится; скрытность = UI-only (чужие пики не отображаются, данные технически у всех), пики в снапшоте v13 (reconnect/migration-safe); см. `Bonuses.md` |
 | PRE-002 | Титан: найм/deploy/XP как герой | pending | Hire в main после 3 героев; deploy из barracks; CD после смерти; см. `Heroes.md` |
 | PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | pending | Research main L2+; FoW off для себя; отложенный выбор 1 ability; см. `Upgrades.md` |
 | PRE-004 | Контент героев слот 2–3 (baseline) | pending | Имена/статы/визуал; иначе 3 hero-бонуса пустые |

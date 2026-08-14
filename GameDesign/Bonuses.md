@@ -22,7 +22,10 @@ overlay_duration_sec: 60
 choices_per_player: 1
 pool_size: 12
 visibility: hidden_from_opponents
+visibility_note: скрытность = отсутствие отображения в UI (чужие пики не показываются); данные реплицируются всем клиентам (снапшот v13), выбор переживает reconnect и host migration
 timeout_pick: random_from_pool
+ui_display_order: titan, race_unique_1, hero_1..3, units, race_unique_2
+ui_display_order_note: только порядок кнопок оверлея; slot_index в данных и снапшоте v13 не меняется (1..12 стабильны)
 replacement_scope: future_spawns_only
 already_spawned_units: unchanged
 mvp: false
@@ -154,13 +157,20 @@ Race pick → Match start (waves run) → Bonus overlay 60s
   → Future spawns/hires use enhanced defs where applicable
 ```
 
+### Видимость выбора (важно)
+
+- Все клиенты технически получают пики (снапшот v13) — сервер и клиенты «знают» выбор каждого.
+- Скрытность реализуется **только на уровне UI**: в интерфейсе игрок видит свой выбор; чужие пики нигде не отображаются.
+- Игрок узнаёт о чужих бонусах лишь по последствиям в игре (усиленные/заменённые юниты, уникальные эффекты).
+- Т.к. пики в снапшоте — выбор корректно переживает **reconnect** и **host migration** без доп. механики.
+
 ## Locked decisions
 
 | Решение | Значение |
 |---------|----------|
 | Таймер | **60 с**, без паузы матча |
 | Выбор | Ровно **1** из **12** |
-| Видимость | Соперники **не видят** выбор |
+| Видимость | Чужие пики **не отображаются** в UI; данные технически знают все клиенты (снапшот v13) |
 | Timeout | **Случайный** из 12 |
 | Replacement | Только **будущие** спавны/наймы/redeploy |
 | Умения слотов 1–12 | **TBD** — не выдумывать в GDD до контент-прохода |
@@ -169,4 +179,4 @@ Race pick → Match start (waves run) → Bonus overlay 60s
 
 - [ ] Конкретные статы/умения enhanced-юнитов (PRE-005)
 - [ ] Уникальные расовые бонусы слотов 11–12 per race (PRE-005)
-- [ ] UI оверлея и сетевой state (PRE-001)
+- [x] UI оверлея и сетевой state (PRE-001)

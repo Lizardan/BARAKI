@@ -18,6 +18,8 @@ namespace Game.Gameplay.Networking
         public float MatchTimeSeconds;
         /// <summary>-1 when no winner yet.</summary>
         public int WinnerSlot = -1;
+        /// <summary>Seconds left for the bonus pick overlay. 0 on pre-v13 snapshots.</summary>
+        public float BonusPickDeadlineSeconds;
         public MatchPlayerSnapshot[] Players = Array.Empty<MatchPlayerSnapshot>();
         public MatchBuildingSnapshot[] Buildings = Array.Empty<MatchBuildingSnapshot>();
         public MatchUnitSnapshot[] Units = Array.Empty<MatchUnitSnapshot>();
@@ -50,6 +52,8 @@ namespace Game.Gameplay.Networking
         public int RangedDamageLevel;
         /// <summary>0 on pre-v7 snapshots.</summary>
         public int HpArmorLevel;
+        /// <summary>Chosen bonus slot (1..12), 0 = none yet. 0 on pre-v13 snapshots.</summary>
+        public int BonusPickSlot;
     }
 
     public struct MatchBuildingSnapshot
@@ -158,7 +162,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 12;
+        public const int CurrentVersion = 13;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -189,6 +193,7 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.MeleeDamageLevel);
                     writer.Write(p.RangedDamageLevel);
                     writer.Write(p.HpArmorLevel);
+                    writer.Write(p.BonusPickSlot);
                 }
             }
 
@@ -309,6 +314,7 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            writer.Write(snapshot.BonusPickDeadlineSeconds);
             writer.Write(snapshot.Checksum);
 
             return stream.ToArray();
@@ -324,7 +330,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -355,6 +361,11 @@ namespace Game.Gameplay.Networking
                     snapshot.Players[i].MeleeDamageLevel = reader.ReadInt32();
                     snapshot.Players[i].RangedDamageLevel = reader.ReadInt32();
                     snapshot.Players[i].HpArmorLevel = reader.ReadInt32();
+                }
+
+                if (version >= 13)
+                {
+                    snapshot.Players[i].BonusPickSlot = reader.ReadInt32();
                 }
             }
 
@@ -536,6 +547,11 @@ namespace Game.Gameplay.Networking
                 }
             }
 
+            if (version >= 13)
+            {
+                snapshot.BonusPickDeadlineSeconds = reader.ReadSingle();
+            }
+
             if (version >= 4 && reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 snapshot.Checksum = reader.ReadUInt32();
@@ -565,6 +581,7 @@ namespace Game.Gameplay.Networking
                     MeleeDamageLevel = p.MeleeDamageLevel,
                     RangedDamageLevel = p.RangedDamageLevel,
                     HpArmorLevel = p.HpArmorLevel,
+                    BonusPickSlot = controller.GetBonusPickSlot(p.SlotIndex),
                 });
             }
 
@@ -738,6 +755,7 @@ namespace Game.Gameplay.Networking
                 Phase = (int)controller.Phase,
                 MatchTimeSeconds = controller.MatchTimeSeconds,
                 WinnerSlot = controller.WinnerSlot ?? -1,
+                BonusPickDeadlineSeconds = controller.BonusPickDeadlineSeconds,
                 Players = players.ToArray(),
                 Buildings = buildings.ToArray(),
                 Units = units.ToArray(),
