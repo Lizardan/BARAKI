@@ -12,7 +12,7 @@ namespace Game.Editor
     /// <summary>
     /// Builds Human combat unit, hero, and titan prefabs from ToonyTinyPeople TT_RTS assets:
     /// copies the matched TT prefab, points its Animator at a generated controller built
-    /// from TT clips (Stand/Walk/Attack/Death), zeroes root transform (native TT scale, yaw 0),
+    /// from TT clips (Stand/Walk/Attack[/Cast]/Death), zeroes root transform (native TT scale, yaw 0),
     /// attaches <see cref="TtUnitTeamColor"/> with the four slot-color texture variants,
     /// and preserves or seeds <see cref="UnitCombatSettings"/>.
     /// Run via menu BARAKI/Units/Rebuild TT Prefabs.
@@ -35,6 +35,18 @@ namespace Game.Editor
             "TT_RTS_Units_yellow.tga",
         };
 
+        readonly struct ClipRef
+        {
+            public readonly string Subfolder;
+            public readonly string Name;
+
+            public ClipRef(string subfolder, string name)
+            {
+                Subfolder = subfolder;
+                Name = name;
+            }
+        }
+
         readonly struct VisualSetup
         {
             public readonly string PrefabName;
@@ -44,7 +56,8 @@ namespace Game.Editor
             public readonly string AnimSubfolder;
             public readonly string IdleClip;
             public readonly string WalkClip;
-            public readonly string AttackClip;
+            public readonly ClipRef[] AttackClips;
+            public readonly ClipRef[] CastClips;
             public readonly string DeathClip;
             public readonly UnitRole Role;
             public readonly int HeroSlot;
@@ -58,7 +71,8 @@ namespace Game.Editor
                 string animSubfolder,
                 string idleClip,
                 string walkClip,
-                string attackClip,
+                ClipRef[] attackClips,
+                ClipRef[] castClips,
                 string deathClip,
                 UnitRole role,
                 int heroSlot = 0,
@@ -71,7 +85,8 @@ namespace Game.Editor
                 AnimSubfolder = animSubfolder;
                 IdleClip = idleClip;
                 WalkClip = walkClip;
-                AttackClip = attackClip;
+                AttackClips = attackClips ?? Array.Empty<ClipRef>();
+                CastClips = castClips ?? Array.Empty<ClipRef>();
                 DeathClip = deathClip;
                 Role = role;
                 HeroSlot = heroSlot;
@@ -79,31 +94,67 @@ namespace Game.Editor
             }
         }
 
+        static ClipRef Local(string subfolder, string name) => new(subfolder, name);
+
         static readonly VisualSetup[] Setups =
         {
             UnitSetup("Human_Melee", UnitVisualPrefabBuilder.HumanMeleePath, "Human_Melee",
                 "TT_Heavy_Infantry", "animation_infantry/Infantry",
-                "infantry_01_idle", "infantry_03_run", "infantry_04_attack_A", "infantry_06_death_A",
+                "infantry_01_idle", "infantry_03_run",
+                new[]
+                {
+                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
+                    Local("animation_infantry/Infantry", "infantry_04_attack_B"),
+                },
+                null,
+                "infantry_06_death_A",
                 UnitRole.Melee),
             UnitSetup("Human_Ranged", UnitVisualPrefabBuilder.HumanRangedPath, "Human_Ranged",
                 "TT_Archer", "animation_infantry/Archer",
-                "archer_01_idle", "archer_03_run", "archer_04_attack_A", "archer_06_death_A",
+                "archer_01_idle", "archer_03_run",
+                new[]
+                {
+                    Local("animation_infantry/Archer", "archer_04_attack_A"),
+                    Local("animation_infantry/Archer", "archer_04_attack_B"),
+                },
+                null,
+                "archer_06_death_A",
                 UnitRole.Ranged),
             UnitSetup("Human_Caster", UnitVisualPrefabBuilder.HumanCasterPath, "Human_Caster",
                 "TT_Mage", "animation_infantry/Staff",
-                "staff_01_idle", "staff_03_run", "staff_07_cast_A", "staff_06_death_A",
+                "staff_01_idle", "staff_03_run",
+                // Only attack_B: attack_A is the off-hand sword swing on the dual-wield mage.
+                new[]
+                {
+                    Local("animation_infantry/Staff", "staff_04_attack_B"),
+                },
+                new[]
+                {
+                    Local("animation_infantry/Staff", "staff_07_cast_A"),
+                    Local("animation_infantry/Staff", "staff_07_cast_B"),
+                },
+                "staff_06_death_A",
                 UnitRole.Caster),
             UnitSetup("Human_Siege", UnitVisualPrefabBuilder.HumanSiegePath, "Human_Siege",
                 "TT_Mounted_Knight", "animation_cavalry/cavalry_spear_A",
-                "cav_spear_A_01_idle", "cav_spear_A_03_run", "cav_spear_A_04_attack", "cav_spear_A_06_death_A",
+                "cav_spear_A_01_idle", "cav_spear_A_03_run",
+                new[] { Local("animation_cavalry/cavalry_spear_A", "cav_spear_A_04_attack") },
+                null,
+                "cav_spear_A_06_death_A",
                 UnitRole.Siege),
             UnitSetup("Human_Flying", UnitVisualPrefabBuilder.HumanFlyingPath, "Human_Flying",
                 "Fly_Hors", "animation_cavalry/cavalry",
-                "cavalry_01_idle", "cavalry_03_run", "cavalry_04_attack", "cavalry_06_death_A",
+                "cavalry_01_idle", "cavalry_03_run",
+                new[] { Local("animation_cavalry/cavalry", "cavalry_04_attack") },
+                null,
+                "cavalry_06_death_A",
                 UnitRole.Flying),
             UnitSetup("Human_Super", UnitVisualPrefabBuilder.HumanSuperPath, "Human_Super",
                 "machines/TT_Ballista_lvl3", "animation_machines/Ballista",
-                "ballista_01_idle", "ballista_02_move", "ballista_03_attack", "ballista_05_death",
+                "ballista_01_idle", "ballista_02_move",
+                new[] { Local("animation_machines/Ballista", "ballista_03_attack") },
+                null,
+                "ballista_05_death",
                 UnitRole.Super),
             new(
                 "Human_Hero1",
@@ -113,7 +164,16 @@ namespace Game.Editor
                 "animation_infantry/Infantry",
                 "infantry_01_idle",
                 "infantry_03_run",
-                "infantry_04_attack_A",
+                new[]
+                {
+                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
+                    Local("animation_infantry/Infantry", "infantry_04_attack_B"),
+                },
+                new[]
+                {
+                    Local("animation_infantry/Staff", "staff_07_cast_A"),
+                    Local("animation_infantry/Staff", "staff_07_cast_B"),
+                },
                 "infantry_06_death_A",
                 UnitRole.Hero,
                 heroSlot: 1),
@@ -125,7 +185,12 @@ namespace Game.Editor
                 "animation_cavalry/cavalry_shield",
                 "cav_shield_01_idle",
                 "cav_shield_03_run",
-                "cav_shield_04_attack",
+                new[] { Local("animation_cavalry/cavalry_shield", "cav_shield_04_attack") },
+                new[]
+                {
+                    Local("animation_cavalry/cavalry_staff", "cav_staff_07_cast_A"),
+                    Local("animation_cavalry/cavalry_staff", "cav_staff_07_cast_B"),
+                },
                 "cav_shield_06_death_A",
                 UnitRole.Hero,
                 heroSlot: 2),
@@ -137,7 +202,12 @@ namespace Game.Editor
                 "animation_cavalry/cavalry_staff",
                 "cav_staff_01_idle",
                 "cav_staff_03_run",
-                "cav_staff_07_cast_A",
+                new[] { Local("animation_cavalry/cavalry_staff", "cav_staff_04_attack") },
+                new[]
+                {
+                    Local("animation_cavalry/cavalry_staff", "cav_staff_07_cast_A"),
+                    Local("animation_cavalry/cavalry_staff", "cav_staff_07_cast_B"),
+                },
                 "cav_staff_06_death_A",
                 UnitRole.Hero,
                 heroSlot: 3),
@@ -149,7 +219,16 @@ namespace Game.Editor
                 "animation_infantry/Infantry",
                 "infantry_01_idle",
                 "infantry_03_run",
-                "infantry_04_attack_A",
+                new[]
+                {
+                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
+                    Local("animation_infantry/Infantry", "infantry_04_attack_B"),
+                },
+                new[]
+                {
+                    Local("animation_infantry/Infantry", "infantry_07_punch_A"),
+                    Local("animation_infantry/Infantry", "infantry_07_punch_B"),
+                },
                 "infantry_06_death_A",
                 UnitRole.Titan,
                 seedTitanStats: true),
@@ -163,7 +242,8 @@ namespace Game.Editor
             string animSubfolder,
             string idleClip,
             string walkClip,
-            string attackClip,
+            ClipRef[] attackClips,
+            ClipRef[] castClips,
             string deathClip,
             UnitRole role) =>
             new(
@@ -174,7 +254,8 @@ namespace Game.Editor
                 animSubfolder,
                 idleClip,
                 walkClip,
-                attackClip,
+                attackClips,
+                castClips,
                 deathClip,
                 role);
 
@@ -359,12 +440,32 @@ namespace Game.Editor
             controller.AddParameter(UnitCombatAnimatorDriver.SpeedParam, AnimatorControllerParameterType.Float);
             controller.AddParameter(UnitCombatAnimatorDriver.AttackParam, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(UnitCombatAnimatorDriver.DeathParam, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(UnitCombatAnimatorDriver.AttackVariantParam, AnimatorControllerParameterType.Float);
+            if (setup.CastClips.Length > 0)
+            {
+                controller.AddParameter(UnitCombatAnimatorDriver.CastVariantParam, AnimatorControllerParameterType.Float);
+            }
 
             var sm = controller.layers[0].stateMachine;
-            var stand = AddState(sm, UnitCombatAnimatorDriver.StandState, LoadClip(setup, setup.IdleClip));
-            var walk = AddState(sm, UnitCombatAnimatorDriver.WalkState, LoadClip(setup, setup.WalkClip));
-            var attack = AddState(sm, UnitCombatAnimatorDriver.AttackState, LoadClip(setup, setup.AttackClip));
-            var death = AddState(sm, UnitCombatAnimatorDriver.DeathState, LoadClip(setup, setup.DeathClip));
+            var stand = AddState(sm, UnitCombatAnimatorDriver.StandState, LoadClip(setup.IdleClip, setup.AnimSubfolder));
+            var walk = AddState(sm, UnitCombatAnimatorDriver.WalkState, LoadClip(setup.WalkClip, setup.AnimSubfolder));
+            var attack = AddStateWithPool(
+                controller,
+                sm,
+                UnitCombatAnimatorDriver.AttackState,
+                UnitCombatAnimatorDriver.AttackVariantParam,
+                setup.AttackClips);
+            var death = AddState(sm, UnitCombatAnimatorDriver.DeathState, LoadClip(setup.DeathClip, setup.AnimSubfolder));
+            AnimatorState cast = null;
+            if (setup.CastClips.Length > 0)
+            {
+                cast = AddStateWithPool(
+                    controller,
+                    sm,
+                    UnitCombatAnimatorDriver.CastState,
+                    UnitCombatAnimatorDriver.CastVariantParam,
+                    setup.CastClips);
+            }
 
             AddSpeedTransition(stand, walk, AnimatorConditionMode.Greater, 0.1f);
             AddSpeedTransition(walk, stand, AnimatorConditionMode.Less, 0.1f);
@@ -373,6 +474,10 @@ namespace Game.Editor
             AddTriggerTransition(stand, death, UnitCombatAnimatorDriver.DeathParam);
             AddTriggerTransition(walk, death, UnitCombatAnimatorDriver.DeathParam);
             AddTriggerTransition(attack, death, UnitCombatAnimatorDriver.DeathParam);
+            if (cast != null)
+            {
+                AddTriggerTransition(cast, death, UnitCombatAnimatorDriver.DeathParam);
+            }
 
             EditorUtility.SetDirty(controller);
             return controller;
@@ -380,29 +485,72 @@ namespace Game.Editor
 
         static void SyncControllerClips(AnimatorController controller, VisualSetup setup)
         {
+            EnsureFloatParameter(controller, UnitCombatAnimatorDriver.AttackVariantParam);
+            if (setup.CastClips.Length > 0)
+            {
+                EnsureFloatParameter(controller, UnitCombatAnimatorDriver.CastVariantParam);
+            }
+
             var sm = controller.layers[0].stateMachine;
+            var hasCast = false;
             foreach (var child in sm.states)
             {
                 var state = child.state;
                 if (state.name == UnitCombatAnimatorDriver.StandState)
                 {
-                    state.motion = LoadClip(setup, setup.IdleClip);
+                    state.motion = LoadClip(setup.IdleClip, setup.AnimSubfolder);
                 }
                 else if (state.name == UnitCombatAnimatorDriver.WalkState)
                 {
-                    state.motion = LoadClip(setup, setup.WalkClip);
+                    state.motion = LoadClip(setup.WalkClip, setup.AnimSubfolder);
                 }
                 else if (state.name == UnitCombatAnimatorDriver.AttackState)
                 {
-                    state.motion = LoadClip(setup, setup.AttackClip);
+                    state.motion = BuildPoolMotion(
+                        controller,
+                        UnitCombatAnimatorDriver.AttackState,
+                        UnitCombatAnimatorDriver.AttackVariantParam,
+                        setup.AttackClips);
+                }
+                else if (state.name == UnitCombatAnimatorDriver.CastState)
+                {
+                    hasCast = true;
+                    state.motion = BuildPoolMotion(
+                        controller,
+                        UnitCombatAnimatorDriver.CastState,
+                        UnitCombatAnimatorDriver.CastVariantParam,
+                        setup.CastClips);
                 }
                 else if (state.name == UnitCombatAnimatorDriver.DeathState)
                 {
-                    state.motion = LoadClip(setup, setup.DeathClip);
+                    state.motion = LoadClip(setup.DeathClip, setup.AnimSubfolder);
                 }
             }
 
+            if (setup.CastClips.Length > 0 && !hasCast)
+            {
+                AddStateWithPool(
+                    controller,
+                    sm,
+                    UnitCombatAnimatorDriver.CastState,
+                    UnitCombatAnimatorDriver.CastVariantParam,
+                    setup.CastClips);
+            }
+
             EditorUtility.SetDirty(controller);
+        }
+
+        static void EnsureFloatParameter(AnimatorController controller, string name)
+        {
+            foreach (var parameter in controller.parameters)
+            {
+                if (parameter.name == name)
+                {
+                    return;
+                }
+            }
+
+            controller.AddParameter(name, AnimatorControllerParameterType.Float);
         }
 
         static AnimatorState AddState(AnimatorStateMachine sm, string name, AnimationClip clip)
@@ -410,6 +558,50 @@ namespace Game.Editor
             var state = sm.AddState(name);
             state.motion = clip;
             return state;
+        }
+
+        static AnimatorState AddStateWithPool(
+            AnimatorController controller,
+            AnimatorStateMachine sm,
+            string stateName,
+            string variantParam,
+            ClipRef[] clips)
+        {
+            var state = sm.AddState(stateName);
+            state.motion = BuildPoolMotion(controller, stateName, variantParam, clips);
+            return state;
+        }
+
+        static Motion BuildPoolMotion(
+            AnimatorController controller,
+            string stateName,
+            string variantParam,
+            ClipRef[] clips)
+        {
+            if (clips == null || clips.Length == 0)
+            {
+                throw new InvalidOperationException(stateName + " has no clips");
+            }
+
+            if (clips.Length == 1)
+            {
+                return LoadClip(clips[0]);
+            }
+
+            var tree = new BlendTree
+            {
+                name = stateName + "Pool",
+                blendParameter = variantParam,
+                blendType = BlendTreeType.Simple1D,
+                useAutomaticThresholds = false,
+            };
+            AssetDatabase.AddObjectToAsset(tree, controller);
+            for (var i = 0; i < clips.Length; i++)
+            {
+                tree.AddChild(LoadClip(clips[i]), i);
+            }
+
+            return tree;
         }
 
         static void AddSpeedTransition(AnimatorState from, AnimatorState to, AnimatorConditionMode mode, float threshold)
@@ -439,9 +631,11 @@ namespace Game.Editor
             };
         }
 
-        static AnimationClip LoadClip(VisualSetup setup, string clipName)
+        static AnimationClip LoadClip(ClipRef clipRef) => LoadClip(clipRef.Name, clipRef.Subfolder);
+
+        static AnimationClip LoadClip(string clipName, string animSubfolder)
         {
-            var fbxPath = TtAnimationRoot + "/" + setup.AnimSubfolder + "/" + clipName + ".FBX";
+            var fbxPath = TtAnimationRoot + "/" + animSubfolder + "/" + clipName + ".FBX";
             foreach (var obj in AssetDatabase.LoadAllAssetsAtPath(fbxPath))
             {
                 if (obj is AnimationClip clip && clip.name == clipName)

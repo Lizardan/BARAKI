@@ -76,7 +76,28 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 4. Поведение решает, есть ли цель/условие (`TryCast`); кулдаун ставит хост через
    `ArmSlotCooldown`. Успешный каст уходит в снапшот через `IUnitAbilityHost.EmitCast`
    (`AbilityCastEvent { AbilityId, CasterUnitId, TargetUnitId, Position }`).
-5. Пассивные ауры кастуются всегда через `QueryAura` (см. ниже).
+5. После успешного `TryCast` хост ставит **cast-lock** (`AbilityAnimRules`): юнит не ходит,
+   не бьёт автоатакой и не кастует, пока `CastLockRemainingSeconds` > 0.
+   - `AbilityAnimKind.Attack` (Strike, Slam, Smite, …) → `BehaviorState.Attack` + `AttackSwingSerial++`,
+     лок = attack interval.
+   - `AbilityAnimKind.Cast` (Mend, Group Heal, Rally, Shield, …) → `BehaviorState.Cast`,
+     лок = `CastLockSeconds` (~1.1 с).
+   Эффект умения применяется сразу; лок только на AI/анимацию.
+6. Пассивные ауры кастуются всегда через `QueryAura` (см. ниже).
+
+## Анимации способностей (`AbilityAnimRules`)
+
+| Kind | AbilityIds | Клип |
+|------|------------|------|
+| Attack | Strike, Ultimate, Smite, Consecration, Slam, Stomp | пул Attack A/B |
+| Cast | Mend, Frost, Resurrect, Group Heal, Holy Nova, Greater Heal, Revive, Shield, Rally | пул Cast A/B |
+| None | пассивные ауры | — |
+
+Автоатака (не умения): удар/вылет снаряда в середине клипа
+(`CombatAttackRules.SwingImpactNormalizedTime` × attack interval).
+`Animator.speed = AbilityAnimRules.ResolveAttackClipSeconds(role) / interval`
+(пехота 1.5 с, баллиста/кавалерия 1 с). Снарядный урон — на прилёте.
+Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
 
 ## World FX презентер (`MatchCombatPresenter` / `SpellFxFactory`)
 

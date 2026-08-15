@@ -30,6 +30,12 @@ namespace Game.Tests
             Assert.AreEqual(AbilityIds.Strike, casts[0].Def.AbilityId);
             Assert.AreEqual(hero.UnitId, casts[0].CasterUnitId);
             Assert.AreEqual(0, casts[0].TargetUnitId);
+            Assert.AreEqual(UnitBehaviorState.Attack, hero.BehaviorState);
+            Assert.Greater(hero.CastLockRemainingSeconds, 0f);
+            Assert.IsTrue(hero.CastLockUsesAttackAnim);
+            var swingAfterCast = hero.AttackSwingSerial;
+            controller.Combat.Tick(0.05f);
+            Assert.AreEqual(swingAfterCast, hero.AttackSwingSerial, "Cast lock must block a new auto-attack swing");
         }
 
         [Test]
@@ -62,6 +68,12 @@ namespace Game.Tests
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(AbilityIds.Heal, casts[0].Def.AbilityId);
             Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
+            Assert.AreEqual(UnitBehaviorState.Cast, hero.BehaviorState);
+            Assert.Greater(hero.CastLockRemainingSeconds, 0f);
+            Assert.IsFalse(hero.CastLockUsesAttackAnim);
+            Assert.AreEqual(UnitBehaviorState.Cast, hero.BehaviorState);
+            controller.Combat.Tick(0.2f);
+            Assert.AreEqual(UnitBehaviorState.Cast, hero.BehaviorState, "Heal cast lock must keep Cast until clip ends");
         }
 
         [Test]

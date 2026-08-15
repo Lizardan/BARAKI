@@ -80,6 +80,16 @@ namespace Game.Gameplay.Combat
         public float UltimateBuffPercent { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
+        /// <summary>
+        /// Host-only: remaining seconds of ability cast/attack anim lock
+        /// (<see cref="BehaviorState.Cast"/> or locked Attack). Not replicated.
+        /// </summary>
+        public float CastLockRemainingSeconds { get; set; }
+        /// <summary>
+        /// While <see cref="CastLockRemainingSeconds"/> &gt; 0, true means keep Attack state
+        /// (strike abilities); false means Cast state.
+        /// </summary>
+        public bool CastLockUsesAttackAnim { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>
         public int AttackSwingSerial { get; set; }
         public UnitBehaviorState BehaviorState { get; set; }

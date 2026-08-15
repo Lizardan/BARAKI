@@ -27,6 +27,8 @@ namespace Game.Gameplay.Match
             public float GroundRingDiameter;
             public bool HasSpawned;
             public int LastAttackSwingSerial;
+            public UnitBehaviorState LastBehaviorState;
+            public float PendingImpactFxSeconds = -1f;
             public bool IsFogHidden;
             public Renderer[] CachedRenderers;
             public UnitRole Role;
@@ -211,6 +213,7 @@ namespace Game.Gameplay.Match
                 }
 
                 DriveAnimator(visual, unit, combat);
+                TickPendingImpactFx(visual, unit, combat, Time.deltaTime);
 
                 visual.StatusBars.SetHealth(unit.CurrentHp / unit.Stats.MaxHp);
                 if (unit.Stats.HasMana)
@@ -313,6 +316,7 @@ namespace Game.Gameplay.Match
             if (visual.IsParkedAtBase)
             {
                 UnitCombatAnimatorDriver.TickStand(visual.Animator, visual.AnimPlayback);
+                visual.LastBehaviorState = UnitBehaviorState.Move;
                 return;
             }
 
@@ -323,6 +327,12 @@ namespace Game.Gameplay.Match
                 fireAttack = unit.AttackSwingSerial > 0;
             }
 
+            var enteringCast = unit.BehaviorState == UnitBehaviorState.Cast
+                && visual.LastBehaviorState != UnitBehaviorState.Cast;
+            visual.LastBehaviorState = unit.BehaviorState;
+
+            var attackInterval = combat.GetAttackIntervalSeconds(unit);
+            var attackClipLength = AbilityAnimRules.ResolveAttackClipSeconds(unit.Role, unit.HeroSlot);
             UnitCombatAnimatorDriver.Tick(
                 visual.Animator,
                 visual.AnimPlayback,
@@ -330,12 +340,38 @@ namespace Game.Gameplay.Match
                 fireAttack,
                 fireDeath: false,
                 unit.MarchMoveSpeed,
-                visual.LocomotionScaleVsCreep);
+                visual.LocomotionScaleVsCreep,
+                attackInterval,
+                attackClipLength,
+                enteringCast);
 
-            if (fireAttack)
+            if (fireAttack
+                && CombatAttackRules.UsesMeleeStrike(unit.Role, unit.IsHero, unit.HeroSlot))
             {
-                SpawnMeleeImpactFx(unit, combat);
+                visual.PendingImpactFxSeconds =
+                    CombatAttackRules.ResolveSwingImpactDelay(attackInterval, unit.Role);
             }
+        }
+
+        void TickPendingImpactFx(
+            UnitVisual visual,
+            MatchUnitState unit,
+            MatchCombatSystem combat,
+            float deltaTime)
+        {
+            if (visual.PendingImpactFxSeconds < 0f)
+            {
+                return;
+            }
+
+            visual.PendingImpactFxSeconds -= deltaTime;
+            if (visual.PendingImpactFxSeconds > 0f)
+            {
+                return;
+            }
+
+            visual.PendingImpactFxSeconds = -1f;
+            SpawnMeleeImpactFx(unit, combat);
         }
 
         void SpawnMeleeImpactFx(MatchUnitState unit, MatchCombatSystem combat)

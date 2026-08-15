@@ -1,0 +1,95 @@
+using Game.Gameplay.Data;
+using UnityEngine;
+
+namespace Game.Gameplay.Combat
+{
+    /// <summary>Which combat animator state an active ability should drive.</summary>
+    public enum AbilityAnimKind
+    {
+        None = 0,
+        /// <summary>Random clip from the Attack pool (strike / slam / smite).</summary>
+        Attack = 1,
+        /// <summary>Random clip from the Cast pool (heal / frost / rally).</summary>
+        Cast = 2,
+    }
+
+    /// <summary>
+    /// Maps ability ids to cast/attack animation kinds and cast-lock duration.
+    /// Clip lengths match ToonyTinyPeople TT_RTS authored clips (measured in Editor).
+    /// </summary>
+    public static class AbilityAnimRules
+    {
+        /// <summary>TT infantry/staff attack &amp; cast clips (A/B).</summary>
+        public const float InfantryAttackClipSeconds = 1.5f;
+
+        /// <summary>TT cavalry / ballista / punch clips.</summary>
+        public const float CavalryOrMachineAttackClipSeconds = 1f;
+
+        /// <summary>Staff cast A/B and cav_staff cast B (use max so A/B lock covers longer).</summary>
+        public const float StaffCastClipSeconds = 1.5f;
+
+        /// <summary>Titan Rally punch A/B.</summary>
+        public const float PunchCastClipSeconds = 1f;
+
+        /// <summary>Legacy alias — prefer <see cref="ResolveCastLockSeconds"/>.</summary>
+        public const float CastLockSeconds = StaffCastClipSeconds;
+
+        public static AbilityAnimKind ResolveKind(int abilityId) =>
+            abilityId switch
+            {
+                AbilityIds.Strike
+                    or AbilityIds.Ultimate
+                    or AbilityIds.Smite
+                    or AbilityIds.Consecration
+                    or AbilityIds.Slam
+                    or AbilityIds.Stomp => AbilityAnimKind.Attack,
+
+                AbilityIds.CasterHeal
+                    or AbilityIds.Frost
+                    or AbilityIds.Resurrect
+                    or AbilityIds.Heal
+                    or AbilityIds.HolyNova
+                    or AbilityIds.GreaterHeal
+                    or AbilityIds.Revive
+                    or AbilityIds.Shield
+                    or AbilityIds.Rally => AbilityAnimKind.Cast,
+
+                _ => AbilityAnimKind.None,
+            };
+
+        /// <summary>
+        /// Authored Attack clip length for this unit. Used as
+        /// <c>Animator.speed = clipLength / attackInterval</c> so mid-clip impact stays mid-clip
+        /// when attack speed (and Haste Aura) change.
+        /// </summary>
+        public static float ResolveAttackClipSeconds(UnitRole role, int heroSlot = 0)
+        {
+            if (role == UnitRole.Hero && heroSlot == HeroAbilityRules.KingSlot)
+            {
+                return InfantryAttackClipSeconds;
+            }
+
+            return role switch
+            {
+                UnitRole.Melee or UnitRole.Ranged or UnitRole.Caster or UnitRole.Titan =>
+                    InfantryAttackClipSeconds,
+                _ => CavalryOrMachineAttackClipSeconds,
+            };
+        }
+
+        /// <summary>Host cast-lock duration at animator speed 1 (full Cast clip).</summary>
+        public static float ResolveCastLockSeconds(int abilityId) =>
+            abilityId == AbilityIds.Rally ? PunchCastClipSeconds : StaffCastClipSeconds;
+
+        public static float ResolveLockSeconds(
+            AbilityAnimKind kind,
+            float attackIntervalSeconds,
+            int abilityId = 0) =>
+            kind switch
+            {
+                AbilityAnimKind.Cast => ResolveCastLockSeconds(abilityId),
+                AbilityAnimKind.Attack => Mathf.Max(0.05f, attackIntervalSeconds),
+                _ => 0f,
+            };
+    }
+}

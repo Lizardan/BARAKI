@@ -33,9 +33,23 @@ ScriptableObjects/
   Масштаб применяется при любом spawn (park на базе и deploy с barracks).
   Walk: `UnitCombatAnimatorDriver` крутит `Animator.speed` =
   `(moveSpeed / 4) / visualScaleVsCreep` (титан ≈ ×⅓ к крипу при той же скорости);
-  Attack/Death/Stand всегда `speed = 1`.
+  Attack: `clipLength / attackInterval` (реальная длина TT-клипа: пехота/staff **1.5 с**,
+  кавалерия/баллиста **1 с**; Haste Aura ускоряет клип); Cast/Death/Stand = 1.
+  Удар/вылет всегда на `interval × 0.5` (= середина ускоренного клипа).
   Attack range: `TitanRules.AttackRange` = **3** (сид/sync с Hero1 ×3 не затирает;
   vs-titan hit reach через `CombatRules.GetUnitAttackReach` — мили бьют с ≥3).
+
+## TT unit anim pools
+
+Контроллеры собирает `TtUnitVisualSetup` (`BARAKI/Units/Rebuild TT Prefabs`):
+
+- **Attack** — пул A/B где есть (`infantry/archer/staff_04_attack_*`); один клип у siege/flying/super/hero2/hero3.
+- **Cast** — у caster/heroes/titan: staff/cav_staff cast A/B, titan Rally → `infantry_07_punch_A/B`,
+  king Group Heal → `staff_07_cast_*`, paladin Shield → `cav_staff_07_cast_*`.
+- Вариант выбирается на свинг (`AttackVariant`) / вход в Cast (`CastVariant`).
+- Автоатака: урон/вылет снаряда в `SwingImpactNormalizedTime` (0.5) от интервала атаки;
+  лучники — на **0.25**, кастер — на **0.35**. Кастер Attack только `staff_04_attack_B` (без sword `attack_A`).
+  Длины клипов — `AbilityAnimRules.ResolveAttackClipSeconds` / cast-lock.
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
   `AI`, `Tech`, `Passives`, `Buildings`) **не создавать заранее**.
 - Герой/кит с abilities — отдельная папка владельца (`Heroes/Hero1`, `Units/Caster`),

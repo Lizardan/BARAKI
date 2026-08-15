@@ -5,18 +5,55 @@ namespace Game.Gameplay.Combat
     /// <summary>Attack delivery timing and trajectory rules.</summary>
     public static class CombatAttackRules
     {
+        /// <summary>
+        /// Default normalized time (0–1) within the attack clip for melee impact / projectile spawn.
+        /// Paired with Attack animator speed = clipLength / attackInterval.
+        /// </summary>
+        public const float SwingImpactNormalizedTime = 0.5f;
+
+        /// <summary>Archers release the arrow earlier in the draw (TT archer clip).</summary>
+        public const float RangedSwingImpactNormalizedTime = 0.25f;
+
+        /// <summary>Casters release the fireball slightly before mid-staff swing.</summary>
+        public const float CasterSwingImpactNormalizedTime = 0.35f;
+
+        /// <summary>Legacy alias — prefer <see cref="ResolveSwingImpactDelay"/>.</summary>
         public const float MeleeStrikeDuration = 0.14f;
+
         public const float MeleeLungeDistance = 0.55f;
         public const float ProjectileSpeed = 22f;
         public const float ParabolicArcHeight = 2.8f;
         public const float ProjectileBodyHeight = 1.1f;
 
-        public static bool UsesMeleeStrike(UnitRole role) =>
-            role is UnitRole.Melee or UnitRole.Siege;
+        public static float ResolveSwingImpactNormalizedTime(UnitRole role) =>
+            role switch
+            {
+                UnitRole.Ranged => RangedSwingImpactNormalizedTime,
+                UnitRole.Caster => CasterSwingImpactNormalizedTime,
+                _ => SwingImpactNormalizedTime,
+            };
 
-        public static bool UsesMeleeStrike(UnitRole role, bool isHero, int heroSlot) =>
-            !(isHero && heroSlot == HeroAbilityRules.PriestSlot)
-            && UsesMeleeStrike(role);
+        public static float ResolveSwingImpactDelay(float attackIntervalSeconds, UnitRole role = UnitRole.Melee) =>
+            UnityEngine.Mathf.Max(
+                0.05f,
+                attackIntervalSeconds * ResolveSwingImpactNormalizedTime(role));
+
+        public static bool UsesMeleeStrike(UnitRole role) =>
+            role is UnitRole.Melee or UnitRole.Siege or UnitRole.Titan;
+
+        /// <summary>
+        /// Non-projectile auto-attacks (melee creeps, siege, titan, king/paladin heroes).
+        /// Priest shoots; other heroes strike.
+        /// </summary>
+        public static bool UsesMeleeStrike(UnitRole role, bool isHero, int heroSlot)
+        {
+            if (isHero)
+            {
+                return heroSlot != HeroAbilityRules.PriestSlot;
+            }
+
+            return UsesMeleeStrike(role);
+        }
 
         public static bool UsesProjectile(UnitRole role) =>
             role is UnitRole.Ranged

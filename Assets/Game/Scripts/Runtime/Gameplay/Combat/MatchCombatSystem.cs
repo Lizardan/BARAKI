@@ -8,13 +8,14 @@ using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    public sealed class MatchCombatSystem : IProjectileImpactHandler, IMeleeImpactHandler, IUnitAbilityHost
+    public sealed class MatchCombatSystem : IProjectileImpactHandler, IMeleeImpactHandler, IPendingProjectileHandler, IUnitAbilityHost
     {
         readonly List<MatchUnitState> _units = new();
         readonly Dictionary<int, MatchUnitState> _unitById = new();
         readonly List<MatchPlayerState> _players = new();
         readonly CombatProjectileSystem _projectiles = new();
         readonly CombatMeleeStrikeSystem _meleeStrikes = new();
+        readonly CombatPendingProjectileSystem _pendingProjectiles = new();
         readonly CombatSpatialGrid _spatialGrid = new();
 
         LaneGraph _graph;
@@ -124,6 +125,7 @@ namespace Game.Gameplay.Combat
             _players.Clear();
             _projectiles.Clear();
             _meleeStrikes.Clear();
+            _pendingProjectiles.Clear();
             _corpses.Clear();
             _networkAbilityCasts.Clear();
             _presenterAbilityCasts.Clear();
@@ -1081,13 +1083,22 @@ namespace Game.Gameplay.Combat
             TickPendingSpawns(deltaTime);
             TickCorpses(deltaTime);
 
-            if (_units.Count == 0 && _projectiles.Active.Count == 0 && _meleeStrikes.Active.Count == 0)
+            if (_units.Count == 0
+                && _projectiles.Active.Count == 0
+                && _meleeStrikes.Active.Count == 0
+                && _pendingProjectiles.Active.Count == 0)
             {
                 _healZones.Clear();
                 return;
             }
 
             _spatialGrid.Rebuild(_units);
+
+            // Resolve deliveries from previous swings before AI can spawn new ones,
+            // so a mid-swing delay is never fully consumed in the same Tick that created it.
+            TickMeleeStrikes(deltaTime);
+            TickPendingProjectiles(deltaTime);
+            TickProjectiles(deltaTime);
 
             _tickBuffer.Clear();
             _tickBuffer.AddRange(_units);
@@ -1111,13 +1122,16 @@ namespace Game.Gameplay.Combat
 
             TickHealZones(deltaTime);
             ClampUnitsToEffectiveMaxHp();
-            TickProjectiles(deltaTime);
-            TickMeleeStrikes(deltaTime);
         }
 
         void TickProjectiles(float deltaTime)
         {
             _projectiles.Tick(deltaTime, this);
+        }
+
+        void TickPendingProjectiles(float deltaTime)
+        {
+            _pendingProjectiles.Tick(deltaTime, this);
         }
 
         void TickCorpses(float deltaTime)
@@ -1238,7 +1252,17 @@ namespace Game.Gameplay.Combat
             if (unit.FrozenRemainingSeconds > 0f)
             {
                 unit.FrozenRemainingSeconds = Mathf.Max(0f, unit.FrozenRemainingSeconds - deltaTime);
+                unit.CastLockRemainingSeconds = 0f;
                 unit.BehaviorState = UnitBehaviorState.Frozen;
+                return;
+            }
+
+            if (unit.CastLockRemainingSeconds > 0f)
+            {
+                unit.CastLockRemainingSeconds = Mathf.Max(0f, unit.CastLockRemainingSeconds - deltaTime);
+                unit.BehaviorState = unit.CastLockUsesAttackAnim
+                    ? UnitBehaviorState.Attack
+                    : UnitBehaviorState.Cast;
                 return;
             }
 
@@ -1735,6 +1759,9 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMin,
                 attacker.Stats.DamageMax,
                 _random);
+            var impactDelay = CombatAttackRules.ResolveSwingImpactDelay(
+                GetUnitAttackInterval(attacker),
+                attacker.Role);
 
             if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot)
                 || !CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
@@ -1743,28 +1770,17 @@ namespace Game.Gameplay.Combat
                     attacker.UnitId,
                     targetUnitId: -1,
                     rawDamage,
-                    CombatAttackRules.MeleeStrikeDuration,
+                    impactDelay,
                     targetBuildingInstanceId: building.InstanceId));
                 return;
             }
 
-            var start = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
-            var end = CombatProjectileTrajectory.GetProjectileTarget(building.WorldPosition);
-            var duration = CombatProjectileTrajectory.ComputeFlightDuration(
-                start,
-                end,
-                CombatAttackRules.ProjectileSpeed);
-            var projectile = _projectiles.SpawnBuildingAttack(
+            _pendingProjectiles.Spawn(new CombatPendingProjectileState(
                 attacker.UnitId,
-                building.InstanceId,
-                attacker.OwnerSlot,
-                attacker.Role,
-                GetPlayerRaceId(attacker.OwnerSlot),
+                targetUnitId: -1,
                 rawDamage,
-                duration,
-                start,
-                end);
-            EmitNetworkProjectileSpawn(projectile);
+                impactDelay,
+                targetBuildingInstanceId: building.InstanceId));
         }
 
         MatchUnitState GetUnitById(int? unitId)
@@ -2001,6 +2017,9 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMin,
                 attacker.Stats.DamageMax,
                 _random);
+            var impactDelay = CombatAttackRules.ResolveSwingImpactDelay(
+                GetUnitAttackInterval(attacker),
+                attacker.Role);
 
             if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
@@ -2008,35 +2027,93 @@ namespace Game.Gameplay.Combat
                     attacker.UnitId,
                     target.UnitId,
                     rawDamage,
-                    CombatAttackRules.MeleeStrikeDuration));
+                    impactDelay));
                 return;
             }
 
             if (!CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
-                ApplyDamage(attacker, target, rawDamage, attacker.OwnerSlot);
+                _meleeStrikes.Spawn(new CombatMeleeStrikeState(
+                    attacker.UnitId,
+                    target.UnitId,
+                    rawDamage,
+                    impactDelay));
                 return;
             }
 
-            var start = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
-            var end = CombatProjectileTrajectory.GetProjectileTarget(target.WorldPosition);
+            _pendingProjectiles.Spawn(new CombatPendingProjectileState(
+                attacker.UnitId,
+                target.UnitId,
+                rawDamage,
+                impactDelay));
+        }
+
+        public void ReleasePendingProjectile(CombatPendingProjectileState pending)
+        {
+            if (pending == null)
+            {
+                return;
+            }
+
+            var attacker = GetUnitById(pending.AttackerUnitId);
+            if (attacker == null || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            if (pending.TargetBuildingInstanceId.HasValue)
+            {
+                var building = GetBuildingByInstanceId(pending.TargetBuildingInstanceId);
+                if (building == null || building.IsRuins)
+                {
+                    return;
+                }
+
+                var start = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
+                var end = CombatProjectileTrajectory.GetProjectileTarget(building.WorldPosition);
+                var duration = CombatProjectileTrajectory.ComputeFlightDuration(
+                    start,
+                    end,
+                    CombatAttackRules.ProjectileSpeed);
+                var projectile = _projectiles.SpawnBuildingAttack(
+                    attacker.UnitId,
+                    building.InstanceId,
+                    attacker.OwnerSlot,
+                    attacker.Role,
+                    GetPlayerRaceId(attacker.OwnerSlot),
+                    pending.RawDamage,
+                    duration,
+                    start,
+                    end);
+                EmitNetworkProjectileSpawn(projectile);
+                return;
+            }
+
+            var target = GetUnitById(pending.TargetUnitId);
+            if (target == null || !target.IsAlive)
+            {
+                return;
+            }
+
+            var shotStart = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
+            var shotEnd = CombatProjectileTrajectory.GetProjectileTarget(target.WorldPosition);
             var isParabolic = CombatAttackRules.UsesParabolicArc(attacker.Role);
-            var duration = CombatProjectileTrajectory.ComputeFlightDuration(
-                start,
-                end,
+            var flight = CombatProjectileTrajectory.ComputeFlightDuration(
+                shotStart,
+                shotEnd,
                 CombatAttackRules.ProjectileSpeed);
-            var projectile = _projectiles.Spawn(
+            var unitProjectile = _projectiles.Spawn(
                 attacker.UnitId,
                 target.UnitId,
                 attacker.OwnerSlot,
                 attacker.Role,
                 GetPlayerRaceId(attacker.OwnerSlot),
-                rawDamage,
-                duration,
-                start,
-                end,
+                pending.RawDamage,
+                flight,
+                shotStart,
+                shotEnd,
                 isParabolic);
-            EmitNetworkProjectileSpawn(projectile);
+            EmitNetworkProjectileSpawn(unitProjectile);
         }
 
         public void ResolveProjectileImpact(CombatProjectileState projectile)
@@ -2225,6 +2302,10 @@ namespace Game.Gameplay.Combat
         float GetUnitAttackInterval(MatchUnitState unit) =>
             CombatRules.GetAttackIntervalSeconds(unit.Stats.AttackSpeed * GetArmyAttackSpeedMultiplier(unit));
 
+        /// <summary>Effective attack interval including Haste Aura (presenter / anim speed).</summary>
+        public float GetAttackIntervalSeconds(MatchUnitState unit) =>
+            unit == null ? 1f : GetUnitAttackInterval(unit);
+
         string GetPlayerRaceId(int ownerSlot)
         {
             foreach (var player in _players)
@@ -2379,7 +2460,36 @@ namespace Game.Gameplay.Combat
                 def,
                 slotIndex,
                 GetMagicLevel(unit.OwnerSlot));
-            return def.Behaviour.TryCast(in ctx);
+            if (!def.Behaviour.TryCast(in ctx))
+            {
+                return false;
+            }
+
+            ApplyAbilityAnimLock(unit, def.AbilityId);
+            return true;
+        }
+
+        void ApplyAbilityAnimLock(MatchUnitState unit, int abilityId)
+        {
+            var kind = AbilityAnimRules.ResolveKind(abilityId);
+            if (kind == AbilityAnimKind.None)
+            {
+                return;
+            }
+
+            var lockSeconds = AbilityAnimRules.ResolveLockSeconds(
+                kind,
+                GetUnitAttackInterval(unit),
+                abilityId);
+            unit.CastLockRemainingSeconds = lockSeconds;
+            unit.CastLockUsesAttackAnim = kind == AbilityAnimKind.Attack;
+            unit.BehaviorState = unit.CastLockUsesAttackAnim
+                ? UnitBehaviorState.Attack
+                : UnitBehaviorState.Cast;
+            if (kind == AbilityAnimKind.Attack)
+            {
+                unit.AttackSwingSerial++;
+            }
         }
 
         public void EmitCast(AbilityCastEvent cast)

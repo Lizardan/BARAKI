@@ -123,6 +123,66 @@ namespace Game.Tests
             Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.SpeedParam));
             Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.AttackParam));
             Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.DeathParam));
+            Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.AttackVariantParam));
+
+            var attackState = FindState(controller, UnitCombatAnimatorDriver.AttackState);
+            Assert.IsNotNull(attackState);
+            Assert.IsInstanceOf<UnityEditor.Animations.BlendTree>(attackState.motion);
+            var attackTree = (UnityEditor.Animations.BlendTree)attackState.motion;
+            Assert.AreEqual(2, attackTree.children.Length);
+        }
+
+        static UnityEditor.Animations.AnimatorState FindState(
+            UnityEditor.Animations.AnimatorController controller,
+            string stateName)
+        {
+            foreach (var child in controller.layers[0].stateMachine.states)
+            {
+                if (child.state.name == stateName)
+                {
+                    return child.state;
+                }
+            }
+
+            return null;
+        }
+
+        [Test]
+        public void HumanCasterPrefab_HasAttackAndCastPools()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Caster, out var prefab));
+            var animator = prefab.GetComponentInChildren<Animator>();
+            var controller = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+            Assert.IsNotNull(controller);
+
+            var names = new System.Collections.Generic.HashSet<string>();
+            foreach (var parameter in controller.parameters)
+            {
+                names.Add(parameter.name);
+            }
+
+            Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.AttackVariantParam));
+            Assert.IsTrue(names.Contains(UnitCombatAnimatorDriver.CastVariantParam));
+
+            var attack = FindState(controller, UnitCombatAnimatorDriver.AttackState);
+            Assert.IsInstanceOf<AnimationClip>(attack.motion);
+            Assert.AreEqual("staff_04_attack_B", attack.motion.name);
+
+            var cast = FindState(controller, UnitCombatAnimatorDriver.CastState);
+            Assert.IsNotNull(cast);
+            Assert.IsInstanceOf<UnityEditor.Animations.BlendTree>(cast.motion);
+            Assert.AreEqual(2, ((UnityEditor.Animations.BlendTree)cast.motion).children.Length);
+        }
+
+        [Test]
+        public void HumanSiegePrefab_AttackIsSingleClip()
+        {
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Siege, out var prefab));
+            var animator = prefab.GetComponentInChildren<Animator>();
+            var controller = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+            Assert.IsNotNull(controller);
+            var attack = FindState(controller, UnitCombatAnimatorDriver.AttackState);
+            Assert.IsInstanceOf<AnimationClip>(attack.motion);
         }
 
         [Test]
@@ -654,8 +714,31 @@ namespace Game.Tests
                 UnitCombatAnimatorDriver.ResolveAnimatorPlaybackSpeed(
                     UnitBehaviorState.Attack,
                     moveSpeed: 4f,
-                    visualScaleVsCreep: 3f),
+                    visualScaleVsCreep: 3f,
+                    attackIntervalSeconds: 1f),
                 0.001f);
+        }
+
+        [Test]
+        public void ResolveAttackPlaybackSpeed_HasteShortensClip()
+        {
+            Assert.AreEqual(
+                1f / 0.909f,
+                UnitCombatAnimatorDriver.ResolveAttackPlaybackSpeed(0.909f),
+                0.02f);
+            Assert.AreEqual(
+                2f,
+                UnitCombatAnimatorDriver.ResolveAttackPlaybackSpeed(0.5f),
+                0.001f);
+        }
+
+        [Test]
+        public void ResolveVariant_WrapsSampleIntoPool()
+        {
+            Assert.AreEqual(0f, UnitCombatAnimatorDriver.ResolveVariant(2, 0));
+            Assert.AreEqual(1f, UnitCombatAnimatorDriver.ResolveVariant(2, 1));
+            Assert.AreEqual(0f, UnitCombatAnimatorDriver.ResolveVariant(2, 2));
+            Assert.AreEqual(0f, UnitCombatAnimatorDriver.ResolveVariant(1, 99));
         }
 
         [Test]
@@ -664,6 +747,18 @@ namespace Game.Tests
             Assert.AreEqual(UnitCombatAnimatorDriver.WalkState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Move));
             Assert.AreEqual(UnitCombatAnimatorDriver.WalkState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Chase));
             Assert.AreEqual(UnitCombatAnimatorDriver.StandState, UnitCombatAnimatorDriver.ResolveLocomotionState(UnitBehaviorState.Attack));
+        }
+
+        [Test]
+        public void ResolveDesiredState_CastOverridesAttack()
+        {
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.CastState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Cast,
+                    fireAttack: true,
+                    fireDeath: false,
+                    isDead: false));
         }
 
         [Test]

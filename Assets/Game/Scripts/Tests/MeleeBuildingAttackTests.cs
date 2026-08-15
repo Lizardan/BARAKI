@@ -40,7 +40,8 @@ namespace Game.Tests
             Assert.AreEqual(melee.UnitId, controller.Combat.MeleeStrikes[0].AttackerUnitId);
             Assert.AreEqual(building.InstanceId, controller.Combat.MeleeStrikes[0].TargetBuildingInstanceId);
 
-            controller.Combat.Tick(CombatAttackRules.MeleeStrikeDuration + 0.01f);
+            var delay = controller.Combat.MeleeStrikes[0].Duration;
+            controller.Combat.Tick(delay + 0.01f);
             Assert.Less(building.CurrentHp, hpBefore);
         }
 

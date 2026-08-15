@@ -18,13 +18,54 @@ namespace Game.Tests
         }
 
         [Test]
-        public void UsesMeleeStrike_IncludesSiege_ExcludesSuper()
+        public void UsesMeleeStrike_IncludesSiegeTitanAndKing_ExcludesSuper()
         {
             Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Melee));
             Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Siege));
+            Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(UnitRole.Titan));
             Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Super));
             Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Ranged));
             Assert.IsFalse(CombatAttackRules.UsesMeleeStrike(UnitRole.Flying));
+            Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.KingSlot));
+            Assert.IsTrue(CombatAttackRules.UsesMeleeStrike(
+                UnitRole.Hero,
+                isHero: true,
+                heroSlot: HeroAbilityRules.PaladinSlot));
+        }
+
+        [Test]
+        public void ResolveSwingImpactDelay_IsHalfOfAttackInterval_ByDefault()
+        {
+            Assert.AreEqual(0.5f, CombatAttackRules.ResolveSwingImpactDelay(1f), 0.001f);
+            Assert.AreEqual(0.05f, CombatAttackRules.ResolveSwingImpactDelay(0.1f), 0.001f);
+        }
+
+        [Test]
+        public void ResolveSwingImpactDelay_ArcherReleasesAtQuarterClip()
+        {
+            Assert.AreEqual(
+                0.25f,
+                CombatAttackRules.ResolveSwingImpactDelay(1f, UnitRole.Ranged),
+                0.001f);
+            Assert.AreEqual(
+                CombatAttackRules.RangedSwingImpactNormalizedTime,
+                CombatAttackRules.ResolveSwingImpactNormalizedTime(UnitRole.Ranged),
+                0.001f);
+            Assert.AreEqual(
+                0.35f,
+                CombatAttackRules.ResolveSwingImpactDelay(1f, UnitRole.Caster),
+                0.001f);
+            Assert.AreEqual(
+                CombatAttackRules.CasterSwingImpactNormalizedTime,
+                CombatAttackRules.ResolveSwingImpactNormalizedTime(UnitRole.Caster),
+                0.001f);
+            Assert.AreEqual(
+                CombatAttackRules.SwingImpactNormalizedTime,
+                CombatAttackRules.ResolveSwingImpactNormalizedTime(UnitRole.Melee),
+                0.001f);
         }
 
         [Test]
@@ -168,9 +209,10 @@ namespace Game.Tests
 
             Assert.Greater(combat.MeleeStrikes.Count, 0);
             var hpWhenStrike = victim.CurrentHp;
-            combat.Tick(0.04f);
+            var delay = combat.MeleeStrikes[0].Duration;
+            combat.Tick(delay * 0.5f);
             Assert.AreEqual(hpWhenStrike, victim.CurrentHp, 0.01f, "Melee damage should land after strike delay");
-            combat.Tick(CombatAttackRules.MeleeStrikeDuration);
+            combat.Tick(delay);
             Assert.Less(victim.CurrentHp, hpWhenStrike);
         }
 

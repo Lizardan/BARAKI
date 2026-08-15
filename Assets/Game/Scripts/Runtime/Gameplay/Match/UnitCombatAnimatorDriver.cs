@@ -14,28 +14,40 @@ namespace Game.Gameplay.Match
     /// Drives unit combat clips via immediate <see cref="Animator.CrossFade"/> on behavior changes.
     /// Never waits for clip exit time — a new status always blends to the matching state right away.
     /// Walk clip rate scales with move speed and visual size so feet match ground travel.
+    /// Attack clip rate scales with attack interval so one clip equals one swing (Haste Aura included).
     /// </summary>
     public static class UnitCombatAnimatorDriver
     {
         public const string SpeedParam = "Speed";
         public const string AttackParam = "Attack";
         public const string DeathParam = "Death";
+        public const string AttackVariantParam = "AttackVariant";
+        public const string CastVariantParam = "CastVariant";
 
         public const string StandState = "Stand";
         public const string WalkState = "Walk";
         public const string AttackState = "Attack";
+        public const string CastState = "Cast";
         public const string DeathState = "Death";
 
         public const float LocomotionCrossFadeDuration = 0.2f;
         public const float AttackCrossFadeDuration = 0.12f;
+        public const float CastCrossFadeDuration = 0.12f;
         public const float DeathCrossFadeDuration = 0.12f;
         public const float DeathVisualSeconds = 3.2f;
 
         /// <summary>Melee creep baseline (GDD / UNIT_HUMAN_MELEE) — walk clip is authored around this.</summary>
         public const float ReferenceMoveSpeed = 4f;
 
+        /// <summary>
+        /// Fallback when role is unknown. Prefer <see cref="AbilityAnimRules.ResolveAttackClipSeconds"/>.
+        /// </summary>
+        public const float ReferenceAttackClipLength = AbilityAnimRules.CavalryOrMachineAttackClipSeconds;
+
         public const float MinWalkPlaybackSpeed = 0.2f;
         public const float MaxWalkPlaybackSpeed = 2.5f;
+        public const float MinAttackPlaybackSpeed = 0.35f;
+        public const float MaxAttackPlaybackSpeed = 3f;
 
         /// <summary>Animator float used only as Stand↔Walk gate (0 or 1), not clip rate.</summary>
         public static float ResolveSpeed(UnitBehaviorState behaviorState) =>
@@ -53,15 +65,66 @@ namespace Game.Gameplay.Match
         }
 
         /// <summary>
-        /// Global <see cref="Animator.speed"/>: scaled only while walking; attack/stand/death stay at 1.
+        /// Attack clip playback so one authored clip spans one attack interval
+        /// (Haste Aura shortens interval ⇒ faster swing).
+        /// </summary>
+        public static float ResolveAttackPlaybackSpeed(
+            float attackIntervalSeconds,
+            float attackClipLength = ReferenceAttackClipLength)
+        {
+            var interval = Mathf.Max(0.05f, attackIntervalSeconds);
+            var length = Mathf.Max(0.05f, attackClipLength);
+            return Mathf.Clamp(length / interval, MinAttackPlaybackSpeed, MaxAttackPlaybackSpeed);
+        }
+
+        /// <summary>Picks a discrete BlendTree child index for Attack/Cast pools.</summary>
+        public static float ResolveVariant(int clipCount, int sample)
+        {
+            if (clipCount <= 1)
+            {
+                return 0f;
+            }
+
+            var index = sample % clipCount;
+            if (index < 0)
+            {
+                index += clipCount;
+            }
+
+            return index;
+        }
+
+        public static float ResolveRandomVariant(int clipCount) =>
+            ResolveVariant(clipCount, Random.Range(0, Mathf.Max(1, clipCount)));
+
+        /// <summary>
+        /// Global <see cref="Animator.speed"/>: scaled while walking; attack uses interval;
+        /// cast/stand/death stay at 1.
         /// </summary>
         public static float ResolveAnimatorPlaybackSpeed(
             UnitBehaviorState behaviorState,
             float moveSpeed,
             float visualScaleVsCreep,
-            bool isDead = false)
+            bool isDead = false,
+            float attackIntervalSeconds = 1f,
+            float attackClipLength = ReferenceAttackClipLength)
         {
-            if (isDead || ResolveSpeed(behaviorState) <= 0.1f)
+            if (isDead)
+            {
+                return 1f;
+            }
+
+            if (behaviorState == UnitBehaviorState.Attack)
+            {
+                return ResolveAttackPlaybackSpeed(attackIntervalSeconds, attackClipLength);
+            }
+
+            if (behaviorState is UnitBehaviorState.Cast or UnitBehaviorState.Frozen)
+            {
+                return 1f;
+            }
+
+            if (ResolveSpeed(behaviorState) <= 0.1f)
             {
                 return 1f;
             }
@@ -86,6 +149,11 @@ namespace Game.Gameplay.Match
                 return DeathState;
             }
 
+            if (behaviorState == UnitBehaviorState.Cast)
+            {
+                return CastState;
+            }
+
             // Attack status (or a new swing) → Attack immediately, never idle-gap first.
             if (fireAttack || behaviorState == UnitBehaviorState.Attack)
             {
@@ -102,6 +170,11 @@ namespace Game.Gameplay.Match
                 return AttackCrossFadeDuration;
             }
 
+            if (stateName == CastState)
+            {
+                return CastCrossFadeDuration;
+            }
+
             if (stateName == DeathState)
             {
                 return DeathCrossFadeDuration;
@@ -112,6 +185,24 @@ namespace Game.Gameplay.Match
 
         public static bool ShouldForceRestartAttack(bool fireAttack, string desiredState) =>
             fireAttack && desiredState == AttackState;
+
+        public static bool HasParameter(Animator animator, string parameterName)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null)
+            {
+                return false;
+            }
+
+            foreach (var parameter in animator.parameters)
+            {
+                if (parameter.name == parameterName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public static bool IsInStateOrTransitioningTo(Animator animator, string stateName)
         {
@@ -155,7 +246,10 @@ namespace Game.Gameplay.Match
             bool fireAttack,
             bool fireDeath,
             float moveSpeed = ReferenceMoveSpeed,
-            float visualScaleVsCreep = 1f)
+            float visualScaleVsCreep = 1f,
+            float attackIntervalSeconds = 1f,
+            float attackClipLength = ReferenceAttackClipLength,
+            bool enteringCast = false)
         {
             if (animator == null)
             {
@@ -173,11 +267,6 @@ namespace Game.Gameplay.Match
             }
 
             animator.SetFloat(SpeedParam, ResolveSpeed(behaviorState));
-            animator.speed = ResolveAnimatorPlaybackSpeed(
-                behaviorState,
-                moveSpeed,
-                visualScaleVsCreep,
-                playback.IsDead);
 
             var desired = ResolveDesiredState(
                 behaviorState,
@@ -185,13 +274,38 @@ namespace Game.Gameplay.Match
                 fireDeath,
                 playback.IsDead);
 
-            // Attack/death must not inherit a slowed titan walk rate.
-            if (desired is AttackState or DeathState)
+            animator.speed = ResolveAnimatorPlaybackSpeed(
+                behaviorState,
+                moveSpeed,
+                visualScaleVsCreep,
+                playback.IsDead,
+                attackIntervalSeconds,
+                attackClipLength);
+
+            // Death/cast must not inherit a slowed titan walk or haste attack rate.
+            if (desired is DeathState or CastState)
             {
                 animator.speed = 1f;
             }
+            else if (desired == AttackState)
+            {
+                animator.speed = ResolveAttackPlaybackSpeed(attackIntervalSeconds, attackClipLength);
+            }
 
-            var forceRestart = ShouldForceRestartAttack(fireAttack, desired);
+            if (fireAttack && HasParameter(animator, AttackVariantParam))
+            {
+                // Pools are A/B (2) or single; Random.Range upper is exclusive.
+                var variant = ResolveRandomVariant(2);
+                animator.SetFloat(AttackVariantParam, variant);
+            }
+
+            if (enteringCast && HasParameter(animator, CastVariantParam))
+            {
+                animator.SetFloat(CastVariantParam, ResolveRandomVariant(2));
+            }
+
+            var forceRestart = ShouldForceRestartAttack(fireAttack, desired)
+                || (enteringCast && desired == CastState);
             CrossFade(
                 animator,
                 playback,
