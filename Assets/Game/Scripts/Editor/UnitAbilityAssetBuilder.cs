@@ -9,14 +9,14 @@ namespace Game.Editor
 {
     /// <summary>
     /// Builds one <see cref="UnitAbilityDef"/> asset per ability (named from <see cref="UnitAbilityDef.DisplayName"/>,
-    /// with the behaviour as a sub-asset) plus the shared <see cref="UnitAbilityCatalog"/> under <see cref="AbilitiesDir"/>.
+    /// with the behaviour as a sub-asset), grouped by owner, plus the global <see cref="UnitAbilityCatalog"/>.
     /// Existing def assets are reused by <see cref="UnitAbilityDef.AbilityId"/> so prefab references survive.
     /// Legacy <c>Ability{id}.asset</c> names are migrated to display names on the next build.
     /// </summary>
     public static class UnitAbilityAssetBuilder
     {
-        public const string AbilitiesDir = "Assets/Game/ScriptableObjects/Abilities";
-        public const string CatalogPath = AbilitiesDir + "/UnitAbilityCatalog.asset";
+        public const string AbilitiesDir = ContentAssetPaths.HumanAbilities;
+        public const string CatalogPath = ContentAssetPaths.UnitAbilityCatalog;
 
         [MenuItem("BARAKI/Abilities/Build Ability Defs")]
         public static void BuildAll()
@@ -61,6 +61,30 @@ namespace Game.Editor
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
 
+            var knownIds = new HashSet<int>();
+            foreach (var def in allDefs)
+            {
+                knownIds.Add(def.AbilityId);
+            }
+
+            foreach (var existing in catalog.Abilities)
+            {
+                if (existing == null || knownIds.Contains(existing.AbilityId))
+                {
+                    continue;
+                }
+
+                var path = AssetDatabase.GetAssetPath(existing);
+                if (!path.StartsWith(
+                        ContentAssetPaths.HumanAbilities + "/",
+                        System.StringComparison.Ordinal))
+                {
+                    allDefs.Add(existing);
+                    knownIds.Add(existing.AbilityId);
+                }
+            }
+
+            allDefs.Sort((a, b) => a.AbilityId.CompareTo(b.AbilityId));
             catalog.ReplaceAbilities(allDefs.ToArray());
             EditorUtility.SetDirty(catalog);
 
@@ -80,10 +104,12 @@ namespace Game.Editor
 
         static void EnsureFolder()
         {
-            if (!AssetDatabase.IsValidFolder(AbilitiesDir))
-            {
-                AssetDatabase.CreateFolder("Assets/Game/ScriptableObjects", "Abilities");
-            }
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.Catalogs);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero1Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero2Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero3Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanCasterAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
         }
 
         /// <summary>"Holy Nova" -> "holy-nova" (ASCII, kebab-case).</summary>
@@ -110,7 +136,7 @@ namespace Game.Editor
 
         static UnitAbilityDef EnsureDefAsset(UnitAbilityDef defaults, string fileName)
         {
-            var newPath = $"{AbilitiesDir}/{fileName}.asset";
+            var newPath = $"{GetAbilityDirectory(defaults.AbilityId)}/{fileName}.asset";
             var legacyPath = $"{AbilitiesDir}/Ability{defaults.AbilityId}.asset";
 
             var existing = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(newPath);
@@ -189,6 +215,28 @@ namespace Game.Editor
                 defaults.SecondaryHeal);
             EditorUtility.SetDirty(def);
             return def;
+        }
+
+        static string GetAbilityDirectory(int abilityId)
+        {
+            if (abilityId < AbilityIds.Heal)
+            {
+                return ContentAssetPaths.HumanCasterAbilities;
+            }
+
+            if (abilityId < AbilityIds.Smite)
+            {
+                return ContentAssetPaths.HumanHero1Abilities;
+            }
+
+            if (abilityId < AbilityIds.HolyNova)
+            {
+                return ContentAssetPaths.HumanHero2Abilities;
+            }
+
+            return abilityId < AbilityIds.Rally
+                ? ContentAssetPaths.HumanHero3Abilities
+                : ContentAssetPaths.HumanTitanAbilities;
         }
 
         /// <summary>Finds an existing def by <see cref="UnitAbilityDef.AbilityId"/> regardless of its file name.</summary>

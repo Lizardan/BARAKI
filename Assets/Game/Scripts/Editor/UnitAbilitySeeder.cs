@@ -9,18 +9,19 @@ namespace Game.Editor
 {
     /// <summary>
     /// Writes shared <see cref="UnitAbilityDef"/> references (from the catalog built by
-    /// <see cref="UnitAbilityAssetBuilder"/>) onto hero/caster/titan prefabs. Does not run as part of
-    /// BARAKI/Units/Sync Balance to Prefabs so later tuning on the prefab is kept.
+    /// <see cref="UnitAbilityAssetBuilder"/>) into hero/caster/titan combat settings. Does not run as part of
+    /// BARAKI/Units/Sync Balance to Prefabs because balance snapshots and ability references are
+    /// synchronized independently.
     /// </summary>
-    public static class UnitAbilityKitSeeder
+    public static class UnitAbilitySeeder
     {
-        [MenuItem("BARAKI/Units/Seed Ability Kits")]
+        [MenuItem("BARAKI/Units/Seed Unit Abilities")]
         public static void SeedAll()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(UnitAbilityAssetBuilder.CatalogPath);
             if (catalog == null)
             {
-                Debug.LogError($"UnitAbilityKitSeeder: catalog not found at {UnitAbilityAssetBuilder.CatalogPath}. " +
+                Debug.LogError($"UnitAbilitySeeder: catalog not found at {UnitAbilityAssetBuilder.CatalogPath}. " +
                                "Run BARAKI/Abilities/Build Ability Defs first.");
                 return;
             }
@@ -28,7 +29,7 @@ namespace Game.Editor
             var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(UnitVisualPrefabBuilder.CatalogPath);
             if (visualCatalog == null)
             {
-                Debug.LogError($"UnitAbilityKitSeeder: visual catalog not found at {UnitVisualPrefabBuilder.CatalogPath}.");
+                Debug.LogError($"UnitAbilitySeeder: visual catalog not found at {UnitVisualPrefabBuilder.CatalogPath}.");
                 return;
             }
 
@@ -39,7 +40,7 @@ namespace Game.Editor
             seeded += Seed(visualCatalog, catalog, UnitRole.Caster, 0, AbilityKitDefaults.CreateCaster()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Titan, 0, AbilityKitDefaults.CreateTitan()) ? 1 : 0;
             AssetDatabase.SaveAssets();
-            Debug.Log($"UnitAbilityKitSeeder: seeded {seeded} prefab(s).");
+            Debug.Log($"UnitAbilitySeeder: seeded {seeded} prefab(s).");
         }
 
         static bool Seed(
@@ -51,7 +52,7 @@ namespace Game.Editor
         {
             if (!catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, out var prefab) || prefab == null)
             {
-                Debug.LogWarning($"UnitAbilityKitSeeder: no prefab for {role} slot {heroSlot}.");
+                Debug.LogWarning($"UnitAbilitySeeder: no prefab for {role} slot {heroSlot}.");
                 return false;
             }
 
@@ -62,7 +63,7 @@ namespace Game.Editor
                 assets[i] = def != null ? abilityCatalog.Find(def.AbilityId) : null;
                 if (assets[i] == null)
                 {
-                    Debug.LogWarning($"UnitAbilityKitSeeder: catalog has no def for id {def?.AbilityId ?? 0} ({role} slot {heroSlot}).");
+                    Debug.LogWarning($"UnitAbilitySeeder: catalog has no def for id {def?.AbilityId ?? 0} ({role} slot {heroSlot}).");
                 }
             }
 
@@ -70,13 +71,13 @@ namespace Game.Editor
             var root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                var kit = root.GetComponentInChildren<UnitAbilityKit>(true);
-                if (kit == null)
+                var settings = root.GetComponentInChildren<UnitCombatSettings>(true);
+                if (settings == null)
                 {
-                    kit = root.AddComponent<UnitAbilityKit>();
+                    settings = root.AddComponent<UnitCombatSettings>();
                 }
 
-                kit.ReplaceAbilities(assets);
+                settings.ReplaceAbilities(assets);
                 PrefabUtility.SaveAsPrefabAsset(root, path);
                 return true;
             }

@@ -29,6 +29,13 @@ namespace Game.Tests
         }
 
         [Test]
+        public void TryGetPrefab_UnknownRace_DoesNotFallBackToHuman()
+        {
+            Assert.IsFalse(_catalog.TryGetPrefab("RACE_UNKNOWN", UnitRole.Melee, out var prefab));
+            Assert.IsNull(prefab);
+        }
+
+        [Test]
         public void TryGetPrefab_HumanMelee_ReturnsCanonicalUnitsPath()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));
@@ -541,7 +548,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanChampionPrefabs_HaveUnitBalanceSettings()
+        public void HumanChampionPrefabs_HaveUnitCombatSettings()
         {
             AssertBalance("Human_Hero1", UnitRole.Hero, 1, 600f);
             AssertBalance("Human_Hero2", UnitRole.Hero, 2, 600f);
@@ -555,7 +562,7 @@ namespace Game.Tests
             RaceContentBuilder.EnsureContent();
             var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, out var prefab));
-            var settings = prefab.GetComponentInChildren<UnitBalanceSettings>(true);
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
             Assert.IsNotNull(settings);
             var stats = UnitStatsResolver.ResolveBase(
                 new RaceCatalogCombatCatalog(raceCatalog),
@@ -577,8 +584,8 @@ namespace Game.Tests
         void AssertBalance(string name, UnitRole role, int heroSlot, float expectedHp)
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, out var prefab), name);
-            var settings = prefab.GetComponentInChildren<UnitBalanceSettings>(true);
-            Assert.IsNotNull(settings, $"{name} UnitBalanceSettings");
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings, $"{name} UnitCombatSettings");
             Assert.AreEqual(expectedHp, settings.MaxHp, 0.001f, $"{name} MaxHp");
         }
     }

@@ -96,12 +96,12 @@ namespace Game.Tests
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Game/Prefabs/Races/Humans/Heroes/Human_Hero3.prefab");
             Assert.IsNotNull(prefab);
-            var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
-            Assert.IsNotNull(kit, "Seed Human_Hero3 via BARAKI/Units/Seed Ability Kits.");
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings, "Seed Human_Hero3 via BARAKI/Units/Seed Unit Abilities.");
 
-            Assert.AreEqual(4, kit.Abilities.Length);
-            Assert.AreEqual(AbilityIds.HolyNova, kit.Abilities[2].AbilityId);
-            Assert.IsFalse(string.IsNullOrWhiteSpace(kit.Abilities[2].Description));
+            Assert.AreEqual(4, settings.Abilities.Length);
+            Assert.AreEqual(AbilityIds.HolyNova, settings.Abilities[2].AbilityId);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(settings.Abilities[2].Description));
         }
 
         [Test]
@@ -110,11 +110,11 @@ namespace Game.Tests
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Game/Prefabs/Races/Humans/Units/Human_Titan.prefab");
             Assert.IsNotNull(prefab);
-            var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
-            Assert.IsNotNull(kit, "Seed Human_Titan via BARAKI/Units/Seed Ability Kits.");
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings, "Seed Human_Titan via BARAKI/Units/Seed Unit Abilities.");
 
-            Assert.AreEqual(4, kit.Abilities.Length);
-            Assert.AreEqual(AbilityIds.Slam, kit.Abilities[2].AbilityId);
+            Assert.AreEqual(4, settings.Abilities.Length);
+            Assert.AreEqual(AbilityIds.Slam, settings.Abilities[2].AbilityId);
         }
     }
 }

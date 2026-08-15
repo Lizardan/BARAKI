@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEditor;
@@ -16,7 +17,7 @@ namespace Game.Editor
         public const string RootPath = "Assets/Game/Prefabs/Races";
         public const string HumanPath = RootPath + "/Humans/Units";
         public const string HumanHeroesPath = RootPath + "/Humans/Heroes";
-        public const string CatalogPath = "Assets/Game/ScriptableObjects/UnitVisualCatalog.asset";
+        public const string CatalogPath = ContentAssetPaths.UnitVisualCatalog;
         public const string HumanMeleePath = HumanPath + "/Human_Melee.prefab";
         public const string HumanRangedPath = HumanPath + "/Human_Ranged.prefab";
         public const string HumanCasterPath = HumanPath + "/Human_Caster.prefab";
@@ -43,7 +44,7 @@ namespace Game.Editor
             EnsureFolder(RootPath);
             EnsureFolder(HumanPath);
             EnsureFolder(HumanHeroesPath);
-            EnsureFolder("Assets/Game/ScriptableObjects");
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.Catalogs);
 
             var humanPrefabs = LoadAnimatedHumanPrefabs();
             var hero1 = LoadRequiredPrefab(HumanHero1Path);
@@ -92,10 +93,29 @@ namespace Game.Editor
         {
             var catalog = LoadOrCreateCatalog();
             var so = new SerializedObject(catalog);
-
-            AssignSet(so.FindProperty("_human"), humanPrefabs, hero1, hero2, hero3, titan);
+            var races = so.FindProperty("_races");
+            var entry = FindOrAddRace(races, GameIds.Races.Human);
+            AssignSet(entry.FindPropertyRelative("_visuals"), humanPrefabs, hero1, hero2, hero3, titan);
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
+        }
+
+        static SerializedProperty FindOrAddRace(SerializedProperty races, string raceId)
+        {
+            for (var i = 0; i < races.arraySize; i++)
+            {
+                var entry = races.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("_raceId").stringValue == raceId)
+                {
+                    return entry;
+                }
+            }
+
+            var index = races.arraySize;
+            races.InsertArrayElementAtIndex(index);
+            var created = races.GetArrayElementAtIndex(index);
+            created.FindPropertyRelative("_raceId").stringValue = raceId;
+            return created;
         }
 
         static void AssignSet(

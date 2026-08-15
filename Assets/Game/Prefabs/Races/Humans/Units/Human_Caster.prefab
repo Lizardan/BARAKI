@@ -18546,7 +18546,6 @@ GameObject:
   - component: {fileID: 2207341999708013691}
   - component: {fileID: 9181484224369983869}
   - component: {fileID: 5427441546432369067}
-  - component: {fileID: 7744974635348267832}
   m_Layer: 0
   m_Name: Human_Caster
   m_TagString: Untagged
@@ -18692,18 +18691,6 @@ MonoBehaviour:
   _goldBounty: 7
   _maxMana: 200
   _marchSpeedOverride: 0
---- !u!114 &7744974635348267832
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8423793415308610872}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50e80b5b84ba17342a15db8698925f56, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityKit
   _abilities:
   - {fileID: 11400000, guid: db57edf0c156adc4891123688aeae4d6, type: 2}
   - {fileID: 11400000, guid: c689b9cf1aa5bd344a6718c5357ce510, type: 2}

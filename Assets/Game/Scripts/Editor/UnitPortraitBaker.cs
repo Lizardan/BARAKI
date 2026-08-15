@@ -26,16 +26,21 @@ namespace Game.Editor
             }
 
             EnsureFolder(PortraitFolder);
-            BakeRace(catalog, "Human", GameIds.Races.Human, "_human");
+            BakeRace(catalog, "Human", GameIds.Races.Human);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        static void BakeRace(UnitVisualCatalog catalog, string prefix, string raceId, string setPropertyName)
+        static void BakeRace(UnitVisualCatalog catalog, string prefix, string raceId)
         {
             var so = new SerializedObject(catalog);
-            var set = so.FindProperty(setPropertyName);
+            var set = FindRaceVisuals(so.FindProperty("_races"), raceId);
+            if (set == null)
+            {
+                return;
+            }
+
             var roles = new[]
             {
                 UnitRole.Melee,
@@ -73,6 +78,20 @@ namespace Game.Editor
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait", $"{PortraitFolder}/{prefix}_Titan.png");
 
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static SerializedProperty FindRaceVisuals(SerializedProperty races, string raceId)
+        {
+            for (var i = 0; i < races.arraySize; i++)
+            {
+                var entry = races.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("_raceId").stringValue == raceId)
+                {
+                    return entry.FindPropertyRelative("_visuals");
+                }
+            }
+
+            return null;
         }
 
         static void BakeChampion(

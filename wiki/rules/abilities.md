@@ -2,7 +2,7 @@
 
 Данные-ориентированная система способностей: тюнинг живёт в C#-дефолтах, генерируется в
 ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субассет), раздаётся по префабам героев
-через `UnitAbilityKit`, а в рантайме кастуется единым циклом без switch-диспетчеризации.
+через единый `UnitCombatSettings`, а в рантайме кастуется единым циклом без switch-диспетчеризации.
 
 ## Ключевые понятия
 
@@ -11,8 +11,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 | `AbilityIds` | Стабильные int-константы id способностей (`AbilityIds.cs`). Передаются в снапшот как `ushort` |
 | `UnitAbilityDef` | SO-ассет одной способности: id, display name, описание, kind, unlock, все тюнинг-параметры, `AbilityFx`, поведение |
 | `UnitAbilityBehaviour` | SO-субассет внутри def: структурная логика (`TryCast`, `QueryAura`, `DescribeParams`) |
-| `UnitAbilityCatalog` | Общий список всех def-ов (19 шт.), сериализован в `Assets/Game/ScriptableObjects/Abilities/UnitAbilityCatalog.asset` |
-| `UnitAbilityKit` | Компонент на префабе героя: массив ссылок на def-ы. **Порядок списка = приоритет каста AI** |
+| `UnitAbilityCatalog` | Общий список всех def-ов (19 шт.), сериализован в `Assets/Game/ScriptableObjects/Catalogs/UnitAbilityCatalog.asset` |
+| `UnitCombatSettings` | Единственный боевой компонент префаба: runtime-снапшот статов + массив ссылок на def-ы. **Порядок списка = приоритет каста AI** |
 | `AbilityKitDefaults` | Источник истины тюнинга: фабрики китов `CreateKing/Paladin/Priest/Titan/Caster` + runtime-фолбэк |
 
 ## Правила именования
@@ -35,10 +35,10 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
     добавляется суффикс `-{id}`. При смене DisplayName старый файл мигрируется по `AbilityId`
     (`AssetDatabase.MoveAsset` — GUID-ссылки из префабов/каталога сохраняются). Легаси-имена
     `Ability{id}.asset` также мигрируются автоматически.
-  - `BARAKI/Units/Seed Ability Kits` — раскладывает def-ы по префабам героев
-    (`UnitAbilityKitSeeder`).
-- **Runtime-фолбэк**: если на префабе нет kit/ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
-  (`MatchCombatSystem.AttachAbilityKit`, L2240).
+  - `BARAKI/Units/Seed Unit Abilities` — записывает def-ссылки в `UnitCombatSettings` префабов
+    (`UnitAbilitySeeder`).
+- **Runtime-фолбэк**: если в prefab settings нет ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
+  (`MatchCombatSystem.AttachAbilities`).
 
 ## Ид-таблица (19 способностей)
 
@@ -100,11 +100,20 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 - Изменения способностей = изменение кол-ва def-ов/параметров; изменять **кодек не нужно**,
   пока id стабильны.
 
-## Инспектор префаба
+## Инспекторы (Game.Editor)
 
-`UnitAbilityKitEditor` (Game.Editor) на компоненте `UnitAbilityKit` рисует подробную сводку:
-номер+имя (цвет = kind), цвет FX-свач, описание, числовые параметры, правило unlock,
-поведение и FX. Это read-only-сводка; сам `UnitAbilityDef` правится в дефолтах и пересобирается.
+- **`UnitCombatSettingsEditor`** — единый read-only viewer префаба: сверху красиво оформленные
+  боевые статы и кнопка перехода к `UnitDefinition` / `HeroDefinition`, ниже — карточки способностей.
+  Если у юнита нет способностей, секция способностей не рисуется вообще.
+- Каждая карточка способности показывает номер+имя (цвет = kind), цвет FX-свач, описание,
+  только ненулевые числовые параметры, правило unlock, поведение и FX. Кнопка **«Открыть»**
+  выделяет и пингует `UnitAbilityDef`-ассет.
+- **`UnitAbilityDefEditor`** на самом def-ассете показывает по умолчанию только **ненулевые** тюнинг-строки
+  (ноль не мусорит — например, у не-хилящих нет поля «Heal»); toggle «Показать все» раскрывает нулевые.
+  Read-only-сводку см. выше; тюнинг всё равно пересобирается из дефолтов.
+- Статы и способности на префабе не редактируются: баланс правится в definition-ассете и переносится
+  через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
+  `BARAKI/Units/Seed Unit Abilities`.
 
 ## Как добавить способность
 
@@ -112,13 +121,13 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 2. Добавить тюнинг-константы в `HeroAbilityRules` / `CasterSpellRules`.
 3. Вставить def в нужный кит `AbilityKitDefaults.CreateXxx()` (позиция в массиве = приоритет каста).
 4. Если нужна новая механика — добавить `UnitAbilityBehaviour` в `Combat/Abilities/`.
-5. Меню: `Build Ability Defs` → `Seed Ability Kits`.
+5. Меню: `Build Ability Defs` → `Seed Unit Abilities`.
 6. Прогнать тесты `AbilityKitDefaultsTests` и затронутые (см. ниже).
 
 ## Как изменить тюнинг
 
 Править **только** дефолты (`AbilityKitDefaults` + правила), затем `Build Ability Defs` +
-`Seed Ability Kits`. Прямые правки def-ассетов в инспекторе — временные, на пересборке затираются.
+`Seed Unit Abilities`. Прямые правки def-ассетов в инспекторе — временные, на пересборке затираются.
 
 ## Тесты
 

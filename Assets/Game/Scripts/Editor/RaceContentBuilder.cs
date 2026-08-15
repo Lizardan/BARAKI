@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Game.Core;
 using Game.Gameplay.Combat;
@@ -10,16 +11,16 @@ namespace Game.Editor
     /// <summary>Creates MVP race/unit/hero/squad/upgrade ScriptableObject assets from GDD baseline stats.</summary>
     public static class RaceContentBuilder
     {
-        public const string RootPath = "Assets/Game/ScriptableObjects";
-        public const string CatalogPath = RootPath + "/RaceCatalog.asset";
+        public const string RootPath = ContentAssetPaths.Root;
+        public const string CatalogPath = ContentAssetPaths.RaceCatalog;
 
         public static void EnsureContent()
         {
-            EnsureFolder(RootPath + "/Units");
-            EnsureFolder(RootPath + "/Heroes");
-            EnsureFolder(RootPath + "/Races");
-            EnsureFolder(RootPath + "/Squads");
-            EnsureFolder(RootPath + "/Upgrades");
+            EnsureFolder(ContentAssetPaths.HumanBaseUnits);
+            EnsureFolder(ContentAssetPaths.HumanBaseHeroes);
+            EnsureFolder(ContentAssetPaths.Humans);
+            EnsureFolder(ContentAssetPaths.SharedSquads);
+            EnsureFolder(ContentAssetPaths.SharedUpgrades);
 
             var humanUnits = CreateHumanUnits();
             var humanHeroes = CreateHeroes();
@@ -103,7 +104,7 @@ namespace Game.Editor
             float moveSpeed,
             int bounty)
         {
-            var path = $"{RootPath}/Units/{id}.asset";
+            var path = $"{ContentAssetPaths.HumanBaseUnits}/{id}.asset";
             var unit = LoadOrCreate<UnitDefinition>(path);
             var so = new SerializedObject(unit);
             so.FindProperty("_id").stringValue = id;
@@ -126,7 +127,7 @@ namespace Game.Editor
 
         private static HeroDefinition CreateHero(string id, string raceId, int slot, string moraleId)
         {
-            var path = $"{RootPath}/Heroes/{id}.asset";
+            var path = $"{ContentAssetPaths.HumanBaseHeroes}/{id}.asset";
             var hero = LoadOrCreate<HeroDefinition>(path);
             var so = new SerializedObject(hero);
             so.FindProperty("_id").stringValue = id;
@@ -154,7 +155,7 @@ namespace Game.Editor
             string[] positivePassives,
             string negativePassive)
         {
-            var path = $"{RootPath}/Races/{id}.asset";
+            var path = ContentAssetPaths.HumanRace;
             var race = LoadOrCreate<RaceDefinition>(path);
             var so = new SerializedObject(race);
             so.FindProperty("_id").stringValue = id;
@@ -200,7 +201,7 @@ namespace Game.Editor
                 _ => GameIds.Squads.BarracksL4,
             };
 
-            var path = $"{RootPath}/Squads/{squadId}.asset";
+            var path = $"{ContentAssetPaths.SharedSquads}/{squadId}.asset";
             var squad = LoadOrCreate<SquadCompositionDefinition>(path);
             var so = new SerializedObject(squad);
             so.FindProperty("_barracksLevel").intValue = level;
@@ -221,7 +222,7 @@ namespace Game.Editor
             int[] costs,
             float[] times)
         {
-            var path = $"{RootPath}/Upgrades/{id}.asset";
+            var path = $"{ContentAssetPaths.SharedUpgrades}/{id}.asset";
             var track = LoadOrCreate<StatUpgradeTrackDefinition>(path);
             var so = new SerializedObject(track);
             so.FindProperty("_id").stringValue = id;
@@ -241,8 +242,24 @@ namespace Game.Editor
         {
             var catalog = LoadOrCreate<RaceCatalog>(CatalogPath);
             var so = new SerializedObject(catalog);
-            so.FindProperty("_races").arraySize = 1;
-            so.FindProperty("_races").GetArrayElementAtIndex(0).objectReferenceValue = human;
+            var races = new List<RaceDefinition> { human };
+            if (catalog.Races != null)
+            {
+                foreach (var existing in catalog.Races)
+                {
+                    if (existing != null && existing.Id != human.Id)
+                    {
+                        races.Add(existing);
+                    }
+                }
+            }
+
+            var racesProperty = so.FindProperty("_races");
+            racesProperty.arraySize = races.Count;
+            for (var i = 0; i < races.Count; i++)
+            {
+                racesProperty.GetArrayElementAtIndex(i).objectReferenceValue = races[i];
+            }
             so.FindProperty("_squadCompositions").arraySize = squads.Length;
             for (var i = 0; i < squads.Length; i++)
             {

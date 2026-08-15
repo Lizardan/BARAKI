@@ -9,7 +9,7 @@ namespace Game.Gameplay.Match
     [CreateAssetMenu(fileName = "UnitVisualCatalog", menuName = "Game/Unit Visual Catalog")]
     public sealed class UnitVisualCatalog : ScriptableObject
     {
-        [SerializeField] private UnitVisualSet _human;
+        [SerializeField] private RaceVisualSet[] _races = Array.Empty<RaceVisualSet>();
 
         public bool TryGetPrefab(string raceId, UnitRole role, out GameObject prefab) =>
             TryGetPrefab(raceId, role, heroSlot: 0, out prefab);
@@ -29,7 +29,28 @@ namespace Game.Gameplay.Match
             return portrait != null;
         }
 
-        UnitVisualSet GetSet(string raceId) => _human;
+        UnitVisualSet GetSet(string raceId)
+        {
+            for (var i = 0; i < _races.Length; i++)
+            {
+                if (_races[i] != null && _races[i].RaceId == raceId)
+                {
+                    return _races[i].Visuals;
+                }
+            }
+
+            return null;
+        }
+
+        [Serializable]
+        public sealed class RaceVisualSet
+        {
+            [SerializeField] private string _raceId;
+            [SerializeField] private UnitVisualSet _visuals;
+
+            public string RaceId => _raceId;
+            public UnitVisualSet Visuals => _visuals;
+        }
 
         [Serializable]
         public sealed class UnitVisualSet

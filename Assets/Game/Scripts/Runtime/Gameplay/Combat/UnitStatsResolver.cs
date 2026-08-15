@@ -4,9 +4,9 @@ using Game.Gameplay.Match;
 namespace Game.Gameplay.Combat
 {
     /// <summary>
-    /// Resolves a combat unit's stats. Prefab-based <see cref="UnitBalanceSettings"/> are
-    /// authoritative when present (balance lives on the prefab); otherwise falls back to the
-    /// race's <see cref="UnitDefinition"/> / <see cref="HeroDefinition"/>.
+    /// Resolves a combat unit's stats. Prefab-based <see cref="UnitCombatSettings"/> are
+    /// authoritative runtime snapshots when present; otherwise falls back to the race's
+    /// <see cref="UnitDefinition"/> / <see cref="HeroDefinition"/> source assets.
     /// </summary>
     public static class UnitStatsResolver
     {
@@ -37,7 +37,7 @@ namespace Game.Gameplay.Combat
                 && visualCatalog.TryGetPrefab(raceId, role, heroSlot, out var prefab)
                 && prefab != null)
             {
-                var settings = prefab.GetComponentInChildren<UnitBalanceSettings>();
+                var settings = prefab.GetComponentInChildren<UnitCombatSettings>();
                 if (settings != null)
                 {
                     return BuildFromSettings(settings, role);
@@ -69,7 +69,7 @@ namespace Game.Gameplay.Combat
             return DefaultStats(role);
         }
 
-        public static UnitCombatStats BuildFromSettings(UnitBalanceSettings settings, UnitRole role)
+        public static UnitCombatStats BuildFromSettings(UnitCombatSettings settings, UnitRole role)
         {
             if (settings == null)
             {
@@ -104,7 +104,7 @@ namespace Game.Gameplay.Combat
         static UnitCombatStats ChampionFallback(UnitRole role) =>
             new(role, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);
 
-        static float ResolveMaxMana(UnitBalanceSettings settings, UnitRole role)
+        static float ResolveMaxMana(UnitCombatSettings settings, UnitRole role)
         {
             if (settings.MaxMana > 0f)
             {

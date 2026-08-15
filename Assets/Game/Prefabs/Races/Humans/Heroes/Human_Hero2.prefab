@@ -18494,7 +18494,6 @@ GameObject:
   - component: {fileID: 4800253068639099767}
   - component: {fileID: 2176464629853058187}
   - component: {fileID: 414943688640242490}
-  - component: {fileID: 982687391181325323}
   m_Layer: 0
   m_Name: Human_Hero2
   m_TagString: Untagged
@@ -18648,18 +18647,6 @@ MonoBehaviour:
   _goldBounty: 80
   _maxMana: 0
   _marchSpeedOverride: 0
---- !u!114 &982687391181325323
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7587950957063230053}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50e80b5b84ba17342a15db8698925f56, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityKit
   _abilities:
   - {fileID: 11400000, guid: 557e266c81feed946b95cfe9467a6867, type: 2}
   - {fileID: 11400000, guid: 4d318188e55e3f146b064fec6b15a64b, type: 2}

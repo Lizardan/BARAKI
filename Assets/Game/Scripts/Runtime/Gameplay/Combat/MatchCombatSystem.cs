@@ -715,7 +715,7 @@ namespace Game.Gameplay.Combat
             unit.MarchProgressDistance = progressDistance;
             ApplySpawnFacing(unit, route, distanceAlongLane);
             ApplyMarchFocusFromLane(unit, ownerSlot, laneId);
-            AttachAbilityKit(unit);
+            AttachAbilities(unit);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
             return unit;
@@ -953,7 +953,7 @@ namespace Game.Gameplay.Combat
 
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
-            AttachAbilityKit(unit);
+            AttachAbilities(unit);
             _nextUnitId = Mathf.Max(_nextUnitId, snap.UnitId + 1);
         }
 
@@ -1180,7 +1180,7 @@ namespace Game.Gameplay.Combat
             unit.MarchProgressDistance = progressDistance;
             ApplySpawnFacing(unit, route, pending.SpawnDistance);
             ApplyMarchFocusFromLane(unit, pending.OwnerSlot, pending.LaneId);
-            AttachAbilityKit(unit);
+            AttachAbilities(unit);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
         }
@@ -2237,14 +2237,14 @@ namespace Game.Gameplay.Combat
             return 0;
         }
 
-        void AttachAbilityKit(MatchUnitState unit)
+        void AttachAbilities(MatchUnitState unit)
         {
             if (unit == null)
             {
                 return;
             }
 
-            if (!TryCopyKitFromPrefab(unit))
+            if (!TryCopyAbilitiesFromPrefab(unit))
             {
                 unit.Abilities = AbilityKitDefaults.Create(unit.Role, unit.HeroSlot);
             }
@@ -2253,7 +2253,7 @@ namespace Game.Gameplay.Combat
             unit.AbilityCooldownRemaining = count > 0 ? new float[count] : System.Array.Empty<float>();
         }
 
-        bool TryCopyKitFromPrefab(MatchUnitState unit)
+        bool TryCopyAbilitiesFromPrefab(MatchUnitState unit)
         {
             if (UnitVisualCatalog == null)
             {
@@ -2267,13 +2267,13 @@ namespace Game.Gameplay.Combat
                 return false;
             }
 
-            var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
-            if (kit == null || kit.Abilities.Length == 0)
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            if (settings == null || settings.Abilities.Length == 0)
             {
                 return false;
             }
 
-            unit.Abilities = kit.Abilities;
+            unit.Abilities = settings.Abilities;
             return true;
         }
 
@@ -2398,7 +2398,7 @@ namespace Game.Gameplay.Combat
             revived.MarchFocusOpponentSlot = corpse.MarchFocusOpponentSlot;
             ApplySpawnFacing(revived, route, progressDistance);
             ApplyMarchFocusFromLane(revived, corpse.OwnerSlot, corpse.LaneId);
-            AttachAbilityKit(revived);
+            AttachAbilities(revived);
             _units.Add(revived);
             _unitById[revived.UnitId] = revived;
             _corpses.Remove(corpse);

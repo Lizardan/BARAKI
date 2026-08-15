@@ -15,6 +15,7 @@
 | `rules/unity-ui.md` | UI Toolkit, UIBindingScope, USS-стили |
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
+| `rules/content-assets.md` | Race-first структура ScriptableObjects, каталоги и shared-контент |
 
 ## Что здесь не дублируется
 

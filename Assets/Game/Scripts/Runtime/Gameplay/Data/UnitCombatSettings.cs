@@ -1,14 +1,17 @@
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Gameplay.Data
 {
     /// <summary>
-    /// Balance settings stored directly on the unit prefab. When present at match runtime,
-    /// these values override the race's <see cref="UnitDefinition"/> so balance can be
-    /// tuned by editing the prefab alone. Populated by the editor menu
-    /// BARAKI/Units/Sync Balance to Prefabs.
+    /// Read-only combat profile stored on the unit prefab: synchronized balance values and shared
+    /// <see cref="UnitAbilityDef"/> references. Definition assets remain the editing source;
+    /// editor sync/seed commands refresh this runtime snapshot.
     /// </summary>
-    public sealed class UnitBalanceSettings : MonoBehaviour
+    [DisallowMultipleComponent]
+    [AddComponentMenu("BARAKI/Unit Combat Settings")]
+    [MovedFrom(true, "Game.Gameplay.Data", "Game.Gameplay", "UnitBalanceSettings")]
+    public sealed class UnitCombatSettings : MonoBehaviour
     {
         [SerializeField] private float _maxHp = 100f;
         [SerializeField] private float _armor;
@@ -20,6 +23,7 @@ namespace Game.Gameplay.Data
         [SerializeField] private int _goldBounty = 8;
         [SerializeField] private float _maxMana;
         [SerializeField] private float _marchSpeedOverride;
+        [SerializeField] private UnitAbilityDef[] _abilities = System.Array.Empty<UnitAbilityDef>();
 
         public float MaxHp => _maxHp;
         public float Armor => _armor;
@@ -31,6 +35,12 @@ namespace Game.Gameplay.Data
         public int GoldBounty => _goldBounty;
         public float MaxMana => _maxMana;
         public float MarchSpeedOverride => _marchSpeedOverride;
+        public UnitAbilityDef[] Abilities => _abilities ?? System.Array.Empty<UnitAbilityDef>();
+
+        public void ReplaceAbilities(UnitAbilityDef[] abilities)
+        {
+            _abilities = abilities ?? System.Array.Empty<UnitAbilityDef>();
+        }
 
         public void CopyFrom(UnitDefinition definition)
         {
@@ -71,7 +81,7 @@ namespace Game.Gameplay.Data
             _marchSpeedOverride = 0f;
         }
 
-        public void CopyFrom(UnitBalanceSettings other)
+        public void CopyFrom(UnitCombatSettings other)
         {
             if (other == null)
             {
@@ -88,6 +98,7 @@ namespace Game.Gameplay.Data
             _goldBounty = other._goldBounty;
             _maxMana = other._maxMana;
             _marchSpeedOverride = other._marchSpeedOverride;
+            _abilities = other.Abilities;
         }
     }
 }

@@ -9,12 +9,12 @@ namespace Game.Editor
 {
     /// <summary>
     /// Copies the current human UnitDefinition / HeroDefinition values onto the unit prefabs as
-    /// UnitBalanceSettings components (migration / reset). After that, balance is
-    /// tuned directly on the prefabs and runtime uses the prefab values.
+    /// read-only UnitCombatSettings runtime snapshots. Balance is edited on the definition assets;
+    /// run this sync after a change so runtime prefab values stay current.
     /// </summary>
     public static class UnitBalanceSetup
     {
-        public const string RaceCatalogPath = "Assets/Game/ScriptableObjects/RaceCatalog.asset";
+        public const string RaceCatalogPath = ContentAssetPaths.RaceCatalog;
 
         static readonly UnitRole[] Roles =
         {
@@ -116,7 +116,7 @@ namespace Game.Editor
             string raceId,
             UnitRole role,
             int heroSlot,
-            System.Action<UnitBalanceSettings> apply,
+            System.Action<UnitCombatSettings> apply,
             out string path)
         {
             path = null;
@@ -130,10 +130,10 @@ namespace Game.Editor
             var root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                var settings = root.GetComponentInChildren<UnitBalanceSettings>(true);
+                var settings = root.GetComponentInChildren<UnitCombatSettings>(true);
                 if (settings == null)
                 {
-                    settings = root.AddComponent<UnitBalanceSettings>();
+                    settings = root.AddComponent<UnitCombatSettings>();
                 }
 
                 apply(settings);

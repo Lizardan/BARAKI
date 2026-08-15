@@ -14,7 +14,7 @@ namespace Game.Editor
     /// copies the matched TT prefab, points its Animator at a generated controller built
     /// from TT clips (Stand/Walk/Attack/Death), zeroes root transform (native TT scale, yaw 0),
     /// attaches <see cref="TtUnitTeamColor"/> with the four slot-color texture variants,
-    /// and preserves or seeds <see cref="UnitBalanceSettings"/>.
+    /// and preserves or seeds <see cref="UnitCombatSettings"/>.
     /// Run via menu BARAKI/Units/Rebuild TT Prefabs.
     /// </summary>
     public static class TtUnitVisualSetup
@@ -234,7 +234,7 @@ namespace Game.Editor
 
         static void BuildPrefab(VisualSetup setup)
         {
-            UnitBalanceSettings preserved = null;
+            UnitCombatSettings preserved = null;
             try
             {
                 preserved = CaptureBalance(setup.DestinationPath);
@@ -265,10 +265,10 @@ namespace Game.Editor
 
                     ttColor.TeamTextures = LoadTeamTextures();
 
-                    var settings = root.GetComponent<UnitBalanceSettings>();
+                    var settings = root.GetComponent<UnitCombatSettings>();
                     if (settings == null)
                     {
-                        settings = root.AddComponent<UnitBalanceSettings>();
+                        settings = root.AddComponent<UnitCombatSettings>();
                     }
 
                     if (preserved != null)
@@ -296,11 +296,11 @@ namespace Game.Editor
             }
         }
 
-        static UnitBalanceSettings CaptureBalance(string dstPath)
+        static UnitCombatSettings CaptureBalance(string dstPath)
         {
             var destPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(dstPath);
             var existing = destPrefab != null
-                ? destPrefab.GetComponentInChildren<UnitBalanceSettings>(true)
+                ? destPrefab.GetComponentInChildren<UnitCombatSettings>(true)
                 : null;
             if (existing == null)
             {
@@ -309,12 +309,12 @@ namespace Game.Editor
 
             var temp = new GameObject("TtBalanceCapture");
             temp.hideFlags = HideFlags.HideAndDontSave;
-            var copy = temp.AddComponent<UnitBalanceSettings>();
+            var copy = temp.AddComponent<UnitCombatSettings>();
             copy.CopyFrom(existing);
             return copy;
         }
 
-        static void SeedBalance(UnitBalanceSettings settings, VisualSetup setup)
+        static void SeedBalance(UnitCombatSettings settings, VisualSetup setup)
         {
             var race = LoadHumanRace();
             if (race == null)

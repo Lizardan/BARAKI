@@ -1,0 +1,125 @@
+using System.Collections.Generic;
+using Game.Editor;
+using Game.Gameplay.Combat;
+using Game.Gameplay.Data;
+using Game.Gameplay.Match;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+
+namespace Game.Tests
+{
+    public sealed class ContentAssetLayoutTests
+    {
+        [Test]
+        public void Catalogs_UseCanonicalPaths()
+        {
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<RaceCatalog>(ContentAssetPaths.RaceCatalog));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(ContentAssetPaths.UnitVisualCatalog));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(ContentAssetPaths.UnitAbilityCatalog));
+
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<RaceCatalog>(
+                ContentAssetPaths.Root + "/RaceCatalog.asset"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(
+                ContentAssetPaths.Root + "/UnitVisualCatalog.asset"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(
+                ContentAssetPaths.Root + "/Abilities/UnitAbilityCatalog.asset"));
+        }
+
+        [Test]
+        public void HumanContent_IsGroupedByOwner()
+        {
+            Assert.AreEqual(6, AssetDatabase.FindAssets(
+                "t:UnitDefinition", new[] { ContentAssetPaths.HumanBaseUnits }).Length);
+            Assert.AreEqual(3, AssetDatabase.FindAssets(
+                "t:HeroDefinition", new[] { ContentAssetPaths.HumanBaseHeroes }).Length);
+            Assert.AreEqual(4, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero1Abilities }).Length);
+            Assert.AreEqual(4, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero2Abilities }).Length);
+            Assert.AreEqual(4, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero3Abilities }).Length);
+            Assert.AreEqual(3, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanCasterAbilities }).Length);
+            Assert.AreEqual(4, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanTitanAbilities }).Length);
+        }
+
+        [Test]
+        public void FutureContentFolders_ArePrepared()
+        {
+            foreach (var path in new[]
+                     {
+                         ContentAssetPaths.HumanEnhancedUnits,
+                         ContentAssetPaths.HumanEnhancedHero1,
+                         ContentAssetPaths.HumanEnhancedHero2,
+                         ContentAssetPaths.HumanEnhancedHero3,
+                         ContentAssetPaths.HumanEnhancedUnitAbilities,
+                         ContentAssetPaths.HumanEnhancedHero1Abilities,
+                         ContentAssetPaths.HumanEnhancedHero2Abilities,
+                         ContentAssetPaths.HumanEnhancedHero3Abilities,
+                         ContentAssetPaths.HumanReplacementBonuses,
+                         ContentAssetPaths.HumanUniqueBonuses,
+                         ContentAssetPaths.HumanBuildings,
+                         ContentAssetPaths.HumanPassives,
+                         ContentAssetPaths.HumanTech,
+                         ContentAssetPaths.HumanAi,
+                     })
+            {
+                Assert.IsTrue(AssetDatabase.IsValidFolder(path), path);
+            }
+        }
+
+        [Test]
+        public void AbilityCatalog_HasNineteenUniqueIds()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(
+                ContentAssetPaths.UnitAbilityCatalog);
+            Assert.IsNotNull(catalog);
+
+            var ids = new HashSet<int>();
+            foreach (var guid in AssetDatabase.FindAssets(
+                         "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanAbilities }))
+            {
+                var def = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(
+                    AssetDatabase.GUIDToAssetPath(guid));
+                Assert.IsNotNull(def);
+                Assert.IsTrue(ids.Add(def.AbilityId), $"Duplicate ability id {def.AbilityId}.");
+            }
+
+            Assert.AreEqual(19, ids.Count);
+        }
+
+        [Test]
+        public void HumanPrefabs_HaveOneCombatSettingsAndNoMissingScripts()
+        {
+            var prefabFolders = new[]
+            {
+                "Assets/Game/Prefabs/Races/Humans/Units",
+                "Assets/Game/Prefabs/Races/Humans/Heroes",
+            };
+
+            var prefabGuids = AssetDatabase.FindAssets("t:Prefab", prefabFolders);
+            Assert.AreEqual(10, prefabGuids.Length);
+
+            foreach (var guid in prefabGuids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Assert.IsNotNull(prefab, path);
+                Assert.AreEqual(
+                    1,
+                    prefab.GetComponentsInChildren<UnitCombatSettings>(true).Length,
+                    path);
+
+                foreach (var transform in prefab.GetComponentsInChildren<Transform>(true))
+                {
+                    Assert.AreEqual(
+                        0,
+                        GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transform.gameObject),
+                        $"{path}: {transform.name}");
+                }
+            }
+        }
+    }
+}

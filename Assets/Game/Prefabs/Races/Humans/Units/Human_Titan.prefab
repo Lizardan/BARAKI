@@ -16201,7 +16201,6 @@ GameObject:
   - component: {fileID: 7124937976097199616}
   - component: {fileID: 1717472401164751181}
   - component: {fileID: 8797823276544932413}
-  - component: {fileID: 2657937561949020459}
   m_Layer: 0
   m_Name: Human_Titan
   m_TagString: Untagged
@@ -16347,18 +16346,6 @@ MonoBehaviour:
   _goldBounty: 80
   _maxMana: 0
   _marchSpeedOverride: 0
---- !u!114 &2657937561949020459
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7296975541438243870}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50e80b5b84ba17342a15db8698925f56, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityKit
   _abilities:
   - {fileID: 11400000, guid: cbeca1825f35b854cad68f6924175749, type: 2}
   - {fileID: 11400000, guid: 4f34b385062a5f8408961d4dd66ed68e, type: 2}

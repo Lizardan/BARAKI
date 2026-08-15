@@ -279,7 +279,8 @@ gold_bounty: 80
 mvp: true
 ```
 
-Баланс героев (HP/броня/урон и т.д.) — на префабе (`UnitBalanceSettings`); `HeroDefinition` — фолбек и GDD-зеркало.
+Баланс героев (HP/броня/урон и т.д.) правится в `HeroDefinition`; `UnitCombatSettings` на префабе —
+read-only runtime-снапшот, обновляемый через `BARAKI/Units/Sync Balance to Prefabs`.
 
 ## Bonus hero variants
 
@@ -307,7 +308,7 @@ cooldown_after_death: 300
 redeploy_cost_again: true      # повторный выпуск после CD снова 2500g
 re_research_after_death: false # полоску 180s набирать снова не нужно
 xp_leveling: same_as_hero
-stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan (UnitBalanceSettings); рантайм не множит снова
+stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan (UnitCombatSettings); рантайм не множит снова
 visual: TT_Peasant
 visual_prefab: Human_Titan
 bonus_slot: BONUS_SLOT_TITAN
@@ -316,7 +317,7 @@ mvp: true
 
 Титан **не нанимается в main как герой**. Пока **одновременно** `main_level >= 3`, наняты **все 3 героя** и все трое `IdleAtBase` — над главным зданием идёт **полоска 180 с**. Любой герой deployed/dead — прогресс **замораживается** (не сбрасывается); когда все 3 снова на базе — полоска продолжается.
 
-По заполнении титан **появляется на базе** (`IdleAtBase`, parked). Выпуск из **живого** barracks **мгновенно за 2500g** (как hero deploy). Смерть → CD **300 s** per barracks, как у героя; повторный выпуск после CD — **снова 2500g**, **без** новой полоски 180 с. XP/уровни — как у героя (`HERO_LEVELING`). Базовые статы сидятся как **3× героя** на префаб `Human_Titan` (`UnitBalanceSettings`); дальше титан балансится на префабе независимо (рантайм **не** умножает снова). Способности — `UnitAbilityKit` на префабе, unlock 1/4/7/10 как у героя.
+По заполнении титан **появляется на базе** (`IdleAtBase`, parked). Выпуск из **живого** barracks **мгновенно за 2500g** (как hero deploy). Смерть → CD **300 s** per barracks, как у героя; повторный выпуск после CD — **снова 2500g**, **без** новой полоски 180 с. XP/уровни — как у героя (`HERO_LEVELING`). Базовые статы синхронизируются как **3× героя 1** на префаб `Human_Titan` (`UnitCombatSettings`); рантайм **не** умножает снова. Способности хранятся там же, unlock 1/4/7/10 как у героя.
 
 ### Titan abilities — Human (`TT_Peasant`)
 
@@ -372,8 +373,8 @@ mvp: true
 | Deployed / dead | Morale **нет**; re-hire **не нужен** |
 | Idle bonuses (MVP) | Slot1 +10% dmg, slot2 +10% AS, slot3 +10% armor; **стакаются** |
 | Idle bonuses (post-MVP) | **Уникальные** per race |
-| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10, кит на префабе (`UnitAbilityKit`) |
-| Титан | Отдельный тип; **не hire в main**; полоска **180 s** над main (L3 + все 3 героя на базе; deployed/dead → заморозка) → появляется на базе; выпуск **2500g** из живого barracks; CD 300 s как герой (без повторной полоски); XP как герой; визуал `TT_Peasant` / `Human_Titan`; статы сид 3× на префаб, дальше баланс на `UnitBalanceSettings`; кит Slam/Rally/Colossus/Stomp на префабе (1/4/7/10); PRE-002 |
+| XP / leveling | **Есть**: max lvl 10; XP за убийства героем юнитов + убийства зданий твоими юнитами; уровень слота переживает смерть/redeploy; статы растут; 4 способности на 1/4/7/10 в `UnitCombatSettings` |
+| Титан | Отдельный тип; **не hire в main**; полоска **180 s** над main (L3 + все 3 героя на базе; deployed/dead → заморозка) → появляется на базе; выпуск **2500g** из живого barracks; CD 300 s как герой (без повторной полоски); XP как герой; визуал `TT_Peasant` / `Human_Titan`; статы = синхронизированный на префаб снапшот 3× `HeroDefinition` героя 1; кит Slam/Rally/Colossus/Stomp на префабе (1/4/7/10); PRE-002 |
 
 ## Open
 

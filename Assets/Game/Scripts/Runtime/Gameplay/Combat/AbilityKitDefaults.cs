@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Game.Gameplay.Combat
 {
     /// <summary>
-    /// Default kits used when a prefab has no <see cref="UnitAbilityKit"/> (EditMode tests)
+    /// Default kits used when a prefab has no abilities in <see cref="UnitCombatSettings"/> (EditMode tests)
     /// and as the seed written onto hero/caster/titan prefabs.
     /// Slot order = AI cast priority (passives are skipped).
     /// Tuning constants still come from <see cref="HeroAbilityRules"/> / <see cref="CasterSpellRules"/>
