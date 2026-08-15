@@ -109,19 +109,7 @@ namespace Game.Gameplay.Match
 
         void HideGreyboxVisual(BuildingState building)
         {
-            var greybox = MatchArenaGreybox.Current;
-            if (greybox == null)
-            {
-                return;
-            }
-
-            var slotRoot = greybox.transform.Find($"GreyboxVisual/Player_{building.OwnerSlot}");
-            if (slotRoot == null)
-            {
-                return;
-            }
-
-            var visual = slotRoot.Find(building.BuildingId);
+            var visual = MatchArenaGreybox.FindBuildingVisual(building);
             if (visual != null && visual.gameObject.activeSelf)
             {
                 visual.gameObject.SetActive(false);

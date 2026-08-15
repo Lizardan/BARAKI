@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Game.Gameplay.Match
 {
     /// <summary>
-    /// Pick colliders for buildings. Prefers mesh colliders on greybox visuals so clicks match
-    /// the visible silhouette (AABB proxies steal hits through empty space of tall buildings).
+    /// Pick colliders for buildings. Uses a box from the visual mesh bounds, then
+    /// <see cref="MatchPickMeshRaycast"/> rejects rays that only graze empty AABB space.
     /// </summary>
     public sealed class MatchBuildingPickPresenter : MonoBehaviour
     {
@@ -74,7 +74,7 @@ namespace Game.Gameplay.Match
             }
 
             var host = meshFilter.gameObject;
-            collider = MatchPickColliderUtility.EnsureMeshPickCollider(host, meshFilter.sharedMesh);
+            collider = MatchPickColliderUtility.EnsureVisualPickCollider(host, meshFilter.sharedMesh);
             if (collider == null)
             {
                 return false;
@@ -121,27 +121,8 @@ namespace Game.Gameplay.Match
             return collider;
         }
 
-        static Transform FindBuildingVisual(BuildingState building)
-        {
-            var greybox = MatchArenaGreybox.Current;
-            if (greybox == null)
-            {
-                greybox = Object.FindFirstObjectByType<MatchArenaGreybox>();
-            }
-
-            if (greybox == null)
-            {
-                return null;
-            }
-
-            var slotRoot = greybox.transform.Find($"GreyboxVisual/Player_{building.OwnerSlot}");
-            if (slotRoot == null)
-            {
-                return null;
-            }
-
-            return slotRoot.Find(building.BuildingId);
-        }
+        static Transform FindBuildingVisual(BuildingState building) =>
+            MatchArenaGreybox.FindBuildingVisual(building);
 
         void ClearPicks()
         {

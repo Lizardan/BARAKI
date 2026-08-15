@@ -84,29 +84,33 @@ namespace Game.Tests
             Assert.AreEqual(
                 Vector3.right,
                 BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.BarracksRight));
-            Assert.AreEqual(
-                Vector3.forward,
-                BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerNw));
+            Assert.AreEqual(Vector3.left, BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerNw));
+            Assert.AreEqual(Vector3.left, BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerSw));
+            Assert.AreEqual(Vector3.right, BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerNe));
+            Assert.AreEqual(Vector3.right, BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerSe));
         }
 
         [Test]
-        public void BaseLayout_LocalRotation_DoorAxisAlignsWithFacing()
+        public void BaseLayout_LocalRotation_ForwardAlignsWithFacing()
         {
-            // TT meshes: door on +X; after GetLocalRotation the door axis is the desired face.
-            AssertDoorFaces(GameIds.Buildings.Main, Vector3.forward);
-            AssertDoorFaces(GameIds.Buildings.BarracksCenter, Vector3.forward);
-            AssertDoorFaces(GameIds.Buildings.BarracksLeft, Vector3.left);
-            AssertDoorFaces(GameIds.Buildings.BarracksRight, Vector3.right);
+            AssertForwardFaces(GameIds.Buildings.Main, Vector3.forward);
+            AssertForwardFaces(GameIds.Buildings.BarracksCenter, Vector3.forward);
+            AssertForwardFaces(GameIds.Buildings.BarracksLeft, Vector3.left);
+            AssertForwardFaces(GameIds.Buildings.BarracksRight, Vector3.right);
+            AssertForwardFaces(GameIds.Buildings.TowerNw, Vector3.left);
+            AssertForwardFaces(GameIds.Buildings.TowerSw, Vector3.left);
+            AssertForwardFaces(GameIds.Buildings.TowerNe, Vector3.right);
+            AssertForwardFaces(GameIds.Buildings.TowerSe, Vector3.right);
         }
 
-        static void AssertDoorFaces(string buildingId, Vector3 expectedFace)
+        static void AssertForwardFaces(string buildingId, Vector3 expectedFace)
         {
             var rotation = BaseLayoutDefinition.GetLocalRotation(buildingId);
-            var doorAxis = rotation * Vector3.right;
+            var forward = rotation * Vector3.forward;
             Assert.Greater(
-                Vector3.Dot(doorAxis.normalized, expectedFace.normalized),
+                Vector3.Dot(forward.normalized, expectedFace.normalized),
                 0.99f,
-                $"{buildingId} door should face {expectedFace}, got {doorAxis}");
+                $"{buildingId} forward should face {expectedFace}, got {forward}");
         }
 
         [Test]

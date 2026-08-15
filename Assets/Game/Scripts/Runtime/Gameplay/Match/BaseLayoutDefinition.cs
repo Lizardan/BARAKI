@@ -17,10 +17,11 @@ namespace Game.Gameplay.Match
         public const float BarracksOffsetFactor = 1.5f;
 
         /// <summary>
-        /// TT building meshes are authored with the door on local +X; yaw maps door → transform forward (+Z).
-        /// Same pack quirk as <see cref="UnitGreyboxVisuals.AnimatedHumanModelYawDegrees"/>.
+        /// Extra yaw on top of <see cref="Quaternion.LookRotation"/> toward
+        /// <see cref="GetLocalFacingDirection"/>. TT prefab forward (+Z) is the visual face;
+        /// 0 keeps LookRotation aim = face (door/+X sits on the model's right).
         /// </summary>
-        public const float BuildingModelYawDegrees = -90f;
+        public const float BuildingModelYawDegrees = 0f;
 
         public static IReadOnlyDictionary<string, Vector3> GetLocalOffsets(float mainToTowerDistance)
         {
@@ -40,17 +41,22 @@ namespace Game.Gameplay.Match
         }
 
         /// <summary>
-        /// Desired door/face direction in base local space.
-        /// Main and center barracks face the central road (+Z); side barracks face creep exit (±X).
+        /// Desired visual face direction in base local space.
+        /// Main and center barracks face the central road (+Z);
+        /// side barracks and same-side towers face creep exit (±X).
         /// </summary>
         public static Vector3 GetLocalFacingDirection(string buildingId) => buildingId switch
         {
-            GameIds.Buildings.BarracksLeft => Vector3.left,
-            GameIds.Buildings.BarracksRight => Vector3.right,
+            GameIds.Buildings.BarracksLeft
+                or GameIds.Buildings.TowerNw
+                or GameIds.Buildings.TowerSw => Vector3.left,
+            GameIds.Buildings.BarracksRight
+                or GameIds.Buildings.TowerNe
+                or GameIds.Buildings.TowerSe => Vector3.right,
             _ => Vector3.forward,
         };
 
-        /// <summary>Local rotation so the building door faces <see cref="GetLocalFacingDirection"/>.</summary>
+        /// <summary>Local rotation so prefab forward faces <see cref="GetLocalFacingDirection"/>.</summary>
         public static Quaternion GetLocalRotation(string buildingId)
         {
             var face = GetLocalFacingDirection(buildingId);
@@ -59,8 +65,13 @@ namespace Game.Gameplay.Match
                 face = Vector3.forward;
             }
 
-            return Quaternion.LookRotation(face.normalized, Vector3.up)
-                   * Quaternion.Euler(0f, BuildingModelYawDegrees, 0f);
+            var rotation = Quaternion.LookRotation(face.normalized, Vector3.up);
+            if (Mathf.Abs(BuildingModelYawDegrees) < 0.01f)
+            {
+                return rotation;
+            }
+
+            return rotation * Quaternion.Euler(0f, BuildingModelYawDegrees, 0f);
         }
 
         public static string GetLaneForBarracks(string barracksId) => barracksId switch

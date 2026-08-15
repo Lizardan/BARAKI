@@ -52,7 +52,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void RefreshBuildingPicks_WithVisualMesh_AttachesMeshCollider()
+        public void RefreshBuildingPicks_WithVisualMesh_AttachesBoxOnMeshBounds()
         {
             MatchPickLayers.InitializeFromName();
 
@@ -82,8 +82,10 @@ namespace Game.Tests
 
                 var visualRoot = new GameObject("GreyboxVisual");
                 visualRoot.transform.SetParent(greyboxGo.transform, false);
+                var basesRoot = new GameObject("Bases");
+                basesRoot.transform.SetParent(visualRoot.transform, false);
                 var slotRoot = new GameObject($"Player_{building.OwnerSlot}");
-                slotRoot.transform.SetParent(visualRoot.transform, false);
+                slotRoot.transform.SetParent(basesRoot.transform, false);
                 var buildingVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 buildingVisual.name = building.BuildingId;
                 buildingVisual.transform.SetParent(slotRoot.transform, false);
@@ -92,17 +94,20 @@ namespace Game.Tests
                 greyboxGo.SetActive(true);
 
                 presenter.RefreshBuildingPicks();
+                presenter.RefreshBuildingPicks();
 
                 var meshFilter = buildingVisual.GetComponent<MeshFilter>();
                 Assert.IsNotNull(meshFilter);
-                var meshCollider = buildingVisual.GetComponent<MeshCollider>();
-                Assert.IsNotNull(meshCollider, "Visual mesh should receive a MeshCollider pick.");
-                Assert.IsFalse(meshCollider.isTrigger);
-                Assert.AreEqual(meshFilter.sharedMesh, meshCollider.sharedMesh);
+                Assert.IsNull(buildingVisual.GetComponent<MeshCollider>());
+                var box = buildingVisual.GetComponent<BoxCollider>();
+                Assert.IsNotNull(box, "Visual mesh should receive a BoxCollider pick.");
+                Assert.IsTrue(box.isTrigger);
+                Assert.AreEqual(meshFilter.sharedMesh.bounds.center, box.center);
+                Assert.AreEqual(meshFilter.sharedMesh.bounds.size, box.size);
 
                 var pickLayer = LayerMask.NameToLayer(MatchPickLayers.PickableLayerName);
                 Assert.AreEqual(pickLayer, buildingVisual.layer);
-                Assert.IsTrue(bridge.Registry.TryResolve(meshCollider, out var target));
+                Assert.IsTrue(bridge.Registry.TryResolve(box, out var target));
                 Assert.IsTrue(target.IsBuilding);
                 Assert.AreEqual(building.InstanceId, target.EntityId);
 
@@ -111,7 +116,7 @@ namespace Game.Tests
                 Assert.AreEqual(
                     0,
                     CountOwnedFallbackForBuilding(pickRoot, building),
-                    "Mesh pick should not create a fallback proxy for that building.");
+                    "Visual pick should not create a fallback proxy for that building.");
             }
             finally
             {
@@ -121,7 +126,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void EnsureMeshPickCollider_UsesSharedMeshAndPickableLayer()
+        public void EnsureVisualPickCollider_UsesMeshBoundsAndPickableLayer()
         {
             MatchPickLayers.InitializeFromName();
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -129,11 +134,11 @@ namespace Game.Tests
             {
                 Object.DestroyImmediate(cube.GetComponent<Collider>());
                 var mesh = cube.GetComponent<MeshFilter>().sharedMesh;
-                var collider = MatchPickColliderUtility.EnsureMeshPickCollider(cube, mesh);
+                var collider = MatchPickColliderUtility.EnsureVisualPickCollider(cube, mesh);
                 Assert.IsNotNull(collider);
-                Assert.IsInstanceOf<MeshCollider>(collider);
-                Assert.AreEqual(mesh, ((MeshCollider)collider).sharedMesh);
-                Assert.IsFalse(collider.isTrigger);
+                Assert.IsInstanceOf<BoxCollider>(collider);
+                Assert.IsTrue(collider.isTrigger);
+                Assert.AreEqual(mesh.bounds.size, ((BoxCollider)collider).size);
                 Assert.AreEqual(LayerMask.NameToLayer(MatchPickLayers.PickableLayerName), cube.layer);
             }
             finally

@@ -136,12 +136,18 @@ namespace Game.Gameplay.Match.Selection
                     continue;
                 }
 
-                if (hit.distance >= bestDistance)
+                if (!MatchPickMeshRaycast.TryResolveHit(
+                        hit.collider,
+                        ray,
+                        hit.distance,
+                        _maxRayDistance,
+                        out var distance)
+                    || distance >= bestDistance)
                 {
                     continue;
                 }
 
-                bestDistance = hit.distance;
+                bestDistance = distance;
                 target = candidate;
                 found = true;
             }

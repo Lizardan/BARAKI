@@ -21,6 +21,59 @@ namespace Game.Gameplay.Match
         public MatchArenaLayout Layout { get; private set; }
         public LaneGraph Graph { get; private set; }
 
+        /// <summary>
+        /// Building marker under <c>GreyboxVisual/Bases/Player_{slot}/{buildingId}</c>
+        /// (also accepts a slot parented directly under GreyboxVisual).
+        /// </summary>
+        public static Transform FindBuildingVisual(BuildingState building)
+        {
+            if (building == null)
+            {
+                return null;
+            }
+
+            var greybox = Current != null ? Current : Object.FindFirstObjectByType<MatchArenaGreybox>();
+            return greybox != null
+                ? greybox.FindBuildingVisual(building.OwnerSlot, building.BuildingId)
+                : null;
+        }
+
+        public Transform FindBuildingVisual(int ownerSlot, string buildingId)
+        {
+            if (string.IsNullOrEmpty(buildingId))
+            {
+                return null;
+            }
+
+            var searchRoot = _visualRoot != null ? _visualRoot : transform.Find("GreyboxVisual");
+            if (searchRoot == null)
+            {
+                searchRoot = transform;
+            }
+
+            var slotRoot = FindNamedChild(searchRoot, $"Player_{ownerSlot}");
+            return slotRoot != null ? slotRoot.Find(buildingId) : null;
+        }
+
+        static Transform FindNamedChild(Transform root, string name)
+        {
+            if (root.name == name)
+            {
+                return root;
+            }
+
+            for (var i = 0; i < root.childCount; i++)
+            {
+                var found = FindNamedChild(root.GetChild(i), name);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
+        }
+
         public void Configure(int playerCount, float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius)
         {
             _playerCount = Mathf.Clamp(playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);

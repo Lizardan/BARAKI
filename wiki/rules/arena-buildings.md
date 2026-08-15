@@ -11,7 +11,8 @@ BaseLayoutDefinition.GetLocalRotation(buildingId).
 | BUILDING_BARRACKS_CENTER | +Z (выход крипов по центру) |
 | BUILDING_BARRACKS_LEFT | −X (выход на левый фланг) |
 | BUILDING_BARRACKS_RIGHT | +X (выход на правый фланг) |
-| башни | +Z (как main) |
+| `BUILDING_TOWER_NW` / `SW` | −X (слева от main) |
+| `BUILDING_TOWER_NE` / `SE` | +X (справа от main) |
 
 TT-меши (TownHall / Barracks / Tower): дверь автора на **local +X**, не на +Z.
 Компенсация: BaseLayoutDefinition.BuildingModelYawDegrees (−90°), та же идея, что
@@ -19,12 +20,16 @@ UnitGreyboxVisuals.AnimatedHumanModelYawDegrees у юнитов.
 
 ## Pick / клик-выбор
 
-`MatchBuildingPickPresenter` вешает **MeshCollider** на `MeshFilter` визуала здания
-(`GreyboxVisual/Player_{slot}/{buildingId}`), слой `MatchPickable`.
+`MatchBuildingPickPresenter` вешает **BoxCollider** (trigger, слой `MatchPickable`) на
+`MeshFilter` визуала: `GreyboxVisual/Bases/Player_{slot}/{buildingId}`.
+Поиск визуала — `MatchArenaGreybox.FindBuildingVisual`.
 
-Почему не AABB-прокси: у TownHall и др. силуэт не заполняет world AABB; с камеры RTS
-луч в барак / башню часто первым пересекает «пустой» объём Main и выбирает не тот объект.
-Mesh-коллайдер совпадает с видимой геометрией. Fallback — axis box без margin, если
-визуала ещё нет (тест / сервер без мешей).
+AABB здания больше силуэта (особенно TownHall). Поэтому `MatchSelectionInput` после
+физика-хита проверяет треугольники меша (`MatchPickMeshRaycast`): луч через пустой
+угол Main не выбирает Main и доходит до барака позади.
 
-Engage-радиус боя по-прежнему из `MatchPickFootprint.GetBuildingDiameter` (не из pick-меша).
+Не использовать MeshCollider для pick: отложенный `Destroy` в Play Mode снимает
+компонент в конце кадра после повторного Refresh — клики перестают попадать.
+
+Fallback — axis box без margin, если визуала ещё нет (тест / сервер без мешей).
+Engage-радиус боя по-прежнему из `MatchPickFootprint.GetBuildingDiameter`.

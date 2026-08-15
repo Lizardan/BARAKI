@@ -98,7 +98,10 @@ building_facing:                # door direction in base local (see wiki/rules/a
   BUILDING_BARRACKS_CENTER: +Z
   BUILDING_BARRACKS_LEFT: -X    # creep exit
   BUILDING_BARRACKS_RIGHT: +X   # creep exit
-  towers: +Z
+  BUILDING_TOWER_NW: -X         # left of main
+  BUILDING_TOWER_SW: -X
+  BUILDING_TOWER_NE: +X         # right of main
+  BUILDING_TOWER_SE: +X
   tt_model_door_axis: +X        # BuildingModelYawDegrees −90 → align door to facing
   runtime: BaseLayoutDefinition.GetLocalRotation
 main: BUILDING_MAIN
