@@ -5,9 +5,10 @@ using UnityEngine;
 namespace Game.Gameplay.Combat
 {
     /// <summary>
-    /// Combat tuning + cast event for hero abilities.
+    /// Hero ability tuning + targeting helpers.
     /// GDD: HERO_ABILITY_UNLOCK_LEVELS (1 / 4 / 7 / 10), unique kit per hero slot.
-    /// Active abilities are CD-only (no mana). Slot-3 auras are global owner buffs while that hero is alive.
+    /// Numbers here are fallbacks when the <see cref="Data.UnitAbilityDef"/> leaves a value at 0;
+    /// behaviours live in <see cref="Data.UnitAbilityDef.Behaviour"/>.
     /// </summary>
     public static class HeroAbilityRules
     {
@@ -295,87 +296,12 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>Active ability for a hero slot (1..4).</summary>
-        public static HeroAbilityType GetAbilityType(int heroSlot, int abilitySlot)
-        {
-            return (heroSlot, abilitySlot) switch
-            {
-                (KingSlot, 1) => HeroAbilityType.Strike,
-                (KingSlot, 2) => HeroAbilityType.Heal,
-                (KingSlot, 3) => HeroAbilityType.AuraDamagePercent,
-                (KingSlot, 4) => HeroAbilityType.Ultimate,
-                (PaladinSlot, 1) => HeroAbilityType.Smite,
-                (PaladinSlot, 2) => HeroAbilityType.Shield,
-                (PaladinSlot, 3) => HeroAbilityType.AuraAttackSpeedPercent,
-                (PaladinSlot, 4) => HeroAbilityType.Consecration,
-                (PriestSlot, 1) => HeroAbilityType.HolyNova,
-                (PriestSlot, 2) => HeroAbilityType.GreaterHeal,
-                (PriestSlot, 3) => HeroAbilityType.AuraArmorPercent,
-                (PriestSlot, 4) => HeroAbilityType.Revive,
-                _ => HeroAbilityType.None,
-            };
-        }
-
-        /// <summary>Floating label shown above the hero when the ability is fired.</summary>
-        public static string GetDisplayName(HeroAbilityType ability)
-        {
-            return ability switch
-            {
-                HeroAbilityType.Strike => "Strike",
-                HeroAbilityType.Heal => "Heal",
-                HeroAbilityType.AuraDamagePercent
-                    or HeroAbilityType.AuraAttackSpeedPercent
-                    or HeroAbilityType.AuraArmorPercent
-                    or HeroAbilityType.AuraMaxHpPercent => "Aura",
-                HeroAbilityType.Ultimate => "Ultimate",
-                HeroAbilityType.Smite => "Smite",
-                HeroAbilityType.Shield => "Shield",
-                HeroAbilityType.Consecration => "Consecration",
-                HeroAbilityType.HolyNova => "Holy Nova",
-                HeroAbilityType.GreaterHeal => "Greater Heal",
-                HeroAbilityType.Revive => "Revive",
-                HeroAbilityType.Slam => "Slam",
-                HeroAbilityType.Rally => "Rally",
-                HeroAbilityType.Stomp => "Stomp",
-                _ => ability.ToString(),
-            };
-        }
-
         static float HorizontalDistanceSq(Vector3 a, Vector3 b)
         {
             a.y = 0f;
             b.y = 0f;
             return (a - b).sqrMagnitude;
         }
-    }
-
-    /// <summary>Payload fired when a hero unit uses an ability (host-side; presenter listens for VFX).</summary>
-    public readonly struct HeroAbilityCastEvent
-    {
-        public HeroAbilityCastEvent(
-            int casterUnitId,
-            int ownerSlot,
-            HeroAbilityType ability,
-            Vector3 centerPosition,
-            float radius,
-            int targetUnitId = 0,
-            int serial = 0)
-        {
-            CasterUnitId = casterUnitId;
-            OwnerSlot = ownerSlot;
-            Ability = ability;
-            CenterPosition = centerPosition;
-            Radius = radius;
-            TargetUnitId = targetUnitId;
-            Serial = serial;
-        }
-
-        public int CasterUnitId { get; }
-        public int OwnerSlot { get; }
-        public HeroAbilityType Ability { get; }
-        public Vector3 CenterPosition { get; }
-        public float Radius { get; }
-        public int TargetUnitId { get; }
-        public int Serial { get; }
     }
 
     /// <summary>Stationary ally heal field created by Greater Heal.</summary>

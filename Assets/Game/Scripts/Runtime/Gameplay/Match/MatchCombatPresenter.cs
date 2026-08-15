@@ -103,8 +103,7 @@ namespace Game.Gameplay.Match
             }
 
             SyncVisuals(controller, controller.Combat);
-            SyncSpellCasts(controller.Combat);
-            SyncHeroAbilityCasts(controller.Combat);
+            SyncAbilityCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(Time.deltaTime);
         }
@@ -126,8 +125,7 @@ namespace Game.Gameplay.Match
 
             EnsureRoot();
             SyncVisuals(controller, controller.Combat);
-            SyncSpellCasts(controller.Combat);
-            SyncHeroAbilityCasts(controller.Combat);
+            SyncAbilityCasts(controller.Combat);
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(0f);
         }
@@ -552,149 +550,96 @@ namespace Game.Gameplay.Match
             }
         }
 
-        /// <summary>Plays host + client spell-cast events (label over caster, "+" over target, Frost ring).</summary>
-        void SyncSpellCasts(MatchCombatSystem combat)
+        /// <summary>Plays ability cast events (label over caster + FX chosen by <see cref="UnitAbilityDef.Fx"/>).</summary>
+        void SyncAbilityCasts(MatchCombatSystem combat)
         {
             if (!Application.isPlaying)
             {
                 return;
             }
 
-            foreach (var cast in combat.ConsumePendingSpellCasts())
+            foreach (var cast in combat.ConsumePendingAbilityCasts())
             {
-                ShowSpellFx(cast);
+                ShowAbilityFx(cast);
             }
         }
 
-        void ShowSpellFx(CasterSpellCastEvent cast)
+        void ShowAbilityFx(AbilityCastEvent cast)
         {
-            var color = SpellFxColor(cast.SpellType);
+            var def = cast.Def;
+            if (def == null || def.Fx.Color.a <= 0f)
+            {
+                return;
+            }
+
+            var fx = def.Fx;
+            var color = fx.Color;
             if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
             {
                 SpellFxFactory.CreateLabel(
                     _root,
                     casterTop + Vector3.up * 0.45f,
-                    CasterSpellRules.GetDisplayName(cast.SpellType),
+                    def.DisplayName,
                     color);
             }
 
-            switch (cast.SpellType)
+            var duration = fx.DurationSeconds > 0f ? fx.DurationSeconds : DefaultDuration(fx.Kind);
+            var center = cast.CenterPosition;
+            var radius = cast.Radius;
+            switch (fx.Kind)
             {
-                case CasterSpellType.Heal:
-                    if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
+                case FxKind.Plus:
+                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var plusTop))
                     {
-                        SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
+                        SpellFxFactory.CreatePlus(_root, plusTop, color, duration);
+                    }
+                    else
+                    {
+                        SpellFxFactory.CreatePlus(_root, center + Vector3.up * 0.6f, color, duration);
                     }
 
                     break;
-                case CasterSpellType.Frost:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, FrostFxColor);
+                case FxKind.Ring:
+                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
                     break;
-                case CasterSpellType.Resurrect:
-                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 0.6f, ResurrectFxColor);
-                    break;
-            }
-        }
-
-        /// <summary>Plays hero ability cast events (label over hero, Strike/Ultimate rings, Heal "+").</summary>
-        void SyncHeroAbilityCasts(MatchCombatSystem combat)
-        {
-            if (!Application.isPlaying)
-            {
-                return;
-            }
-
-            foreach (var cast in combat.ConsumePendingHeroAbilityCasts())
-            {
-                ShowHeroAbilityFx(cast);
-            }
-        }
-
-        void ShowHeroAbilityFx(HeroAbilityCastEvent cast)
-        {
-            var color = HeroAbilityFxColor(cast.Ability);
-            if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
-            {
-                SpellFxFactory.CreateLabel(
-                    _root,
-                    casterTop + Vector3.up * 0.5f,
-                    HeroAbilityRules.GetDisplayName(cast.Ability),
-                    color);
-            }
-
-            switch (cast.Ability)
-            {
-                case HeroAbilityType.Heal:
-                    if (TryGetUnitBarTop(cast.TargetUnitId, out var healTop))
-                    {
-                        SpellFxFactory.CreatePlus(_root, healTop, HealFxColor);
-                    }
-
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, color, 0.85f);
-                    break;
-                case HeroAbilityType.GreaterHeal:
-                    if (TryGetUnitBarTop(cast.TargetUnitId, out var zoneHealTop))
-                    {
-                        SpellFxFactory.CreatePlus(_root, zoneHealTop, HealFxColor);
-                    }
-
-                    SpellFxFactory.CreateRing(
+                case FxKind.Burst:
+                    SpellFxFactory.CreateBurst(
                         _root,
-                        cast.CenterPosition,
-                        cast.Radius,
+                        center,
                         color,
-                        HeroAbilityRules.GreaterHealDurationSeconds,
-                        fadeOutNormalized: 0.88f);
+                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 2.4f);
                     break;
-                case HeroAbilityType.Strike:
-                case HeroAbilityType.Slam:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, StrikeFxColor, 0.75f);
-                    break;
-                case HeroAbilityType.Ultimate:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, UltimateFxColor, 1.2f);
-                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 1.4f, UltimateFxColor, 1.2f, 0.7f);
-                    break;
-                case HeroAbilityType.Smite:
-                    SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor);
-                    break;
-                case HeroAbilityType.Shield:
-                case HeroAbilityType.Rally:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.0f);
-                    break;
-                case HeroAbilityType.Consecration:
-                case HeroAbilityType.Stomp:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PaladinFxColor, 1.3f);
-                    SpellFxFactory.CreateBurst(_root, cast.CenterPosition, PaladinFxColor, 2.8f);
-                    break;
-                case HeroAbilityType.HolyNova:
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PriestFxColor, 0.9f);
-                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var novaHealTop))
+                case FxKind.RingPlus:
+                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
+                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var ringPlusTop))
                     {
-                        SpellFxFactory.CreatePlus(_root, novaHealTop, HealFxColor);
+                        SpellFxFactory.CreatePlus(_root, ringPlusTop, color, duration);
+                    }
+                    else
+                    {
+                        SpellFxFactory.CreatePlus(_root, center + Vector3.up * 0.6f, color, duration);
                     }
 
                     break;
-                case HeroAbilityType.Revive:
-                    SpellFxFactory.CreatePlus(_root, cast.CenterPosition + Vector3.up * 0.6f, ResurrectFxColor);
-                    SpellFxFactory.CreateRing(_root, cast.CenterPosition, cast.Radius, PriestFxColor, 1.1f);
+                case FxKind.RingBurst:
+                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
+                    SpellFxFactory.CreateBurst(
+                        _root,
+                        center,
+                        color,
+                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 2.8f);
                     break;
             }
         }
 
-        static Color HeroAbilityFxColor(HeroAbilityType ability)
+        static float DefaultDuration(FxKind kind)
         {
-            return ability switch
+            return kind switch
             {
-                HeroAbilityType.Heal or HeroAbilityType.GreaterHeal => HealFxColor,
-                HeroAbilityType.Strike or HeroAbilityType.Slam => StrikeFxColor,
-                HeroAbilityType.Ultimate => UltimateFxColor,
-                HeroAbilityType.Smite
-                    or HeroAbilityType.Shield
-                    or HeroAbilityType.Consecration
-                    or HeroAbilityType.Rally
-                    or HeroAbilityType.Stomp => PaladinFxColor,
-                HeroAbilityType.HolyNova or HeroAbilityType.Revive => PriestFxColor,
-                _ => Color.white,
+                FxKind.Ring => 1.0f,
+                FxKind.RingBurst => 1.3f,
+                FxKind.Burst => 0.7f,
+                _ => 1.1f,
             };
         }
 
@@ -711,17 +656,6 @@ namespace Game.Gameplay.Match
             position = visual.StatusBars.transform.position
                        + Vector3.up * visual.StatusBars.HealthBarTopLocalY;
             return true;
-        }
-
-        static Color SpellFxColor(CasterSpellType spellType)
-        {
-            return spellType switch
-            {
-                CasterSpellType.Heal => HealFxColor,
-                CasterSpellType.Frost => FrostFxColor,
-                CasterSpellType.Resurrect => ResurrectFxColor,
-                _ => Color.white,
-            };
         }
 
         bool CanSpawnFx() => Application.isPlaying && _fxCatalog != null;
@@ -916,13 +850,5 @@ namespace Game.Gameplay.Match
         const float BloodFxLifetimeSeconds = 1.2f;
         const float MachineFxLifetimeSeconds = 5f;
         const float ImpactFxLifetimeSeconds = 1.5f;
-
-        static readonly Color HealFxColor = new Color(0.25f, 1f, 0.4f, 1f);
-        static readonly Color FrostFxColor = new Color(0.35f, 0.65f, 1f, 1f);
-        static readonly Color ResurrectFxColor = new Color(1f, 0.85f, 0.25f, 1f);
-        static readonly Color StrikeFxColor = new Color(1f, 0.55f, 0.2f, 1f);
-        static readonly Color UltimateFxColor = new Color(1f, 0.3f, 0.2f, 1f);
-        static readonly Color PaladinFxColor = new Color(1f, 0.84f, 0.28f, 1f);
-        static readonly Color PriestFxColor = new Color(0.78f, 0.92f, 1f, 1f);
     }
 }

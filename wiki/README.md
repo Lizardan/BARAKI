@@ -14,6 +14,7 @@
 | `rules/unity-reactive.md` | UniRx — реактивные свойства, disposal |
 | `rules/unity-ui.md` | UI Toolkit, UIBindingScope, USS-стили |
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
+| `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
 
 ## Что здесь не дублируется
 

@@ -159,11 +159,8 @@ namespace Game.Gameplay.Networking
         public int Serial;
         public int CasterUnitId;
         public int OwnerSlot;
-        public byte SpellType;
-        /// <summary>0 = caster spell, 1 = hero ability (see <see cref="HeroAbility"/>).</summary>
-        public byte SpellKind;
-        /// <summary>Hero ability type (valid when <see cref="SpellKind"/> == 1).</summary>
-        public byte HeroAbility;
+        /// <summary>Id of the cast <see cref="Data.UnitAbilityDef"/> (resolved via the ability catalog).</summary>
+        public ushort AbilityId;
         public int TargetUnitId;
         public float CenterX;
         public float CenterZ;
@@ -195,7 +192,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 15;
+        public const int CurrentVersion = 16;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -323,9 +320,7 @@ namespace Game.Gameplay.Networking
                     writer.Write(c.Serial);
                     writer.Write(c.CasterUnitId);
                     writer.Write(c.OwnerSlot);
-                    writer.Write(c.SpellType);
-                    writer.Write(c.SpellKind);
-                    writer.Write(c.HeroAbility);
+                    writer.Write(c.AbilityId);
                     writer.Write(c.TargetUnitId);
                     writer.Write(c.CenterX);
                     writer.Write(c.CenterZ);
@@ -387,7 +382,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -586,12 +581,19 @@ namespace Game.Gameplay.Networking
                         Serial = reader.ReadInt32(),
                         CasterUnitId = reader.ReadInt32(),
                         OwnerSlot = reader.ReadInt32(),
-                        SpellType = reader.ReadByte(),
                     };
-                    if (version >= 11)
+                    if (version >= 16)
                     {
-                        spell.SpellKind = reader.ReadByte();
-                        spell.HeroAbility = reader.ReadByte();
+                        spell.AbilityId = reader.ReadUInt16();
+                    }
+                    else
+                    {
+                        reader.ReadByte(); // legacy SpellType
+                        if (version >= 11)
+                        {
+                            reader.ReadByte(); // legacy SpellKind
+                            reader.ReadByte(); // legacy HeroAbility
+                        }
                     }
 
                     spell.TargetUnitId = reader.ReadInt32();
@@ -824,16 +826,14 @@ namespace Game.Gameplay.Networking
             }
 
             var spellCasts = new List<MatchSpellSnapshot>();
-            foreach (var c in controller.Combat.NetworkSpellCasts)
+            foreach (var c in controller.Combat.NetworkAbilityCasts)
             {
                 spellCasts.Add(new MatchSpellSnapshot
                 {
                     Serial = c.Serial,
                     CasterUnitId = c.CasterUnitId,
                     OwnerSlot = c.OwnerSlot,
-                    SpellType = (byte)c.SpellType,
-                    SpellKind = 0,
-                    HeroAbility = 0,
+                    AbilityId = c.Def != null ? (ushort)c.Def.AbilityId : (ushort)0,
                     TargetUnitId = c.TargetUnitId,
                     CenterX = c.CenterPosition.x,
                     CenterZ = c.CenterPosition.z,
@@ -841,25 +841,7 @@ namespace Game.Gameplay.Networking
                 });
             }
 
-            foreach (var c in controller.Combat.NetworkHeroCasts)
-            {
-                spellCasts.Add(new MatchSpellSnapshot
-                {
-                    Serial = c.Serial,
-                    CasterUnitId = c.CasterUnitId,
-                    OwnerSlot = c.OwnerSlot,
-                    SpellType = 0,
-                    SpellKind = 1,
-                    HeroAbility = (byte)c.Ability,
-                    TargetUnitId = c.TargetUnitId,
-                    CenterX = c.CenterPosition.x,
-                    CenterZ = c.CenterPosition.z,
-                    Radius = c.Radius,
-                });
-            }
-
-            controller.Combat.ClearNetworkSpellCasts();
-            controller.Combat.ClearNetworkHeroCasts();
+            controller.Combat.ClearNetworkAbilityCasts();
 
             var projectiles = new List<MatchProjectileSnapshot>(controller.Combat.NetworkProjectileSpawns.Count);
             foreach (var p in controller.Combat.NetworkProjectileSpawns)

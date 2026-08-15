@@ -23,6 +23,7 @@ namespace Game.Gameplay.Match
         [SerializeField] private MatchArenaGreybox _greybox;
         [SerializeField] private RaceCatalog _raceCatalog;
         [SerializeField] private UnitVisualCatalog _unitVisualCatalog;
+        [SerializeField] private UnitAbilityCatalog _abilityCatalog;
 
         private bool _isMatchStarted;
         private MatchTickMode _tickMode = MatchTickMode.Offline;
@@ -188,6 +189,11 @@ namespace Game.Gameplay.Match
             var visualCatalog = ResolveUnitVisualCatalog();
             Controller.UnitVisualCatalog = visualCatalog;
             Controller.Combat.UnitVisualCatalog = visualCatalog;
+            if (_abilityCatalog != null)
+            {
+                Controller.Combat.AbilityCatalog = _abilityCatalog;
+            }
+
             Controller.StartMatch(config);
             _isMatchStarted = true;
             EnsureSelectionBridge();

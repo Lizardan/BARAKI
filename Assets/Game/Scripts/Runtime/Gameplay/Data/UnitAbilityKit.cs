@@ -3,37 +3,21 @@ using UnityEngine;
 namespace Game.Gameplay.Data
 {
     /// <summary>
-    /// Ability list stored on a unit prefab. Empty / missing = no spells.
-    /// Runtime copies these slots onto <see cref="Combat.MatchUnitState"/> at spawn.
+    /// Ability list stored on a unit prefab as shared <see cref="UnitAbilityDef"/> asset references.
+    /// Runtime copies these references onto <see cref="Combat.MatchUnitState"/> at spawn.
+    /// Empty / missing = no spells.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("BARAKI/Unit Ability Kit")]
     public sealed class UnitAbilityKit : MonoBehaviour
     {
-        [SerializeField] private UnitAbilitySlot[] _slots = System.Array.Empty<UnitAbilitySlot>();
+        [SerializeField] private UnitAbilityDef[] _abilities = System.Array.Empty<UnitAbilityDef>();
 
-        public UnitAbilitySlot[] Slots => _slots ?? System.Array.Empty<UnitAbilitySlot>();
+        public UnitAbilityDef[] Abilities => _abilities ?? System.Array.Empty<UnitAbilityDef>();
 
-        public UnitAbilitySlot[] CloneSlots()
+        public void ReplaceAbilities(UnitAbilityDef[] abilities)
         {
-            var source = Slots;
-            if (source.Length == 0)
-            {
-                return System.Array.Empty<UnitAbilitySlot>();
-            }
-
-            var copy = new UnitAbilitySlot[source.Length];
-            for (var i = 0; i < source.Length; i++)
-            {
-                copy[i] = source[i] != null ? source[i].Clone() : null;
-            }
-
-            return copy;
-        }
-
-        public void ReplaceSlots(UnitAbilitySlot[] slots)
-        {
-            _slots = slots ?? System.Array.Empty<UnitAbilitySlot>();
+            _abilities = abilities ?? System.Array.Empty<UnitAbilityDef>();
         }
     }
 }

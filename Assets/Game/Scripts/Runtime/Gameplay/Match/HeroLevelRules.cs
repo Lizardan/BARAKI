@@ -40,32 +40,6 @@ namespace Game.Gameplay.Match
         public static bool CanLevelUp(int level, int xp) =>
             level < MaxLevel && xp >= XpToNext(level);
 
-        public static int GetAbilityUnlockLevel(HeroAbilityType ability) =>
-            GetAbilityUnlockLevel((AbilityType)(int)ability);
-
-        public static int GetAbilityUnlockLevel(AbilityType ability) =>
-            ability switch
-            {
-                AbilityType.Strike or AbilityType.Smite or AbilityType.HolyNova or AbilityType.Slam
-                    => StrikeUnlockLevel,
-                AbilityType.Heal or AbilityType.Shield or AbilityType.GreaterHeal or AbilityType.Rally
-                    => HealUnlockLevel,
-                AbilityType.AuraDamagePercent
-                    or AbilityType.AuraAttackSpeedPercent
-                    or AbilityType.AuraArmorPercent
-                    or AbilityType.AuraMaxHpPercent
-                    => AuraUnlockLevel,
-                AbilityType.Ultimate or AbilityType.Consecration or AbilityType.Revive or AbilityType.Stomp
-                    => UltimateUnlockLevel,
-                _ => int.MaxValue,
-            };
-
-        public static bool IsAbilityUnlocked(HeroAbilityType ability, int level) =>
-            level >= GetAbilityUnlockLevel(ability);
-
-        public static bool IsAbilityUnlocked(AbilityType ability, int level) =>
-            level >= GetAbilityUnlockLevel(ability);
-
         public static UnitCombatStats ApplyLevelGrowth(UnitCombatStats baseStats, int level)
         {
             var effectiveLevel = Math.Max(1, level);

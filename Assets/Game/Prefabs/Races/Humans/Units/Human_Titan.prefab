@@ -16359,92 +16359,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50e80b5b84ba17342a15db8698925f56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityKit
-  _slots:
-  - _type: 14
-    _kind: 0
-    _unlock: 1
-    _unlockValue: 4
-    _displayName: Rally
-    _description: "\u041A\u043B\u0438\u0447: \u0433\u0435\u0440\u043E\u0439 \u0438
-      \u0441\u043E\u044E\u0437\u043D\u0438\u043A\u0438 \u0440\u044F\u0434\u043E\u043C
-      \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0431\u0440\u043E\u043D\u044E."
-    _damage: 0
-    _heal: 0
-    _healPerSecond: 0
-    _radius: 8
-    _castRange: 0
-    _cooldownSeconds: 10
-    _durationSeconds: 6
-    _percent: 0
-    _manaCost: 0
-    _stunSeconds: 0
-    _flatBonus: 12
-    _secondaryRadius: 0
-    _secondaryHeal: 0
-  - _type: 16
-    _kind: 0
-    _unlock: 1
-    _unlockValue: 10
-    _displayName: Stomp
-    _description: "\u0422\u043E\u043F\u043E\u0442: \u0443\u0440\u043E\u043D \u0438
-      \u043E\u0433\u043B\u0443\u0448\u0435\u043D\u0438\u0435 \u0432\u0440\u0430\u0433\u043E\u0432
-      \u0432\u043E\u043A\u0440\u0443\u0433."
-    _damage: 360
-    _heal: 0
-    _healPerSecond: 0
-    _radius: 8
-    _castRange: 0
-    _cooldownSeconds: 30
-    _durationSeconds: 0
-    _percent: 0
-    _manaCost: 0
-    _stunSeconds: 2
-    _flatBonus: 0
-    _secondaryRadius: 0
-    _secondaryHeal: 0
-  - _type: 13
-    _kind: 0
-    _unlock: 1
-    _unlockValue: 1
-    _displayName: Slam
-    _description: "\u041C\u043E\u0449\u043D\u044B\u0439 \u0443\u0434\u0430\u0440
-      \u043F\u043E \u0432\u0441\u0435\u043C \u0432\u0440\u0430\u0433\u0430\u043C
-      \u0432\u043E\u043A\u0440\u0443\u0433."
-    _damage: 180
-    _heal: 0
-    _healPerSecond: 0
-    _radius: 6
-    _castRange: 0
-    _cooldownSeconds: 6
-    _durationSeconds: 0
-    _percent: 0
-    _manaCost: 0
-    _stunSeconds: 0
-    _flatBonus: 0
-    _secondaryRadius: 0
-    _secondaryHeal: 0
-  - _type: 15
-    _kind: 1
-    _unlock: 1
-    _unlockValue: 7
-    _displayName: Colossus
-    _description: "\u041F\u043E\u043A\u0430 \u0442\u0438\u0442\u0430\u043D \u0436\u0438\u0432,
-      \u0430\u0440\u043C\u0438\u044F \u0432\u043B\u0430\u0434\u0435\u043B\u044C\u0446\u0430
-      \u043A\u0440\u0435\u043F\u0447\u0435 (\u0431\u043E\u043B\u044C\u0448\u0435
-      \u0437\u0430\u043F\u0430\u0441\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F)."
-    _damage: 0
-    _heal: 0
-    _healPerSecond: 0
-    _radius: 0
-    _castRange: 0
-    _cooldownSeconds: 0
-    _durationSeconds: 0
-    _percent: 0.15
-    _manaCost: 0
-    _stunSeconds: 0
-    _flatBonus: 0
-    _secondaryRadius: 0
-    _secondaryHeal: 0
+  _abilities:
+  - {fileID: 11400000, guid: cbeca1825f35b854cad68f6924175749, type: 2}
+  - {fileID: 11400000, guid: 4f34b385062a5f8408961d4dd66ed68e, type: 2}
+  - {fileID: 11400000, guid: 9ce499fc61d8c7941970f6ca1983ab10, type: 2}
+  - {fileID: 11400000, guid: de01573483cf5f34fb5228be579bb45b, type: 2}
 --- !u!1 &7325499167874225059
 GameObject:
   m_ObjectHideFlags: 0

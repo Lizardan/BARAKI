@@ -75,30 +75,63 @@ namespace Game.Tests
         }
 
         [Test]
-        public void GetAbilityType_MapsUniqueKitsPerSlot()
+        public void Kits_MatchExpectedAbilitiesPerHeroSlot()
         {
-            Assert.AreEqual(HeroAbilityType.Strike, HeroAbilityRules.GetAbilityType(1, 1));
-            Assert.AreEqual(HeroAbilityType.Smite, HeroAbilityRules.GetAbilityType(2, 1));
-            Assert.AreEqual(HeroAbilityType.HolyNova, HeroAbilityRules.GetAbilityType(3, 1));
-            Assert.AreEqual(HeroAbilityType.Shield, HeroAbilityRules.GetAbilityType(2, 2));
-            Assert.AreEqual(HeroAbilityType.GreaterHeal, HeroAbilityRules.GetAbilityType(3, 2));
-            Assert.AreEqual(HeroAbilityType.Consecration, HeroAbilityRules.GetAbilityType(2, 4));
-            Assert.AreEqual(HeroAbilityType.Revive, HeroAbilityRules.GetAbilityType(3, 4));
-            Assert.AreEqual(HeroAbilityType.AuraAttackSpeedPercent, HeroAbilityRules.GetAbilityType(2, 3));
-            Assert.AreEqual(HeroAbilityType.AuraArmorPercent, HeroAbilityRules.GetAbilityType(3, 3));
+            var king = AbilityKitDefaults.Create(UnitRole.Hero, HeroAbilityRules.KingSlot);
+            Assert.AreEqual(AbilityIds.Strike, king[2].AbilityId);
+            Assert.AreEqual(AbilityIds.Heal, king[0].AbilityId);
+            Assert.AreEqual(AbilityIds.Ultimate, king[1].AbilityId);
+            Assert.AreEqual(AbilityIds.AuraDamagePercent, king[3].AbilityId);
+
+            var paladin = AbilityKitDefaults.Create(UnitRole.Hero, HeroAbilityRules.PaladinSlot);
+            Assert.AreEqual(AbilityIds.Smite, paladin[2].AbilityId);
+            Assert.AreEqual(AbilityIds.Shield, paladin[0].AbilityId);
+            Assert.AreEqual(AbilityIds.Consecration, paladin[1].AbilityId);
+            Assert.AreEqual(AbilityIds.AuraAttackSpeedPercent, paladin[3].AbilityId);
+
+            var priest = AbilityKitDefaults.Create(UnitRole.Hero, HeroAbilityRules.PriestSlot);
+            Assert.AreEqual(AbilityIds.HolyNova, priest[2].AbilityId);
+            Assert.AreEqual(AbilityIds.GreaterHeal, priest[0].AbilityId);
+            Assert.AreEqual(AbilityIds.Revive, priest[1].AbilityId);
+            Assert.AreEqual(AbilityIds.AuraArmorPercent, priest[3].AbilityId);
         }
 
         [Test]
-        public void GetDisplayName_CoversPaladinAndPriestAbilities()
+        public void DisplayNames_CoverPaladinAndPriestAbilities()
         {
-            Assert.AreEqual("Smite", HeroAbilityRules.GetDisplayName(HeroAbilityType.Smite));
-            Assert.AreEqual("Shield", HeroAbilityRules.GetDisplayName(HeroAbilityType.Shield));
-            Assert.AreEqual("Consecration", HeroAbilityRules.GetDisplayName(HeroAbilityType.Consecration));
-            Assert.AreEqual("Holy Nova", HeroAbilityRules.GetDisplayName(HeroAbilityType.HolyNova));
-            Assert.AreEqual("Greater Heal", HeroAbilityRules.GetDisplayName(HeroAbilityType.GreaterHeal));
-            Assert.AreEqual("Revive", HeroAbilityRules.GetDisplayName(HeroAbilityType.Revive));
-            Assert.AreEqual("Slam", HeroAbilityRules.GetDisplayName(HeroAbilityType.Slam));
-            Assert.AreEqual("Stomp", HeroAbilityRules.GetDisplayName(HeroAbilityType.Stomp));
+            Assert.AreEqual("Smite", Def(AbilityIds.Smite).DisplayName);
+            Assert.AreEqual("Shield", Def(AbilityIds.Shield).DisplayName);
+            Assert.AreEqual("Consecration", Def(AbilityIds.Consecration).DisplayName);
+            Assert.AreEqual("Holy Nova", Def(AbilityIds.HolyNova).DisplayName);
+            Assert.AreEqual("Greater Heal", Def(AbilityIds.GreaterHeal).DisplayName);
+            Assert.AreEqual("Revive", Def(AbilityIds.Revive).DisplayName);
+            Assert.AreEqual("Slam", Def(AbilityIds.Slam).DisplayName);
+            Assert.AreEqual("Stomp", Def(AbilityIds.Stomp).DisplayName);
+        }
+
+        private static UnitAbilityDef Def(int abilityId)
+        {
+            foreach (var role in new[] { UnitRole.Hero, UnitRole.Titan, UnitRole.Caster })
+            {
+                var slots = role == UnitRole.Hero
+                    ? new[] { HeroAbilityRules.KingSlot, HeroAbilityRules.PaladinSlot, HeroAbilityRules.PriestSlot }
+                    : new[] { 0 };
+
+                foreach (var slot in slots)
+                {
+                    var kit = AbilityKitDefaults.Create(role, slot);
+                    for (var i = 0; i < kit.Length; i++)
+                    {
+                        if (kit[i].AbilityId == abilityId)
+                        {
+                            return kit[i];
+                        }
+                    }
+                }
+            }
+
+            Assert.Fail($"Ability {abilityId} not found in default kits.");
+            return null;
         }
 
         [Test]

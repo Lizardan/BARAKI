@@ -70,7 +70,7 @@ namespace Game.Tests
             combat.Tick(0.1f);
 
             Assert.AreEqual(30f, ally.CurrentHp, 0.01f, "Heal should not fire without magic level 1.");
-            Assert.AreEqual(0f, caster.HealCooldownRemaining, 0.01f);
+            Assert.AreEqual(0f, caster.AbilityCooldownRemaining[0], 0.01f);
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace Game.Tests
 
             Assert.AreEqual(100f, low.CurrentHp, 0.01f, "Lowest-HP ally should be healed and clamped to max.");
             Assert.AreEqual(70f, high.CurrentHp, 0.01f, "Other ally should not be healed in the same tick.");
-            Assert.Greater(caster.HealCooldownRemaining, 0f, "Heal cooldown should be armed.");
+            Assert.Greater(caster.AbilityCooldownRemaining[0], 0f, "Heal cooldown should be armed.");
         }
 
         [Test]
@@ -134,7 +134,7 @@ namespace Game.Tests
             Assert.AreEqual(60f, e1.CurrentHp, 0.01f, "Frost should deal 40 damage to each enemy in AoE.");
             Assert.AreEqual(60f, e2.CurrentHp, 0.01f);
             Assert.AreEqual(60f, e3.CurrentHp, 0.01f);
-            Assert.Greater(caster.FrostCooldownRemaining, 0f, "Frost cooldown should be armed.");
+            Assert.Greater(caster.AbilityCooldownRemaining[1], 0f, "Frost cooldown should be armed.");
         }
 
         [Test]
@@ -177,12 +177,12 @@ namespace Game.Tests
             combat.ApplyExternalDamage(ally.UnitId, 1000f, killerOwnerSlot: 1);
             Assert.AreEqual(1, combat.Corpses.Count);
 
-            CasterSpellCastEvent? cast = null;
-            combat.SpellCast += e => cast = e;
+            AbilityCastEvent? cast = null;
+            combat.AbilityCast += e => cast = e;
 
             combat.Tick(0.1f);
 
-            Assert.AreEqual(CasterSpellType.Resurrect, cast?.SpellType);
+            Assert.AreEqual(AbilityIds.Resurrect, cast?.Def.AbilityId);
             Assert.AreEqual(2, combat.Units.Count, "Caster + revived unit should be alive.");
             Assert.AreEqual(0, combat.Corpses.Count, "Corpse should be consumed on resurrect.");
 
@@ -193,7 +193,7 @@ namespace Game.Tests
             Assert.AreEqual(Center, revived.LaneId);
             Assert.AreEqual(UnitRole.Melee, revived.Role);
             Assert.AreEqual(ally.Stats.MaxHp, revived.CurrentHp, 0.01f, "Revived unit spawns at full health.");
-            Assert.Greater(caster.ResurrectCooldownRemaining, 0f, "Resurrect cooldown should be armed.");
+            Assert.Greater(caster.AbilityCooldownRemaining[2], 0f, "Resurrect cooldown should be armed.");
         }
 
         [Test]
@@ -259,12 +259,12 @@ namespace Game.Tests
             Place(enemy, new Vector3(0f, 0f, -1f));
             ally.CurrentHp = 30f;
 
-            CasterSpellCastEvent? cast = null;
-            combat.SpellCast += e => cast = e;
+            AbilityCastEvent? cast = null;
+            combat.AbilityCast += e => cast = e;
 
             combat.Tick(0.1f);
 
-            Assert.AreEqual(CasterSpellType.Heal, cast?.SpellType);
+            Assert.AreEqual(AbilityIds.CasterHeal, cast?.Def.AbilityId);
             Assert.AreEqual(100f, ally.CurrentHp, 0.01f);
             Assert.AreEqual(100f, enemy.CurrentHp, 0.01f, "Frost must not be cast while heal has a valid target.");
         }
@@ -305,7 +305,7 @@ namespace Game.Tests
             combat.Tick(0.1f);
 
             Assert.AreEqual(30f, ally.CurrentHp, 0.01f, "No heal without enough mana.");
-            Assert.AreEqual(0f, caster.HealCooldownRemaining, 0.01f, "Cooldown must not arm on a failed cast.");
+            Assert.AreEqual(0f, caster.AbilityCooldownRemaining[0], 0.01f, "Cooldown must not arm on a failed cast.");
         }
 
         [Test]

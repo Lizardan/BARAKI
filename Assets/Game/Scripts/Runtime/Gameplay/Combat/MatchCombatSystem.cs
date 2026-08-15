@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    public sealed class MatchCombatSystem : IProjectileImpactHandler, IMeleeImpactHandler
+    public sealed class MatchCombatSystem : IProjectileImpactHandler, IMeleeImpactHandler, IUnitAbilityHost
     {
         readonly List<MatchUnitState> _units = new();
         readonly Dictionary<int, MatchUnitState> _unitById = new();
@@ -32,10 +32,8 @@ namespace Game.Gameplay.Combat
         readonly List<PendingBarracksSpawn> _pendingSpawns = new();
         readonly Dictionary<int, LaneRoute> _committedRoutes = new();
         readonly List<CombatCorpseState> _corpses = new();
-        readonly List<CasterSpellCastEvent> _networkSpellCasts = new();
-        readonly List<CasterSpellCastEvent> _presenterSpellCasts = new();
-        readonly List<HeroAbilityCastEvent> _networkHeroCasts = new();
-        readonly List<HeroAbilityCastEvent> _presenterHeroCasts = new();
+        readonly List<AbilityCastEvent> _networkAbilityCasts = new();
+        readonly List<AbilityCastEvent> _presenterAbilityCasts = new();
         readonly List<HeroHealZoneState> _healZones = new();
         readonly List<MatchProjectileSnapshot> _networkProjectileSpawns = new();
         int _spellCastSerial;
@@ -55,10 +53,11 @@ namespace Game.Gameplay.Combat
         }
 
         public event Action<UnitKillEvent> UnitKilled;
-        public event Action<CasterSpellCastEvent> SpellCast;
-        public event Action<HeroAbilityCastEvent> HeroSpellCast;
+        public event Action<AbilityCastEvent> AbilityCast;
 
         public UnitVisualCatalog UnitVisualCatalog { get; set; }
+        /// <summary>Resolves snapshot ability ids to <see cref="UnitAbilityDef"/> (clients + host).</summary>
+        public UnitAbilityCatalog AbilityCatalog { get; set; }
 
         public IReadOnlyList<MatchUnitState> Units => _units;
         public IReadOnlyList<CombatProjectileState> Projectiles => _projectiles.Active;
@@ -68,37 +67,21 @@ namespace Game.Gameplay.Combat
 
         /// <summary>
         /// Casts not yet captured into a snapshot. Host: drained by <see cref="MatchSnapshotCodec.Capture"/>.
-        /// Used to sync spell VFX to clients.
+        /// Used to sync ability VFX to clients.
         /// </summary>
-        public IReadOnlyList<CasterSpellCastEvent> NetworkSpellCasts => _networkSpellCasts;
+        public IReadOnlyList<AbilityCastEvent> NetworkAbilityCasts => _networkAbilityCasts;
 
-        /// <summary>Host-only: consumed by the snapshot capture into the next <see cref="NetworkSpellCasts"/>.</summary>
-        public void ClearNetworkSpellCasts() => _networkSpellCasts.Clear();
+        /// <summary>Host-only: consumed by the snapshot capture into the next <see cref="NetworkAbilityCasts"/>.</summary>
+        public void ClearNetworkAbilityCasts() => _networkAbilityCasts.Clear();
 
         /// <summary>
         /// Casts pending presenter playback (host + clients). Consumers call this once per sync tick;
         /// the same serial never reappears thanks to snapshot v9 dedup on clients.
         /// </summary>
-        public IReadOnlyList<CasterSpellCastEvent> ConsumePendingSpellCasts()
+        public IReadOnlyList<AbilityCastEvent> ConsumePendingAbilityCasts()
         {
-            var result = new List<CasterSpellCastEvent>(_presenterSpellCasts);
-            _presenterSpellCasts.Clear();
-            return result;
-        }
-
-        /// <summary>
-        /// Hero ability casts not yet captured into a snapshot (mirrors <see cref="NetworkSpellCasts"/>).
-        /// </summary>
-        public IReadOnlyList<HeroAbilityCastEvent> NetworkHeroCasts => _networkHeroCasts;
-
-        /// <summary>Host-only: consumed by the snapshot capture into the next <see cref="NetworkHeroCasts"/>.</summary>
-        public void ClearNetworkHeroCasts() => _networkHeroCasts.Clear();
-
-        /// <summary>Hero ability casts pending presenter playback (host + clients).</summary>
-        public IReadOnlyList<HeroAbilityCastEvent> ConsumePendingHeroAbilityCasts()
-        {
-            var result = new List<HeroAbilityCastEvent>(_presenterHeroCasts);
-            _presenterHeroCasts.Clear();
+            var result = new List<AbilityCastEvent>(_presenterAbilityCasts);
+            _presenterAbilityCasts.Clear();
             return result;
         }
 
@@ -142,10 +125,8 @@ namespace Game.Gameplay.Combat
             _projectiles.Clear();
             _meleeStrikes.Clear();
             _corpses.Clear();
-            _networkSpellCasts.Clear();
-            _presenterSpellCasts.Clear();
-            _networkHeroCasts.Clear();
-            _presenterHeroCasts.Clear();
+            _networkAbilityCasts.Clear();
+            _presenterAbilityCasts.Clear();
             _networkProjectileSpawns.Clear();
             _spellCastSerial = 0;
             _lastAppliedSpellSerial = 0;
@@ -889,23 +870,16 @@ namespace Game.Gameplay.Combat
                 }
 
                 _lastAppliedSpellSerial = snap.Serial;
-                if (snap.SpellKind == 1)
+                var def = AbilityCatalog != null ? AbilityCatalog.Find(snap.AbilityId) : null;
+                if (def == null || def.Behaviour == null)
                 {
-                    _presenterHeroCasts.Add(new HeroAbilityCastEvent(
-                        snap.CasterUnitId,
-                        snap.OwnerSlot,
-                        (HeroAbilityType)snap.HeroAbility,
-                        new Vector3(snap.CenterX, 0.15f, snap.CenterZ),
-                        snap.Radius,
-                        snap.TargetUnitId,
-                        snap.Serial));
                     continue;
                 }
 
-                _presenterSpellCasts.Add(new CasterSpellCastEvent(
+                _presenterAbilityCasts.Add(new AbilityCastEvent(
                     snap.CasterUnitId,
                     snap.OwnerSlot,
-                    (CasterSpellType)snap.SpellType,
+                    def,
                     snap.TargetUnitId,
                     new Vector3(snap.CenterX, 0.15f, snap.CenterZ),
                     snap.Radius,
@@ -2091,7 +2065,7 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        void ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
+        public void ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
         {
             if (target == null || !target.IsAlive)
             {
@@ -2140,8 +2114,8 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// King aura (passive <see cref="AbilityType.AuraDamagePercent"/>): army of the
-        /// owner's living champion deals extra damage while that slot is unlocked.
+        /// King aura (passive AuraDamagePercent def): army of the owner's living champion
+        /// deals extra damage while that slot is unlocked.
         /// </summary>
         float GetArmyDamageMultiplier(MatchUnitState attacker)
         {
@@ -2150,7 +2124,7 @@ namespace Game.Gameplay.Combat
                 return 1f;
             }
 
-            return 1f + GetAuraPercent(attacker.OwnerSlot, AbilityType.AuraDamagePercent);
+            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.Damage);
         }
 
         float GetArmyAttackSpeedMultiplier(MatchUnitState attacker)
@@ -2160,7 +2134,7 @@ namespace Game.Gameplay.Combat
                 return 1f;
             }
 
-            return 1f + GetAuraPercent(attacker.OwnerSlot, AbilityType.AuraAttackSpeedPercent);
+            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.AttackSpeed);
         }
 
         float GetEffectiveArmor(MatchUnitState target)
@@ -2171,7 +2145,7 @@ namespace Game.Gameplay.Combat
             }
 
             var armor = target.Stats.Armor;
-            armor *= 1f + GetAuraPercent(target.OwnerSlot, AbilityType.AuraArmorPercent);
+            armor *= 1f + GetAuraPercent(target.OwnerSlot, AuraStat.Armor);
 
             if (target.ArmorBuffRemaining > 0f)
             {
@@ -2183,17 +2157,17 @@ namespace Game.Gameplay.Combat
             return armor;
         }
 
-        float GetEffectiveMaxHp(MatchUnitState unit)
+        public float GetEffectiveMaxHp(MatchUnitState unit)
         {
             if (unit == null)
             {
                 return 0f;
             }
 
-            return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AbilityType.AuraMaxHpPercent));
+            return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp));
         }
 
-        float GetAuraPercent(int ownerSlot, AbilityType type)
+        float GetAuraPercent(int ownerSlot, AuraStat stat)
         {
             var best = 0f;
             for (var i = 0; i < _units.Count; i++)
@@ -2209,17 +2183,24 @@ namespace Game.Gameplay.Combat
 
                 for (var s = 0; s < candidate.Abilities.Length; s++)
                 {
-                    var slot = candidate.Abilities[s];
-                    if (slot == null
-                        || slot.Type != type
-                        || !IsAbilitySlotUnlocked(candidate, slot))
+                    var def = candidate.Abilities[s];
+                    if (def == null
+                        || def.IsActive
+                        || !IsAbilitySlotUnlocked(candidate, def))
                     {
                         continue;
                     }
 
-                    if (slot.Percent > best)
+                    var ctx = new UnitAbilityContext(
+                        this,
+                        candidate,
+                        def,
+                        s,
+                        GetMagicLevel(ownerSlot));
+                    var value = def.Behaviour != null ? def.Behaviour.QueryAura(in ctx, stat) : 0f;
+                    if (value > best)
                     {
-                        best = slot.Percent;
+                        best = value;
                     }
                 }
             }
@@ -2243,7 +2224,7 @@ namespace Game.Gameplay.Combat
             return GameIds.Races.Human;
         }
 
-        int GetMagicLevel(int ownerSlot)
+        public int GetMagicLevel(int ownerSlot)
         {
             foreach (var player in _players)
             {
@@ -2287,27 +2268,27 @@ namespace Game.Gameplay.Combat
             }
 
             var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
-            if (kit == null || kit.Slots.Length == 0)
+            if (kit == null || kit.Abilities.Length == 0)
             {
                 return false;
             }
 
-            unit.Abilities = kit.CloneSlots();
+            unit.Abilities = kit.Abilities;
             return true;
         }
 
-        bool IsAbilitySlotUnlocked(MatchUnitState unit, UnitAbilitySlot slot)
+        bool IsAbilitySlotUnlocked(MatchUnitState unit, UnitAbilityDef def)
         {
-            if (slot == null)
+            if (def == null)
             {
                 return false;
             }
 
-            return slot.Unlock switch
+            return def.Unlock switch
             {
                 AbilityUnlock.Always => true,
-                AbilityUnlock.HeroLevel => unit.Level >= slot.UnlockValue,
-                AbilityUnlock.MagicLevel => GetMagicLevel(unit.OwnerSlot) >= slot.UnlockValue,
+                AbilityUnlock.HeroLevel => unit.Level >= def.UnlockValue,
+                AbilityUnlock.MagicLevel => GetMagicLevel(unit.OwnerSlot) >= def.UnlockValue,
                 _ => false,
             };
         }
@@ -2317,15 +2298,15 @@ namespace Game.Gameplay.Combat
         /// </summary>
         bool TryCastKitAbilities(MatchUnitState unit, float deltaTime)
         {
-            var slots = unit.Abilities;
-            if (slots == null || slots.Length == 0)
+            var defs = unit.Abilities;
+            if (defs == null || defs.Length == 0)
             {
                 return false;
             }
 
-            if (unit.AbilityCooldownRemaining == null || unit.AbilityCooldownRemaining.Length != slots.Length)
+            if (unit.AbilityCooldownRemaining == null || unit.AbilityCooldownRemaining.Length != defs.Length)
             {
-                unit.AbilityCooldownRemaining = new float[slots.Length];
+                unit.AbilityCooldownRemaining = new float[defs.Length];
             }
 
             unit.UltimateBuffRemaining = Mathf.Max(0f, unit.UltimateBuffRemaining - deltaTime);
@@ -2334,29 +2315,26 @@ namespace Game.Gameplay.Combat
                 unit.UltimateBuffPercent = 0f;
             }
 
-            for (var i = 0; i < slots.Length; i++)
+            for (var i = 0; i < defs.Length; i++)
             {
                 unit.AbilityCooldownRemaining[i] = Mathf.Max(0f, unit.AbilityCooldownRemaining[i] - deltaTime);
             }
 
-            SyncLegacyCooldowns(unit);
-
-            for (var i = 0; i < slots.Length; i++)
+            for (var i = 0; i < defs.Length; i++)
             {
-                var slot = slots[i];
-                if (slot == null || slot.Kind == AbilityKind.Passive)
+                var def = defs[i];
+                if (def == null || !def.IsActive)
                 {
                     continue;
                 }
 
-                if (!IsAbilitySlotUnlocked(unit, slot) || unit.AbilityCooldownRemaining[i] > 0f)
+                if (!IsAbilitySlotUnlocked(unit, def) || unit.AbilityCooldownRemaining[i] > 0f)
                 {
                     continue;
                 }
 
-                if (TryCastAbility(unit, slot, i))
+                if (TryCastAbility(unit, def, i))
                 {
-                    SyncLegacyCooldowns(unit);
                     return true;
                 }
             }
@@ -2364,7 +2342,7 @@ namespace Game.Gameplay.Combat
             return false;
         }
 
-        void ArmSlotCooldown(MatchUnitState unit, int slotIndex, float seconds)
+        public void ArmSlotCooldown(MatchUnitState unit, int slotIndex, float seconds)
         {
             if (unit.AbilityCooldownRemaining != null
                 && slotIndex >= 0
@@ -2372,191 +2350,33 @@ namespace Game.Gameplay.Combat
             {
                 unit.AbilityCooldownRemaining[slotIndex] = seconds;
             }
-
-            SyncLegacyCooldowns(unit);
         }
 
-        void SyncLegacyCooldowns(MatchUnitState unit)
+        bool TryCastAbility(MatchUnitState unit, UnitAbilityDef def, int slotIndex)
         {
-            var slots = unit.Abilities;
-            var cds = unit.AbilityCooldownRemaining;
-            if (slots == null || cds == null)
+            if (def.Behaviour == null)
             {
-                return;
+                return false;
             }
 
-            for (var i = 0; i < slots.Length && i < cds.Length; i++)
-            {
-                var slot = slots[i];
-                if (slot == null)
-                {
-                    continue;
-                }
-
-                switch (slot.Type)
-                {
-                    case AbilityType.CasterHeal:
-                    case AbilityType.Heal:
-                    case AbilityType.Shield:
-                    case AbilityType.GreaterHeal:
-                    case AbilityType.Rally:
-                        unit.HealCooldownRemaining = cds[i];
-                        break;
-                    case AbilityType.Frost:
-                        unit.FrostCooldownRemaining = cds[i];
-                        break;
-                    case AbilityType.Resurrect:
-                        unit.ResurrectCooldownRemaining = cds[i];
-                        break;
-                    case AbilityType.Strike:
-                    case AbilityType.Smite:
-                    case AbilityType.HolyNova:
-                    case AbilityType.Slam:
-                        unit.StrikeCooldownRemaining = cds[i];
-                        break;
-                    case AbilityType.Ultimate:
-                    case AbilityType.Consecration:
-                    case AbilityType.Revive:
-                    case AbilityType.Stomp:
-                        unit.UltimateCooldownRemaining = cds[i];
-                        break;
-                }
-            }
+            var ctx = new UnitAbilityContext(
+                this,
+                unit,
+                def,
+                slotIndex,
+                GetMagicLevel(unit.OwnerSlot));
+            return def.Behaviour.TryCast(in ctx);
         }
 
-        bool TryCastAbility(MatchUnitState unit, UnitAbilitySlot slot, int slotIndex)
+        public void EmitCast(AbilityCastEvent cast)
         {
-            return slot.Type switch
-            {
-                AbilityType.CasterHeal => TryCastHeal(unit, slot, slotIndex),
-                AbilityType.Frost => TryCastFrost(unit, slot, slotIndex),
-                AbilityType.Resurrect => TryCastResurrect(unit, slot, slotIndex),
-                AbilityType.Heal => TryCastHeroHeal(unit, slot, slotIndex),
-                AbilityType.Strike or AbilityType.Slam => TryCastHeroStrike(unit, slot, slotIndex),
-                AbilityType.Ultimate => TryCastHeroUltimate(unit, slot, slotIndex),
-                AbilityType.Smite => TryCastPaladinSmite(unit, slot, slotIndex),
-                AbilityType.Shield or AbilityType.Rally => TryCastArmorShout(unit, slot, slotIndex),
-                AbilityType.Consecration or AbilityType.Stomp => TryCastStomp(unit, slot, slotIndex),
-                AbilityType.HolyNova => TryCastPriestNova(unit, slot, slotIndex),
-                AbilityType.GreaterHeal => TryCastPriestGreaterHeal(unit, slot, slotIndex),
-                AbilityType.Revive => TryCastPriestRevive(unit, slot, slotIndex),
-                _ => false,
-            };
+            var serial = ++_spellCastSerial;
+            _networkAbilityCasts.Add(cast.WithSerial(serial));
+            _presenterAbilityCasts.Add(cast.WithSerial(serial));
+            AbilityCast?.Invoke(cast.WithSerial(serial));
         }
 
-        void EmitSpellCast(CasterSpellCastEvent cast)
-        {
-            _networkSpellCasts.Add(cast);
-            _presenterSpellCasts.Add(cast);
-            SpellCast?.Invoke(cast);
-        }
-
-        bool TryCastHeal(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var manaCost = slot.ManaCost > 0f ? slot.ManaCost : CasterSpellRules.HealManaCost;
-            if (caster.CurrentMana < manaCost)
-            {
-                return false;
-            }
-
-            var range = slot.CastRange > 0f ? slot.CastRange : CasterSpellRules.CastRange;
-            var target = CasterSpellRules.PickHealTarget(caster, _units, range, GetEffectiveMaxHp);
-            if (target == null)
-            {
-                return false;
-            }
-
-            var amount = slot.Heal > 0f ? slot.Heal : CasterSpellRules.HealAmount;
-            target.CurrentHp = HeroAbilityRules.ApplyHeal(target.CurrentHp, GetEffectiveMaxHp(target), amount);
-            caster.CurrentMana -= manaCost;
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitSpellCast(new CasterSpellCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                CasterSpellType.Heal,
-                target.UnitId,
-                target.WorldPosition,
-                0f,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastFrost(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var manaCost = slot.ManaCost > 0f ? slot.ManaCost : CasterSpellRules.FrostManaCost;
-            if (caster.CurrentMana < manaCost)
-            {
-                return false;
-            }
-
-            var range = slot.CastRange > 0f ? slot.CastRange : CasterSpellRules.CastRange;
-            var radius = slot.Radius > 0f ? slot.Radius : CasterSpellRules.FrostRadius;
-            var center = CasterSpellRules.PickFrostCenter(caster, _units, range, radius);
-            if (center == null)
-            {
-                return false;
-            }
-
-            var victims = CasterSpellRules.GatherFrostVictims(caster, center, _units, radius);
-            var damage = slot.Damage > 0f ? slot.Damage : CasterSpellRules.FrostDamage;
-            var stun = slot.StunSeconds > 0f ? slot.StunSeconds : CasterSpellRules.FrostFreezeSeconds;
-            for (var i = 0; i < victims.Count; i++)
-            {
-                ApplyDamage(caster, victims[i], damage, caster.OwnerSlot);
-                victims[i].FrozenRemainingSeconds = Mathf.Max(victims[i].FrozenRemainingSeconds, stun);
-            }
-
-            caster.CurrentMana -= manaCost;
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitSpellCast(new CasterSpellCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                CasterSpellType.Frost,
-                center.UnitId,
-                center.WorldPosition,
-                radius,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastResurrect(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var manaCost = slot.ManaCost > 0f ? slot.ManaCost : CasterSpellRules.ResurrectManaCost;
-            if (caster.CurrentMana < manaCost)
-            {
-                return false;
-            }
-
-            var range = slot.CastRange > 0f ? slot.CastRange : CasterSpellRules.CastRange;
-            var maxAge = slot.DurationSeconds > 0f
-                ? slot.DurationSeconds
-                : CasterSpellRules.ResurrectCorpseMaxAgeSeconds;
-            var corpse = CasterSpellRules.PickResurrectCorpse(caster, _corpses, range, maxAge);
-            if (corpse == null)
-            {
-                return false;
-            }
-
-            var revived = ResurrectUnit(corpse);
-            if (revived == null)
-            {
-                return false;
-            }
-
-            caster.CurrentMana -= manaCost;
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitSpellCast(new CasterSpellCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                CasterSpellType.Resurrect,
-                revived.UnitId,
-                revived.WorldPosition,
-                0f,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        MatchUnitState ResurrectUnit(CombatCorpseState corpse)
+        public MatchUnitState ResurrectUnit(CombatCorpseState corpse)
         {
             if (!_routes.TryGetRoute(corpse.OwnerSlot, corpse.LaneId, out var route))
             {
@@ -2585,325 +2405,7 @@ namespace Game.Gameplay.Combat
             return revived;
         }
 
-        bool TryCastHeroHeal(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.HealRadius;
-            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, radius);
-            var target = FindMostInjuredAlly(allies);
-            if (target == null)
-            {
-                return false;
-            }
-
-            var amount = slot.Heal > 0f ? slot.Heal : HeroAbilityRules.HealAmount;
-            for (var i = 0; i < allies.Count; i++)
-            {
-                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
-                    allies[i].CurrentHp,
-                    GetEffectiveMaxHp(allies[i]),
-                    amount);
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                target.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastHeroStrike(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.StrikeRadius;
-            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, radius);
-            if (enemies.Count == 0)
-            {
-                return false;
-            }
-
-            var damage = slot.Damage > 0f ? slot.Damage : HeroAbilityRules.StrikeDamage;
-            for (var i = 0; i < enemies.Count; i++)
-            {
-                ApplyDamage(caster, enemies[i], damage, caster.OwnerSlot);
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                targetUnitId: 0,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastHeroUltimate(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.UltimateRadius;
-            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, radius);
-            if (enemies.Count == 0)
-            {
-                return false;
-            }
-
-            var damage = slot.Damage > 0f ? slot.Damage : HeroAbilityRules.UltimateDamage;
-            for (var i = 0; i < enemies.Count; i++)
-            {
-                ApplyDamage(caster, enemies[i], damage, caster.OwnerSlot);
-            }
-
-            caster.UltimateBuffRemaining = slot.DurationSeconds > 0f
-                ? slot.DurationSeconds
-                : HeroAbilityRules.UltimateSelfBuffSeconds;
-            caster.UltimateBuffPercent = slot.Percent > 0f
-                ? slot.Percent
-                : HeroAbilityRules.UltimateSelfDamageBonusPercent;
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                targetUnitId: 0,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastPaladinSmite(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.SmiteRadius;
-            var target = HeroAbilityRules.FindNearestEnemy(caster, _units, radius);
-            if (target == null)
-            {
-                return false;
-            }
-
-            var damage = slot.Damage > 0f ? slot.Damage : HeroAbilityRules.SmiteDamage;
-            ApplyDamage(caster, target, damage, caster.OwnerSlot);
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                target.WorldPosition,
-                0.8f,
-                target.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastArmorShout(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            if (caster.ArmorBuffRemaining > 0f)
-            {
-                return false;
-            }
-
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.ShieldRadius;
-            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, radius);
-            if (enemies.Count == 0)
-            {
-                return false;
-            }
-
-            var duration = slot.DurationSeconds > 0f ? slot.DurationSeconds : HeroAbilityRules.ShieldDurationSeconds;
-            var bonus = slot.FlatBonus > 0f ? slot.FlatBonus : HeroAbilityRules.ShieldArmorBonus;
-            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, radius);
-            for (var i = 0; i < allies.Count; i++)
-            {
-                allies[i].ArmorBuffRemaining = Mathf.Max(allies[i].ArmorBuffRemaining, duration);
-                allies[i].ArmorBuffBonus = Mathf.Max(allies[i].ArmorBuffBonus, bonus);
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                caster.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastStomp(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.ConsecrationRadius;
-            var enemies = HeroAbilityRules.GatherEnemiesInRadius(caster, _units, radius);
-            if (enemies.Count == 0)
-            {
-                return false;
-            }
-
-            var damage = slot.Damage > 0f ? slot.Damage : HeroAbilityRules.ConsecrationDamage;
-            var stun = slot.StunSeconds > 0f ? slot.StunSeconds : HeroAbilityRules.ConsecrationStunSeconds;
-            for (var i = 0; i < enemies.Count; i++)
-            {
-                ApplyDamage(caster, enemies[i], damage, caster.OwnerSlot);
-                if (enemies[i].IsAlive)
-                {
-                    enemies[i].FrozenRemainingSeconds = Mathf.Max(enemies[i].FrozenRemainingSeconds, stun);
-                }
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                targetUnitId: 0,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastPriestNova(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            if (HasActiveHealZone(caster.UnitId))
-            {
-                return false;
-            }
-
-            var novaRadius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.NovaRadius;
-            var castRange = slot.CastRange > 0f ? slot.CastRange : HeroAbilityRules.NovaCastRange;
-            var anchor = HeroAbilityRules.PickHolyNovaAnchor(caster, _units, castRange, novaRadius);
-            if (anchor == null)
-            {
-                return false;
-            }
-
-            var center = anchor.WorldPosition;
-            var enemies = HeroAbilityRules.GatherEnemiesAround(caster.OwnerSlot, center, _units, novaRadius);
-            var allies = HeroAbilityRules.GatherAlliesAround(caster.OwnerSlot, center, _units, novaRadius);
-            var injured = FindMostInjuredAlly(allies);
-            if (enemies.Count == 0 && injured == null)
-            {
-                return false;
-            }
-
-            var damage = slot.Damage > 0f ? slot.Damage : HeroAbilityRules.NovaDamage;
-            var heal = slot.Heal > 0f ? slot.Heal : HeroAbilityRules.NovaHealAmount;
-            for (var i = 0; i < enemies.Count; i++)
-            {
-                ApplyDamage(caster, enemies[i], damage, caster.OwnerSlot);
-            }
-
-            for (var i = 0; i < allies.Count; i++)
-            {
-                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
-                    allies[i].CurrentHp,
-                    GetEffectiveMaxHp(allies[i]),
-                    heal);
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                center,
-                novaRadius,
-                anchor.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastPriestGreaterHeal(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var radius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.GreaterHealRadius;
-            var allies = HeroAbilityRules.GatherAlliesInRadius(caster, _units, radius);
-            var target = FindMostInjuredAlly(allies);
-            if (target == null)
-            {
-                return false;
-            }
-
-            var duration = slot.DurationSeconds > 0f
-                ? slot.DurationSeconds
-                : HeroAbilityRules.GreaterHealDurationSeconds;
-            var healPerSecond = slot.HealPerSecond > 0f
-                ? slot.HealPerSecond
-                : HeroAbilityRules.GreaterHealHealPerSecond;
-            ReplaceHealZone(new HeroHealZoneState
-            {
-                CasterUnitId = caster.UnitId,
-                OwnerSlot = caster.OwnerSlot,
-                Center = caster.WorldPosition,
-                Radius = radius,
-                RemainingSeconds = duration,
-                HealPerSecond = healPerSecond,
-            });
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                caster.WorldPosition,
-                radius,
-                target.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool TryCastPriestRevive(MatchUnitState caster, UnitAbilitySlot slot, int slotIndex)
-        {
-            var corpseRadius = slot.Radius > 0f ? slot.Radius : HeroAbilityRules.ReviveRadius;
-            var corpse = CasterSpellRules.PickResurrectCorpse(
-                caster,
-                _corpses,
-                corpseRadius,
-                CasterSpellRules.ResurrectCorpseMaxAgeSeconds);
-            if (corpse == null)
-            {
-                return false;
-            }
-
-            var revived = ResurrectUnit(corpse);
-            if (revived == null)
-            {
-                return false;
-            }
-
-            var healRadius = slot.SecondaryRadius > 0f ? slot.SecondaryRadius : HeroAbilityRules.ReviveHealRadius;
-            var heal = slot.SecondaryHeal > 0f
-                ? slot.SecondaryHeal
-                : (slot.Heal > 0f ? slot.Heal : HeroAbilityRules.ReviveHealAmount);
-            var allies = HeroAbilityRules.GatherAlliesAround(
-                caster.OwnerSlot,
-                caster.WorldPosition,
-                _units,
-                healRadius);
-            for (var i = 0; i < allies.Count; i++)
-            {
-                allies[i].CurrentHp = HeroAbilityRules.ApplyHeal(
-                    allies[i].CurrentHp,
-                    GetEffectiveMaxHp(allies[i]),
-                    heal);
-            }
-
-            ArmSlotCooldown(caster, slotIndex, slot.CooldownSeconds);
-            EmitHeroAbilityCast(new HeroAbilityCastEvent(
-                caster.UnitId,
-                caster.OwnerSlot,
-                slot.AsHeroAbility(),
-                revived.WorldPosition,
-                healRadius,
-                revived.UnitId,
-                ++_spellCastSerial));
-            return true;
-        }
-
-        bool HasActiveHealZone(int casterUnitId)
+        public bool HasActiveHealZone(int casterUnitId)
         {
             for (var i = 0; i < _healZones.Count; i++)
             {
@@ -2917,7 +2419,7 @@ namespace Game.Gameplay.Combat
             return false;
         }
 
-        void ReplaceHealZone(HeroHealZoneState zone)
+        public void ReplaceHealZone(HeroHealZoneState zone)
         {
             for (var i = _healZones.Count - 1; i >= 0; i--)
             {
@@ -2981,7 +2483,7 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        MatchUnitState FindMostInjuredAlly(List<MatchUnitState> allies)
+        public MatchUnitState FindMostInjuredAlly(IReadOnlyList<MatchUnitState> allies)
         {
             if (allies == null || allies.Count == 0)
             {
@@ -3008,13 +2510,6 @@ namespace Game.Gameplay.Combat
             }
 
             return best;
-        }
-
-        void EmitHeroAbilityCast(HeroAbilityCastEvent cast)
-        {
-            _networkHeroCasts.Add(cast);
-            _presenterHeroCasts.Add(cast);
-            HeroSpellCast?.Invoke(cast);
         }
 
         void GrantGold(int ownerSlot, int amount)

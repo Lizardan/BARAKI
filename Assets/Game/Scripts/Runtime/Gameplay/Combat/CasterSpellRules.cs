@@ -3,49 +3,12 @@ using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
-    public enum CasterSpellType
-    {
-        Heal = 0,
-        Frost = 1,
-        Resurrect = 2,
-    }
-
-    /// <summary>Payload fired when a Caster unit casts a spell (host-side; presenter listens for VFX/anim).</summary>
-    public readonly struct CasterSpellCastEvent
-    {
-        public CasterSpellCastEvent(
-            int casterUnitId,
-            int ownerSlot,
-            CasterSpellType spellType,
-            int targetUnitId,
-            Vector3 centerPosition,
-            float radius,
-            int serial = 0)
-        {
-            CasterUnitId = casterUnitId;
-            OwnerSlot = ownerSlot;
-            SpellType = spellType;
-            TargetUnitId = targetUnitId;
-            CenterPosition = centerPosition;
-            Radius = radius;
-            Serial = serial;
-        }
-
-        public int CasterUnitId { get; }
-        public int OwnerSlot { get; }
-        public CasterSpellType SpellType { get; }
-        public int TargetUnitId { get; }
-        public Vector3 CenterPosition { get; }
-        public float Radius { get; }
-        /// <summary>Monotonic per-match cast sequence number (host-side).</summary>
-        public int Serial { get; }
-    }
-
     /// <summary>
     /// Combat spell tuning + target-selection helpers for Caster units.
     /// GDD baseline: SPELL_HUMAN_1 heal 80 / r6 / cd10 / mana50, SPELL_HUMAN_2 frost AoE r5 dmg40 / cd14 / mana75,
-    /// SPELL_HUMAN_3 resurrect corpse <=20s / cd30 / mana150. All spells cast range 6.
+    /// SPELL_HUMAN_3 resurrect corpse &lt;=20s / cd30 / mana150. All spells cast range 6.
     /// Caster pool 200 mana; regenerates at <see cref="ManaRegenPerSecond"/> (5/s ≈ covers one cast per CD).
+    /// Numbers here are fallbacks when the <see cref="Data.UnitAbilityDef"/> leaves a value at 0.
     /// </summary>
     public static class CasterSpellRules
     {
@@ -75,18 +38,6 @@ namespace Game.Gameplay.Combat
         public static float ApplyHeal(float currentHp, float maxHp)
         {
             return Mathf.Min(maxHp, currentHp + HealAmount);
-        }
-
-        /// <summary>Floating label shown above the caster when the spell is fired.</summary>
-        public static string GetDisplayName(CasterSpellType spellType)
-        {
-            return spellType switch
-            {
-                CasterSpellType.Heal => "Heal",
-                CasterSpellType.Frost => "Frost",
-                CasterSpellType.Resurrect => "Resurrect",
-                _ => spellType.ToString(),
-            };
         }
 
         /// <summary>Lowest-HP living ally (not full health) within range. Includes the caster itself.</summary>

@@ -141,23 +141,27 @@ namespace Game.Tests
             host.Combat.Tick(0.1f);
             var snapshot = MatchSnapshotCodec.Capture(host);
             Assert.AreEqual(1, snapshot.SpellCasts.Length, "Host snapshot should carry the Frost cast event.");
-            Assert.AreEqual((byte)CasterSpellType.Frost, snapshot.SpellCasts[0].SpellType);
+            Assert.AreEqual((ushort)AbilityIds.Frost, snapshot.SpellCasts[0].AbilityId);
+
+            var catalog = ScriptableObject.CreateInstance<UnitAbilityCatalog>();
+            catalog.ReplaceAbilities(AbilityKitDefaults.CreateCaster());
 
             var client = new MatchController();
             client.StartMatch(MatchConfig.MvpDefault(2));
+            client.Combat.AbilityCatalog = catalog;
             client.ApplyAuthoritativeSnapshot(snapshot);
 
-            var casts = client.Combat.ConsumePendingSpellCasts();
+            var casts = client.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count, "Client should forward the snapshot cast to the presenter buffer.");
-            Assert.AreEqual((byte)CasterSpellType.Frost, (byte)casts[0].SpellType);
+            Assert.AreEqual(AbilityIds.Frost, casts[0].Def.AbilityId);
             Assert.AreEqual(snapshot.SpellCasts[0].Serial, casts[0].Serial);
 
-            Assert.AreEqual(0, client.Combat.ConsumePendingSpellCasts().Count, "Consumed buffer should be empty.");
+            Assert.AreEqual(0, client.Combat.ConsumePendingAbilityCasts().Count, "Consumed buffer should be empty.");
 
             client.ApplyAuthoritativeSnapshot(snapshot);
             Assert.AreEqual(
                 0,
-                client.Combat.ConsumePendingSpellCasts().Count,
+                client.Combat.ConsumePendingAbilityCasts().Count,
                 "Re-applying the same serial must not duplicate.");
         }
 

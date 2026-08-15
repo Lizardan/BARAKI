@@ -1,5 +1,5 @@
-using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
+using UnityEngine;
 
 namespace Game.Gameplay.Combat
 {
@@ -7,10 +7,12 @@ namespace Game.Gameplay.Combat
     /// Default kits used when a prefab has no <see cref="UnitAbilityKit"/> (EditMode tests)
     /// and as the seed written onto hero/caster/titan prefabs.
     /// Slot order = AI cast priority (passives are skipped).
+    /// Tuning constants still come from <see cref="HeroAbilityRules"/> / <see cref="CasterSpellRules"/>
+    /// as zero-value fallbacks; the editor builder bakes real numbers into the def assets.
     /// </summary>
     public static class AbilityKitDefaults
     {
-        public static UnitAbilitySlot[] Create(UnitRole role, int heroSlot)
+        public static UnitAbilityDef[] Create(UnitRole role, int heroSlot)
         {
             if (role == UnitRole.Titan)
             {
@@ -32,200 +34,234 @@ namespace Game.Gameplay.Combat
                 };
             }
 
-            return System.Array.Empty<UnitAbilitySlot>();
+            return System.Array.Empty<UnitAbilityDef>();
         }
 
-        public static UnitAbilitySlot[] CreateKing() => new[]
+        public static UnitAbilityDef[] CreateKing() => new[]
         {
             Active(
-                AbilityType.Heal,
-                4,
-                "Heal",
+                AbilityIds.Heal,
+                "Group Heal",
                 "Лечение героя и союзников вокруг.",
+                4,
+                HealArea(),
+                AbilityFx.RingPlus(AbilityFxColors.Heal, 0.85f),
                 heal: HeroAbilityRules.HealAmount,
                 radius: HeroAbilityRules.HealRadius,
                 cooldownSeconds: HeroAbilityRules.HealCooldownSeconds),
             Active(
-                AbilityType.Ultimate,
-                10,
+                AbilityIds.Ultimate,
                 "Ultimate",
                 "Большой удар вокруг героя и краткое усиление собственного урона.",
+                10,
+                GroundAoe(applyUltimateSelfBuff: true),
+                AbilityFx.RingPlus(AbilityFxColors.Ultimate, 1.2f),
                 damage: HeroAbilityRules.UltimateDamage,
                 radius: HeroAbilityRules.UltimateRadius,
                 cooldownSeconds: HeroAbilityRules.UltimateCooldownSeconds,
                 durationSeconds: HeroAbilityRules.UltimateSelfBuffSeconds,
                 percent: HeroAbilityRules.UltimateSelfDamageBonusPercent),
             Active(
-                AbilityType.Strike,
-                1,
+                AbilityIds.Strike,
                 "Strike",
                 "Урон по всем врагам вокруг героя.",
+                1,
+                GroundAoe(),
+                AbilityFx.Ring(AbilityFxColors.Strike, 0.75f),
                 damage: HeroAbilityRules.StrikeDamage,
                 radius: HeroAbilityRules.StrikeRadius,
                 cooldownSeconds: HeroAbilityRules.StrikeCooldownSeconds),
             Passive(
-                AbilityType.AuraDamagePercent,
-                7,
-                "Aura",
+                AbilityIds.AuraDamagePercent,
+                "Attack Aura",
                 "Пока герой жив, армия владельца наносит больше урона.",
+                7,
+                Aura(AuraStat.Damage),
                 percent: HeroAbilityRules.AuraDamageBonusPercent),
         };
 
-        public static UnitAbilitySlot[] CreatePaladin() => new[]
+        public static UnitAbilityDef[] CreatePaladin() => new[]
         {
             Active(
-                AbilityType.Shield,
-                4,
+                AbilityIds.Shield,
                 "Shield",
                 "Щит: броня герою и союзникам рядом на короткое время. Кастуется, если рядом есть враг.",
+                4,
+                ArmorShout(),
+                AbilityFx.Ring(AbilityFxColors.Paladin, 1.0f),
                 radius: HeroAbilityRules.ShieldRadius,
                 cooldownSeconds: HeroAbilityRules.ShieldCooldownSeconds,
                 durationSeconds: HeroAbilityRules.ShieldDurationSeconds,
                 flatBonus: HeroAbilityRules.ShieldArmorBonus),
             Active(
-                AbilityType.Consecration,
-                10,
+                AbilityIds.Consecration,
                 "Consecration",
                 "Освящение: урон и краткое оглушение врагов вокруг.",
+                10,
+                GroundAoe(),
+                AbilityFx.RingBurst(AbilityFxColors.Paladin, ringDuration: 1.3f, burstHeight: 2.8f),
                 damage: HeroAbilityRules.ConsecrationDamage,
                 radius: HeroAbilityRules.ConsecrationRadius,
                 cooldownSeconds: HeroAbilityRules.ConsecrationCooldownSeconds,
                 stunSeconds: HeroAbilityRules.ConsecrationStunSeconds),
             Active(
-                AbilityType.Smite,
-                1,
+                AbilityIds.Smite,
                 "Smite",
                 "Кара: высокий урон по ближайшему врагу.",
+                1,
+                DamageBurst(),
+                AbilityFx.Burst(AbilityFxColors.Paladin),
                 damage: HeroAbilityRules.SmiteDamage,
                 radius: HeroAbilityRules.SmiteRadius,
                 cooldownSeconds: HeroAbilityRules.SmiteCooldownSeconds),
             Passive(
-                AbilityType.AuraAttackSpeedPercent,
-                7,
-                "Aura",
+                AbilityIds.AuraAttackSpeedPercent,
+                "Haste Aura",
                 "Пока герой жив, армия владельца атакует быстрее.",
+                7,
+                Aura(AuraStat.AttackSpeed),
                 percent: HeroAbilityRules.AuraAttackSpeedBonusPercent),
         };
 
-        public static UnitAbilitySlot[] CreatePriest() => new[]
+        public static UnitAbilityDef[] CreatePriest() => new[]
         {
             Active(
-                AbilityType.GreaterHeal,
-                4,
+                AbilityIds.GreaterHeal,
                 "Greater Heal",
                 "Создаёт большую зону, в которой союзники лечатся, пока стоят внутри.",
+                4,
+                GreaterHealZone(),
+                AbilityFx.RingPlus(AbilityFxColors.Priest, HeroAbilityRules.GreaterHealDurationSeconds),
                 healPerSecond: HeroAbilityRules.GreaterHealHealPerSecond,
                 radius: HeroAbilityRules.GreaterHealRadius,
                 cooldownSeconds: HeroAbilityRules.GreaterHealCooldownSeconds,
                 durationSeconds: HeroAbilityRules.GreaterHealDurationSeconds),
             Active(
-                AbilityType.Revive,
-                10,
+                AbilityIds.Revive,
                 "Revive",
                 "Возрождает ближайший союзный труп и лечит союзников вокруг.",
+                10,
+                Revive(),
+                AbilityFx.RingPlus(AbilityFxColors.Priest, 1.1f),
                 heal: HeroAbilityRules.ReviveHealAmount,
                 radius: HeroAbilityRules.ReviveRadius,
                 cooldownSeconds: HeroAbilityRules.ReviveCooldownSeconds,
                 secondaryRadius: HeroAbilityRules.ReviveHealRadius,
                 secondaryHeal: HeroAbilityRules.ReviveHealAmount),
             Active(
-                AbilityType.HolyNova,
-                1,
+                AbilityIds.HolyNova,
                 "Holy Nova",
                 "Вспышка вокруг выбранного союзника: лечит своих и бьёт врагов рядом с ним.",
+                1,
+                Nova(),
+                AbilityFx.RingPlus(AbilityFxColors.Priest, 0.9f),
                 damage: HeroAbilityRules.NovaDamage,
                 heal: HeroAbilityRules.NovaHealAmount,
                 radius: HeroAbilityRules.NovaRadius,
                 castRange: HeroAbilityRules.NovaCastRange,
                 cooldownSeconds: HeroAbilityRules.NovaCooldownSeconds),
             Passive(
-                AbilityType.AuraArmorPercent,
-                7,
-                "Aura",
+                AbilityIds.AuraArmorPercent,
+                "Iron Aura",
                 "Пока герой жив, армия владельца получает больше брони.",
+                7,
+                Aura(AuraStat.Armor),
                 percent: HeroAbilityRules.AuraArmorBonusPercent),
         };
 
-        public static UnitAbilitySlot[] CreateTitan() => new[]
+        public static UnitAbilityDef[] CreateTitan() => new[]
         {
             Active(
-                AbilityType.Rally,
-                4,
+                AbilityIds.Rally,
                 "Rally",
                 "Клич: герой и союзники рядом получают броню.",
+                4,
+                ArmorShout(),
+                AbilityFx.Ring(AbilityFxColors.Paladin, 1.0f),
                 radius: HeroAbilityRules.RallyRadius,
                 cooldownSeconds: HeroAbilityRules.RallyCooldownSeconds,
                 durationSeconds: HeroAbilityRules.RallyDurationSeconds,
                 flatBonus: HeroAbilityRules.RallyArmorBonus),
             Active(
-                AbilityType.Stomp,
-                10,
+                AbilityIds.Stomp,
                 "Stomp",
                 "Топот: урон и оглушение врагов вокруг.",
+                10,
+                GroundAoe(),
+                AbilityFx.RingBurst(AbilityFxColors.Paladin, ringDuration: 1.3f, burstHeight: 2.8f),
                 damage: HeroAbilityRules.StompDamage,
                 radius: HeroAbilityRules.StompRadius,
                 cooldownSeconds: HeroAbilityRules.StompCooldownSeconds,
                 stunSeconds: HeroAbilityRules.StompStunSeconds),
             Active(
-                AbilityType.Slam,
-                1,
+                AbilityIds.Slam,
                 "Slam",
                 "Мощный удар по всем врагам вокруг.",
+                1,
+                GroundAoe(),
+                AbilityFx.Ring(AbilityFxColors.Strike, 0.75f),
                 damage: HeroAbilityRules.SlamDamage,
                 radius: HeroAbilityRules.SlamRadius,
                 cooldownSeconds: HeroAbilityRules.SlamCooldownSeconds),
             Passive(
-                AbilityType.AuraMaxHpPercent,
-                7,
+                AbilityIds.AuraMaxHpPercent,
                 "Colossus",
                 "Пока титан жив, армия владельца крепче (больше запаса здоровья).",
+                7,
+                Aura(AuraStat.MaxHp),
                 percent: HeroAbilityRules.AuraMaxHpBonusPercent),
         };
 
-        public static UnitAbilitySlot[] CreateCaster() => new[]
+        public static UnitAbilityDef[] CreateCaster() => new[]
         {
-            UnitAbilitySlot.Create(
-                AbilityType.CasterHeal,
-                AbilityKind.Active,
-                AbilityUnlock.MagicLevel,
-                CasterSpellRules.HealRequiredMagicLevel,
-                "Heal",
+            Active(
+                AbilityIds.CasterHeal,
+                "Mend",
                 "Лечит самого раненого союзника в радиусе каста.",
+                CasterSpellRules.HealRequiredMagicLevel,
+                HealSingle(),
+                AbilityFx.Plus(AbilityFxColors.Heal),
+                unlock: AbilityUnlock.MagicLevel,
                 heal: CasterSpellRules.HealAmount,
                 castRange: CasterSpellRules.CastRange,
                 cooldownSeconds: CasterSpellRules.HealCooldownSeconds,
                 manaCost: CasterSpellRules.HealManaCost),
-            UnitAbilitySlot.Create(
-                AbilityType.Frost,
-                AbilityKind.Active,
-                AbilityUnlock.MagicLevel,
-                CasterSpellRules.FrostRequiredMagicLevel,
+            Active(
+                AbilityIds.Frost,
                 "Frost",
                 "Ледяной взрыв по скоплению врагов: урон и краткая заморозка.",
+                CasterSpellRules.FrostRequiredMagicLevel,
+                GroundAoe(),
+                AbilityFx.Ring(AbilityFxColors.Frost, 0.9f),
+                unlock: AbilityUnlock.MagicLevel,
                 damage: CasterSpellRules.FrostDamage,
                 radius: CasterSpellRules.FrostRadius,
                 castRange: CasterSpellRules.CastRange,
                 cooldownSeconds: CasterSpellRules.FrostCooldownSeconds,
                 manaCost: CasterSpellRules.FrostManaCost,
                 stunSeconds: CasterSpellRules.FrostFreezeSeconds),
-            UnitAbilitySlot.Create(
-                AbilityType.Resurrect,
-                AbilityKind.Active,
-                AbilityUnlock.MagicLevel,
-                CasterSpellRules.ResurrectRequiredMagicLevel,
+            Active(
+                AbilityIds.Resurrect,
                 "Resurrect",
                 "Поднимает недавний союзный труп с полным здоровьем.",
+                CasterSpellRules.ResurrectRequiredMagicLevel,
+                ResurrectCorpse(),
+                AbilityFx.Plus(AbilityFxColors.Resurrect),
+                unlock: AbilityUnlock.MagicLevel,
                 castRange: CasterSpellRules.CastRange,
                 cooldownSeconds: CasterSpellRules.ResurrectCooldownSeconds,
                 durationSeconds: CasterSpellRules.ResurrectCorpseMaxAgeSeconds,
                 manaCost: CasterSpellRules.ResurrectManaCost),
         };
 
-        static UnitAbilitySlot Active(
-            AbilityType type,
-            int heroLevel,
+        static UnitAbilityDef Active(
+            int abilityId,
             string name,
             string description,
+            int unlockValue,
+            UnitAbilityBehaviour behaviour,
+            AbilityFx fx,
+            AbilityUnlock unlock = AbilityUnlock.HeroLevel,
             float damage = 0f,
             float heal = 0f,
             float healPerSecond = 0f,
@@ -234,17 +270,20 @@ namespace Game.Gameplay.Combat
             float cooldownSeconds = 0f,
             float durationSeconds = 0f,
             float percent = 0f,
+            float manaCost = 0f,
             float stunSeconds = 0f,
             float flatBonus = 0f,
             float secondaryRadius = 0f,
             float secondaryHeal = 0f) =>
-            UnitAbilitySlot.Create(
-                type,
-                AbilityKind.Active,
-                AbilityUnlock.HeroLevel,
-                heroLevel,
+            UnitAbilityDef.Create(
+                abilityId,
                 name,
                 description,
+                AbilityKind.Active,
+                unlock,
+                unlockValue,
+                behaviour,
+                fx,
                 damage,
                 heal,
                 healPerSecond,
@@ -253,24 +292,62 @@ namespace Game.Gameplay.Combat
                 cooldownSeconds,
                 durationSeconds,
                 percent,
-                stunSeconds: stunSeconds,
-                flatBonus: flatBonus,
-                secondaryRadius: secondaryRadius,
-                secondaryHeal: secondaryHeal);
+                manaCost,
+                stunSeconds,
+                flatBonus,
+                secondaryRadius,
+                secondaryHeal);
 
-        static UnitAbilitySlot Passive(
-            AbilityType type,
-            int heroLevel,
+        static UnitAbilityDef Passive(
+            int abilityId,
             string name,
             string description,
+            int unlockValue,
+            UnitAbilityBehaviour behaviour,
             float percent) =>
-            UnitAbilitySlot.Create(
-                type,
-                AbilityKind.Passive,
-                AbilityUnlock.HeroLevel,
-                heroLevel,
+            UnitAbilityDef.Create(
+                abilityId,
                 name,
                 description,
+                AbilityKind.Passive,
+                AbilityUnlock.HeroLevel,
+                unlockValue,
+                behaviour,
                 percent: percent);
+
+        static HealAreaBehaviour HealArea() => ScriptableObject.CreateInstance<HealAreaBehaviour>();
+
+        static HealSingleBehaviour HealSingle() => ScriptableObject.CreateInstance<HealSingleBehaviour>();
+
+        static GroundAoeBehaviour GroundAoe(bool applyUltimateSelfBuff = false)
+        {
+            var b = ScriptableObject.CreateInstance<GroundAoeBehaviour>();
+            b.Configure(applyUltimateSelfBuff);
+            return b;
+        }
+
+        static DamageBurstBehaviour DamageBurst()
+        {
+            var b = ScriptableObject.CreateInstance<DamageBurstBehaviour>();
+            b.Configure(singleTarget: true);
+            return b;
+        }
+
+        static ArmorShoutBehaviour ArmorShout() => ScriptableObject.CreateInstance<ArmorShoutBehaviour>();
+
+        static GreaterHealZoneBehaviour GreaterHealZone() => ScriptableObject.CreateInstance<GreaterHealZoneBehaviour>();
+
+        static ReviveBehaviour Revive() => ScriptableObject.CreateInstance<ReviveBehaviour>();
+
+        static NovaBehaviour Nova() => ScriptableObject.CreateInstance<NovaBehaviour>();
+
+        static ResurrectCorpseBehaviour ResurrectCorpse() => ScriptableObject.CreateInstance<ResurrectCorpseBehaviour>();
+
+        static AuraBehaviour Aura(AuraStat stat)
+        {
+            var b = ScriptableObject.CreateInstance<AuraBehaviour>();
+            b.Configure(stat);
+            return b;
+        }
     }
 }

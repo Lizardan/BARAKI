@@ -26,25 +26,55 @@ namespace Game.Tests
         [Test]
         public void IsAbilityUnlocked_FollowsUnlockLevels()
         {
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Strike, 1));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, 3));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Heal, 4));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraDamagePercent, 6));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraDamagePercent, 7));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.AuraMaxHpPercent, 7));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Slam, 1));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Stomp, 10));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 9));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Ultimate, 10));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Strike, 1));
+            Assert.IsFalse(IsUnlocked(AbilityIds.Heal, 3));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Heal, 4));
+            Assert.IsFalse(IsUnlocked(AbilityIds.AuraDamagePercent, 6));
+            Assert.IsTrue(IsUnlocked(AbilityIds.AuraDamagePercent, 7));
+            Assert.IsTrue(IsUnlocked(AbilityIds.AuraMaxHpPercent, 7));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Slam, 1));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Stomp, 10));
+            Assert.IsFalse(IsUnlocked(AbilityIds.Ultimate, 9));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Ultimate, 10));
 
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Smite, 1));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.HolyNova, 1));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Shield, 3));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Shield, 4));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.GreaterHeal, 4));
-            Assert.IsFalse(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Consecration, 9));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Consecration, 10));
-            Assert.IsTrue(HeroLevelRules.IsAbilityUnlocked(HeroAbilityType.Revive, 10));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Smite, 1));
+            Assert.IsTrue(IsUnlocked(AbilityIds.HolyNova, 1));
+            Assert.IsFalse(IsUnlocked(AbilityIds.Shield, 3));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Shield, 4));
+            Assert.IsTrue(IsUnlocked(AbilityIds.GreaterHeal, 4));
+            Assert.IsFalse(IsUnlocked(AbilityIds.Consecration, 9));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Consecration, 10));
+            Assert.IsTrue(IsUnlocked(AbilityIds.Revive, 10));
+        }
+
+        private static bool IsUnlocked(int abilityId, int level)
+        {
+            var def = FindDef(abilityId);
+            return def != null && def.Unlock == AbilityUnlock.HeroLevel && level >= def.UnlockValue;
+        }
+
+        private static UnitAbilityDef FindDef(int abilityId)
+        {
+            foreach (var role in new[] { UnitRole.Hero, UnitRole.Titan, UnitRole.Caster })
+            {
+                var slots = role == UnitRole.Hero
+                    ? new[] { HeroAbilityRules.KingSlot, HeroAbilityRules.PaladinSlot, HeroAbilityRules.PriestSlot }
+                    : new[] { 0 };
+
+                foreach (var slot in slots)
+                {
+                    var kit = AbilityKitDefaults.Create(role, slot);
+                    for (var i = 0; i < kit.Length; i++)
+                    {
+                        if (kit[i].AbilityId == abilityId)
+                        {
+                            return kit[i];
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
         [Test]

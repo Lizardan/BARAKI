@@ -25,9 +25,9 @@ namespace Game.Tests
 
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.StrikeDamage, enemy.CurrentHp, 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Strike, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Strike, casts[0].Def.AbilityId);
             Assert.AreEqual(hero.UnitId, casts[0].CasterUnitId);
             Assert.AreEqual(0, casts[0].TargetUnitId);
         }
@@ -58,9 +58,9 @@ namespace Game.Tests
                 ally.CurrentHp,
                 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Heal, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Heal, casts[0].Def.AbilityId);
             Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
         }
 
@@ -83,9 +83,9 @@ namespace Game.Tests
             Assert.AreEqual(MeleeMaxHp - expectedDamage, enemy.CurrentHp, 0.001f);
             Assert.AreEqual(HeroAbilityRules.UltimateSelfBuffSeconds, hero.UltimateBuffRemaining, 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Ultimate, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Ultimate, casts[0].Def.AbilityId);
         }
 
         [Test]
@@ -142,7 +142,7 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(MeleeMaxHp - 200f, ally.CurrentHp, 0.001f);
-            Assert.AreEqual(0, controller.Combat.ConsumePendingHeroAbilityCasts().Count);
+            Assert.AreEqual(0, controller.Combat.ConsumePendingAbilityCasts().Count);
         }
 
         [Test]
@@ -187,9 +187,9 @@ namespace Game.Tests
 
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.SmiteDamage, enemy.CurrentHp, 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Smite, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Smite, casts[0].Def.AbilityId);
             Assert.AreEqual(enemy.UnitId, casts[0].TargetUnitId);
         }
 
@@ -207,8 +207,8 @@ namespace Game.Tests
 
             controller.Combat.Tick(0.1f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
-            Assert.AreEqual(HeroAbilityType.Smite, casts[0].Ability);
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(AbilityIds.Smite, casts[0].Def.AbilityId);
             Assert.AreNotEqual(MeleeMaxHp - HeroAbilityRules.StrikeDamage, enemy.CurrentHp);
         }
 
@@ -233,9 +233,9 @@ namespace Game.Tests
             Assert.Greater(ally.ArmorBuffRemaining, HeroAbilityRules.ShieldDurationSeconds - 0.15f);
             Assert.Greater(hero.ArmorBuffRemaining, HeroAbilityRules.ShieldDurationSeconds - 0.15f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Shield, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Shield, casts[0].Def.AbilityId);
 
             controller.Combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
                 enemy.UnitId, ally.UnitId, 100f, 0.1f));
@@ -257,7 +257,7 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(0f, hero.ArmorBuffRemaining, 0.001f);
-            Assert.AreEqual(HeroAbilityType.Smite, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(AbilityIds.Smite, controller.Combat.ConsumePendingAbilityCasts()[0].Def.AbilityId);
         }
 
         [Test]
@@ -278,9 +278,9 @@ namespace Game.Tests
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.ConsecrationDamage, enemy.CurrentHp, 0.001f);
             Assert.Greater(enemy.FrozenRemainingSeconds, HeroAbilityRules.ConsecrationStunSeconds - 0.15f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Consecration, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Consecration, casts[0].Def.AbilityId);
         }
 
         [Test]
@@ -349,9 +349,9 @@ namespace Game.Tests
             Assert.AreEqual(MeleeMaxHp - 200f + HeroAbilityRules.NovaHealAmount, ally.CurrentHp, 0.001f);
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, enemy.CurrentHp, 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.HolyNova, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.HolyNova, casts[0].Def.AbilityId);
             Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
             Assert.AreEqual(ally.WorldPosition.x, casts[0].CenterPosition.x, 0.01f);
             Assert.AreEqual(ally.WorldPosition.z, casts[0].CenterPosition.z, 0.01f);
@@ -384,8 +384,8 @@ namespace Game.Tests
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, farEnemy.CurrentHp, 0.001f);
             Assert.AreEqual(MeleeMaxHp, nearEnemy.CurrentHp, 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
-            Assert.AreEqual(HeroAbilityType.HolyNova, casts[0].Ability);
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(AbilityIds.HolyNova, casts[0].Def.AbilityId);
             Assert.AreEqual(ally.UnitId, casts[0].TargetUnitId);
         }
 
@@ -409,9 +409,9 @@ namespace Game.Tests
                 ally.CurrentHp,
                 0.001f);
 
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.GreaterHeal, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.GreaterHeal, casts[0].Def.AbilityId);
 
             hero.AbilityCooldownRemaining[2] = 99f;
             controller.Combat.Tick(1f);
@@ -461,7 +461,7 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(MeleeMaxHp - 200f + HeroAbilityRules.NovaHealAmount, ally.CurrentHp, 0.001f);
-            Assert.AreEqual(HeroAbilityType.HolyNova, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(AbilityIds.HolyNova, controller.Combat.ConsumePendingAbilityCasts()[0].Def.AbilityId);
         }
 
         [Test]
@@ -503,9 +503,9 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(0, controller.Combat.Corpses.Count);
-            var casts = controller.Combat.ConsumePendingHeroAbilityCasts();
+            var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
-            Assert.AreEqual(HeroAbilityType.Revive, casts[0].Ability);
+            Assert.AreEqual(AbilityIds.Revive, casts[0].Def.AbilityId);
 
             var revived = controller.Combat.GetUnit(casts[0].TargetUnitId);
             Assert.IsNotNull(revived);
@@ -527,7 +527,7 @@ namespace Game.Tests
 
             controller.Combat.Tick(0.1f);
 
-            Assert.AreEqual(HeroAbilityType.HolyNova, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(AbilityIds.HolyNova, controller.Combat.ConsumePendingAbilityCasts()[0].Def.AbilityId);
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.NovaDamage, enemy.CurrentHp, 0.001f);
         }
 
@@ -546,7 +546,7 @@ namespace Game.Tests
             controller.Combat.Tick(0.1f);
 
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.SlamDamage, enemy.CurrentHp, 0.001f);
-            Assert.AreEqual(HeroAbilityType.Slam, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(AbilityIds.Slam, controller.Combat.ConsumePendingAbilityCasts()[0].Def.AbilityId);
         }
 
         [Test]
@@ -584,7 +584,7 @@ namespace Game.Tests
 
             Assert.AreEqual(MeleeMaxHp - HeroAbilityRules.StompDamage, enemy.CurrentHp, 0.001f);
             Assert.Greater(enemy.FrozenRemainingSeconds, HeroAbilityRules.StompStunSeconds - 0.15f);
-            Assert.AreEqual(HeroAbilityType.Stomp, controller.Combat.ConsumePendingHeroAbilityCasts()[0].Ability);
+            Assert.AreEqual(AbilityIds.Stomp, controller.Combat.ConsumePendingAbilityCasts()[0].Def.AbilityId);
         }
 
         [Test]
@@ -601,7 +601,7 @@ namespace Game.Tests
 
             controller.Combat.Tick(0.1f);
 
-            Assert.AreEqual(0, controller.Combat.ConsumePendingHeroAbilityCasts().Count);
+            Assert.AreEqual(0, controller.Combat.ConsumePendingAbilityCasts().Count);
             Assert.AreEqual(0, melee.Abilities.Length);
         }
 

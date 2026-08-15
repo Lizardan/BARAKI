@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using NUnit.Framework;
@@ -20,10 +21,10 @@ namespace Game.Tests
         {
             var kit = AbilityKitDefaults.CreatePriest();
             Assert.AreEqual(4, kit.Length);
-            Assert.AreEqual(AbilityType.GreaterHeal, kit[0].Type);
-            Assert.AreEqual(AbilityType.Revive, kit[1].Type);
-            Assert.AreEqual(AbilityType.HolyNova, kit[2].Type);
-            Assert.AreEqual(AbilityType.AuraArmorPercent, kit[3].Type);
+            Assert.AreEqual(AbilityIds.GreaterHeal, kit[0].AbilityId);
+            Assert.AreEqual(AbilityIds.Revive, kit[1].AbilityId);
+            Assert.AreEqual(AbilityIds.HolyNova, kit[2].AbilityId);
+            Assert.AreEqual(AbilityIds.AuraArmorPercent, kit[3].AbilityId);
             Assert.AreEqual(4, kit[0].UnlockValue);
             Assert.AreEqual(1, kit[2].UnlockValue);
             Assert.IsFalse(string.IsNullOrWhiteSpace(kit[2].DisplayName));
@@ -38,10 +39,10 @@ namespace Game.Tests
         {
             var kit = AbilityKitDefaults.CreateTitan();
             Assert.AreEqual(4, kit.Length);
-            Assert.AreEqual(AbilityType.Rally, kit[0].Type);
-            Assert.AreEqual(AbilityType.Stomp, kit[1].Type);
-            Assert.AreEqual(AbilityType.Slam, kit[2].Type);
-            Assert.AreEqual(AbilityType.AuraMaxHpPercent, kit[3].Type);
+            Assert.AreEqual(AbilityIds.Rally, kit[0].AbilityId);
+            Assert.AreEqual(AbilityIds.Stomp, kit[1].AbilityId);
+            Assert.AreEqual(AbilityIds.Slam, kit[2].AbilityId);
+            Assert.AreEqual(AbilityIds.AuraMaxHpPercent, kit[3].AbilityId);
             Assert.AreEqual("Colossus", kit[3].DisplayName);
             Assert.AreEqual(HeroAbilityRules.AuraMaxHpBonusPercent, kit[3].Percent);
         }
@@ -58,6 +59,38 @@ namespace Game.Tests
         }
 
         [Test]
+        public void DisplayNames_AreUniqueAcrossAllKits()
+        {
+            var names = new HashSet<string>();
+            foreach (var def in CollectAllDefaults())
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(def.DisplayName), $"Ability id {def.AbilityId} has no display name.");
+                Assert.IsTrue(names.Add(def.DisplayName), $"Duplicate ability display name: '{def.DisplayName}'");
+            }
+        }
+
+        static IEnumerable<UnitAbilityDef> CollectAllDefaults()
+        {
+            foreach (var kit in new[]
+                     {
+                         AbilityKitDefaults.CreateKing(),
+                         AbilityKitDefaults.CreatePaladin(),
+                         AbilityKitDefaults.CreatePriest(),
+                         AbilityKitDefaults.CreateTitan(),
+                         AbilityKitDefaults.CreateCaster(),
+                     })
+            {
+                foreach (var def in kit)
+                {
+                    if (def != null)
+                    {
+                        yield return def;
+                    }
+                }
+            }
+        }
+
+        [Test]
         public void HumanHero3Prefab_HasPriestKitWhenSeeded()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -66,9 +99,9 @@ namespace Game.Tests
             var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
             Assert.IsNotNull(kit, "Seed Human_Hero3 via BARAKI/Units/Seed Ability Kits.");
 
-            Assert.AreEqual(4, kit.Slots.Length);
-            Assert.AreEqual(AbilityType.HolyNova, kit.Slots[2].Type);
-            Assert.IsFalse(string.IsNullOrWhiteSpace(kit.Slots[2].Description));
+            Assert.AreEqual(4, kit.Abilities.Length);
+            Assert.AreEqual(AbilityIds.HolyNova, kit.Abilities[2].AbilityId);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(kit.Abilities[2].Description));
         }
 
         [Test]
@@ -80,8 +113,8 @@ namespace Game.Tests
             var kit = prefab.GetComponentInChildren<UnitAbilityKit>(true);
             Assert.IsNotNull(kit, "Seed Human_Titan via BARAKI/Units/Seed Ability Kits.");
 
-            Assert.AreEqual(4, kit.Slots.Length);
-            Assert.AreEqual(AbilityType.Slam, kit.Slots[2].Type);
+            Assert.AreEqual(4, kit.Abilities.Length);
+            Assert.AreEqual(AbilityIds.Slam, kit.Abilities[2].AbilityId);
         }
     }
 }

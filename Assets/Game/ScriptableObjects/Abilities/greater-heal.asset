@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7737522484877688619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eebca00135d6cc4e97ad5e42af79eee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.GreaterHealZoneBehaviour
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: greater-heal
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 31
+  _displayName: Greater Heal
+  _description: "\u0421\u043E\u0437\u0434\u0430\u0451\u0442 \u0431\u043E\u043B\u044C\u0448\u0443\u044E
+    \u0437\u043E\u043D\u0443, \u0432 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0441\u043E\u044E\u0437\u043D\u0438\u043A\u0438
+    \u043B\u0435\u0447\u0430\u0442\u0441\u044F, \u043F\u043E\u043A\u0430 \u0441\u0442\u043E\u044F\u0442
+    \u0432\u043D\u0443\u0442\u0440\u0438."
+  _kind: 0
+  _unlock: 1
+  _unlockValue: 4
+  _damage: 0
+  _heal: 0
+  _healPerSecond: 20
+  _radius: 10
+  _castRange: 0
+  _cooldownSeconds: 10
+  _durationSeconds: 10
+  _percent: 0
+  _manaCost: 0
+  _stunSeconds: 0
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Kind: 3
+    Color: {r: 0.78, g: 0.92, b: 1, a: 1}
+    DurationSeconds: 10
+    BurstHeight: 0
+  _behaviour: {fileID: -7737522484877688619}

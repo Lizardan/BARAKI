@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-4916350946605330367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 037da523c12c4f14fa3fabaef57adf8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.GroundAoeBehaviour
+  _applyUltimateSelfBuff: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: frost
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 2
+  _displayName: Frost
+  _description: "\u041B\u0435\u0434\u044F\u043D\u043E\u0439 \u0432\u0437\u0440\u044B\u0432
+    \u043F\u043E \u0441\u043A\u043E\u043F\u043B\u0435\u043D\u0438\u044E \u0432\u0440\u0430\u0433\u043E\u0432:
+    \u0443\u0440\u043E\u043D \u0438 \u043A\u0440\u0430\u0442\u043A\u0430\u044F \u0437\u0430\u043C\u043E\u0440\u043E\u0437\u043A\u0430."
+  _kind: 0
+  _unlock: 2
+  _unlockValue: 2
+  _damage: 40
+  _heal: 0
+  _healPerSecond: 0
+  _radius: 5
+  _castRange: 6
+  _cooldownSeconds: 14
+  _durationSeconds: 0
+  _percent: 0
+  _manaCost: 75
+  _stunSeconds: 1.5
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Kind: 1
+    Color: {r: 0.35, g: 0.65, b: 1, a: 1}
+    DurationSeconds: 0.9
+    BurstHeight: 0
+  _behaviour: {fileID: -4916350946605330367}

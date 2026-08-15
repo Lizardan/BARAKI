@@ -119,7 +119,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void RoundTrip_V9_PreservesSpellCasts()
+        public void RoundTrip_V16_PreservesSpellCasts()
         {
             var original = new MatchSnapshot
             {
@@ -134,7 +134,7 @@ namespace Game.Tests
                         Serial = 3,
                         CasterUnitId = 11,
                         OwnerSlot = 0,
-                        SpellType = (byte)CasterSpellType.Frost,
+                        AbilityId = (ushort)AbilityIds.Frost,
                         TargetUnitId = 14,
                         CenterX = 12.5f,
                         CenterZ = -4.25f,
@@ -145,7 +145,7 @@ namespace Game.Tests
                         Serial = 4,
                         CasterUnitId = 11,
                         OwnerSlot = 0,
-                        SpellType = (byte)CasterSpellType.Heal,
+                        AbilityId = (ushort)AbilityIds.CasterHeal,
                         TargetUnitId = 12,
                         CenterX = 8f,
                         CenterZ = 2f,
@@ -159,12 +159,12 @@ namespace Game.Tests
             Assert.AreEqual(2, restored.SpellCasts.Length);
             Assert.AreEqual(3, restored.SpellCasts[0].Serial);
             Assert.AreEqual(11, restored.SpellCasts[0].CasterUnitId);
-            Assert.AreEqual((byte)CasterSpellType.Frost, restored.SpellCasts[0].SpellType);
+            Assert.AreEqual((ushort)AbilityIds.Frost, restored.SpellCasts[0].AbilityId);
             Assert.AreEqual(14, restored.SpellCasts[0].TargetUnitId);
             Assert.AreEqual(12.5f, restored.SpellCasts[0].CenterX, 0.01f);
             Assert.AreEqual(-4.25f, restored.SpellCasts[0].CenterZ, 0.01f);
             Assert.AreEqual(5f, restored.SpellCasts[0].Radius, 0.01f);
-            Assert.AreEqual((byte)CasterSpellType.Heal, restored.SpellCasts[1].SpellType);
+            Assert.AreEqual((ushort)AbilityIds.CasterHeal, restored.SpellCasts[1].AbilityId);
         }
 
         [Test]

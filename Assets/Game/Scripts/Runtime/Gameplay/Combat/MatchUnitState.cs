@@ -39,7 +39,7 @@ namespace Game.Gameplay.Combat
             HeroSlot = heroSlot;
             Level = level;
             IsParkedAtBase = false;
-            Abilities = System.Array.Empty<UnitAbilitySlot>();
+            Abilities = System.Array.Empty<UnitAbilityDef>();
             AbilityCooldownRemaining = System.Array.Empty<float>();
         }
 
@@ -54,8 +54,8 @@ namespace Game.Gameplay.Combat
         public int HeroSlot { get; }
         /// <summary>Hero level this unit was spawned with (per-match slot level).</summary>
         public int Level { get; }
-        /// <summary>Copied ability kit. Empty = no spells.</summary>
-        public UnitAbilitySlot[] Abilities { get; set; }
+        /// <summary>Copied ability kit (shared def references). Empty = no spells.</summary>
+        public UnitAbilityDef[] Abilities { get; set; }
 
         /// <summary>Per-slot cooldown remaining, parallel to <see cref="Abilities"/>.</summary>
         public float[] AbilityCooldownRemaining { get; set; }
@@ -70,16 +70,6 @@ namespace Game.Gameplay.Combat
         public float MarchSpawnDistance { get; }
         public float MarchProgressDistance { get; set; }
         public float AttackCooldownRemaining { get; set; }
-        /// <summary>Cooldown until this unit can cast Heal again (Caster role). Transient host state.</summary>
-        public float HealCooldownRemaining { get; set; }
-        /// <summary>Cooldown until this unit can cast Frost again (Caster role). Transient host state.</summary>
-        public float FrostCooldownRemaining { get; set; }
-        /// <summary>Cooldown until this unit can cast Resurrect again (Caster role). Transient host state.</summary>
-        public float ResurrectCooldownRemaining { get; set; }
-        /// <summary>Cooldown until this hero can Strike again (hero ability). Transient host state.</summary>
-        public float StrikeCooldownRemaining { get; set; }
-        /// <summary>Cooldown until this hero can cast the Ultimate again. Transient host state.</summary>
-        public float UltimateCooldownRemaining { get; set; }
         /// <summary>Remaining self-buff seconds from the Ultimate (+damage). Transient host state.</summary>
         public float UltimateBuffRemaining { get; set; }
         /// <summary>Remaining Paladin Shield armor-buff seconds. Transient host state.</summary>
