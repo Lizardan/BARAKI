@@ -57,6 +57,7 @@ deploy_building: BUILDING_BARRACKS
 deploy_gold: 2500
 cooldown_after_death: 300
 stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan; рантайм не множит снова
+attack_range: 3.0               # TitanRules.AttackRange; vs-titan hit reach = max(attacker, 3)
 xp_leveling: same_as_hero
 visual: TT_Peasant
 visual_prefab: Human_Titan

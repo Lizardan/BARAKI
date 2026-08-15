@@ -31,6 +31,8 @@ namespace Game.Gameplay.Match
             public Renderer[] CachedRenderers;
             public UnitRole Role;
             public bool IsParkedAtBase;
+            /// <summary>World model scale relative to melee creep (titan ≈ 3).</summary>
+            public float LocomotionScaleVsCreep = 1f;
         }
 
         sealed class DyingVisual
@@ -326,7 +328,9 @@ namespace Game.Gameplay.Match
                 visual.AnimPlayback,
                 unit.BehaviorState,
                 fireAttack,
-                fireDeath: false);
+                fireDeath: false,
+                unit.MarchMoveSpeed,
+                visual.LocomotionScaleVsCreep);
 
             if (fireAttack)
             {
@@ -376,7 +380,9 @@ namespace Game.Gameplay.Match
                     visual.AnimPlayback,
                     UnitBehaviorState.Attack,
                     fireAttack: false,
-                    fireDeath: true);
+                    fireDeath: true,
+                    moveSpeed: UnitCombatAnimatorDriver.ReferenceMoveSpeed,
+                    visualScaleVsCreep: visual.LocomotionScaleVsCreep);
             }
 
             _dyingVisuals.Add(new DyingVisual
@@ -457,13 +463,15 @@ namespace Game.Gameplay.Match
                 model = CreateFallbackCapsule(root, unit.OwnerSlot, unit.Role);
             }
 
+            // Measure mesh height from the model only — ignore VFX under root (titan aura, etc.).
+            var barHeight = ComputeVisualHeight(root, model) + _statusBarClearance;
+            var statusBars = UnitWorldStatusBars.Create(root, barHeight, unit.Stats.HasMana);
+
             if (unit.Role == UnitRole.Titan)
             {
                 AttachTitanDivineAura(root);
             }
 
-            var barHeight = ComputeVisualHeight(root) + _statusBarClearance;
-            var statusBars = UnitWorldStatusBars.Create(root, barHeight, unit.Stats.HasMana);
             statusBars.SetHealth(1f);
             if (unit.Stats.HasMana)
             {
@@ -479,6 +487,7 @@ namespace Game.Gameplay.Match
                 GroundRingDiameter = MatchPickFootprint.GetModelFootprintDiameter(model),
                 Role = unit.Role,
                 IsParkedAtBase = unit.IsParkedAtBase,
+                LocomotionScaleVsCreep = ResolveLocomotionScaleVsCreep(unit.Role),
             };
             AttachUnitPickCollider(unitVisual, unit);
             return unitVisual;
@@ -581,11 +590,7 @@ namespace Game.Gameplay.Match
             var color = fx.Color;
             if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
             {
-                SpellFxFactory.CreateLabel(
-                    _root,
-                    casterTop + Vector3.up * 0.45f,
-                    def.DisplayName,
-                    color);
+                SpellFxFactory.CreateLabel(_root, casterTop, def.DisplayName, color);
             }
 
             var duration = fx.DurationSeconds > 0f ? fx.DurationSeconds : DefaultDuration(fx.Kind);
@@ -673,8 +678,12 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
-            position = visual.StatusBars.transform.position
-                       + Vector3.up * visual.StatusBars.HealthBarTopLocalY;
+            // Local Y follows the pitched billboard so the label sits on the HP strip face.
+            const float labelClearance = 0.18f;
+            position = visual.StatusBars.transform.TransformPoint(
+                0f,
+                visual.StatusBars.HealthBarTopLocalY + labelClearance,
+                0f);
             return true;
         }
 
@@ -822,7 +831,7 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var height = Mathf.Max(1f, ComputeVisualHeight(visual.Root));
+            var height = Mathf.Max(1f, ComputeVisualHeight(visual.Root, visual.Model));
             var collider = MatchPickColliderUtility.EnsurePickCollider(
                 visual.Root.gameObject,
                 new Vector3(0f, height * 0.5f, 0f),
@@ -868,22 +877,20 @@ namespace Game.Gameplay.Match
             return true;
         }
 
-        static float ComputeVisualHeight(Transform root)
+        /// <summary>
+        /// World height from <paramref name="feetRoot"/> up to the top of mesh/skinned renderers
+        /// under <paramref name="measureFrom"/> (particles/trails excluded).
+        /// </summary>
+        internal static float ComputeVisualHeight(Transform feetRoot, Transform measureFrom = null)
         {
-            var renderers = root.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0)
-            {
-                return 1.8f;
-            }
-
-            var bounds = renderers[0].bounds;
-            for (var i = 1; i < renderers.Length; i++)
-            {
-                bounds.Encapsulate(renderers[i].bounds);
-            }
-
-            return bounds.max.y - root.position.y;
+            return UnitVisualHeight.MeasureAboveFeet(feetRoot, measureFrom);
         }
+
+        /// <summary>
+        /// Relative stride size vs melee creep (hero 1.15, titan 3, creeps 1).
+        /// </summary>
+        static float ResolveLocomotionScaleVsCreep(UnitRole role) =>
+            UnitGreyboxVisuals.GetChampionVisualScale(role);
 
         void OnDisable()
         {

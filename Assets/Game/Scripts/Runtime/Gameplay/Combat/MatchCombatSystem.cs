@@ -1293,7 +1293,8 @@ namespace Game.Gameplay.Combat
             if (target != null && CombatRules.CanAttackTarget(unit.Role, target.Role))
             {
                 var distance = HorizontalDistance(unit.WorldPosition, target.WorldPosition);
-                if (distance <= unit.Stats.AttackRange)
+                var reach = CombatRules.GetUnitAttackReach(unit.Stats.AttackRange, target.Role);
+                if (distance <= reach)
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
                     TickAttack(unit, target, deltaTime);
@@ -1405,7 +1406,8 @@ namespace Game.Gameplay.Combat
             }
 
             var distance = HorizontalDistance(unit.WorldPosition, target.WorldPosition);
-            if (distance > unit.Stats.AttackRange)
+            var reach = CombatRules.GetUnitAttackReach(unit.Stats.AttackRange, target.Role);
+            if (distance > reach)
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
                 return;
@@ -1931,7 +1933,8 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                if (HorizontalDistance(ally.WorldPosition, enemy.WorldPosition) <= ally.Stats.AttackRange * 1.25f)
+                var allyReach = CombatRules.GetUnitAttackReach(ally.Stats.AttackRange, enemy.Role);
+                if (HorizontalDistance(ally.WorldPosition, enemy.WorldPosition) <= allyReach * 1.25f)
                 {
                     return true;
                 }

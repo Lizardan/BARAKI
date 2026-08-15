@@ -75,6 +75,12 @@ private void OnDisable()
 | `Dropdown` (int index) | `DropdownField` + `OnIndexChangedAsObservable` |
 | `ScrollRect` | `ScrollView` |
 
+## Pointer / screen → panel
+
+Input System (`Mouse.position`) — origin **снизу слева**; UI Toolkit `RuntimePanelUtils.ScreenToPanel` —
+origin **сверху слева**. Всегда конвертировать через `MatchSelectionUiPointer.ScreenToPanelPosition`
+(или `ToUiToolkitScreenPosition`), иначе элементы у курсора (напр. `TargetingTooltip`) «зеркалятся» по Y.
+
 ## Controller pattern
 
 - **ViewModel:** `ReactiveProperty`, `ReactiveCommand` — без ссылок на `VisualElement`

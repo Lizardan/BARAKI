@@ -61,7 +61,7 @@ namespace Game.Gameplay.Data
             _marchSpeedOverride = definition.MarchSpeedOverride;
         }
 
-        public void CopyFrom(HeroDefinition definition, float hpArmorDamageMultiplier = 1f)
+        public void CopyFrom(HeroDefinition definition, float hpArmorDamageMultiplier = 1f, float? attackRangeOverride = null)
         {
             if (definition == null)
             {
@@ -74,7 +74,7 @@ namespace Game.Gameplay.Data
             _damageMin = definition.DamageMin * scale;
             _damageMax = definition.DamageMax * scale;
             _attackSpeed = definition.AttackSpeed;
-            _attackRange = definition.AttackRange;
+            _attackRange = attackRangeOverride ?? definition.AttackRange;
             _moveSpeed = definition.MoveSpeed;
             _goldBounty = definition.GoldBounty;
             _maxMana = 0f;

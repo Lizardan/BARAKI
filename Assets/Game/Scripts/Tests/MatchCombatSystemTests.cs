@@ -645,6 +645,41 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Tick_TitanAttackRange_HitsAndIsHitAtThree()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+
+            var combat = new MatchCombatSystem();
+            combat.Reset(controller.Players, controller.Graph, randomSeed: 21);
+
+            var titanStats = new UnitCombatStats(
+                UnitRole.Titan, 1800f, 0f, 40f, 40f, 5f, TitanRules.AttackRange, 0f, 1);
+            var meleeStats = new UnitCombatStats(
+                UnitRole.Melee, 200f, 0f, 25f, 25f, 5f, 1.5f, 0f, 1);
+
+            controller.Graph.TryGetLane(0, GameIds.Lanes.Left, out var lane0);
+            controller.Graph.TryGetLane(1, GameIds.Lanes.Left, out var lane1);
+            var meet0 = FindDistanceNearArenaCenter(lane0.Path);
+            var meet1 = FindDistanceNearArenaCenter(lane1.Path);
+
+            var titan = combat.SpawnUnit(0, GameIds.Lanes.Left, UnitRole.Titan, titanStats, meet0);
+            var enemy = combat.SpawnUnit(1, GameIds.Lanes.Left, UnitRole.Melee, meleeStats, meet1);
+            titan.Abilities = System.Array.Empty<UnitAbilityDef>();
+            // Between melee 1.5 and titan 3: only titan-body reach should allow both to hit.
+            enemy.WorldPosition = titan.WorldPosition + new Vector3(2.9f, 0f, 0f);
+
+            Assert.AreEqual(TitanRules.AttackRange, titan.Stats.AttackRange, 0.001f);
+            Assert.AreEqual(3f, CombatRules.GetUnitAttackReach(enemy.Stats.AttackRange, UnitRole.Titan), 0.001f);
+
+            combat.Tick(0.25f);
+            combat.Tick(1f);
+
+            Assert.Less(enemy.CurrentHp, 200f, "Titan should hit melee at range 2.9");
+            Assert.Less(titan.CurrentHp, 1800f, "Melee should hit titan at range 2.9 via titan body reach");
+        }
+
+        [Test]
         public void Tick_AfterKill_PursuesAnotherEnemyInAggroRadius()
         {
             var controller = new MatchController();

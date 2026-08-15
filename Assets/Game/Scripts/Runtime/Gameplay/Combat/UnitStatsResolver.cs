@@ -83,7 +83,7 @@ namespace Game.Gameplay.Combat
                 settings.DamageMin,
                 settings.DamageMax,
                 settings.AttackSpeed,
-                settings.AttackRange,
+                role == UnitRole.Titan ? TitanRules.AttackRange : settings.AttackRange,
                 settings.MoveSpeed,
                 settings.GoldBounty,
                 ResolveMaxMana(settings, role));

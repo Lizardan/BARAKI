@@ -101,7 +101,10 @@ namespace Game.Editor
                          GameIds.Races.Human,
                          UnitRole.Titan,
                          heroSlot: 0,
-                         settings => settings.CopyFrom(titanBase, TitanRules.BaseStatMultiplier),
+                         settings => settings.CopyFrom(
+                             titanBase,
+                             TitanRules.BaseStatMultiplier,
+                             TitanRules.AttackRange),
                          out var titanPath))
             {
                 synced.Add($"Titan: {titanPath}");

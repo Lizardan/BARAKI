@@ -13,6 +13,7 @@ namespace Game.Gameplay.Match
     /// <summary>
     /// Drives unit combat clips via immediate <see cref="Animator.CrossFade"/> on behavior changes.
     /// Never waits for clip exit time — a new status always blends to the matching state right away.
+    /// Walk clip rate scales with move speed and visual size so feet match ground travel.
     /// </summary>
     public static class UnitCombatAnimatorDriver
     {
@@ -30,8 +31,43 @@ namespace Game.Gameplay.Match
         public const float DeathCrossFadeDuration = 0.12f;
         public const float DeathVisualSeconds = 3.2f;
 
+        /// <summary>Melee creep baseline (GDD / UNIT_HUMAN_MELEE) — walk clip is authored around this.</summary>
+        public const float ReferenceMoveSpeed = 4f;
+
+        public const float MinWalkPlaybackSpeed = 0.2f;
+        public const float MaxWalkPlaybackSpeed = 2.5f;
+
+        /// <summary>Animator float used only as Stand↔Walk gate (0 or 1), not clip rate.</summary>
         public static float ResolveSpeed(UnitBehaviorState behaviorState) =>
             behaviorState is UnitBehaviorState.Move or UnitBehaviorState.Chase ? 1f : 0f;
+
+        /// <summary>
+        /// Walk clip playback: faster when moving faster, slower when the model is larger
+        /// (same world speed + bigger stride ⇒ fewer steps per second).
+        /// </summary>
+        public static float ResolveWalkPlaybackSpeed(float moveSpeed, float visualScaleVsCreep)
+        {
+            var speedFactor = Mathf.Max(0f, moveSpeed) / ReferenceMoveSpeed;
+            var sizeFactor = 1f / Mathf.Max(0.01f, visualScaleVsCreep);
+            return Mathf.Clamp(speedFactor * sizeFactor, MinWalkPlaybackSpeed, MaxWalkPlaybackSpeed);
+        }
+
+        /// <summary>
+        /// Global <see cref="Animator.speed"/>: scaled only while walking; attack/stand/death stay at 1.
+        /// </summary>
+        public static float ResolveAnimatorPlaybackSpeed(
+            UnitBehaviorState behaviorState,
+            float moveSpeed,
+            float visualScaleVsCreep,
+            bool isDead = false)
+        {
+            if (isDead || ResolveSpeed(behaviorState) <= 0.1f)
+            {
+                return 1f;
+            }
+
+            return ResolveWalkPlaybackSpeed(moveSpeed, visualScaleVsCreep);
+        }
 
         public static string ResolveLocomotionState(UnitBehaviorState behaviorState) =>
             ResolveSpeed(behaviorState) > 0.1f ? WalkState : StandState;
@@ -107,6 +143,7 @@ namespace Game.Gameplay.Match
                 throw new System.ArgumentNullException(nameof(playback));
             }
 
+            animator.speed = 1f;
             animator.SetFloat(SpeedParam, 0f);
             CrossFade(animator, playback, StandState, LocomotionCrossFadeDuration, force: false);
         }
@@ -116,7 +153,9 @@ namespace Game.Gameplay.Match
             UnitCombatAnimatorPlayback playback,
             UnitBehaviorState behaviorState,
             bool fireAttack,
-            bool fireDeath)
+            bool fireDeath,
+            float moveSpeed = ReferenceMoveSpeed,
+            float visualScaleVsCreep = 1f)
         {
             if (animator == null)
             {
@@ -128,18 +167,29 @@ namespace Game.Gameplay.Match
                 throw new System.ArgumentNullException(nameof(playback));
             }
 
-            animator.SetFloat(SpeedParam, ResolveSpeed(behaviorState));
-
             if (fireDeath || playback.IsDead)
             {
                 playback.IsDead = true;
             }
+
+            animator.SetFloat(SpeedParam, ResolveSpeed(behaviorState));
+            animator.speed = ResolveAnimatorPlaybackSpeed(
+                behaviorState,
+                moveSpeed,
+                visualScaleVsCreep,
+                playback.IsDead);
 
             var desired = ResolveDesiredState(
                 behaviorState,
                 fireAttack,
                 fireDeath,
                 playback.IsDead);
+
+            // Attack/death must not inherit a slowed titan walk rate.
+            if (desired is AttackState or DeathState)
+            {
+                animator.speed = 1f;
+            }
 
             var forceRestart = ShouldForceRestartAttack(fireAttack, desired);
             CrossFade(

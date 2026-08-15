@@ -309,9 +309,10 @@ redeploy_cost_again: true      # повторный выпуск после CD �
 re_research_after_death: false # полоску 180s набирать снова не нужно
 xp_leveling: same_as_hero
 stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan (UnitCombatSettings); рантайм не множит снова
+attack_range: 3.0               # TitanRules.AttackRange (hero/creep melee = 1.5); attackers vs titan get the same min reach
 visual: TT_Peasant
 visual_prefab: Human_Titan
-visual_scale_vs_creep: 2.0      # UnitGreyboxVisuals.TitanVsCreepScale; presenter Apply на spawn/park/deploy
+visual_scale_vs_creep: 3.0      # UnitGreyboxVisuals.TitanVsCreepScale; presenter Apply на spawn/park/deploy
 visual_aura: soft_building_burn # FX_Building_burning_small + point glow; SoftenLoopingFx
 bonus_slot: BONUS_SLOT_TITAN
 mvp: true

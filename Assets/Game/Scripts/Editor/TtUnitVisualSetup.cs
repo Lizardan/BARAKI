@@ -330,7 +330,10 @@ namespace Game.Editor
 
             if (setup.SeedTitanStats)
             {
-                settings.CopyFrom(race.GetHeroBySlot(1), TitanRules.BaseStatMultiplier);
+                settings.CopyFrom(
+                    race.GetHeroBySlot(1),
+                    TitanRules.BaseStatMultiplier,
+                    TitanRules.AttackRange);
                 return;
             }
 

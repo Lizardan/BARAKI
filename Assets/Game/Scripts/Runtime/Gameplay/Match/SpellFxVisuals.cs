@@ -13,8 +13,8 @@ namespace Game.Gameplay.Match
 
         Renderer[] _renderers;
         Color[] _baseColors;
-        TextMesh _label;
-        Color _labelColor;
+        TextMesh[] _labels;
+        Color[] _labelColors;
         float _duration;
         float _riseSpeed;
         float _fadeOutStart;
@@ -43,11 +43,11 @@ namespace Game.Gameplay.Match
             _fadeOutStart = _duration * Mathf.Clamp01(fadeOutNormalized);
         }
 
-        /// <summary>Fade-out for a legacy TextMesh label (vertex colors, not property blocks).</summary>
-        public void ConfigureLabel(TextMesh label, Color color, float duration, float riseSpeed)
+        /// <summary>Fade-out for legacy TextMesh label stack (fill + outline), vertex colors.</summary>
+        public void ConfigureLabel(TextMesh[] labels, Color[] colors, float duration, float riseSpeed)
         {
-            _label = label;
-            _labelColor = color;
+            _labels = labels;
+            _labelColors = colors;
             _duration = Mathf.Max(0.05f, duration);
             _riseSpeed = riseSpeed;
             _billboard = true;
@@ -100,11 +100,22 @@ namespace Game.Gameplay.Match
 
         void ApplyAlpha(float alpha)
         {
-            if (_label != null)
+            if (_labels != null && _labelColors != null)
             {
-                var c = _labelColor;
-                c.a = Mathf.Max(0f, c.a * alpha);
-                _label.color = c;
+                var count = Mathf.Min(_labels.Length, _labelColors.Length);
+                for (var i = 0; i < count; i++)
+                {
+                    var label = _labels[i];
+                    if (label == null)
+                    {
+                        continue;
+                    }
+
+                    var c = _labelColors[i];
+                    c.a = Mathf.Max(0f, c.a * alpha);
+                    label.color = c;
+                }
+
                 return;
             }
 
@@ -135,10 +146,31 @@ namespace Game.Gameplay.Match
     /// <summary>Builds spell FX from Unity primitives + legacy TextMesh (URP Unlit materials).</summary>
     public static class SpellFxFactory
     {
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int ColorId = Shader.PropertyToID("_Color");
+
         const float PlusArmLength = 0.55f;
         const float PlusArmThickness = 0.14f;
         const float RingSegmentSize = 0.55f;
         const float RingThickness = 0.07f;
+        const float LabelWorldScale = 0.38f;
+        const int LabelFontSize = 30;
+        const float LabelOutlineOffset = 0.055f;
+        /// <summary>Local −Z faces the camera; fill sits slightly closer than outline copies.</summary>
+        const float LabelFillLocalZ = -0.01f;
+        const float LabelOutlineLocalZ = 0.01f;
+
+        static readonly Vector2[] LabelOutlineOffsets =
+        {
+            new(-1f, 0f),
+            new(1f, 0f),
+            new(0f, -1f),
+            new(0f, 1f),
+            new(-1f, -1f),
+            new(-1f, 1f),
+            new(1f, -1f),
+            new(1f, 1f),
+        };
 
         static Material s_transparentMaterial;
         static Material s_textMaterial;
@@ -298,35 +330,101 @@ namespace Game.Gameplay.Match
             string text,
             Color color,
             float duration = 1.4f,
-            float riseSpeed = 0.7f)
+            float riseSpeed = 0.45f)
         {
             var root = new GameObject("SpellName");
             root.transform.SetParent(parent, false);
             root.transform.position = position;
-            root.transform.localScale = Vector3.one * 0.25f;
+            root.transform.localScale = Vector3.one * LabelWorldScale;
+
+            var fillColor = MakeReadableFill(color);
+            var outlineColor = new Color(0f, 0f, 0f, 0.95f);
+            var labels = new TextMesh[LabelOutlineOffsets.Length + 1];
+            var colors = new Color[labels.Length];
+
+            for (var i = 0; i < LabelOutlineOffsets.Length; i++)
+            {
+                var offset = LabelOutlineOffsets[i] * LabelOutlineOffset;
+                labels[i] = CreateTextMesh(
+                    root.transform,
+                    "Outline",
+                    text,
+                    outlineColor,
+                    new Vector3(offset.x, offset.y, LabelOutlineLocalZ));
+                colors[i] = outlineColor;
+            }
+
+            labels[^1] = CreateTextMesh(
+                root.transform,
+                "Fill",
+                text,
+                fillColor,
+                new Vector3(0f, 0f, LabelFillLocalZ));
+            colors[^1] = fillColor;
+
+            var component = root.AddComponent<SpellFxRiseFade>();
+            component.ConfigureLabel(labels, colors, duration, riseSpeed);
+            return root;
+        }
+
+        static TextMesh CreateTextMesh(
+            Transform parent,
+            string objectName,
+            string text,
+            Color color,
+            Vector3 localPosition)
+        {
+            var go = new GameObject(objectName);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPosition;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
 
             var font = GetFont();
-            var label = root.AddComponent<TextMesh>();
+            var label = go.AddComponent<TextMesh>();
             label.text = text;
-            label.fontSize = 24;
-            label.anchor = TextAnchor.MiddleCenter;
+            label.fontSize = LabelFontSize;
+            label.fontStyle = FontStyle.Bold;
+            label.anchor = TextAnchor.LowerCenter;
             label.alignment = TextAlignment.Center;
-            label.color = Color.white;
+            label.color = color;
             label.characterSize = 1f;
             if (font != null)
             {
                 label.font = font;
             }
 
-            var material = GetTextMaterial();
-            if (material != null)
+            // Font atlas is black RGB + alpha. URP Unlit shows RGB → solid black glyphs.
+            // Font material uses alpha as the mask and multiplies TextMesh.color correctly.
+            var renderer = label.GetComponent<Renderer>();
+            if (font != null && font.material != null)
             {
-                label.GetComponent<Renderer>().sharedMaterial = material;
+                renderer.sharedMaterial = font.material;
+            }
+            else
+            {
+                var material = GetTextMaterial();
+                if (material != null)
+                {
+                    renderer.sharedMaterial = material;
+                    var block = new MaterialPropertyBlock();
+                    block.SetColor(BaseColorId, color);
+                    block.SetColor(ColorId, color);
+                    renderer.SetPropertyBlock(block);
+                }
             }
 
-            var component = root.AddComponent<SpellFxRiseFade>();
-            component.ConfigureLabel(label, color, duration, riseSpeed);
-            return root;
+            return label;
+        }
+
+        /// <summary>
+        /// Ability FX tint, brightened toward white so the fill stays readable over the black outline.
+        /// </summary>
+        static Color MakeReadableFill(Color color)
+        {
+            var fill = Color.Lerp(color, Color.white, 0.35f);
+            fill.a = 1f;
+            return fill;
         }
 
         static Transform CreatePrimitiveCube(Transform parent, string name, Vector3 scale, Color color)

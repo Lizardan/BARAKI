@@ -619,7 +619,7 @@ namespace Game.Tests
             new UnitCombatStats(UnitRole.Hero, 600f, 4f, 35f, 45f, 1f, 1.5f, 4f, 80);
 
         static UnitCombatStats TitanStats() =>
-            new UnitCombatStats(UnitRole.Titan, 1800f, 12f, 105f, 135f, 1f, 1.5f, 4f, 80);
+            new UnitCombatStats(UnitRole.Titan, 1800f, 12f, 105f, 135f, 1f, 3f, 4f, 80);
 
         static UnitCombatStats MeleeStats() =>
             new UnitCombatStats(UnitRole.Melee, MeleeMaxHp, 0f, 35f, 45f, 1f, 1.5f, 4f, 80);

@@ -1,5 +1,6 @@
 using System;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using UnityEngine;
 
@@ -16,6 +17,15 @@ namespace Game.Gameplay.Combat
         /// </summary>
         public static float GetBuildingAttackReach(float attackRange) =>
             attackRange + MatchPickFootprint.DefaultUnitDiameter * 0.5f;
+
+        /// <summary>
+        /// Unit-vs-unit hit reach. Oversized titan body: attackers get at least
+        /// <see cref="TitanRules.AttackRange"/> against a titan (same as the titan's own melee).
+        /// </summary>
+        public static float GetUnitAttackReach(float attackRange, UnitRole targetRole) =>
+            targetRole == UnitRole.Titan
+                ? Mathf.Max(attackRange, TitanRules.AttackRange)
+                : attackRange;
 
         public static float RollDamage(float damageMin, float damageMax, System.Random random)
         {

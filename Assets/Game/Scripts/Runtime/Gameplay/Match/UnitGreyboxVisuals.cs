@@ -33,7 +33,7 @@ namespace Game.Gameplay.Match
         public const float HeroVsCreepScale = 1.15f;
 
         /// <summary>Titan world scale relative to a regular creep (melee baseline).</summary>
-        public const float TitanVsCreepScale = 2f;
+        public const float TitanVsCreepScale = 3f;
 
         /// <summary>Local scale of the looping divine burn FX parented under the titan root.</summary>
         public const float TitanAuraFxScale = 0.5f;

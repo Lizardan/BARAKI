@@ -7,7 +7,6 @@ using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using Game.UI;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace Game.UI.Controllers
@@ -1503,15 +1502,15 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var mouse = Mouse.current;
-            if (mouse == null)
+            if (!MatchSelectionUiPointer.TryGetScreenPosition(out var screenPosition))
             {
                 return;
             }
 
-            var panelPos = RuntimePanelUtils.ScreenToPanel(
+            // Input System is bottom-left; UI Toolkit ScreenToPanel expects top-left.
+            var panelPos = MatchSelectionUiPointer.ScreenToPanelPosition(
                 _targetingTooltip.panel,
-                mouse.position.ReadValue());
+                screenPosition);
             var rootBound = _hudRoot.worldBound;
             _targetingTooltip.style.left = panelPos.x - rootBound.x + TargetingTooltipOffsetX;
             _targetingTooltip.style.top = panelPos.y - rootBound.y + TargetingTooltipOffsetY;

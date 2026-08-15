@@ -58,5 +58,14 @@ namespace Game.Tests
             Assert.AreEqual(8f, CombatRules.GetAggroRadius(melee), 0.01f);
             Assert.AreEqual(20f, CombatRules.GetAggroRadius(ranged), 0.01f);
         }
+
+        [Test]
+        public void GetUnitAttackReach_ExtendsAgainstTitanToTitanMeleeRange()
+        {
+            Assert.AreEqual(3f, CombatRules.GetUnitAttackReach(1.5f, UnitRole.Titan), 0.001f);
+            Assert.AreEqual(1.5f, CombatRules.GetUnitAttackReach(1.5f, UnitRole.Melee), 0.001f);
+            Assert.AreEqual(8f, CombatRules.GetUnitAttackReach(8f, UnitRole.Titan), 0.001f);
+            Assert.AreEqual(3f, CombatRules.GetUnitAttackReach(3f, UnitRole.Melee), 0.001f);
+        }
     }
 }

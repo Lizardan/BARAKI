@@ -18,6 +18,7 @@ namespace Game.Tests
             Assert.AreEqual(3, TitanRules.RequiredHeroesHired);
             Assert.AreEqual(3, TitanRules.RequiredHeroesIdleAtBase);
             Assert.AreEqual(3f, TitanRules.BaseStatMultiplier);
+            Assert.AreEqual(3f, TitanRules.AttackRange);
         }
 
         [Test]
@@ -99,7 +100,7 @@ namespace Game.Tests
             Assert.AreEqual(105f, titan.DamageMin, 0.001f);
             Assert.AreEqual(135f, titan.DamageMax, 0.001f);
             Assert.AreEqual(1f, titan.AttackSpeed, 0.001f);
-            Assert.AreEqual(1.5f, titan.AttackRange, 0.001f);
+            Assert.AreEqual(3f, titan.AttackRange, 0.001f);
             Assert.AreEqual(4f, titan.MoveSpeed, 0.001f);
             Assert.AreEqual(80, titan.GoldBounty);
         }

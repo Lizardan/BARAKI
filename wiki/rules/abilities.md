@@ -78,6 +78,14 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
    (`AbilityCastEvent { AbilityId, CasterUnitId, TargetUnitId, Position }`).
 5. Пассивные ауры кастуются всегда через `QueryAura` (см. ниже).
 
+## World FX презентер (`MatchCombatPresenter` / `SpellFxFactory`)
+
+- Имя способности: `SpellFxFactory.CreateLabel` — жирный TextMesh + чёрная 8-dir обводка,
+  якорь `LowerCenter`, спавн **прямо над полоской HP** кастера
+  (`StatusBars.TransformPoint(0, HealthBarTopLocalY + clearance, 0)`).
+- Высота HP-полосок: `UnitVisualHeight.MeasureAboveFeet` меряет только `MeshRenderer` /
+  `SkinnedMeshRenderer` у модели. Particle/trail (aura титана и т.п.) **не** поднимают бар.
+
 ## Поведения (`Combat/Abilities/`)
 
 | Behaviour | Суть | Используется |
@@ -131,7 +139,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 Каст: слот 9 main → targeting mode (`MatchSelectionBridge.BeginMainExtraAbilityTargeting`) →
 LMB по цели → `TryCastMainExtraAbility` / net `RequestCastMainExtraAbility`.
 UX прицела: красный крестик (`MainExtraAbilityCursor`), красное ground-кольцо на валидном
-hover (`MatchMainExtraTargetingRingPresenter`), tooltip имени у курсора (`TargetingTooltip` в MatchHud).
+hover (`MatchMainExtraTargetingRingPresenter`), tooltip имени у курсора (`TargetingTooltip` в MatchHud;
+позиция через `MatchSelectionUiPointer.ScreenToPanelPosition` — Input System Y снизу, UITK сверху).
 Отмена: RMB / Esc / клик в пустоту.
 VFX: `FxKind.SkyBeam` — луч с неба в точку удара; уходит в снапшот `SpellCasts`
 (`AbilityIds.MainBuildingSmite=100` / `MainUnitSmite=101`) — видят все клиенты.
@@ -162,3 +171,4 @@ HP зданий растут с уровнем (main 2000/2500/3000, barracks 80
 - `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts` / `RoundTrip_V17_PreservesDivineBlessingFields` /
   `RoundTrip_V18_PreservesMainManaAndCooldown`,
   `MatchSnapshotApplyTests`, `MainExtraAbilityRulesTests`, `DivineBlessingMatchControllerTests`.
+- `UnitVisualHeightTests` — высота HP-полоски не раздувается particle VFX (aura титана).

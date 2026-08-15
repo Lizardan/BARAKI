@@ -28,9 +28,14 @@ ScriptableObjects/
 ## Правила
 
 - Новая раса: `Races/<PluralRaceName>/` с теми же категориями `Heroes/` и `Units/`.
-- Титан: runtime-scale `UnitGreyboxVisuals.TitanVsCreepScale` (**×2** к creep), aura —
+- Титан: runtime-scale `UnitGreyboxVisuals.TitanVsCreepScale` (**×3** к creep), aura —
   `MatchCombatPresenter.AttachTitanDivineAura` (TT burning_small + soft point light).
   Масштаб применяется при любом spawn (park на базе и deploy с barracks).
+  Walk: `UnitCombatAnimatorDriver` крутит `Animator.speed` =
+  `(moveSpeed / 4) / visualScaleVsCreep` (титан ≈ ×⅓ к крипу при той же скорости);
+  Attack/Death/Stand всегда `speed = 1`.
+  Attack range: `TitanRules.AttackRange` = **3** (сид/sync с Hero1 ×3 не затирает;
+  vs-titan hit reach через `CombatRules.GetUnitAttackReach` — мили бьют с ≥3).
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
   `AI`, `Tech`, `Passives`, `Buildings`) **не создавать заранее**.
 - Герой/кит с abilities — отдельная папка владельца (`Heroes/Hero1`, `Units/Caster`),

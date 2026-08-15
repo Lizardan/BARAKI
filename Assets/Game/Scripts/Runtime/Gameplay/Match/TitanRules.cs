@@ -30,6 +30,9 @@ namespace Game.Gameplay.Match
         /// <summary>Titan combat stats = hero base × this multiplier (HP/armor/damage), before level growth.</summary>
         public const float BaseStatMultiplier = 3f;
 
+        /// <summary>Melee reach for the oversized titan body (hero/creep melee is 1.5).</summary>
+        public const float AttackRange = 3f;
+
         public static bool AreResearchGatesMet(MatchPlayerState player, HeroRosterState roster)
         {
             if (player == null || roster == null || player.MainLevel < RequiredMainLevel)
@@ -79,7 +82,7 @@ namespace Game.Gameplay.Match
                 baseStats.DamageMin * BaseStatMultiplier,
                 baseStats.DamageMax * BaseStatMultiplier,
                 baseStats.AttackSpeed,
-                baseStats.AttackRange,
+                AttackRange,
                 baseStats.MoveSpeed,
                 baseStats.GoldBounty,
                 baseStats.MaxMana);

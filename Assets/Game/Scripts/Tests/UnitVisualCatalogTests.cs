@@ -571,6 +571,8 @@ namespace Game.Tests
                 UnitRole.Titan);
             Assert.AreEqual(settings.MaxHp, stats.MaxHp, 0.001f);
             Assert.AreEqual(settings.Armor, stats.Armor, 0.001f);
+            Assert.AreEqual(TitanRules.AttackRange, settings.AttackRange, 0.001f);
+            Assert.AreEqual(TitanRules.AttackRange, stats.AttackRange, 0.001f);
         }
 
         void AssertHeroPrefab(int slot, string name, string path)
@@ -620,6 +622,40 @@ namespace Game.Tests
         public void ResolveSpeed_Attack_IsStanding()
         {
             Assert.AreEqual(0f, UnitCombatAnimatorDriver.ResolveSpeed(UnitBehaviorState.Attack));
+        }
+
+        [Test]
+        public void ResolveWalkPlaybackSpeed_TitanAtCreepSpeed_IsOneThird()
+        {
+            Assert.AreEqual(
+                1f / 3f,
+                UnitCombatAnimatorDriver.ResolveWalkPlaybackSpeed(
+                    UnitCombatAnimatorDriver.ReferenceMoveSpeed,
+                    UnitGreyboxVisuals.TitanVsCreepScale),
+                0.001f);
+        }
+
+        [Test]
+        public void ResolveWalkPlaybackSpeed_FasterCreep_ScalesUp()
+        {
+            Assert.AreEqual(
+                1.5f,
+                UnitCombatAnimatorDriver.ResolveWalkPlaybackSpeed(
+                    UnitCombatAnimatorDriver.ReferenceMoveSpeed * 1.5f,
+                    visualScaleVsCreep: 1f),
+                0.001f);
+        }
+
+        [Test]
+        public void ResolveAnimatorPlaybackSpeed_AttackIgnoresSize()
+        {
+            Assert.AreEqual(
+                1f,
+                UnitCombatAnimatorDriver.ResolveAnimatorPlaybackSpeed(
+                    UnitBehaviorState.Attack,
+                    moveSpeed: 4f,
+                    visualScaleVsCreep: 3f),
+                0.001f);
         }
 
         [Test]
