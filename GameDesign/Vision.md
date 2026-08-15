@@ -46,7 +46,8 @@ provides: [pillars, audience, scope, non_goals]
 - Поддержка **N = 3, 5** в casual лобби
 - **Рейтинг** только для **N=2** и **N=4**
 - **Eliminated spectator** — FoW off, free camera
-- Бонус после пика расы, титан, Divine Blessing — см. `Bonuses.md`, `TODO.md` Phase PRE-RACE2
+- Бонус после пика расы, титан, Divine Blessing, **tower ×9** — см. `Bonuses.md`, `Races.md`, `TODO.md` Phase PRE-RACE2 + GATE
+- **Гейт расы #2:** полный invent+implement бонусов и tower upgrades → playtest/checkup → только потом EA-001
 
 ### Phase 3+ (post-EA)
 

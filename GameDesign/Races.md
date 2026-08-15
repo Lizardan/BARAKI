@@ -1,6 +1,6 @@
 ---
 doc_id: races
-version: 0.9
+version: 1.0
 status: draft
 depends_on: [units, buildings, upgrades]
 provides: [race_definitions, original_factions, content_pipeline, roster, race_asymmetry]
@@ -21,7 +21,7 @@ provides: [race_definitions, original_factions, content_pipeline, roster, race_a
 | Ось | Описание |
 |-----|----------|
 | **Стартовые пассивы** | **2 положительных** + **1 отрицательный** с начала матча |
-| **Tower upgrades** | Уникальные для расы улучшения **в башнях** → статы или способности юнитам |
+| **Tower upgrades** | Уникальные **9** треков **в башнях** → пассивы/умения **только юнитам** (не герои/титан) |
 | **Маги (casters)** | В отряде; **уникальные заклинания** per race |
 | **Magic upgrades (main)** | Прокачка **в главном здании** → открывает/усиливает заклинания магов |
 | **Match bonus** | **12 слотов** per race (10 replacement + 2 unique); см. `Bonuses.md` |
@@ -40,11 +40,15 @@ mvp: true
 id: RACE_TOWER_UPGRADES
 location: BUILDING_TOWER   # alive only
 scope: race_unique
-effect: unit_stat_or_ability
-tracks_per_race: 5
+effect: unit_passive_or_extra_ability   # units only; not heroes/titan/tower DPS
+tracks_per_race: 9
+max_level_per_track: 3
+level_gate: sequential
+ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
 costs_gold: [500, 800, 1200]       # per track level L1, L2, L3
 research_time_sec: [45, 90, 135]
-mvp: true
+mvp: false
+note: PRE-006; Human kit TBD
 ```
 
 ```entity
@@ -59,7 +63,7 @@ mvp: true
 
 | Этап | Рас | Примечание |
 |------|-----|------------|
-| **MVP / старт** | **1** | `RACE_HUMAN` — passives, magic, tower kit **confirmed** |
+| **MVP / старт** | **1** | `RACE_HUMAN` — passives, magic; tower ×9 = PRE-006; bonuses content = PRE-005 |
 | Рост контента | +N | Полный asymmetry kit per race |
 | Early Access (цель) | **4+** | Каждая с уникальным набором passives / tower / magic |
 
@@ -170,9 +174,13 @@ mvp: true
 | 2 | `SPELL_HUMAN_2` | **Ледяной взрыв** | radius **5**, **40** dmg, CD **14s** |
 | 3 | `SPELL_HUMAN_3` | **Воскрешение** | corpse **≤20s**, CD **30s** |
 
-## Tower upgrades — прокачка в башне (confirmed)
+## Tower upgrades — прокачка в башне
 
-**5 способностей** per race; каждая **levels 1–3**. Исследование в **живой** `BUILDING_TOWER` (**4 башни** — своя очередь). Эффект **race-wide**, прогресс трека **общий**.
+**9 треков** per race; каждая **levels 1–3** (L2 только после L1, L3 после L2). Исследование в **живой** `BUILDING_TOWER` (**4 башни** — своя очередь). Эффект **race-wide** на **юнитов**; прогресс трека **общий**. Старый kit из 5 треков (Steel Temper … Last Stand) — **scrap**.
+
+**Цели эффектов:** только **юниты** (роли melee/ranged/caster/siege/flying/super). **Не** герои, **не** титан, **не** урон/статы самих башен. Типы: (а) пассив на тип(ы) юнитов; (б) доп. умение юниту (пример: siege даёт бафф союзникам). Сила растёт по L1–L3.
+
+**UI (12 command slots):** слоты **1–3** пустые (заглушку «Апгрейд» на слоте 1 убрать); **9** треков на **слотах 4–12** (1-based = `CommandSlot3`…`CommandSlot11`).
 
 **Стоимость / время** (одинаково для всех треков и рас, за каждый level):
 
@@ -184,18 +192,22 @@ mvp: true
 
 ```entity
 id: UPG_TOWER_TRACK_RULES
-tracks_per_race: 5
+tracks_per_race: 9
 max_level_per_track: 3
+level_gate: sequential          # L2 requires L1 of same track; L3 requires L2
 towers_per_base: 4
 tower_positions: [NW, NE, SW, SE]
 research_building: BUILDING_TOWER
 requires: tower alive
 scope: race_wide
+applies_to: units_only          # not heroes, not titan, not tower DPS
 queue_per_tower: 1
 parallel: up_to_4_towers_different_tracks
+ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]   # 1-based; slots 1–3 empty
 costs_gold: [500, 800, 1200]
 research_time_sec: [45, 90, 135]
-mvp: true
+mvp: false
+note: PRE-006; Human kit TBD (9 new tracks)
 ```
 
 ```entity
@@ -206,51 +218,11 @@ scope: all_race_tower_tracks
 mvp: true
 ```
 
-### Люди — 5 способностей
+### Люди — 9 способностей (TBD)
 
-| # | ID | Тип | L1 | L2 | L3 |
-|---|-----|-----|----|----|-----|
-| 1 | `UPG_TOWER_HUMAN_STEEL_TEMPER` | stat | **+3%** урон юнитам | **+6%** | **+10%** |
-| 2 | `UPG_TOWER_HUMAN_HOLD_THE_LINE` | stat | **+5%** защита юнитам | **+10%** | **+15%** |
-| 3 | `UPG_TOWER_HUMAN_BALLISTA_OVERDRAW` | tower | **+15%** урон **всех башен** | **+25%** | **+35%** |
-| 4 | `UPG_TOWER_HUMAN_ARCANE_RELAY` | spell | **−10%** CD заклинаний магов | **−15%** | **−20%** |
-| 5 | `UPG_TOWER_HUMAN_LAST_STAND` | ability | Юниты **<30% HP:** **+10%** защита | **+15%** | **+20%** |
+Список **Open / PRE-006**. Старые ID `UPG_TOWER_HUMAN_STEEL_TEMPER` … `LAST_STAND` **удалены из канона** (runtime `GameIds` — снять при PRE-006).
 
-```entity
-id: UPG_TOWER_HUMAN_STEEL_TEMPER
-max_level: 3
-effect: unit_damage_percent
-values: [3, 6, 10]
-scope: race_wide
-
-id: UPG_TOWER_HUMAN_HOLD_THE_LINE
-max_level: 3
-effect: unit_defense_percent
-values: [5, 10, 15]
-scope: race_wide
-
-id: UPG_TOWER_HUMAN_BALLISTA_OVERDRAW
-max_level: 3
-effect: tower_damage_percent
-values: [15, 25, 35]
-applies_to: all_BUILDING_TOWER
-
-id: UPG_TOWER_HUMAN_ARCANE_RELAY
-max_level: 3
-effect: caster_spell_cooldown_reduction
-values: [0.10, 0.15, 0.20]
-applies_to: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
-
-id: UPG_TOWER_HUMAN_LAST_STAND
-max_level: 3
-effect: low_hp_defense_bonus
-hp_threshold: 0.30
-values: [10, 15, 20]
-scope: race_wide
-mvp: true
-```
-
-> **4 башни** — до **4 параллельных** исследований (разные треки). Всего **5** треков → нужен выбор, что качать первым.
+> **4 башни** — до **4 параллельных** исследований (разные треки). **9** треков → выбор, что качать за матч.
 
 ## Roster — старт (1 раса)
 
@@ -275,7 +247,7 @@ heroes: [HERO_HUMAN_1, HERO_HUMAN_2, HERO_HUMAN_3]
 bonus_slots: 12               # BONUS_SLOT_*; 2 unique TBD per race
 buildings: BUILDING_SET_HUMAN
 upgrades: UPGRADE_TREE_HUMAN
-tower_tracks: [UPG_TOWER_HUMAN_STEEL_TEMPER, UPG_TOWER_HUMAN_HOLD_THE_LINE, UPG_TOWER_HUMAN_BALLISTA_OVERDRAW, UPG_TOWER_HUMAN_ARCANE_RELAY, UPG_TOWER_HUMAN_LAST_STAND]
+tower_tracks: []                  # 9 TBD — PRE-006; scrap STEEL_TEMPER…LAST_STAND
 magic_spells: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
 ```
 
@@ -318,7 +290,7 @@ mvp: false
 |---------|----------|
 | Стартовый roster | **1 раса:** Люди (+2 слота TBD) |
 | Стартовые пассивы | **2+ / 1−** per race; уникальные |
-| Tower upgrades | **5 tracks × L1–3**; **4 башни**; race-wide |
+| Tower upgrades | **9 tracks × L1–3**; sequential levels; **4 башни**; race-wide; **только юниты**; UI слоты **4–12** |
 | Tower upgrade economy | **500/800/1200g**; **45/90/135s** per level |
 | Base layout | **8 зданий**; **3 lane**; тыл **к краю карты**, перед **к центру** |
 | Маги | **Casters** в волне; **уникальные заклинания** per race |
@@ -339,7 +311,8 @@ mvp: true
 
 - [x] Passives Human (+2/−1)
 - [x] Magic spells Human (×3)
-- [x] Tower tracks Human (**×5**, L1–3)
+- [ ] Tower tracks Human (**×9**, L1–3) — invent + implement = **PRE-006**; старые ×5 scrap
 - [x] Gold/time за **tower** upgrades — **500/800/1200g**, **45/90/135s**
 - [x] Gold/time за **magic** upgrades — **800/1500/2500g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)
+- [ ] Раса #2 — только после PRE-001..006 + GATE (`TODO.md`)

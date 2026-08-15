@@ -20,18 +20,18 @@
 | [Core Gameplay.md](Core%20Gameplay.md) | Петля, lanes, автобой | Любая геймплейная задача |
 | [Map Topology.md](Map%20Topology.md) | Карта 2–5 игроков, LaneGraph | Карта / lanes |
 | [Match Flow.md](Match%20Flow.md) | Фазы матча, лобби, disconnect | GameSession |
-| [Bonuses.md](Bonuses.md) | Выбор бонуса после race pick | PRE-RACE2 / бонусы |
+| [Bonuses.md](Bonuses.md) | Выбор бонуса после race pick | PRE-005 / гейт до расы #2 |
 | [Economy.md](Economy.md) | Золото, доход | Экономика |
 | [Units.md](Units.md) | Типы юнитов, статы | Combat |
 | [Heroes.md](Heroes.md) | Герои, титан, summon | Hero system |
-| [Races.md](Races.md) | 4 расы EA, пайплайн | Race select |
+| [Races.md](Races.md) | Расы, tower ×9, пайплайн | Race select / PRE-006 |
 | [Buildings.md](Buildings.md) | Структуры базы | Buildings |
 | [Upgrades.md](Upgrades.md) | Дерево исследований | Tech tree |
 | [AI.md](AI.md) | Автономия юнитов (не боты) | Unit behavior |
 | [Balance.md](Balance.md) | Числа | Тюнинг |
 | [Technical.md](Technical.md) | Unity, netcode | Реализация |
 | [Platform.md](Platform.md) | Windows hub, UGS, GitHub Releases/Pages | Платформа / дистрибуция |
-| [TODO.md](TODO.md) | Backlog | Планирование |
+| [TODO.md](TODO.md) | Backlog; гейт PRE→GATE→EA-001 | Планирование |
 
 ## MVP
 

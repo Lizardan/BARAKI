@@ -1,6 +1,6 @@
 ---
 doc_id: bonuses
-version: 0.1
+version: 0.2
 status: draft
 depends_on: [match_flow, races, units, heroes]
 provides: [bonus_pick_rules, bonus_slots, replacement_policy]
@@ -8,7 +8,7 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 
 # Bonuses
 
-> **Статус:** каркас GDD. Геймплей и конкретные умения — **не реализованы** (см. `TODO.md` Phase PRE-RACE2).
+> **Статус:** UI-оверлей **есть** (PRE-001 done). Геймплей/умения слотов — **пустые кнопки**. Invent + внедрение всех 12 = **PRE-005**, **блокер расы #2** (вместе с PRE-006 + GATE). См. `TODO.md`.
 
 ## Обзор
 
@@ -173,10 +173,12 @@ Race pick → Match start (waves run) → Bonus overlay 60s
 | Видимость | Чужие пики **не отображаются** в UI; данные технически знают все клиенты (снапшот v13) |
 | Timeout | **Случайный** из 12 |
 | Replacement | Только **будущие** спавны/наймы/redeploy |
-| Умения слотов 1–12 | **TBD** — не выдумывать в GDD до контент-прохода |
+| Умения слотов 1–12 | Invent + fill = **PRE-005**; обязательны до EA-001 |
+| Stack | Каждый бонус = **+1 линия** усиления; **стакается** с tower upgrades и прочим tech |
+| Late game | Матчи ~**40–60 мин** — у всех мощные юниты и сильно усиленная армия |
 
 ## Open
 
-- [ ] Конкретные статы/умения enhanced-юнитов (PRE-005)
-- [ ] Уникальные расовые бонусы слотов 11–12 per race (PRE-005)
+- [ ] Конкретные статы/умения enhanced-юнитов (PRE-005) — закрытие = критерий PRE-005 done
+- [ ] Уникальные расовые бонусы слотов 11–12 Людей (PRE-005)
 - [x] UI оверлея и сетевой state (PRE-001)

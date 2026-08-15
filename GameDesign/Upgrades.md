@@ -1,6 +1,6 @@
 ---
 doc_id: upgrades
-version: 0.6
+version: 0.7
 status: draft
 depends_on: [units, buildings, economy]
 provides: [upgrade_tree, research_rules, mvp_upgrades, barracks_level_upgrade, main_building_gates]
@@ -19,7 +19,7 @@ provides: [upgrade_tree, research_rules, mvp_upgrades, barracks_level_upgrade, m
 | **Divine Blessing** | База | 1× per match (research) |
 | **Main extra ability** | База | 1× pick (после blessing) |
 | **Barracks level** | Per-barracks | **4** |
-| **Tower upgrades** | Per tower (alive), **race-unique** | **5 tracks × L3**; **500/800/1200g**; **45/90/135s** |
+| **Tower upgrades** | Per tower (alive), **race-unique** | **9 tracks × L3**; unit-only; UI slots **4–12**; **500/800/1200g**; **45/90/135s** |
 
 ## Main building level
 
@@ -199,32 +199,36 @@ mvp: true
 
 ## Tower upgrades (race-unique)
 
-**5 треков** per race; **max level 3**; **4 башни** на базе. Эффект **race-wide**. См. **`Races.md` § Tower upgrades**.
+**9 треков** per race; **max level 3** (sequential: L2 после L1); **4 башни** на базе. Эффект **race-wide**, **только юниты** (не герои/титан/DPS башен). UI: слоты **4–12**. См. **`Races.md` § Tower upgrades**. Старый kit ×5 — scrap; Human ×9 = **PRE-006**.
 
 ```entity
 id: UPG_TOWER_RACE
 building: BUILDING_TOWER
 requires: tower alive (not ruins)
 scope: race_unique
-tracks_per_race: 5
+tracks_per_race: 9
 max_level_per_track: 3
+level_gate: sequential
+applies_to: units_only
 towers_per_base: 4
 queue_per_tower: 1
 parallel: up_to_4_different_tracks
+ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
 costs_gold: [500, 800, 1200]    # L1, L2, L3 per track level
 research_time_sec: [45, 90, 135]
-mvp: true
+mvp: false
+note: PRE-006
 ```
 
-| Race | 5 tracks (L1→L3) |
+| Race | 9 tracks (L1→L3) |
 |------|-------------------|
-| Human | Steel Temper, Hold the Line, Ballista Overdraw, Arcane Relay, Last Stand |
+| Human | **TBD** (PRE-006); scrap Steel Temper … Last Stand |
 
 ## UI
 
 - **Main:** upgrade main level, passive gold, stat tracks, **magic**, hire heroes; полоска титана над зданием (main L3 + 3 героя на базе, не кнопка), Divine Blessing / extra ability menu
 - **Barracks (alive):** barracks level + manual call + deploy hero (1000g) / deploy titan (2500g, после появления на базе)
-- **Tower (alive):** target mode + **race tower upgrades**
+- **Tower (alive):** RMB target + **9 race tower upgrades** на слотах **4–12** (слоты 1–3 пустые; stub «Апгрейд» на слоте 1 убрать)
 
 ## Locked decisions (confirmed)
 
@@ -236,7 +240,7 @@ mvp: true
 | Hero hire cap | **= main level** (1 / 2 / 3 героя); hire research **25 s** |
 | Magic unlock | **800 / 1500 / 2500g**; **60 / 90 / 135 s**; gate = main level |
 | Divine Blessing | Main **L2+**; FoW off; → меню 1 extra ability; PRE-003 |
-| Tower upgrades | **5 tracks × 3 levels**; **4 towers**; race-wide; **500/800/1200g**; **45/90/135s** |
+| Tower upgrades | **9 tracks × 3 levels**; sequential; **4 towers**; race-wide; **unit-only**; UI **4–12**; **500/800/1200g**; **45/90/135s** |
 | Barracks level | Per-barracks, max 4; costs **1000/1500/2500**; time **3/3/3 s** |
 | Stat upgrades | **+3%** dmg/armor per level; costs см. `UPG_STAT_LEVEL_ECONOMY` |
 | Passive gold | **200g**, **25s** per level; **+25g/30s** per level |
@@ -247,5 +251,6 @@ mvp: true
 - [x] Gold/time за **magic** upgrades (main)
 - [x] Gold/time и эффект **stat** upgrades
 - [x] Gold/time **passive gold** и **main/barracks** research
+- [ ] Список **9** Human tower tracks + эффекты (PRE-006)
 - [ ] Gold/time **Divine Blessing** (TBD)
 - [ ] Список **main extra abilities** после blessing (TBD)

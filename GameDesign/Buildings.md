@@ -303,7 +303,7 @@ mvp: true
 | Main (ruins) | **Ничего** |
 | Barracks (alive) | Upgrade level, **manual call**, **Deploy hero** (1000g) / **Deploy titan** (2500g, instant, после появления на базе) |
 | Barracks (ruins) | **Ничего** |
-| Tower (alive) | Target mode + **race tower upgrades** |
+| Tower (alive) | RMB target + **9 race tower upgrades** (слоты UI **4–12**; unit-only; PRE-006) |
 | Tower (ruins) | **Ничего** |
 
 Stat research — через **живой** `BUILDING_MAIN` (global для расы).
@@ -356,7 +356,7 @@ note: См. Upgrades.md — FoW off + меню extra ability
 | Main building levels | **1–3**; gates stat cap, hero hire & passive gold cap |
 | Main passive gold | **+0/30s** без прокачки; **+25g/level**; max **9** |
 | Main magic | **1/2/3** slots = main level; unlocks **race caster spells** |
-| Tower upgrades | **5 tracks × L1–3**; race-wide; см. `Races.md` |
+| Tower upgrades | **9 tracks × L1–3**; sequential; race-wide; **unit-only**; UI слоты **4–12**; см. `Races.md` |
 | Elimination | **Все 8 зданий** уничтожены; main alone **не** выбывание |
 | Base towers | **4** — квадрат NW/NE/SW/SE вокруг main (расст. **d**) |
 | Barracks layout | **3 lane** (L/C/R); тыл **к краю карты**; перед **к центру** |
