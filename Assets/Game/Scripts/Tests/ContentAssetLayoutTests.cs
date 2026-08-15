@@ -29,10 +29,21 @@ namespace Game.Tests
         [Test]
         public void HumanContent_IsGroupedByOwner()
         {
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanCaster + "/UNIT_HUMAN_CASTER.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
+                ContentAssetPaths.HumanHero1 + "/HERO_HUMAN_1.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
+                ContentAssetPaths.HumanHero2 + "/HERO_HUMAN_2.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
+                ContentAssetPaths.HumanHero3 + "/HERO_HUMAN_3.asset"));
+
             Assert.AreEqual(6, AssetDatabase.FindAssets(
-                "t:UnitDefinition", new[] { ContentAssetPaths.HumanBaseUnits }).Length);
+                "t:UnitDefinition", new[] { ContentAssetPaths.HumanUnits }).Length);
             Assert.AreEqual(3, AssetDatabase.FindAssets(
-                "t:HeroDefinition", new[] { ContentAssetPaths.HumanBaseHeroes }).Length);
+                "t:HeroDefinition", new[] { ContentAssetPaths.HumanHeroes }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero1Abilities }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
@@ -46,27 +57,23 @@ namespace Game.Tests
         }
 
         [Test]
-        public void FutureContentFolders_ArePrepared()
+        public void HumanContent_HasNoEmptyScaffoldFolders()
         {
             foreach (var path in new[]
                      {
-                         ContentAssetPaths.HumanEnhancedUnits,
-                         ContentAssetPaths.HumanEnhancedHero1,
-                         ContentAssetPaths.HumanEnhancedHero2,
-                         ContentAssetPaths.HumanEnhancedHero3,
-                         ContentAssetPaths.HumanEnhancedUnitAbilities,
-                         ContentAssetPaths.HumanEnhancedHero1Abilities,
-                         ContentAssetPaths.HumanEnhancedHero2Abilities,
-                         ContentAssetPaths.HumanEnhancedHero3Abilities,
-                         ContentAssetPaths.HumanReplacementBonuses,
-                         ContentAssetPaths.HumanUniqueBonuses,
-                         ContentAssetPaths.HumanBuildings,
-                         ContentAssetPaths.HumanPassives,
-                         ContentAssetPaths.HumanTech,
-                         ContentAssetPaths.HumanAi,
+                         ContentAssetPaths.Humans + "/Abilities",
+                         ContentAssetPaths.Humans + "/AI",
+                         ContentAssetPaths.Humans + "/Bonuses",
+                         ContentAssetPaths.Humans + "/Buildings",
+                         ContentAssetPaths.Humans + "/Passives",
+                         ContentAssetPaths.Humans + "/Tech",
+                         ContentAssetPaths.HumanUnits + "/Base",
+                         ContentAssetPaths.HumanUnits + "/Enhanced",
+                         ContentAssetPaths.HumanHeroes + "/Base",
+                         ContentAssetPaths.HumanHeroes + "/Enhanced",
                      })
             {
-                Assert.IsTrue(AssetDatabase.IsValidFolder(path), path);
+                Assert.IsFalse(AssetDatabase.IsValidFolder(path), path);
             }
         }
 
@@ -79,7 +86,7 @@ namespace Game.Tests
 
             var ids = new HashSet<int>();
             foreach (var guid in AssetDatabase.FindAssets(
-                         "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanAbilities }))
+                         "t:UnitAbilityDef", new[] { ContentAssetPaths.Humans }))
             {
                 var def = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(
                     AssetDatabase.GUIDToAssetPath(guid));

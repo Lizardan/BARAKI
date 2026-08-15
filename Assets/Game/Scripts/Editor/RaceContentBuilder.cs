@@ -16,8 +16,11 @@ namespace Game.Editor
 
         public static void EnsureContent()
         {
-            EnsureFolder(ContentAssetPaths.HumanBaseUnits);
-            EnsureFolder(ContentAssetPaths.HumanBaseHeroes);
+            EnsureFolder(ContentAssetPaths.HumanUnits);
+            EnsureFolder(ContentAssetPaths.HumanCaster);
+            EnsureFolder(ContentAssetPaths.HumanHero1);
+            EnsureFolder(ContentAssetPaths.HumanHero2);
+            EnsureFolder(ContentAssetPaths.HumanHero3);
             EnsureFolder(ContentAssetPaths.Humans);
             EnsureFolder(ContentAssetPaths.SharedSquads);
             EnsureFolder(ContentAssetPaths.SharedUpgrades);
@@ -104,7 +107,7 @@ namespace Game.Editor
             float moveSpeed,
             int bounty)
         {
-            var path = $"{ContentAssetPaths.HumanBaseUnits}/{id}.asset";
+            var path = ContentAssetPaths.HumanUnitDefinitionPath(id);
             var unit = LoadOrCreate<UnitDefinition>(path);
             var so = new SerializedObject(unit);
             so.FindProperty("_id").stringValue = id;
@@ -127,7 +130,7 @@ namespace Game.Editor
 
         private static HeroDefinition CreateHero(string id, string raceId, int slot, string moraleId)
         {
-            var path = $"{ContentAssetPaths.HumanBaseHeroes}/{id}.asset";
+            var path = $"{ContentAssetPaths.HumanHeroFolder(slot)}/{id}.asset";
             var hero = LoadOrCreate<HeroDefinition>(path);
             var so = new SerializedObject(hero);
             so.FindProperty("_id").stringValue = id;

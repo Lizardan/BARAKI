@@ -118,6 +118,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-15 | ScriptableObjects: owner-first раскладка (`Heroes/HeroN`, `Units/Caster|Titan` + `Abilities/`); пустой scaffold убран; канон в `wiki/rules/content-assets.md` |
 | 2026-08-15 | `UnitCombatSettings`: единый prefab-компонент статов и abilities; ScriptableObjects перенесены в race-first структуру; каталоги переведены на расширение по `raceId` |
 | 2026-08-14 | Способности на префабе: каст по типу; Priest Nova по союзнику, Greater Heal — зона 10с; титан Slam/Rally/Colossus/Stomp |
 | 2026-08-14 | PRE-004: герои 2–3 (TT_Mounted_Paladin / TT_Mounted_Priest) и титан (TT_Peasant); префабы Human_Hero1/2/3 + Human_Titan; боевой профиль на `UnitCombatSettings`; каталог по слоту |

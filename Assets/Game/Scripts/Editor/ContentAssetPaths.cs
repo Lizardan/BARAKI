@@ -3,7 +3,10 @@ using UnityEditor;
 
 namespace Game.Editor
 {
-    /// <summary>Canonical editor paths for ScriptableObject game content.</summary>
+    /// <summary>
+    /// Canonical editor paths for ScriptableObject game content.
+    /// Layout is owner-first under each race: open Hero1 / Caster / Titan and see that kit at a glance.
+    /// </summary>
     public static class ContentAssetPaths
     {
         public const string Root = "Assets/Game/ScriptableObjects";
@@ -16,39 +19,47 @@ namespace Game.Editor
         public const string Races = Root + "/Races";
         public const string Humans = Races + "/Humans";
         public const string HumanRace = Humans + "/RACE_HUMAN.asset";
-        public const string HumanUnits = Humans + "/Units";
-        public const string HumanBaseUnits = HumanUnits + "/Base";
-        public const string HumanHeroes = Humans + "/Heroes";
-        public const string HumanBaseHeroes = HumanHeroes + "/Base";
-        public const string HumanAbilities = Humans + "/Abilities";
-        public const string HumanHeroAbilities = HumanAbilities + "/Heroes";
-        public const string HumanHero1Abilities = HumanHeroAbilities + "/Hero1";
-        public const string HumanHero2Abilities = HumanHeroAbilities + "/Hero2";
-        public const string HumanHero3Abilities = HumanHeroAbilities + "/Hero3";
-        public const string HumanCasterAbilities = HumanAbilities + "/Caster";
-        public const string HumanTitanAbilities = HumanAbilities + "/Titan";
-        public const string HumanEnhancedUnitAbilities = HumanAbilities + "/EnhancedUnits";
-        public const string HumanEnhancedHeroAbilities = HumanAbilities + "/EnhancedHeroes";
-        public const string HumanEnhancedHero1Abilities = HumanEnhancedHeroAbilities + "/Hero1";
-        public const string HumanEnhancedHero2Abilities = HumanEnhancedHeroAbilities + "/Hero2";
-        public const string HumanEnhancedHero3Abilities = HumanEnhancedHeroAbilities + "/Hero3";
 
-        public const string HumanEnhancedUnits = HumanUnits + "/Enhanced";
-        public const string HumanEnhancedHeroes = HumanHeroes + "/Enhanced";
-        public const string HumanEnhancedHero1 = HumanEnhancedHeroes + "/Hero1";
-        public const string HumanEnhancedHero2 = HumanEnhancedHeroes + "/Hero2";
-        public const string HumanEnhancedHero3 = HumanEnhancedHeroes + "/Hero3";
-        public const string HumanBonuses = Humans + "/Bonuses";
-        public const string HumanReplacementBonuses = HumanBonuses + "/Replacements";
-        public const string HumanUniqueBonuses = HumanBonuses + "/Unique";
-        public const string HumanBuildings = Humans + "/Buildings";
-        public const string HumanPassives = Humans + "/Passives";
-        public const string HumanTech = Humans + "/Tech";
-        public const string HumanAi = Humans + "/AI";
+        public const string HumanUnits = Humans + "/Units";
+        public const string HumanCaster = HumanUnits + "/Caster";
+        public const string HumanCasterAbilities = HumanCaster + "/Abilities";
+        public const string HumanTitan = HumanUnits + "/Titan";
+        public const string HumanTitanAbilities = HumanTitan + "/Abilities";
+
+        public const string HumanHeroes = Humans + "/Heroes";
+        public const string HumanHero1 = HumanHeroes + "/Hero1";
+        public const string HumanHero2 = HumanHeroes + "/Hero2";
+        public const string HumanHero3 = HumanHeroes + "/Hero3";
+        public const string HumanHero1Abilities = HumanHero1 + "/Abilities";
+        public const string HumanHero2Abilities = HumanHero2 + "/Abilities";
+        public const string HumanHero3Abilities = HumanHero3 + "/Abilities";
 
         public const string Shared = Root + "/Shared";
         public const string SharedSquads = Shared + "/Squads";
         public const string SharedUpgrades = Shared + "/Upgrades";
+
+        public static string HumanHeroFolder(int slot) =>
+            slot switch
+            {
+                1 => HumanHero1,
+                2 => HumanHero2,
+                3 => HumanHero3,
+                _ => HumanHeroes,
+            };
+
+        public static string HumanHeroAbilitiesFolder(int slot) =>
+            slot switch
+            {
+                1 => HumanHero1Abilities,
+                2 => HumanHero2Abilities,
+                3 => HumanHero3Abilities,
+                _ => HumanHeroes,
+            };
+
+        public static string HumanUnitDefinitionPath(string unitId) =>
+            unitId == Game.Core.GameIds.Units.HumanCaster
+                ? $"{HumanCaster}/{unitId}.asset"
+                : $"{HumanUnits}/{unitId}.asset";
 
         public static void EnsureFolder(string path)
         {

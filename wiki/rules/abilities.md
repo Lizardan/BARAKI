@@ -30,7 +30,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
   `CasterSpellRules`). Ручные правки готовых def-ассетов **затираются** при пересборке.
 - **Меню-инструменты** (Game.Editor):
   - `BARAKI/Abilities/Build Ability Defs` — собирает уникальные способности из дефолтов, создаёт
-    по одному `UnitAbilityDef.asset` на способность + каталог. Имена файлов — kebab-case из
+    по одному `UnitAbilityDef.asset` на способность + каталог. Файлы кладутся в папку владельца
+    (`Races/Humans/Heroes/Hero1/Abilities/`, `Units/Caster/Abilities/`, …). Имена — kebab-case из
     `DisplayName` (`mend.asset`, `holy-nova.asset`, `attack-aura.asset`); при совпадении имён
     добавляется суффикс `-{id}`. При смене DisplayName старый файл мигрируется по `AbilityId`
     (`AssetDatabase.MoveAsset` — GUID-ссылки из префабов/каталога сохраняются). Легаси-имена

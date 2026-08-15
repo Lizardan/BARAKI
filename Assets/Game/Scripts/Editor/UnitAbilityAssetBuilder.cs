@@ -15,7 +15,6 @@ namespace Game.Editor
     /// </summary>
     public static class UnitAbilityAssetBuilder
     {
-        public const string AbilitiesDir = ContentAssetPaths.HumanAbilities;
         public const string CatalogPath = ContentAssetPaths.UnitAbilityCatalog;
 
         [MenuItem("BARAKI/Abilities/Build Ability Defs")]
@@ -76,7 +75,7 @@ namespace Game.Editor
 
                 var path = AssetDatabase.GetAssetPath(existing);
                 if (!path.StartsWith(
-                        ContentAssetPaths.HumanAbilities + "/",
+                        ContentAssetPaths.Humans + "/",
                         System.StringComparison.Ordinal))
                 {
                     allDefs.Add(existing);
@@ -112,6 +111,9 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
         }
 
+        static string LegacyAbilityPath(int abilityId) =>
+            $"{ContentAssetPaths.Humans}/Abilities/Ability{abilityId}.asset";
+
         /// <summary>"Holy Nova" -> "holy-nova" (ASCII, kebab-case).</summary>
         static string DisplayNameToFileName(string displayName)
         {
@@ -137,7 +139,7 @@ namespace Game.Editor
         static UnitAbilityDef EnsureDefAsset(UnitAbilityDef defaults, string fileName)
         {
             var newPath = $"{GetAbilityDirectory(defaults.AbilityId)}/{fileName}.asset";
-            var legacyPath = $"{AbilitiesDir}/Ability{defaults.AbilityId}.asset";
+            var legacyPath = LegacyAbilityPath(defaults.AbilityId);
 
             var existing = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(newPath);
             if (existing != null && existing.AbilityId != defaults.AbilityId)
@@ -242,7 +244,8 @@ namespace Game.Editor
         /// <summary>Finds an existing def by <see cref="UnitAbilityDef.AbilityId"/> regardless of its file name.</summary>
         static UnitAbilityDef FindByAbilityId(int abilityId)
         {
-            foreach (var guid in AssetDatabase.FindAssets("t:UnitAbilityDef", new[] { AbilitiesDir }))
+            foreach (var guid in AssetDatabase.FindAssets(
+                         "t:UnitAbilityDef", new[] { ContentAssetPaths.Humans }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var def = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(path);
