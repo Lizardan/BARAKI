@@ -7,6 +7,7 @@ namespace Game.Gameplay.Match
             SlotIndex = slotIndex;
             RaceId = raceId;
             Gold = startingGold;
+            SyncMainManaMax(fillToMax: true);
         }
 
         public int SlotIndex { get; }
@@ -27,5 +28,30 @@ namespace Game.Gameplay.Match
         /// Chosen main extra ability id (1..6); <see cref="MainExtraAbilityRules.None"/> until picked.
         /// </summary>
         public int MainExtraAbilityId { get; set; }
+        public float MainMana { get; set; }
+        public float MainManaMax { get; private set; }
+        public float MainExtraAbilityCooldownRemaining { get; set; }
+
+        public void SyncMainManaMax(bool fillToMax = false)
+        {
+            var previousMax = MainManaMax;
+            MainManaMax = MainExtraAbilityRules.GetMainManaMax(MainLevel);
+            if (fillToMax)
+            {
+                MainMana = MainManaMax;
+                return;
+            }
+
+            var delta = MainManaMax - previousMax;
+            if (delta > 0f)
+            {
+                MainMana += delta;
+            }
+
+            if (MainMana > MainManaMax)
+            {
+                MainMana = MainManaMax;
+            }
+        }
     }
 }

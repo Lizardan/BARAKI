@@ -25,12 +25,30 @@ namespace Game.Gameplay.Match
         public int OwnerSlot { get; }
         public string BuildingId { get; }
         public Vector3 WorldPosition { get; }
-        public float MaxHp { get; }
+        public float MaxHp { get; private set; }
         public float Armor { get; }
         public float CurrentHp { get; private set; }
 
         public bool IsRuins => CurrentHp <= 0f;
         public bool IsIntact => !IsRuins;
+
+        /// <summary>
+        /// Raises max HP; current HP grows by the same delta (RTS level-up heal of the bonus).
+        /// </summary>
+        public void SetMaxHp(float newMaxHp)
+        {
+            newMaxHp = Mathf.Max(1f, newMaxHp);
+            var delta = newMaxHp - MaxHp;
+            MaxHp = newMaxHp;
+            if (delta > 0f && !IsRuins)
+            {
+                CurrentHp = Mathf.Min(MaxHp, CurrentHp + delta);
+            }
+            else
+            {
+                CurrentHp = Mathf.Clamp(CurrentHp, 0f, MaxHp);
+            }
+        }
 
         public bool ApplyDamage(float rawDamage)
         {

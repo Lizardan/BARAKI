@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>One-shot explosion + lingering ruin fire when buildings fall; hides the greybox visual.</summary>
+    /// <summary>
+    /// Explosion + lingering ruin fire when buildings fall; hides the upper Model,
+    /// keeps the TT mesh Foundation visible (same path for combat kills and main smite).
+    /// </summary>
     public sealed class MatchBuildingFxPresenter : MonoBehaviour
     {
         [SerializeField] private MatchRuntime _runtime;
@@ -86,7 +89,7 @@ namespace Game.Gameplay.Match
 
             Spawn(building.WorldPosition, _fxCatalog.BuildingDestroyed, ExplosionLifetimeSeconds);
             Spawn(building.WorldPosition, _fxCatalog.BuildingBurning, 0f);
-            HideGreyboxVisual(building);
+            ApplyRuinsVisual(building);
         }
 
         void Spawn(Vector3 position, GameObject prefab, float lifetimeSeconds)
@@ -107,13 +110,15 @@ namespace Game.Gameplay.Match
             }
         }
 
-        void HideGreyboxVisual(BuildingState building)
+        void ApplyRuinsVisual(BuildingState building)
         {
             var visual = MatchArenaGreybox.FindBuildingVisual(building);
-            if (visual != null && visual.gameObject.activeSelf)
+            if (visual == null)
             {
-                visual.gameObject.SetActive(false);
+                return;
             }
+
+            BuildingRuinsVisual.ApplyRuins(visual, building.BuildingId);
         }
 
         void ClearFx()

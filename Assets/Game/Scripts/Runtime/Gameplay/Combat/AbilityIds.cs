@@ -26,5 +26,10 @@ namespace Game.Gameplay.Combat
         public const int Stomp = 41;
         public const int Slam = 42;
         public const int AuraMaxHpPercent = 43;
+
+        /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
+        public const int MainBuildingSmite = 100;
+        /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>
+        public const int MainUnitSmite = 101;
     }
 }

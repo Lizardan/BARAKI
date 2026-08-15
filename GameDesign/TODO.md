@@ -92,7 +92,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 ## Phase PRE-RACE2 — до расы #2
 
-> Реализация по одному ID. **Следующий:** PRE-005 (эффекты Divine Blessing). **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..007** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
+> Реализация по одному ID. **Следующий:** PRE-006 (12 бонусов Людей). **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..007** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
@@ -100,7 +100,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | PRE-002 | Титан: полоска над main + выпуск как герой | done | Полоска **180 s** над main (main L3 + все 3 героя IdleAtBase; deployed/dead → заморозка без сброса) → титан появляется на базе; выпуск из живого barracks **2500g**; CD после смерти **300 s** как герой (без повторной полоски); XP как герой; статы сид **3×** на префаб `Human_Titan`; снапшот v15 (титан + ростер героев); см. `Heroes.md` |
 | PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | done | Research main L2+ (**1000g / 45s**); FoW off для себя; отложенный выбор 1 stub ability (гейты main tracks); эффекты abilities — **PRE-005**; снапшот v17; см. `Upgrades.md` |
 | PRE-004 | Контент героев слот 2–3 (baseline) | done | Имена TT_Mounted_Paladin / TT_Mounted_Priest; визуал Human_Hero2/3; статы baseline на префабе (`UnitCombatSettings`); 3 hero-бонуса больше не пустые по контенту |
-| PRE-005 | Main extra abilities после Divine Blessing | pending | Invent + внедрить **6** способностей main (замена stub 1–6): эффекты работают в матче; гейты main tracks уже в PRE-003; UI имена/описания; тесты; см. `Upgrades.md` |
+| PRE-005 | Main extra abilities после Divine Blessing | done | Меню 2×3; **2** способности (Кара зданий 1200 / Кара юнитов 5000; CD 180; 200 mana; общий гейт melee+ranged+armor≥7 + magic≥2); слоты 3–6 stub; main mana; HP main/barracks по уровню; снапшот v18; тесты |
 | PRE-006 | Наполнение всех 12 бонусов Людей | pending | Invent + внедрить **все 12** слотов (10 replacement + 2 unique): не пустые кнопки; эффекты работают в матче; стакаются с tower upgrades; late game ~40–60 мин — мощная армия; см. `Bonuses.md` |
 | PRE-007 | Tower upgrades ×9 (Humans) invent + implement | pending | **9 новых** треков (старые 5 scrap); только **юниты** (не герои/титан/DPS башен); L1→L2→L3 (без L1 нет L2); 4 башни → до 4 разных треков; UI: убрать stub слота 1, треки на **слотах 4–12**; удалить старые `GameIds`/entities; тесты; см. `Races.md` / `Upgrades.md` |
 
@@ -132,6 +132,8 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-15 | PRE-005 VFX: Кара зданий/юнитов — `FxKind.SkyBeam` луч с неба; sync через SpellCasts (`AbilityIds` 100/101) |
+| 2026-08-15 | PRE-005: меню 2×3; Кара зданий (1200) / Кара юнитов (5000); гейт melee+ranged+armor≥7 + magic≥2; CD 180 / 200 mana; main mana 100×level; HP main/barracks по уровню; снапшот v18 |
 | 2026-08-15 | Порядок PRE: **PRE-005** = blessing abilities (доделать Divine Blessing) → **PRE-006** = 12 бонусов → **PRE-007** = tower ×9; следующий = PRE-005 |
 | 2026-08-15 | Split: бонусы и blessing abilities — разные ID; гейт EA = PRE-001..007 + GATE |
 | 2026-08-15 | PRE-003: Divine Blessing 1000g/45s (main L2+); FoW off владельцу; меню stub abilities 1–6 с гейтами; pick 1×; снапшот v17; magic costs → 500/750/1000g; боевые эффекты abilities → PRE-005 |

@@ -43,5 +43,19 @@ namespace Game.Tests
             Assert.AreEqual(300, MatchUpgradeLabelRules.CeilRemainingSeconds(300f));
             Assert.AreEqual(300, MatchUpgradeLabelRules.CeilRemainingSeconds(299.1f));
         }
+
+        [Test]
+        public void FormatDivineBlessing_ShowsLevelGateWhenLocked()
+        {
+            Assert.AreEqual(
+                "Благословение\nУр. 2",
+                MatchUpgradeLabelRules.FormatDivineBlessingLockedButton(2));
+            StringAssert.Contains(
+                "Нужен ур. главного здания 2",
+                MatchUpgradeLabelRules.FormatDivineBlessingTooltip(1000, 45f, mainLevel: 1));
+            StringAssert.DoesNotContain(
+                "Нужен ур. главного здания",
+                MatchUpgradeLabelRules.FormatDivineBlessingTooltip(1000, 45f, mainLevel: 2));
+        }
     }
 }

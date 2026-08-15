@@ -4,6 +4,8 @@ using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Networking;
+using UnityEngine;
+using Random = System.Random;
 
 namespace Game.Gameplay.Match
 {
@@ -166,6 +168,8 @@ namespace Game.Gameplay.Match
             MatchTimeSeconds += deltaTime;
             TickResearch(deltaTime);
             TickPassiveGold(deltaTime);
+            TickMainMana(deltaTime);
+            TickMainExtraAbilityCooldown(deltaTime);
             TickHeroRosters(deltaTime);
             TickTitans(deltaTime);
             TickBarracksCallCharges(deltaTime);
@@ -444,6 +448,10 @@ namespace Game.Gameplay.Match
                 _players[p.Slot].MainExtraAbilityId = MainExtraAbilityRules.IsValidId(p.MainExtraAbilityId)
                     ? p.MainExtraAbilityId
                     : MainExtraAbilityRules.None;
+                _players[p.Slot].SyncMainManaMax(fillToMax: false);
+                _players[p.Slot].MainMana = Math.Max(0f, Math.Min(p.MainMana, _players[p.Slot].MainManaMax));
+                _players[p.Slot].MainExtraAbilityCooldownRemaining =
+                    Math.Max(0f, p.MainExtraAbilityCooldownRemaining);
                 if (p.Slot < _bonusPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
                 {
                     _bonusPicks[p.Slot] = p.BonusPickSlot;
@@ -468,8 +476,9 @@ namespace Game.Gameplay.Match
             }
 
             ApplyAuthoritativeHeroes(snapshot.Heroes);
-            ApplyAuthoritativeBuildings(snapshot.Buildings);
             ApplyAuthoritativeBarracks(snapshot.Barracks);
+            SyncAllBuildingMaxHpFromLevels();
+            ApplyAuthoritativeBuildings(snapshot.Buildings);
             ApplyAuthoritativeResearch(snapshot.Research);
             ApplyAuthoritativeCenterLanes(snapshot.CenterLanes);
             _combat.ApplyAuthoritativeUnits(
@@ -1166,8 +1175,85 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
-            player.MainExtraAbilityId = abilityId;
+                player.MainExtraAbilityId = abilityId;
             return true;
+        }
+
+        /// <summary>
+        /// Cast the picked main extra ability on an enemy building (id 1) or unit (id 2).
+        /// </summary>
+        public bool TryCastMainExtraAbility(int playerSlot, int targetBuildingInstanceId, int targetUnitId)
+        {
+            if (!IsRunning || Phase == MatchPhase.Start)
+            {
+                return false;
+            }
+
+            if (playerSlot < 0 || playerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            var player = _players[playerSlot];
+            if (player.IsEliminated || !MainExtraAbilityRules.CanCast(player))
+            {
+                return false;
+            }
+
+            var abilityId = player.MainExtraAbilityId;
+            var damage = MainExtraAbilityRules.GetDamage(abilityId);
+            var kind = MainExtraAbilityRules.GetTargetKind(abilityId);
+
+            if (kind == MainExtraAbilityTargetKind.EnemyBuilding)
+            {
+                var building = _buildings.GetByInstanceId(targetBuildingInstanceId);
+                if (building == null
+                    || building.IsRuins
+                    || building.OwnerSlot == playerSlot)
+                {
+                    return false;
+                }
+
+                _buildings.TryApplyTrueDamage(building.InstanceId, damage, playerSlot);
+                EmitMainExtraAbilityFx(playerSlot, abilityId, building.WorldPosition, targetUnitId: 0);
+            }
+            else if (kind == MainExtraAbilityTargetKind.EnemyUnit)
+            {
+                var unit = _combat.GetUnit(targetUnitId);
+                if (unit == null || !unit.IsAlive || unit.OwnerSlot == playerSlot)
+                {
+                    return false;
+                }
+
+                var impact = unit.WorldPosition;
+                _combat.ApplyDamage(null, unit, damage, playerSlot);
+                EmitMainExtraAbilityFx(playerSlot, abilityId, impact, targetUnitId);
+            }
+            else
+            {
+                return false;
+            }
+
+            player.MainMana -= MainExtraAbilityRules.ManaCost;
+            player.MainExtraAbilityCooldownRemaining = MainExtraAbilityRules.CooldownSeconds;
+            return true;
+        }
+
+        void EmitMainExtraAbilityFx(int ownerSlot, int pickAbilityId, Vector3 impact, int targetUnitId)
+        {
+            var def = MainExtraAbilityFxDefs.GetForPick(pickAbilityId);
+            if (def == null)
+            {
+                return;
+            }
+
+            _combat.EmitCast(new AbilityCastEvent(
+                casterUnitId: 0,
+                ownerSlot,
+                def,
+                targetUnitId,
+                impact,
+                radius: def.Radius > 0f ? def.Radius : 1.5f));
         }
 
         static int GetStatTrackLevel(MatchPlayerState player, string trackId)
@@ -1256,6 +1342,7 @@ namespace Game.Gameplay.Match
                     barracks.Level + 1);
                 EnsureBarracksCallCharges(barracks);
                 barracks.CallCharges.OnLevelUp(ResolveSquadCounts(barracks.EffectiveSquadLevel));
+                SyncBuildingMaxHp(research.OwnerSlot, research.BuildingId, barracks.Level);
                 return;
             }
 
@@ -1300,6 +1387,8 @@ namespace Game.Gameplay.Match
                 }
 
                 player.MainLevel++;
+                player.SyncMainManaMax(fillToMax: false);
+                SyncBuildingMaxHp(research.OwnerSlot, GameIds.Buildings.Main, player.MainLevel);
                 return;
             }
 
@@ -1442,6 +1531,74 @@ namespace Game.Gameplay.Match
                         MatchEconomyRules.PassiveGoldTickIntervalSeconds;
                 }
             }
+        }
+
+        void TickMainMana(float deltaTime)
+        {
+            for (var i = 0; i < _players.Count; i++)
+            {
+                var player = _players[i];
+                if (player.IsEliminated || player.MainMana >= player.MainManaMax)
+                {
+                    continue;
+                }
+
+                var regen = MainExtraAbilityRules.GetMainManaRegenPerSecond(player.MainLevel) * deltaTime;
+                player.MainMana = Math.Min(player.MainManaMax, player.MainMana + regen);
+            }
+        }
+
+        void TickMainExtraAbilityCooldown(float deltaTime)
+        {
+            for (var i = 0; i < _players.Count; i++)
+            {
+                var player = _players[i];
+                if (player.MainExtraAbilityCooldownRemaining <= 0f)
+                {
+                    continue;
+                }
+
+                player.MainExtraAbilityCooldownRemaining =
+                    Math.Max(0f, player.MainExtraAbilityCooldownRemaining - deltaTime);
+            }
+        }
+
+        void SyncAllBuildingMaxHpFromLevels()
+        {
+            foreach (var building in _buildings.Buildings)
+            {
+                var level = ResolveBuildingLevel(building);
+                building.SetMaxHp(BuildingRules.GetMaxHp(building.BuildingId, level));
+            }
+        }
+
+        void SyncBuildingMaxHp(int ownerSlot, string buildingId, int level)
+        {
+            var building = FindBuilding(ownerSlot, buildingId);
+            if (building == null || building.IsRuins)
+            {
+                return;
+            }
+
+            building.SetMaxHp(BuildingRules.GetMaxHp(buildingId, level));
+        }
+
+        int ResolveBuildingLevel(BuildingState building)
+        {
+            if (BuildingRules.IsMain(building.BuildingId)
+                && building.OwnerSlot >= 0
+                && building.OwnerSlot < _players.Count)
+            {
+                return Math.Max(1, _players[building.OwnerSlot].MainLevel);
+            }
+
+            if (BuildingRules.IsBarracks(building.BuildingId))
+            {
+                var barracks = _waveScheduler.GetBarracks(building.OwnerSlot, building.BuildingId);
+                return Math.Max(1, barracks?.Level ?? 1);
+            }
+
+            return 1;
         }
 
         static bool IsBarracksBuildingId(string buildingId) =>

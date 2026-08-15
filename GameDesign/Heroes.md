@@ -311,6 +311,8 @@ xp_leveling: same_as_hero
 stat_multiplier_vs_hero: 3.0    # сид на префаб Human_Titan (UnitCombatSettings); рантайм не множит снова
 visual: TT_Peasant
 visual_prefab: Human_Titan
+visual_scale_vs_creep: 2.0      # UnitGreyboxVisuals.TitanVsCreepScale; presenter Apply на spawn/park/deploy
+visual_aura: soft_building_burn # FX_Building_burning_small + point glow; SoftenLoopingFx
 bonus_slot: BONUS_SLOT_TITAN
 mvp: true
 ```

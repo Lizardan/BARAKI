@@ -454,7 +454,12 @@ namespace Game.Gameplay.Match
             }
             else
             {
-                model = CreateFallbackCapsule(root, unit.OwnerSlot);
+                model = CreateFallbackCapsule(root, unit.OwnerSlot, unit.Role);
+            }
+
+            if (unit.Role == UnitRole.Titan)
+            {
+                AttachTitanDivineAura(root);
             }
 
             var barHeight = ComputeVisualHeight(root) + _statusBarClearance;
@@ -629,6 +634,20 @@ namespace Game.Gameplay.Match
                         color,
                         height: fx.BurstHeight > 0f ? fx.BurstHeight : 2.8f);
                     break;
+                case FxKind.SkyBeam:
+                    SpellFxFactory.CreateSkyBeam(
+                        _root,
+                        center,
+                        color,
+                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 40f,
+                        duration: duration,
+                        impactRadius: radius > 0f ? radius : 1.8f);
+                    SpellFxFactory.CreateLabel(
+                        _root,
+                        center + Vector3.up * 3.2f,
+                        def.DisplayName,
+                        color);
+                    break;
             }
         }
 
@@ -639,6 +658,7 @@ namespace Game.Gameplay.Match
                 FxKind.Ring => 1.0f,
                 FxKind.RingBurst => 1.3f,
                 FxKind.Burst => 0.7f,
+                FxKind.SkyBeam => 1.15f,
                 _ => 1.1f,
             };
         }
@@ -671,13 +691,16 @@ namespace Game.Gameplay.Match
             return GameIds.Races.Human;
         }
 
-        Transform CreateFallbackCapsule(Transform root, int ownerSlot)
+        Transform CreateFallbackCapsule(Transform root, int ownerSlot, UnitRole role)
         {
             var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(root, false);
-            body.transform.localPosition = Vector3.up * (_fallbackUnitHeight * 0.5f);
-            body.transform.localScale = new Vector3(_fallbackUnitScale, _fallbackUnitHeight, _fallbackUnitScale);
+            var champion = UnitGreyboxVisuals.GetChampionVisualScale(role);
+            var height = _fallbackUnitHeight * champion;
+            var width = _fallbackUnitScale * champion;
+            body.transform.localPosition = Vector3.up * (height * 0.5f);
+            body.transform.localScale = new Vector3(width, height, width);
 
             var collider = body.GetComponent<Collider>();
             if (collider != null)
@@ -694,6 +717,96 @@ namespace Game.Gameplay.Match
             }
 
             return body.transform;
+        }
+
+        void AttachTitanDivineAura(Transform root)
+        {
+            if (root == null || _fxCatalog == null)
+            {
+                return;
+            }
+
+            // Prefer the smaller building burn; fall back to the full ruin fire.
+            var prefab = _fxCatalog.BuildingImpact != null
+                ? _fxCatalog.BuildingImpact
+                : _fxCatalog.BuildingBurning;
+            if (prefab == null)
+            {
+                return;
+            }
+
+            var fx = Instantiate(prefab, root);
+            fx.name = "TitanDivineAura";
+            fx.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            fx.transform.localRotation = Quaternion.identity;
+            fx.transform.localScale = Vector3.one * UnitGreyboxVisuals.TitanAuraFxScale;
+            SoftenLoopingFx(fx);
+            EnsureTitanGlowLight(root);
+        }
+
+        static void SoftenLoopingFx(GameObject fx)
+        {
+            if (fx == null)
+            {
+                return;
+            }
+
+            var systems = fx.GetComponentsInChildren<ParticleSystem>(true);
+            for (var i = 0; i < systems.Length; i++)
+            {
+                var ps = systems[i];
+                if (ps == null)
+                {
+                    continue;
+                }
+
+                var main = ps.main;
+                main.maxParticles = Mathf.Max(6, main.maxParticles / 3);
+
+                var emission = ps.emission;
+                emission.rateOverTimeMultiplier *= 0.4f;
+            }
+
+            var lights = fx.GetComponentsInChildren<Light>(true);
+            for (var i = 0; i < lights.Length; i++)
+            {
+                var light = lights[i];
+                if (light == null)
+                {
+                    continue;
+                }
+
+                light.intensity *= 0.45f;
+                light.range *= 0.7f;
+            }
+
+            var audio = fx.GetComponentsInChildren<AudioSource>(true);
+            for (var i = 0; i < audio.Length; i++)
+            {
+                if (audio[i] != null)
+                {
+                    audio[i].mute = true;
+                    audio[i].enabled = false;
+                }
+            }
+        }
+
+        static void EnsureTitanGlowLight(Transform root)
+        {
+            if (root == null || root.Find("TitanDivineGlow") != null)
+            {
+                return;
+            }
+
+            var glow = new GameObject("TitanDivineGlow");
+            glow.transform.SetParent(root, false);
+            glow.transform.localPosition = new Vector3(0f, 1.4f, 0f);
+            var light = glow.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.58f, 0.28f, 1f);
+            light.intensity = 1.35f;
+            light.range = 5.5f;
+            light.shadows = LightShadows.None;
         }
 
         void AttachUnitPickCollider(UnitVisual visual, MatchUnitState unit)

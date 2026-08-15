@@ -13,6 +13,10 @@ namespace Game.Tests
             Assert.AreEqual(2000f, BuildingRules.GetMaxHp(GameIds.Buildings.Main));
             Assert.AreEqual(800f, BuildingRules.GetMaxHp(GameIds.Buildings.BarracksCenter));
             Assert.AreEqual(600f, BuildingRules.GetMaxHp(GameIds.Buildings.TowerNw));
+            Assert.AreEqual(2500f, BuildingRules.GetMaxHp(GameIds.Buildings.Main, 2));
+            Assert.AreEqual(3000f, BuildingRules.GetMaxHp(GameIds.Buildings.Main, 3));
+            Assert.AreEqual(1100f, BuildingRules.GetMaxHp(GameIds.Buildings.BarracksCenter, 2));
+            Assert.AreEqual(1600f, BuildingRules.GetMaxHp(GameIds.Buildings.BarracksCenter, 4));
         }
 
         [Test]

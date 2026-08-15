@@ -118,10 +118,26 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 
 ## Main extra ability (Divine Blessing)
 
-После `UPG_MAIN_DIVINE_BLESSING` игрок выбирает **один** stub id (1..6) через
-`MatchController.TryPickMainExtraAbility`. Выбор в `MatchPlayerState.MainExtraAbilityId`
-и снапшоте **v17**. Гейты — `MainExtraAbilityRules` (треки main). **Каста пока нет**
-(боевые эффекты = PRE-005). Не путать с `UnitAbilityDef` юнитов.
+После `UPG_MAIN_DIVINE_BLESSING` игрок открывает меню **2×3** и выбирает **одну** способность
+через `MatchController.TryPickMainExtraAbility`. Выбор в `MatchPlayerState.MainExtraAbilityId`
+и снапшоте **v18** (+ `MainMana`, `MainExtraAbilityCooldownRemaining`).
+
+| Id | Name | Effect | Gate |
+|----|------|--------|------|
+| 1 | Кара зданий | true 1200 dmg вражескому зданию; CD 180s; 200 mana | melee+ranged+armor ≥7 **и** magic ≥2 |
+| 2 | Кара юнитов | 5000 dmg вражескому юниту; CD 180s; 200 mana | тот же |
+| 3–6 | Скоро | stub | всегда locked |
+
+Каст: слот 9 main → targeting mode (`MatchSelectionBridge.BeginMainExtraAbilityTargeting`) →
+LMB по цели → `TryCastMainExtraAbility` / net `RequestCastMainExtraAbility`.
+UX прицела: красный крестик (`MainExtraAbilityCursor`), красное ground-кольцо на валидном
+hover (`MatchMainExtraTargetingRingPresenter`), tooltip имени у курсора (`TargetingTooltip` в MatchHud).
+Отмена: RMB / Esc / клик в пустоту.
+VFX: `FxKind.SkyBeam` — луч с неба в точку удара; уходит в снапшот `SpellCasts`
+(`AbilityIds.MainBuildingSmite=100` / `MainUnitSmite=101`) — видят все клиенты.
+Мана main: `MainManaMax = 100 * MainLevel`, реген полный пул за 180 с.
+HP зданий растут с уровнем (main 2000/2500/3000, barracks 800/1100/1400/1600).
+Не путать с `UnitAbilityDef` юнитов (FX-defы — runtime `MainExtraAbilityFxDefs`).
 
 ## Как добавить способность
 
@@ -143,5 +159,6 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
   (`HumanHero3Prefab_HasPriestKitWhenSeeded`, `HumanTitanPrefab_HasTitanKitWhenSeeded`).
 - `HeroAbilityCombatTests`, `CasterSpellRulesTests`, `HeroLevelRulesTests` — логика каста/приоритета/unlock.
 - `HeroAbilityRulesTests` — display names покрывают паладинов и жрецов.
-- `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts` / `RoundTrip_V17_PreservesDivineBlessingFields`,
+- `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts` / `RoundTrip_V17_PreservesDivineBlessingFields` /
+  `RoundTrip_V18_PreservesMainManaAndCooldown`,
   `MatchSnapshotApplyTests`, `MainExtraAbilityRulesTests`, `DivineBlessingMatchControllerTests`.

@@ -18,18 +18,43 @@ namespace Game.Gameplay.Match
             GameIds.Buildings.TowerSe,
         };
 
-        public static float GetMaxHp(string buildingId) => buildingId switch
+        public static readonly float[] MainMaxHpByLevel = { 2000f, 2500f, 3000f };
+        public static readonly float[] BarracksMaxHpByLevel = { 800f, 1100f, 1400f, 1600f };
+        public const float TowerMaxHp = 600f;
+
+        public static float GetMaxHp(string buildingId) => GetMaxHp(buildingId, level: 1);
+
+        public static float GetMaxHp(string buildingId, int level)
         {
-            GameIds.Buildings.Main => 2000f,
-            GameIds.Buildings.BarracksLeft
-                or GameIds.Buildings.BarracksCenter
-                or GameIds.Buildings.BarracksRight => 800f,
-            GameIds.Buildings.TowerNw
-                or GameIds.Buildings.TowerNe
-                or GameIds.Buildings.TowerSw
-                or GameIds.Buildings.TowerSe => 600f,
-            _ => 800f,
-        };
+            if (IsMain(buildingId))
+            {
+                return GetMainMaxHp(level);
+            }
+
+            if (IsBarracks(buildingId))
+            {
+                return GetBarracksMaxHp(level);
+            }
+
+            if (IsTower(buildingId))
+            {
+                return TowerMaxHp;
+            }
+
+            return BarracksMaxHpByLevel[0];
+        }
+
+        public static float GetMainMaxHp(int mainLevel)
+        {
+            var index = System.Math.Clamp(mainLevel, 1, MainMaxHpByLevel.Length) - 1;
+            return MainMaxHpByLevel[index];
+        }
+
+        public static float GetBarracksMaxHp(int barracksLevel)
+        {
+            var index = System.Math.Clamp(barracksLevel, 1, BarracksMaxHpByLevel.Length) - 1;
+            return BarracksMaxHpByLevel[index];
+        }
 
         public static float GetArmor(string buildingId) => buildingId switch
         {

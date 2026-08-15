@@ -8,14 +8,15 @@ namespace Game.Editor
 {
     /// <summary>
     /// Builds the three Human building prefabs from ToonyTinyPeople TT_RTS building FBX models:
-    /// copies the matched model, lifts it so its base sits on the ground plane, keeps the native
-    /// FBX scale, and attaches <see cref="TtUnitTeamColor"/> with the four slot-color texture
-    /// variants (buildings share the same atlas-recolor mechanic as units).
+    /// copies the matched model + construction-stage foundation (*_0), lifts them so the base
+    /// sits on the ground plane, keeps the native FBX scale, and attaches
+    /// <see cref="TtUnitTeamColor"/> with the four slot-color texture variants.
     /// Run via menu BARAKI/Buildings/Rebuild TT Prefabs.
     /// </summary>
     public static class TtBuildingVisualSetup
     {
         const string TtModelFolder = "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/models/buildings";
+        const string TtConstructionFolder = TtModelFolder + "/construction";
         const string TtTextureFolder =
             "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/models/materials/color/Buildings/textures";
 
@@ -36,19 +37,30 @@ namespace Game.Editor
         {
             public readonly string DestinationPath;
             public readonly string ModelPath;
+            public readonly string FoundationPath;
 
-            public BuildingSetup(string destinationPath, string modelPath)
+            public BuildingSetup(string destinationPath, string modelPath, string foundationPath)
             {
                 DestinationPath = destinationPath;
                 ModelPath = modelPath;
+                FoundationPath = foundationPath;
             }
         }
 
         static readonly BuildingSetup[] BuildingSetups =
         {
-            new(TownHallPath, TtModelFolder + "/TownHall.FBX"),
-            new(TowerPath, TtModelFolder + "/Tower_A.FBX"),
-            new(BarracksPath, TtModelFolder + "/Barracks.FBX"),
+            new(
+                TownHallPath,
+                TtModelFolder + "/TownHall.FBX",
+                TtConstructionFolder + "/TownHall_0.FBX"),
+            new(
+                TowerPath,
+                TtModelFolder + "/Tower_A.FBX",
+                TtConstructionFolder + "/Tower_A_0.FBX"),
+            new(
+                BarracksPath,
+                TtModelFolder + "/Barracks.FBX",
+                TtConstructionFolder + "/Barracks_0.FBX"),
         };
 
         [MenuItem("BARAKI/Buildings/Rebuild TT Prefabs")]
@@ -75,16 +87,26 @@ namespace Game.Editor
         static void BuildPrefab(BuildingSetup setup)
         {
             var modelRoot = LoadModelRoot(setup.ModelPath);
+            var foundationRoot = LoadModelRoot(setup.FoundationPath);
 
             var root = new GameObject(Path.GetFileNameWithoutExtension(setup.DestinationPath));
             try
             {
                 var model = UnityEngine.Object.Instantiate(modelRoot, root.transform);
-                model.name = "Model";
+                model.name = BuildingRuinsVisual.ModelName;
+
+                var foundation = UnityEngine.Object.Instantiate(foundationRoot, root.transform);
+                foundation.name = BuildingRuinsVisual.FoundationName;
 
                 var lift = ComputeBaseLift(model);
                 model.transform.localPosition = new Vector3(0f, lift, 0f);
                 model.transform.localScale = Vector3.one;
+
+                // Same ground alignment as the full model so the stone ring matches the intact base.
+                var foundationLift = ComputeBaseLift(foundation);
+                foundation.transform.localPosition = new Vector3(0f, foundationLift, 0f);
+                foundation.transform.localScale = Vector3.one;
+                foundation.SetActive(false);
 
                 root.transform.localScale = Vector3.one;
                 root.transform.localRotation = Quaternion.identity;

@@ -387,19 +387,24 @@
 }
 
 .match-extra-ability__list {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
+    padding: 4px;
 }
 
 .match-extra-ability__btn {
-    margin-bottom: 6px;
-    min-height: 44px;
+    width: 31%;
+    height: 72px;
+    margin: 1%;
     white-space: normal;
-    -unity-text-align: middle-left;
+    -unity-text-align: middle-center;
+    font-size: 11px;
 }
 
 .match-extra-ability__btn--locked {
-    opacity: 0.45;
+    opacity: 0.35;
 }
 
 .match-extra-ability__btn--picked {
@@ -410,4 +415,27 @@
     margin-top: 8px;
     align-self: center;
     min-width: 140px;
+}
+
+.match-targeting-tooltip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    max-width: 220px;
+    padding: 6px 10px;
+    background-color: rgba(9, 9, 10, 0.94);
+    border-width: 2px;
+    border-color: rgba(200, 70, 60, 0.75);
+    z-index: 1100;
+}
+
+.match-targeting-tooltip--hidden {
+    display: none;
+}
+
+.match-targeting-tooltip__label {
+    font-size: 12px;
+    color: rgb(255, 214, 200);
+    white-space: normal;
+    -unity-text-align: middle-left;
 }

@@ -871,7 +871,18 @@ namespace Game.Gameplay.Combat
 
                 _lastAppliedSpellSerial = snap.Serial;
                 var def = AbilityCatalog != null ? AbilityCatalog.Find(snap.AbilityId) : null;
-                if (def == null || def.Behaviour == null)
+                if (def == null)
+                {
+                    MainExtraAbilityFxDefs.TryGet(snap.AbilityId, out def);
+                }
+
+                if (def == null)
+                {
+                    continue;
+                }
+
+                // FX-only defs (main Divine Blessing smites) have no behaviour — still play VFX.
+                if (def.Behaviour == null && !MainExtraAbilityFxDefs.TryGet(snap.AbilityId, out _))
                 {
                     continue;
                 }

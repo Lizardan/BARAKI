@@ -15,27 +15,14 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsUnlocked_RespectsStubGates()
+        public void IsUnlocked_RequiresCombatGateForImplementedAbilities()
         {
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(1, 0, 0, 0, 0, 0));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(1, 0, 0, 0, 0, 1));
-
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(2, 2, 0, 0, 0, 0));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(2, 3, 0, 0, 0, 0));
-
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(3, 0, 2, 2, 0, 0));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(3, 0, 3, 0, 0, 0));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(3, 0, 0, 3, 0, 0));
-
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(4, 0, 0, 0, 5, 0));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(4, 0, 0, 0, 6, 0));
-
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(5, 6, 0, 0, 0, 1));
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(5, 5, 5, 5, 0, 2));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(5, 6, 0, 0, 0, 2));
-
-            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(6, 6, 6, 5, 0, 3));
-            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(6, 6, 6, 6, 0, 3));
+            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(1, 6, 7, 7, 0, 2));
+            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(1, 7, 7, 7, 0, 1));
+            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(1, 7, 7, 7, 0, 2));
+            Assert.IsTrue(MainExtraAbilityRules.IsUnlocked(2, 7, 7, 7, 0, 2));
+            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(3, 9, 9, 9, 0, 3));
+            Assert.IsFalse(MainExtraAbilityRules.IsUnlocked(6, 9, 9, 9, 0, 3));
         }
 
         [Test]
@@ -44,16 +31,32 @@ namespace Game.Tests
             var player = new MatchPlayerState(0, "RACE_HUMAN", 1000)
             {
                 DivineBlessingComplete = false,
-                MagicLevel = 1,
+                MeleeDamageLevel = 7,
+                RangedDamageLevel = 7,
+                HpArmorLevel = 7,
+                MagicLevel = 2,
             };
             Assert.IsFalse(MainExtraAbilityRules.CanPick(player, 1));
 
             player.DivineBlessingComplete = true;
             Assert.IsTrue(MainExtraAbilityRules.CanPick(player, 1));
+            Assert.IsTrue(MainExtraAbilityRules.CanPick(player, 2));
+            Assert.IsFalse(MainExtraAbilityRules.CanPick(player, 3));
 
             player.MainExtraAbilityId = 1;
             Assert.IsFalse(MainExtraAbilityRules.CanPick(player, 1));
             Assert.IsFalse(MainExtraAbilityRules.CanPick(player, 2));
+        }
+
+        [Test]
+        public void Tuning_MatchesDesignNumbers()
+        {
+            Assert.AreEqual(1200f, MainExtraAbilityRules.BuildingSmiteDamage);
+            Assert.AreEqual(5000f, MainExtraAbilityRules.UnitSmiteDamage);
+            Assert.AreEqual(180f, MainExtraAbilityRules.CooldownSeconds);
+            Assert.AreEqual(200f, MainExtraAbilityRules.ManaCost);
+            Assert.AreEqual(200f, MainExtraAbilityRules.GetMainManaMax(2));
+            Assert.AreEqual(300f, MainExtraAbilityRules.GetMainManaMax(3));
         }
     }
 }

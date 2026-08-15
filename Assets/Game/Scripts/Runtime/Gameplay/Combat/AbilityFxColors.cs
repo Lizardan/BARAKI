@@ -12,5 +12,6 @@ namespace Game.Gameplay.Combat
         public static readonly Color Ultimate = new(1f, 0.3f, 0.2f);
         public static readonly Color Paladin = new(1f, 0.84f, 0.28f);
         public static readonly Color Priest = new(0.78f, 0.92f, 1f);
+        public static readonly Color DivineSmite = new(1f, 0.92f, 0.45f);
     }
 }

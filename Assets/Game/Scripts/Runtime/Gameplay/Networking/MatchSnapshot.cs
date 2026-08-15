@@ -74,6 +74,10 @@ namespace Game.Gameplay.Networking
         public bool DivineBlessingComplete;
         /// <summary>Picked main extra ability id (1..6). 0 = none. Pre-v17 = 0.</summary>
         public int MainExtraAbilityId;
+        /// <summary>Main building mana. 0 on pre-v18 snapshots.</summary>
+        public float MainMana;
+        /// <summary>Remaining CD for picked main extra ability. 0 on pre-v18 snapshots.</summary>
+        public float MainExtraAbilityCooldownRemaining;
     }
 
     public struct MatchHeroSlotSnapshot
@@ -196,7 +200,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 17;
+        public const int CurrentVersion = 18;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -237,6 +241,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.TitanDeathCooldownRemaining);
                     writer.Write(p.DivineBlessingComplete);
                     writer.Write(p.MainExtraAbilityId);
+                    writer.Write(p.MainMana);
+                    writer.Write(p.MainExtraAbilityCooldownRemaining);
                 }
             }
 
@@ -449,6 +455,12 @@ namespace Game.Gameplay.Networking
                 {
                     snapshot.Players[i].DivineBlessingComplete = reader.ReadBoolean();
                     snapshot.Players[i].MainExtraAbilityId = reader.ReadInt32();
+                }
+
+                if (version >= 18)
+                {
+                    snapshot.Players[i].MainMana = reader.ReadSingle();
+                    snapshot.Players[i].MainExtraAbilityCooldownRemaining = reader.ReadSingle();
                 }
             }
 
@@ -707,6 +719,8 @@ namespace Game.Gameplay.Networking
                     TitanDeathCooldownRemaining = titan?.GetLastBarracksDeathCooldown() ?? 0f,
                     DivineBlessingComplete = p.DivineBlessingComplete,
                     MainExtraAbilityId = p.MainExtraAbilityId,
+                    MainMana = p.MainMana,
+                    MainExtraAbilityCooldownRemaining = p.MainExtraAbilityCooldownRemaining,
                 });
             }
 

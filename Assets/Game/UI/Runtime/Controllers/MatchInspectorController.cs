@@ -7,6 +7,7 @@ using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using Game.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace Game.UI.Controllers
@@ -25,6 +26,10 @@ namespace Game.UI.Controllers
         const string ExtraAbilityMenuHiddenClass = "match-extra-ability--hidden";
         const string ExtraAbilityLockedClass = "match-extra-ability__btn--locked";
         const string ExtraAbilityPickedClass = "match-extra-ability__btn--picked";
+        const string TargetingTooltipHiddenClass = "match-targeting-tooltip--hidden";
+        const string CommandSlotLockedClass = "match-command-grid__slot--locked";
+        const float TargetingTooltipOffsetX = 18f;
+        const float TargetingTooltipOffsetY = 18f;
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -47,7 +52,10 @@ namespace Game.UI.Controllers
         VisualElement _hudRoot;
         VisualElement _extraAbilityMenu;
         Button _extraAbilityCloseButton;
+        VisualElement _targetingTooltip;
+        Label _targetingTooltipLabel;
         readonly Button[] _extraAbilityButtons = new Button[MainExtraAbilityRules.AbilityCount];
+        readonly string[] _extraAbilityTooltips = new string[MainExtraAbilityRules.AbilityCount];
         readonly Button[] _commandSlots = new Button[CommandSlotCount];
         readonly Action[] _commandActions = new Action[CommandSlotCount];
         readonly string[] _commandTooltips = new string[CommandSlotCount];
@@ -58,6 +66,7 @@ namespace Game.UI.Controllers
         readonly int?[] _heroDeploySlots = new int?[CommandSlotCount];
         readonly bool[] _titanDeploySlots = new bool[CommandSlotCount];
         int _hoveredCommandIndex = -1;
+        int _hoveredExtraAbilityIndex = -1;
         string _commandsFingerprint;
         UnitVisualCatalog _visualCatalog;
         MatchCombatPresenter _combatPresenter;
@@ -83,6 +92,8 @@ namespace Game.UI.Controllers
             _panelBody = root.Q<VisualElement>("InspectorPanelBody");
             _commandTooltip = root.Q<VisualElement>("CommandTooltip");
             _commandTooltipLabel = root.Q<Label>("CommandTooltipLabel");
+            _targetingTooltip = root.Q<VisualElement>("TargetingTooltip");
+            _targetingTooltipLabel = root.Q<Label>("TargetingTooltipLabel");
             BindExtraAbilityMenu(root);
 
             for (var i = 0; i < CommandSlotCount; i++)
@@ -127,6 +138,7 @@ namespace Game.UI.Controllers
             }
 
             CloseExtraAbilityMenu();
+            HideTargetingTooltip();
         }
 
         void BindExtraAbilityMenu(VisualElement root)
@@ -136,11 +148,14 @@ namespace Game.UI.Controllers
             for (var i = 0; i < MainExtraAbilityRules.AbilityCount; i++)
             {
                 var abilityId = i + 1;
+                var index = i;
                 var button = root.Q<Button>($"ExtraAbilitySlot{abilityId}");
                 _extraAbilityButtons[i] = button;
                 if (button != null)
                 {
                     button.clicked += () => PickMainExtraAbility(abilityId);
+                    button.RegisterCallback<PointerEnterEvent>(_ => ShowExtraAbilityTooltip(index));
+                    button.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
                 }
             }
 
@@ -163,6 +178,7 @@ namespace Game.UI.Controllers
 
             RefreshLiveStats();
             UpdateCallRegenFrames();
+            UpdateTargetingTooltip();
         }
 
         void SubscribeSelection()
@@ -383,7 +399,7 @@ namespace Game.UI.Controllers
                 }
             }
 
-            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}:{player?.DivineBlessingComplete}:{player?.MainExtraAbilityId ?? 0}";
+            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}:{player?.DivineBlessingComplete}:{player?.MainExtraAbilityId ?? 0}:{player?.MainMana ?? 0f:0}:{player?.MainExtraAbilityCooldownRemaining ?? 0f:0}:{MatchSelectionBridge.Current?.IsMainExtraCastPending}";
         }
 
         void PopulateBuildingCommands(BuildingState building)
@@ -1009,12 +1025,24 @@ namespace Game.UI.Controllers
 
             if (player.MainExtraAbilityId != MainExtraAbilityRules.None)
             {
+                var canCast = MainExtraAbilityRules.CanCast(player);
+                var pending = MatchSelectionBridge.Current != null
+                    && MatchSelectionBridge.Current.IsMainExtraCastPending;
                 SetCommand(
                     slot,
-                    MatchUpgradeLabelRules.FormatExtraAbilityPickedButton(player.MainExtraAbilityId),
-                    enabled: false,
-                    action: null,
-                    MatchUpgradeLabelRules.FormatExtraAbilityPickedTooltip(player.MainExtraAbilityId));
+                    MatchUpgradeLabelRules.FormatExtraAbilityCastButton(
+                        player.MainExtraAbilityId,
+                        player.MainMana,
+                        player.MainManaMax,
+                        player.MainExtraAbilityCooldownRemaining),
+                    enabled: canCast || pending,
+                    action: ToggleMainExtraAbilityCast,
+                    MatchUpgradeLabelRules.FormatExtraAbilityCastTooltip(
+                        player.MainExtraAbilityId,
+                        player.MainMana,
+                        player.MainManaMax,
+                        player.MainExtraAbilityCooldownRemaining));
+                SetCommandLocked(slot, locked: false);
                 return;
             }
 
@@ -1026,6 +1054,7 @@ namespace Game.UI.Controllers
                     enabled: true,
                     OpenExtraAbilityMenu,
                     MatchUpgradeLabelRules.FormatExtraAbilityMenuTooltip());
+                SetCommandLocked(slot, locked: false);
                 return;
             }
 
@@ -1033,24 +1062,74 @@ namespace Game.UI.Controllers
             var queued = controller?.Research.CountUpgrade(
                 building.InstanceId,
                 GameIds.Upgrades.DivineBlessing) ?? 0;
+            var meetsLevel = MatchEconomyRules.CanPurchaseDivineBlessing(
+                player.MainLevel,
+                player.DivineBlessingComplete);
             var canStart = queued == 0
                 && !queueFull
-                && MatchEconomyRules.TryGetDivineBlessingUpgrade(
-                    player.MainLevel,
-                    player.DivineBlessingComplete,
-                    out var cost,
-                    out var duration)
-                && player.Gold >= cost;
+                && meetsLevel
+                && player.Gold >= MatchEconomyRules.DivineBlessingCost;
+            var lockedByLevel = !meetsLevel;
 
+            // Keep the button visible from main L1 (locked label); UI Toolkit disables
+            // pointer events on SetEnabled(false), so locked-by-level stays enabled for
+            // hover tooltips and the click is gated below.
             SetCommand(
                 slot,
-                MatchUpgradeLabelRules.FormatDivineBlessingButton(
-                    MatchEconomyRules.DivineBlessingCost),
-                canStart,
-                () => StartResearch(GameIds.Upgrades.DivineBlessing),
+                lockedByLevel
+                    ? MatchUpgradeLabelRules.FormatDivineBlessingLockedButton(
+                        MatchEconomyRules.DivineBlessingRequiredMainLevel)
+                    : MatchUpgradeLabelRules.FormatDivineBlessingButton(
+                        MatchEconomyRules.DivineBlessingCost),
+                enabled: canStart || lockedByLevel,
+                () =>
+                {
+                    if (!meetsLevel || queued > 0 || queueFull
+                        || player.Gold < MatchEconomyRules.DivineBlessingCost)
+                    {
+                        return;
+                    }
+
+                    StartResearch(GameIds.Upgrades.DivineBlessing);
+                },
                 MatchUpgradeLabelRules.FormatDivineBlessingTooltip(
                     MatchEconomyRules.DivineBlessingCost,
-                    MatchEconomyRules.DivineBlessingSeconds));
+                    MatchEconomyRules.DivineBlessingSeconds,
+                    player.MainLevel));
+            SetCommandLocked(slot, lockedByLevel || !canStart);
+        }
+
+        void SetCommandLocked(int index, bool locked)
+        {
+            if (index < 0 || index >= CommandSlotCount || _commandSlots[index] == null)
+            {
+                return;
+            }
+
+            _commandSlots[index].EnableInClassList(CommandSlotLockedClass, locked);
+        }
+
+        void ToggleMainExtraAbilityCast()
+        {
+            var bridge = MatchSelectionBridge.Current;
+            if (bridge == null)
+            {
+                return;
+            }
+
+            if (bridge.IsMainExtraCastPending)
+            {
+                bridge.CancelMainExtraAbilityTargeting();
+                return;
+            }
+
+            var player = FindLocalPlayer(_matchRuntime?.Controller);
+            if (player == null || !MainExtraAbilityRules.CanCast(player))
+            {
+                return;
+            }
+
+            bridge.BeginMainExtraAbilityTargeting();
         }
 
         void OpenExtraAbilityMenu()
@@ -1084,8 +1163,11 @@ namespace Game.UI.Controllers
 
                 var unlocked = player != null && MainExtraAbilityRules.IsUnlocked(abilityId, player);
                 var picked = player != null && player.MainExtraAbilityId == abilityId;
-                button.text =
-                    $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{MainExtraAbilityRules.GetGateDescription(abilityId)}";
+                var implemented = MainExtraAbilityRules.IsImplemented(abilityId);
+                button.text = implemented
+                    ? MainExtraAbilityRules.GetDisplayName(abilityId)
+                    : "Скоро";
+                _extraAbilityTooltips[i] = MainExtraAbilityRules.GetMenuTooltip(abilityId);
                 button.SetEnabled(unlocked && player != null && MainExtraAbilityRules.CanPick(player, abilityId));
                 button.EnableInClassList(ExtraAbilityLockedClass, !unlocked);
                 button.EnableInClassList(ExtraAbilityPickedClass, picked);
@@ -1303,6 +1385,7 @@ namespace Game.UI.Controllers
 
         void ShowTooltip(int index)
         {
+            _hoveredExtraAbilityIndex = -1;
             if (_commandTooltip == null
                 || _commandTooltipLabel == null
                 || index < 0
@@ -1318,17 +1401,38 @@ namespace Game.UI.Controllers
             _commandTooltipLabel.text = _commandTooltips[index];
             _commandTooltip.RemoveFromClassList(TooltipHiddenClass);
             _commandTooltip.BringToFront();
-            _commandTooltip.schedule.Execute(() => PositionTooltip(index));
+            _commandTooltip.schedule.Execute(() => PositionTooltip(_commandSlots[index]));
         }
 
-        void PositionTooltip(int index)
+        void ShowExtraAbilityTooltip(int index)
         {
-            if (_commandTooltip == null || _commandSlots[index] == null)
+            _hoveredCommandIndex = -1;
+            if (_commandTooltip == null
+                || _commandTooltipLabel == null
+                || index < 0
+                || index >= MainExtraAbilityRules.AbilityCount
+                || string.IsNullOrEmpty(_extraAbilityTooltips[index])
+                || _extraAbilityButtons[index] == null)
+            {
+                HideTooltip();
+                return;
+            }
+
+            _hoveredExtraAbilityIndex = index;
+            _commandTooltipLabel.text = _extraAbilityTooltips[index];
+            _commandTooltip.RemoveFromClassList(TooltipHiddenClass);
+            _commandTooltip.BringToFront();
+            _commandTooltip.schedule.Execute(() => PositionTooltip(_extraAbilityButtons[index]));
+        }
+
+        void PositionTooltip(VisualElement anchor)
+        {
+            if (_commandTooltip == null || anchor == null)
             {
                 return;
             }
 
-            var buttonBound = _commandSlots[index].worldBound;
+            var buttonBound = anchor.worldBound;
             var size = _commandTooltip.worldBound.size;
             if (size.x < 1f || size.y < 1f)
             {
@@ -1342,13 +1446,83 @@ namespace Game.UI.Controllers
             _commandTooltip.style.top = topLeft.y - rootBound.y;
         }
 
+        void PositionTooltip(int index)
+        {
+            if (index < 0 || index >= CommandSlotCount)
+            {
+                return;
+            }
+
+            PositionTooltip(_commandSlots[index]);
+        }
+
         void HideTooltip()
         {
             _hoveredCommandIndex = -1;
+            _hoveredExtraAbilityIndex = -1;
             _commandTooltip?.AddToClassList(TooltipHiddenClass);
             if (_commandTooltipLabel != null)
             {
                 _commandTooltipLabel.text = string.Empty;
+            }
+        }
+
+        void UpdateTargetingTooltip()
+        {
+            if (_targetingTooltip == null || _targetingTooltipLabel == null)
+            {
+                return;
+            }
+
+            var bridge = MatchSelectionBridge.Current;
+            if (bridge == null || !bridge.IsMainExtraCastPending)
+            {
+                HideTargetingTooltip();
+                return;
+            }
+
+            var name = MatchInspectorFormatting.FormatPickTargetName(
+                _matchRuntime?.Controller,
+                bridge.HoverTarget);
+            if (string.IsNullOrEmpty(name))
+            {
+                HideTargetingTooltip();
+                return;
+            }
+
+            _targetingTooltipLabel.text = name;
+            _targetingTooltip.RemoveFromClassList(TargetingTooltipHiddenClass);
+            _targetingTooltip.BringToFront();
+            PositionTargetingTooltipNearPointer();
+        }
+
+        void PositionTargetingTooltipNearPointer()
+        {
+            if (_targetingTooltip == null || _hudRoot == null || _targetingTooltip.panel == null)
+            {
+                return;
+            }
+
+            var mouse = Mouse.current;
+            if (mouse == null)
+            {
+                return;
+            }
+
+            var panelPos = RuntimePanelUtils.ScreenToPanel(
+                _targetingTooltip.panel,
+                mouse.position.ReadValue());
+            var rootBound = _hudRoot.worldBound;
+            _targetingTooltip.style.left = panelPos.x - rootBound.x + TargetingTooltipOffsetX;
+            _targetingTooltip.style.top = panelPos.y - rootBound.y + TargetingTooltipOffsetY;
+        }
+
+        void HideTargetingTooltip()
+        {
+            _targetingTooltip?.AddToClassList(TargetingTooltipHiddenClass);
+            if (_targetingTooltipLabel != null)
+            {
+                _targetingTooltipLabel.text = string.Empty;
             }
         }
 
@@ -1381,6 +1555,7 @@ namespace Game.UI.Controllers
 
                 _commandSlots[i].text = string.Empty;
                 _commandSlots[i].SetEnabled(false);
+                _commandSlots[i].EnableInClassList(CommandSlotLockedClass, false);
             }
         }
 

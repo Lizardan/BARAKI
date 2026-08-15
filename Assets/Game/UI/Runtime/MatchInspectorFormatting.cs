@@ -1,6 +1,7 @@
 using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
+using Game.Gameplay.Match.Selection;
 
 namespace Game.UI
 {
@@ -18,6 +19,38 @@ namespace Game.UI
                 or GameIds.Buildings.TowerSe => "Башня",
             _ => buildingId,
         };
+
+        public static string FormatPickTargetName(MatchController controller, MatchPickTarget target)
+        {
+            if (controller == null || !target.HasTarget)
+            {
+                return string.Empty;
+            }
+
+            if (target.IsBuilding)
+            {
+                var building = controller.Buildings.GetByInstanceId(target.EntityId);
+                return building == null ? string.Empty : FormatBuildingName(building.BuildingId);
+            }
+
+            if (!target.IsUnit)
+            {
+                return string.Empty;
+            }
+
+            var unit = controller.Combat.GetUnit(target.EntityId);
+            if (unit == null)
+            {
+                return string.Empty;
+            }
+
+            if (unit.IsHero && unit.HeroSlot >= 1)
+            {
+                return FormatHeroName(unit.HeroSlot);
+            }
+
+            return FormatRole(unit.Role);
+        }
 
         public static string FormatOwnerLabel(int ownerSlot) => $"Игрок {ownerSlot + 1}";
 

@@ -21,6 +21,8 @@ namespace Game.Gameplay.Combat
         Burst = 2,
         RingPlus = 3,
         RingBurst = 4,
+        /// <summary>Vertical beam from sky into the impact point (main Divine Blessing smites).</summary>
+        SkyBeam = 5,
     }
 
     /// <summary>VFX hint for a cast; zero duration/height means "use the kind default".</summary>
@@ -49,6 +51,9 @@ namespace Game.Gameplay.Combat
 
         public static AbilityFx Plus(Color color) =>
             new() { Kind = FxKind.Plus, Color = color };
+
+        public static AbilityFx SkyBeam(Color color, float duration = 1.1f, float height = 36f) =>
+            new() { Kind = FxKind.SkyBeam, Color = color, DurationSeconds = duration, BurstHeight = height };
     }
 
     /// <summary>Everything a behaviour needs to resolve and apply a single cast.</summary>

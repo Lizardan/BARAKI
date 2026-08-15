@@ -183,16 +183,17 @@ id: BUILDING_MAIN
 building_type: Main
 main_level: 1
 max_level: 3
-max_hp: 2000
+max_hp_by_level: [2000, 2500, 3000]
+main_mana_max: 100 * main_level
 armor: 5
 abilities: [HERO_HIRE, UPG_MAIN_BUILDING_LEVEL, UPG_MAIN_PASSIVE_GOLD, UPG_MAIN_MAGIC, UPG_MAIN_DIVINE_BLESSING, MAIN_EXTRA_ABILITY_MENU, TITAN_SUMMON]
-player_actions: [hire_hero, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability]
+player_actions: [hire_hero, upgrade_main_level, upgrade_main_passive_gold, upgrade_main_magic, upgrade_stat_tracks, research_divine_blessing, pick_main_extra_ability, cast_main_extra_ability]
 upgrade_costs: [2000, 3000]
 gates:
   stat_upgrade_max: main_level * 3
   heroes_hire_max: main_level
   magic_upgrade_max: main_level
-note: Magic unlocks **race caster spells**; не active abilities на main
+note: Magic unlocks **race caster spells**; main extra ability cast after Divine Blessing pick (PRE-005)
 destroyed_effect: main_ruins    # НЕ elimination — см. PLAYER_ELIMINATION
 on_destroy:
   is_destroyed: true
@@ -206,7 +207,7 @@ id: BUILDING_BARRACKS
 building_type: Barracks
 barracks_level: 1
 is_destroyed: false
-max_hp: 800
+max_hp_by_level: [800, 1100, 1400, 1600]
 armor: 2
 grants: SQUAD_BARRACKS_L1
 mvp: true

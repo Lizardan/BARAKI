@@ -241,6 +241,56 @@ namespace Game.Gameplay.Match
             return root;
         }
 
+        /// <summary>
+        /// Divine beam from the sky into the impact point — visible to all clients via snapshot SpellCasts.
+        /// </summary>
+        public static GameObject CreateSkyBeam(
+            Transform parent,
+            Vector3 impact,
+            Color color,
+            float height = 40f,
+            float duration = 1.15f,
+            float impactRadius = 1.8f)
+        {
+            var root = new GameObject("DivineSkyBeam");
+            root.transform.SetParent(parent, false);
+            root.transform.position = impact;
+
+            var beamColor = color;
+            beamColor.a = Mathf.Clamp01(color.a * 0.92f);
+            var beam = CreatePrimitiveCylinder(root.transform, "Beam", 0.85f, height, beamColor);
+            beam.localPosition = Vector3.up * (height * 0.5f);
+
+            var coreColor = Color.Lerp(color, Color.white, 0.55f);
+            coreColor.a = Mathf.Clamp01(color.a);
+            var core = CreatePrimitiveCylinder(root.transform, "Core", 0.28f, height * 0.98f, coreColor);
+            core.localPosition = Vector3.up * (height * 0.5f);
+
+            var diskColor = color;
+            diskColor.a *= 0.4f;
+            var disk = CreatePrimitiveCylinder(root.transform, "ImpactDisk", impactRadius * 2.4f, 0.1f, diskColor);
+            disk.localPosition = Vector3.up * 0.05f;
+
+            var ringColor = color;
+            ringColor.a *= 0.9f;
+            CreateRing(root.transform, impact, impactRadius, ringColor, duration, fadeOutNormalized: 0.8f);
+
+            var component = root.AddComponent<SpellFxRiseFade>();
+            component.Configure(
+                new[]
+                {
+                    beam.GetComponent<Renderer>(),
+                    core.GetComponent<Renderer>(),
+                    disk.GetComponent<Renderer>(),
+                },
+                beamColor,
+                duration,
+                riseSpeed: 0f,
+                billboard: false,
+                fadeOutNormalized: 0.72f);
+            return root;
+        }
+
         /// <summary>Spell name label above the caster's bars, rises then fades.</summary>
         public static GameObject CreateLabel(
             Transform parent,

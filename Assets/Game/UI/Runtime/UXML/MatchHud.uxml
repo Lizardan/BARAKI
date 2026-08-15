@@ -161,15 +161,18 @@
                 <ui:Label text="СПОСОБНОСТЬ MAIN" class="ui-dialog__title match-extra-ability__title" picking-mode="Ignore" />
                 <ui:Label text="Выберите одну — сменить нельзя. Можно закрыть и вернуться позже." class="ui-panel__note match-extra-ability__note" picking-mode="Ignore" />
                 <ui:VisualElement name="ExtraAbilityList" class="match-extra-ability__list">
-                    <ui:Button name="ExtraAbilitySlot1" text="Способность 1" class="ui-btn match-extra-ability__btn" />
-                    <ui:Button name="ExtraAbilitySlot2" text="Способность 2" class="ui-btn match-extra-ability__btn" />
-                    <ui:Button name="ExtraAbilitySlot3" text="Способность 3" class="ui-btn match-extra-ability__btn" />
-                    <ui:Button name="ExtraAbilitySlot4" text="Способность 4" class="ui-btn match-extra-ability__btn" />
-                    <ui:Button name="ExtraAbilitySlot5" text="Способность 5" class="ui-btn match-extra-ability__btn" />
-                    <ui:Button name="ExtraAbilitySlot6" text="Способность 6" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot1" text="1" class="ui-btn--square match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot2" text="2" class="ui-btn--square match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot3" text="3" class="ui-btn--square match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot4" text="4" class="ui-btn--square match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot5" text="5" class="ui-btn--square match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot6" text="6" class="ui-btn--square match-extra-ability__btn" />
                 </ui:VisualElement>
                 <ui:Button name="ExtraAbilityCloseButton" text="Закрыть" class="ui-btn match-extra-ability__close" />
             </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="TargetingTooltip" class="match-targeting-tooltip match-targeting-tooltip--hidden" picking-mode="Ignore">
+            <ui:Label name="TargetingTooltipLabel" text="" class="match-targeting-tooltip__label" picking-mode="Ignore" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

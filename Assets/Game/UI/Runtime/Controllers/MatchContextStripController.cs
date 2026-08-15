@@ -242,6 +242,9 @@ namespace Game.UI.Controllers
                      && building.OwnerSlot < controller.Players.Count)
             {
                 var player = controller.Players[building.OwnerSlot];
+                _stat1.text = building.IsRuins
+                    ? "Руины"
+                    : $"Мана: {MatchInspectorFormatting.FormatHp(player.MainMana, player.MainManaMax)}";
                 _stat2.text = $"Ур. {player.MainLevel}";
                 _stat3.text = $"Passive: {player.PassiveGoldLevel}";
             }

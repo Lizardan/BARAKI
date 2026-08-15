@@ -141,6 +141,9 @@ namespace Game.Tests
                         Slot = 0,
                         DivineBlessingComplete = true,
                         MainExtraAbilityId = 3,
+                        MainMana = 175f,
+                        MainExtraAbilityCooldownRemaining = 12f,
+                        MainLevel = 2,
                     },
                 },
             };
@@ -149,6 +152,8 @@ namespace Game.Tests
 
             Assert.IsTrue(client.Players[0].DivineBlessingComplete);
             Assert.AreEqual(3, client.Players[0].MainExtraAbilityId);
+            Assert.AreEqual(175f, client.Players[0].MainMana, 0.01f);
+            Assert.AreEqual(12f, client.Players[0].MainExtraAbilityCooldownRemaining, 0.01f);
         }
 
         [Test]

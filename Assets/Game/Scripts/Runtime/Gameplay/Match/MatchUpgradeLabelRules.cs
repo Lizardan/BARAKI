@@ -34,19 +34,40 @@ namespace Game.Gameplay.Match
         public static string FormatDivineBlessingButton(int cost) =>
             $"Благословение\n{cost}g";
 
-        public static string FormatDivineBlessingTooltip(int cost, float seconds) =>
-            $"Божественное благословение\n{cost}g · {seconds:0}с\nСнимает туман войны; открывает выбор способности main";
+        public static string FormatDivineBlessingLockedButton(int requiredMainLevel) =>
+            $"Благословение\nУр. {requiredMainLevel}";
+
+        public static string FormatDivineBlessingTooltip(int cost, float seconds, int mainLevel = 99) =>
+            mainLevel < MatchEconomyRules.DivineBlessingRequiredMainLevel
+                ? $"Божественное благословение\nНужен ур. главного здания {MatchEconomyRules.DivineBlessingRequiredMainLevel}\n{cost}g · {seconds:0}с\nСнимает туман войны; открывает выбор способности main"
+                : $"Божественное благословение\n{cost}g · {seconds:0}с\nСнимает туман войны; открывает выбор способности main";
 
         public static string FormatExtraAbilityMenuButton() => "Способность";
 
         public static string FormatExtraAbilityMenuTooltip() =>
             "Выбрать одну доп. способность main на весь матч\nМеню можно закрыть и открыть снова";
 
+        public static string FormatExtraAbilityCastButton(int abilityId, float mana, float manaMax, float cooldown) =>
+            cooldown > 0.05f
+                ? $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{cooldown:0}с"
+                : $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{mana:0}/{manaMax:0}";
+
+        public static string FormatExtraAbilityCastTooltip(int abilityId, float mana, float manaMax, float cooldown)
+        {
+            var effect = MainExtraAbilityRules.GetEffectDescription(abilityId);
+            if (cooldown > 0.05f)
+            {
+                return $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{effect}\nПерезарядка: {cooldown:0}с\nМана: {mana:0}/{manaMax:0}";
+            }
+
+            return $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{effect}\nМана: {mana:0}/{manaMax:0}\nКлик → выбрать цель";
+        }
+
         public static string FormatExtraAbilityPickedButton(int abilityId) =>
             MainExtraAbilityRules.GetDisplayName(abilityId);
 
         public static string FormatExtraAbilityPickedTooltip(int abilityId) =>
-            $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\nВыбрано на весь матч";
+            MainExtraAbilityRules.GetMenuTooltip(abilityId);
 
         public static string FormatHeroHireButton(int heroSlot, int cost) =>
             $"Герой {heroSlot}\n{cost}g";

@@ -528,16 +528,23 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var marker = GameObject.CreatePrimitive(GetPrimitive(buildingId));
-            marker.name = buildingId;
+            var marker = new GameObject(buildingId);
             marker.transform.SetParent(slotRoot, false);
             marker.transform.localPosition = localPosition;
             marker.transform.localRotation = localRotation;
-            marker.transform.localScale = GetScale(buildingId);
+            marker.transform.localScale = Vector3.one;
 
-            DestroyCollider(marker.GetComponent<Collider>());
+            BuildingRuinsVisual.EnsurePrimitiveFoundation(marker.transform, buildingId);
 
-            ApplyColor(marker, GetColor(buildingId));
+            var model = GameObject.CreatePrimitive(GetPrimitive(buildingId));
+            model.name = BuildingRuinsVisual.ModelName;
+            model.transform.SetParent(marker.transform, false);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = GetScale(buildingId);
+
+            DestroyCollider(model.GetComponent<Collider>());
+            ApplyColor(model, GetColor(buildingId));
         }
 
         static void CreateSharedFlankRingLine(Transform lanesRoot, float ringRadius, int playerCount)

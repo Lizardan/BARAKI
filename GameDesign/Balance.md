@@ -132,11 +132,23 @@ Cast range (all): **6**. См. `Races.md` для полных entity.
 
 ## Buildings
 
-| id | HP | Armor |
-|----|-----|-------|
-| BUILDING_MAIN | 2000 | 5 |
-| BUILDING_BARRACKS | 800 | 2 | level 1..4 |
-| BUILDING_TOWER | 600 | 3 | ×4 per base (NW/NE/SW/SE) |
+| id | HP by level | Armor |
+|----|-------------|-------|
+| BUILDING_MAIN | L1 **2000** / L2 **2500** / L3 **3000** | 5 |
+| BUILDING_BARRACKS | L1 **800** / L2 **1100** / L3 **1400** / L4 **1600** | 2 |
+| BUILDING_TOWER | **600** (без роста по уровню) | 3 | ×4 per base (NW/NE/SW/SE) |
+
+## Main mana + blessing abilities
+
+```entity
+id: MAIN_MANA_AND_EXTRA_ABILITIES
+main_mana_max: 100 * main_level   # L1=100, L2=200, L3=300
+main_mana_regen: full_pool_over_180s
+ability_1_building_smite: { damage: 1200, cooldown_sec: 180, mana: 200 }
+ability_2_unit_smite: { damage: 5000, cooldown_sec: 180, mana: 200 }
+note: ability_1 damage = 75% of barracks L4 HP (1600)
+```
+
 
 ## Center arena (map only)
 

@@ -268,6 +268,42 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V18_PreservesMainManaAndCooldown()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        DivineBlessingComplete = true,
+                        MainExtraAbilityId = 1,
+                        MainMana = 150.5f,
+                        MainExtraAbilityCooldownRemaining = 42f,
+                    },
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 1,
+                        MainMana = 100f,
+                        MainExtraAbilityCooldownRemaining = 0f,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(150.5f, restored.Players[0].MainMana, 0.01f);
+            Assert.AreEqual(42f, restored.Players[0].MainExtraAbilityCooldownRemaining, 0.01f);
+            Assert.AreEqual(1, restored.Players[0].MainExtraAbilityId);
+            Assert.AreEqual(100f, restored.Players[1].MainMana, 0.01f);
+        }
+
+        [Test]
         public void RoundTrip_V13_PreservesBonusPickFields()
         {
             var original = new MatchSnapshot

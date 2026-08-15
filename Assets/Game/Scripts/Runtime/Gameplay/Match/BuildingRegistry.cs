@@ -63,6 +63,23 @@ namespace Game.Gameplay.Match
             }
 
             var damage = CombatRules.ApplyArmor(rawDamage, building.Armor);
+            return ApplyResolvedDamage(building, damage, attackerOwnerSlot);
+        }
+
+        /// <summary>True HP damage (no armor) — used by main extra abilities.</summary>
+        public bool TryApplyTrueDamage(int buildingInstanceId, float damage, int attackerOwnerSlot)
+        {
+            var building = GetByInstanceId(buildingInstanceId);
+            if (building == null || building.IsRuins || damage <= 0f)
+            {
+                return false;
+            }
+
+            return ApplyResolvedDamage(building, damage, attackerOwnerSlot);
+        }
+
+        bool ApplyResolvedDamage(BuildingState building, float damage, int attackerOwnerSlot)
+        {
             var becameRuins = building.ApplyDamage(damage);
             if (becameRuins)
             {

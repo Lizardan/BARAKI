@@ -33,6 +33,8 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, snapshot.Players[i].TitanXp);
                         Mix(ref hash, snapshot.Players[i].DivineBlessingComplete ? 1 : 0);
                         Mix(ref hash, snapshot.Players[i].MainExtraAbilityId);
+                        Mix(ref hash, (int)snapshot.Players[i].MainMana);
+                        Mix(ref hash, (int)snapshot.Players[i].MainExtraAbilityCooldownRemaining);
                     }
                 }
 

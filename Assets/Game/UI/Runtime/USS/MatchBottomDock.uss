@@ -253,6 +253,16 @@
     overflow: hidden;
 }
 
+.ui-btn--square.match-command-grid__slot--locked {
+    opacity: 0.72;
+    color: rgba(239, 228, 207, 0.85);
+    border-color: rgba(125, 117, 104, 0.55);
+}
+
+.ui-btn--square.match-command-grid__slot--locked:disabled {
+    opacity: 0.72;
+}
+
 .match-command-portrait {
     position: absolute;
     left: 6px;

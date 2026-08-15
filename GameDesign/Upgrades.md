@@ -145,39 +145,38 @@ mvp: true
 note: PRE-003; FoW — MatchFogOfWar; боевые эффекты ability — PRE-005
 ```
 
-После исследования кнопка благословения **заменяется** на меню **одной** доп. способности main на весь матч. Меню можно **закрыть и открыть снова** — ждать грейды, пока откроются более сильные варианты. Выбрал одну — **навсегда**, сменить нельзя.
+После исследования кнопка благословения **заменяется** на меню **одной** доп. способности main на весь матч. Меню **2×3** (6 слотов). Можно **закрыть и открыть снова** — ждать грейды. Выбрал одну — **навсегда**; слот 9 main становится кнопкой **каста**.
+
+Кнопка благословения на main **всегда видна** с L1 (если main ниже 2 — подпись «Ур. 2», клик недоступен). В context strip у выбранного main: HP + **Мана** + ур. + passive.
 
 ### Гейты способностей main (blessing menu)
 
-Уровни треков в **главном здании**:
+Уровни треков в **главном здании** (башенные апгрейды **не** входят):
 
 - `UPG_MELEE_DMG`
 - `UPG_RANGED_DMG`
 - `UPG_ARMOR`
-- `UPG_MAIN_PASSIVE_GOLD`
 - `UPG_MAIN_MAGIC`
 
-Башенные апгрейды **не** входят (отложено).
-
-**Stub-список** (PRE-003: pick + гейты; эффекты — **PRE-005**):
-
-| Id | Gate |
-|----|------|
-| 1 | magic ≥ 1 |
-| 2 | melee ≥ 3 |
-| 3 | armor ≥ 3 **или** ranged ≥ 3 |
-| 4 | passive gold ≥ 6 |
-| 5 | любой стат-трек ≥ 6 **и** magic ≥ 2 |
-| 6 | melee ≥ 6 **и** ranged ≥ 6 **и** armor ≥ 6 **и** magic ≥ 3 |
+| Id | Name | Effect | Gate |
+|----|------|--------|------|
+| 1 | Кара зданий | 1200 dmg вражескому зданию; CD 180s; 200 mana | melee ≥ 7 **и** ranged ≥ 7 **и** armor ≥ 7 **и** magic ≥ 2 |
+| 2 | Кара юнитов | 5000 dmg вражескому юниту (в т.ч. титан); CD 180s; 200 mana | **тот же** |
+| 3–6 | Скоро | — | всегда locked |
 
 ```entity
 id: MAIN_EXTRA_ABILITY_PICK
 max_picks: 1
 persist: whole_match
-deferred_choice: true          # можно закрыть меню и вернуться
-ability_list: stub_1..6        # эффекты TBD (PRE-005)
+deferred_choice: true
+menu_layout: 2x3
+ability_1: building_smite    # 1200 dmg / 180s / 200 mana
+ability_2: unit_smite        # 5000 dmg / 180s / 200 mana
+ability_3_to_6: stub_soon
+gate_1_and_2: melee>=7 && ranged>=7 && armor>=7 && magic>=2
+main_mana_max: 100 * main_level
 mvp: true
-note: PRE-003 system; combat effects PRE-005
+note: PRE-005
 ```
 
 ## Main magic upgrades (race-unique spells)
@@ -251,7 +250,8 @@ note: PRE-007
 | Main upgrade cost | **2000** (→2), **3000** (→3); time **120 / 180 s** |
 | Hero hire cap | **= main level** (1 / 2 / 3 героя); hire research **25 s** |
 | Magic unlock | **500 / 750 / 1000g**; **60 / 90 / 135 s**; gate = main level |
-| Divine Blessing | Main **L2+**; **1000g / 45s**; FoW off; → меню 1 extra ability (stub PRE-003) |
+| Divine Blessing | Main **L2+**; **1000g / 45s**; FoW off; → меню 2×3; pick 1 ability (PRE-005) |
+| Main extra abilities | 1 Кара зданий / 2 Кара юнитов; gate melee+ranged+armor ≥7 + magic ≥2; CD 180s; 200 mana; slots 3–6 stub |
 | Tower upgrades | **9 tracks × 3 levels**; sequential; **4 towers**; race-wide; **unit-only**; UI **4–12**; **500/800/1200g**; **45/90/135s** |
 | Barracks level | Per-barracks, max 4; costs **1000/1500/2500**; time **3/3/3 s** |
 | Stat upgrades | **+3%** dmg/armor per level; costs см. `UPG_STAT_LEVEL_ECONOMY` |
@@ -265,4 +265,4 @@ note: PRE-007
 - [x] Gold/time **passive gold** и **main/barracks** research
 - [ ] Список **9** Human tower tracks + эффекты (PRE-007)
 - [x] Gold/time **Divine Blessing** — **1000g / 45s**
-- [ ] Боевые эффекты **main extra abilities** после blessing (**PRE-005**; stub гейты — PRE-003)
+- [x] Боевые эффекты **main extra abilities** после blessing (**PRE-005**: Кара зданий / Кара юнитов)

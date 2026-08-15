@@ -156,6 +156,27 @@ namespace Game.Gameplay.Networking
             RequestPickMainExtraAbilityServerRpc(abilityId);
         }
 
+        public void RequestCastMainExtraAbility(int targetBuildingInstanceId, int targetUnitId)
+        {
+            if (IsCommandsBlocked())
+            {
+                PublishCommandResult(MatchCommandResult.HostMigrating);
+                return;
+            }
+
+            if (IsServer)
+            {
+                PublishCommandResult(
+                    TryCastMainExtraAbilityLocal(
+                        MatchNetworkSession.LocalSlot,
+                        targetBuildingInstanceId,
+                        targetUnitId));
+                return;
+            }
+
+            RequestCastMainExtraAbilityServerRpc(targetBuildingInstanceId, targetUnitId);
+        }
+
         public void RequestSetTowerTarget(int towerInstanceId, int unitId)
         {
             if (IsCommandsBlocked())
@@ -343,6 +364,19 @@ namespace Game.Gameplay.Networking
         public void RequestPickMainExtraAbilityServerRpc(int abilityId, RpcParams rpcParams = default)
         {
             var result = TryPickMainExtraAbilityLocal(ResolveSenderSlot(rpcParams), abilityId);
+            SendCommandResult(result, rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestCastMainExtraAbilityServerRpc(
+            int targetBuildingInstanceId,
+            int targetUnitId,
+            RpcParams rpcParams = default)
+        {
+            var result = TryCastMainExtraAbilityLocal(
+                ResolveSenderSlot(rpcParams),
+                targetBuildingInstanceId,
+                targetUnitId);
             SendCommandResult(result, rpcParams.Receive.SenderClientId);
         }
 
@@ -598,6 +632,27 @@ namespace Game.Gameplay.Networking
 
             return MatchCommandResultRules.FromTrySuccess(
                 controller.TryPickMainExtraAbility(slot, abilityId));
+        }
+
+        MatchCommandResult TryCastMainExtraAbilityLocal(
+            int slot,
+            int targetBuildingInstanceId,
+            int targetUnitId)
+        {
+            if (IsCommandsBlocked())
+            {
+                return MatchCommandResult.HostMigrating;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null)
+            {
+                return MatchCommandResult.NotAllowed;
+            }
+
+            var ok = controller.TryCastMainExtraAbility(slot, targetBuildingInstanceId, targetUnitId);
+            return ok ? MatchCommandResult.Ok : MatchCommandResult.InvalidTarget;
         }
 
         MatchCommandResult TrySetTowerTargetLocal(int slot, int towerInstanceId, int unitId)

@@ -33,3 +33,14 @@ AABB здания больше силуэта (особенно TownHall). По�
 
 Fallback — axis box без margin, если визуала ещё нет (тест / сервер без мешей).
 Engage-радиус боя по-прежнему из `MatchPickFootprint.GetBuildingDiameter`.
+
+## Руины
+
+Убийство здания юнитами и карой main — один путь: HP → 0 → `IsRuins` →
+`MatchBuildingFxPresenter` (взрыв + burning FX) + `BuildingRuinsVisual.ApplyRuins`.
+
+Визуал: скрыть `Model` (полное здание), показать `Foundation` — TT construction mesh
+`*_0` (TownHall_0 / Barracks_0 / Tower_A_0), тот же каменный цоколь что у целого здания.
+Префабы собирает `TtBuildingVisualSetup` (`BARAKI/Buildings/Rebuild TT Prefabs`):
+Foundation стартует inactive. Procedural-цилиндр больше не используется.
+Корневой объект не выключается — на нём остаются FX огня.

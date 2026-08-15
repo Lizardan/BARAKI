@@ -57,6 +57,11 @@ namespace Game.Gameplay.Networking
         public static void RequestPickMainExtraAbility(int abilityId) =>
             MatchNetworkAuthority.Instance?.RequestPickMainExtraAbility(abilityId);
 
+        public static void RequestCastMainExtraAbility(int targetBuildingInstanceId, int targetUnitId) =>
+            MatchNetworkAuthority.Instance?.RequestCastMainExtraAbility(
+                targetBuildingInstanceId,
+                targetUnitId);
+
         public static void RequestSetTowerTarget(int towerInstanceId, int unitId) =>
             MatchNetworkAuthority.Instance?.RequestSetTowerTarget(towerInstanceId, unitId);
 
