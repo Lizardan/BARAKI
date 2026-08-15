@@ -126,6 +126,32 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_UpdatesDivineBlessingFields()
+        {
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+
+            var snapshot = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        DivineBlessingComplete = true,
+                        MainExtraAbilityId = 3,
+                    },
+                },
+            };
+
+            client.ApplyAuthoritativeSnapshot(snapshot);
+
+            Assert.IsTrue(client.Players[0].DivineBlessingComplete);
+            Assert.AreEqual(3, client.Players[0].MainExtraAbilityId);
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_ForwardsSpellCastsToClientPresenterBuffer()
         {
             var host = new MatchController();

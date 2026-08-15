@@ -139,6 +139,23 @@ namespace Game.Gameplay.Networking
             RequestDeployTitanServerRpc(buildingInstanceId);
         }
 
+        public void RequestPickMainExtraAbility(int abilityId)
+        {
+            if (IsCommandsBlocked())
+            {
+                PublishCommandResult(MatchCommandResult.HostMigrating);
+                return;
+            }
+
+            if (IsServer)
+            {
+                PublishCommandResult(TryPickMainExtraAbilityLocal(MatchNetworkSession.LocalSlot, abilityId));
+                return;
+            }
+
+            RequestPickMainExtraAbilityServerRpc(abilityId);
+        }
+
         public void RequestSetTowerTarget(int towerInstanceId, int unitId)
         {
             if (IsCommandsBlocked())
@@ -319,6 +336,13 @@ namespace Game.Gameplay.Networking
             var result = TryDeployTitanLocal(
                 ResolveSenderSlot(rpcParams),
                 buildingInstanceId);
+            SendCommandResult(result, rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestPickMainExtraAbilityServerRpc(int abilityId, RpcParams rpcParams = default)
+        {
+            var result = TryPickMainExtraAbilityLocal(ResolveSenderSlot(rpcParams), abilityId);
             SendCommandResult(result, rpcParams.Receive.SenderClientId);
         }
 
@@ -556,6 +580,24 @@ namespace Game.Gameplay.Networking
 
             var ok = controller.TryDeployTitan(slot, buildingInstanceId);
             return MatchCommandResultRules.FromTrySuccess(ok);
+        }
+
+        MatchCommandResult TryPickMainExtraAbilityLocal(int slot, int abilityId)
+        {
+            if (IsCommandsBlocked())
+            {
+                return MatchCommandResult.HostMigrating;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null)
+            {
+                return MatchCommandResult.NotAllowed;
+            }
+
+            return MatchCommandResultRules.FromTrySuccess(
+                controller.TryPickMainExtraAbility(slot, abilityId));
         }
 
         MatchCommandResult TrySetTowerTargetLocal(int slot, int towerInstanceId, int unitId)

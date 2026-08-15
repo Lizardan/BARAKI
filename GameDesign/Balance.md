@@ -56,8 +56,13 @@ costs_gold: [2000, 3000]
 research_time_sec: [120, 180]
 
 id: MAIN_MAGIC_UNLOCK
-costs_gold: [800, 1500, 2500]
+costs_gold: [500, 750, 1000]
 research_time_sec: [60, 90, 135]
+
+id: MAIN_DIVINE_BLESSING
+cost_gold: 1000
+research_time_sec: 45
+requires_main_level: 2
 
 id: MAIN_PASSIVE_GOLD_UPGRADE
 cost_gold: 200

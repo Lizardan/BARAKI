@@ -70,6 +70,10 @@ namespace Game.Gameplay.Networking
         public int TitanLastBarracksInstanceId;
         /// <summary>Death cooldown remaining on that barracks. 0 on pre-v15 snapshots.</summary>
         public float TitanDeathCooldownRemaining;
+        /// <summary>True after Divine Blessing research. False on pre-v17 snapshots.</summary>
+        public bool DivineBlessingComplete;
+        /// <summary>Picked main extra ability id (1..6). 0 = none. Pre-v17 = 0.</summary>
+        public int MainExtraAbilityId;
     }
 
     public struct MatchHeroSlotSnapshot
@@ -192,7 +196,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 16;
+        public const int CurrentVersion = 17;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -231,6 +235,8 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.TitanXp);
                     writer.Write(p.TitanLastBarracksInstanceId);
                     writer.Write(p.TitanDeathCooldownRemaining);
+                    writer.Write(p.DivineBlessingComplete);
+                    writer.Write(p.MainExtraAbilityId);
                 }
             }
 
@@ -382,7 +388,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16))
+            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16 or 17))
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -437,6 +443,12 @@ namespace Game.Gameplay.Networking
                 else if (snapshot.Players[i].TitanLevel <= 0)
                 {
                     snapshot.Players[i].TitanLevel = 1;
+                }
+
+                if (version >= 17)
+                {
+                    snapshot.Players[i].DivineBlessingComplete = reader.ReadBoolean();
+                    snapshot.Players[i].MainExtraAbilityId = reader.ReadInt32();
                 }
             }
 
@@ -693,6 +705,8 @@ namespace Game.Gameplay.Networking
                     TitanXp = titan?.Xp ?? 0,
                     TitanLastBarracksInstanceId = titan?.LastSummonBarracksInstanceId ?? 0,
                     TitanDeathCooldownRemaining = titan?.GetLastBarracksDeathCooldown() ?? 0f,
+                    DivineBlessingComplete = p.DivineBlessingComplete,
+                    MainExtraAbilityId = p.MainExtraAbilityId,
                 });
             }
 

@@ -122,18 +122,31 @@ namespace Game.Tests
         public void TryGetMagicUpgrade_ReturnsGddEconomy()
         {
             Assert.IsTrue(MatchEconomyRules.TryGetMagicUpgrade(0, out var cost, out var time));
-            Assert.AreEqual(800, cost);
+            Assert.AreEqual(500, cost);
             Assert.AreEqual(60f, time);
 
             Assert.IsTrue(MatchEconomyRules.TryGetMagicUpgrade(1, out cost, out time));
-            Assert.AreEqual(1500, cost);
+            Assert.AreEqual(750, cost);
             Assert.AreEqual(90f, time);
 
             Assert.IsTrue(MatchEconomyRules.TryGetMagicUpgrade(2, out cost, out time));
-            Assert.AreEqual(2500, cost);
+            Assert.AreEqual(1000, cost);
             Assert.AreEqual(135f, time);
 
             Assert.IsFalse(MatchEconomyRules.TryGetMagicUpgrade(3, out _, out _));
+        }
+
+        [Test]
+        public void DivineBlessing_EconomyAndGate()
+        {
+            Assert.AreEqual(1000, MatchEconomyRules.DivineBlessingCost);
+            Assert.AreEqual(45f, MatchEconomyRules.DivineBlessingSeconds);
+            Assert.IsFalse(MatchEconomyRules.CanPurchaseDivineBlessing(1, alreadyComplete: false));
+            Assert.IsTrue(MatchEconomyRules.CanPurchaseDivineBlessing(2, alreadyComplete: false));
+            Assert.IsFalse(MatchEconomyRules.CanPurchaseDivineBlessing(2, alreadyComplete: true));
+            Assert.IsTrue(MatchEconomyRules.TryGetDivineBlessingUpgrade(2, false, out var cost, out var time));
+            Assert.AreEqual(1000, cost);
+            Assert.AreEqual(45f, time);
         }
     }
 }

@@ -31,6 +31,8 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, snapshot.Players[i].TitanUnlocked ? 1 : 0);
                         Mix(ref hash, snapshot.Players[i].TitanLevel);
                         Mix(ref hash, snapshot.Players[i].TitanXp);
+                        Mix(ref hash, snapshot.Players[i].DivineBlessingComplete ? 1 : 0);
+                        Mix(ref hash, snapshot.Players[i].MainExtraAbilityId);
                     }
                 }
 

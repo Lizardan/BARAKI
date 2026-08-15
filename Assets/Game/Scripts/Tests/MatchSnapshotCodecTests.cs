@@ -234,6 +234,40 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V17_PreservesDivineBlessingFields()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        DivineBlessingComplete = true,
+                        MainExtraAbilityId = 5,
+                    },
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 1,
+                        DivineBlessingComplete = false,
+                        MainExtraAbilityId = 0,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.IsTrue(restored.Players[0].DivineBlessingComplete);
+            Assert.AreEqual(5, restored.Players[0].MainExtraAbilityId);
+            Assert.IsFalse(restored.Players[1].DivineBlessingComplete);
+            Assert.AreEqual(0, restored.Players[1].MainExtraAbilityId);
+        }
+
+        [Test]
         public void RoundTrip_V13_PreservesBonusPickFields()
         {
             var original = new MatchSnapshot

@@ -155,5 +155,21 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
+        <ui:VisualElement name="ExtraAbilityMenu" class="match-extra-ability match-extra-ability--hidden" picking-mode="Position">
+            <ui:VisualElement class="match-extra-ability__dim" picking-mode="Ignore" />
+            <ui:VisualElement class="ui-dialog match-extra-ability__panel">
+                <ui:Label text="СПОСОБНОСТЬ MAIN" class="ui-dialog__title match-extra-ability__title" picking-mode="Ignore" />
+                <ui:Label text="Выберите одну — сменить нельзя. Можно закрыть и вернуться позже." class="ui-panel__note match-extra-ability__note" picking-mode="Ignore" />
+                <ui:VisualElement name="ExtraAbilityList" class="match-extra-ability__list">
+                    <ui:Button name="ExtraAbilitySlot1" text="Способность 1" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot2" text="Способность 2" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot3" text="Способность 3" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot4" text="Способность 4" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot5" text="Способность 5" class="ui-btn match-extra-ability__btn" />
+                    <ui:Button name="ExtraAbilitySlot6" text="Способность 6" class="ui-btn match-extra-ability__btn" />
+                </ui:VisualElement>
+                <ui:Button name="ExtraAbilityCloseButton" text="Закрыть" class="ui-btn match-extra-ability__close" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

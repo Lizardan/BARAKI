@@ -96,16 +96,16 @@ Level ↑ также **ускоряет** spawn. Уничтоженный barrac
 | Действие | MVP |
 |----------|-----|
 | Research upgrade | ✓ |
-| Pick match bonus (overlay 60s) | PRE-005 (UI PRE-001 done; контент pending) |
+| Pick match bonus (overlay 60s) | PRE-006 (UI PRE-001 done; контент pending) |
 | Upgrade barracks level | ✓ (1→4, per lane) |
 | Upgrade main level | ✓ (2000g → L2, 3000g → L3) |
 | Main magic | ✓ (до `main_level` слотов; race spells) |
-| Divine Blessing + main extra ability | PRE-003 |
+| Divine Blessing + main extra ability | PRE-003 (система); эффекты **PRE-005** |
 | Hire hero (main) | ✓ (500g; cap = main level) |
 | Titan bar (над main, 180s, 3 героя на базе) | ✓ (PRE-002) |
 | Deploy hero / titan (barracks) | hero ✓; titan ✓ (PRE-002, 2500g после появления на базе) |
 | Tower target mode | ✓ |
-| Tower race upgrades (×9, unit-only) | PRE-006 |
+| Tower race upgrades (×9, unit-only) | PRE-007 |
 
 ## Failure spectrum
 

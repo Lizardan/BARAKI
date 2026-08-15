@@ -54,6 +54,9 @@ namespace Game.Gameplay.Networking
         public static void RequestDeployTitan(int buildingInstanceId) =>
             MatchNetworkAuthority.Instance?.RequestDeployTitan(buildingInstanceId);
 
+        public static void RequestPickMainExtraAbility(int abilityId) =>
+            MatchNetworkAuthority.Instance?.RequestPickMainExtraAbility(abilityId);
+
         public static void RequestSetTowerTarget(int towerInstanceId, int unitId) =>
             MatchNetworkAuthority.Instance?.RequestSetTowerTarget(towerInstanceId, unitId);
 

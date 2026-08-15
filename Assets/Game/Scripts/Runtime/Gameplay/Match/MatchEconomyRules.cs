@@ -33,8 +33,11 @@ namespace Game.Gameplay.Match
         public const float UpgradeArmorPerLevel = 2f;
         public const float MagicDamagePerLevel = 3f;
         public const int DefaultMainLevel = 1;
+        public const int DivineBlessingCost = 1000;
+        public const float DivineBlessingSeconds = 45f;
+        public const int DivineBlessingRequiredMainLevel = 2;
 
-        public static readonly int[] MagicSlotCosts = { 800, 1500, 2500 };
+        public static readonly int[] MagicSlotCosts = { 500, 750, 1000 };
         public static readonly float[] MagicSlotDurationsSeconds = { 60f, 90f, 135f };
 
         public static bool TrySpendGold(int currentGold, int cost, out int remainingGold)
@@ -171,6 +174,27 @@ namespace Game.Gameplay.Match
             var index = currentMagicLevel;
             cost = MagicSlotCosts[index];
             durationSeconds = MagicSlotDurationsSeconds[index];
+            return true;
+        }
+
+        public static bool CanPurchaseDivineBlessing(int mainLevel, bool alreadyComplete) =>
+            !alreadyComplete && mainLevel >= DivineBlessingRequiredMainLevel;
+
+        public static bool TryGetDivineBlessingUpgrade(
+            int mainLevel,
+            bool alreadyComplete,
+            out int cost,
+            out float durationSeconds)
+        {
+            cost = 0;
+            durationSeconds = 0f;
+            if (!CanPurchaseDivineBlessing(mainLevel, alreadyComplete))
+            {
+                return false;
+            }
+
+            cost = DivineBlessingCost;
+            durationSeconds = DivineBlessingSeconds;
             return true;
         }
     }

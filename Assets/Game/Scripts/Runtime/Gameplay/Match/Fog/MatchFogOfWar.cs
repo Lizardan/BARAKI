@@ -24,7 +24,8 @@ namespace Game.Gameplay.Match.Fog
 
         public float VisionRadius => _visionRadius;
         public FogPermanentZones PermanentZones => _permanent;
-        public bool FogDisabled => !_fogEnabled || IsLocalPlayerEliminated();
+        public bool FogDisabled =>
+            !_fogEnabled || IsLocalPlayerEliminated() || IsLocalPlayerDivineBlessingComplete();
         public bool IsInitialized => _initialized;
 
         public void Configure(MatchRuntime runtime, int localPlayerSlot)
@@ -138,6 +139,17 @@ namespace Game.Gameplay.Match.Fog
             }
 
             return players[_localPlayerSlot].IsEliminated;
+        }
+
+        bool IsLocalPlayerDivineBlessingComplete()
+        {
+            var players = _runtime?.Controller?.Players;
+            if (players == null || _localPlayerSlot < 0 || _localPlayerSlot >= players.Count)
+            {
+                return false;
+            }
+
+            return players[_localPlayerSlot].DivineBlessingComplete;
         }
 
         void RefreshEnabledState()

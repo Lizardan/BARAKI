@@ -48,7 +48,7 @@ ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
 costs_gold: [500, 800, 1200]       # per track level L1, L2, L3
 research_time_sec: [45, 90, 135]
 mvp: false
-note: PRE-006; Human kit TBD
+note: PRE-007; Human kit TBD
 ```
 
 ```entity
@@ -63,7 +63,7 @@ mvp: true
 
 | Этап | Рас | Примечание |
 |------|-----|------------|
-| **MVP / старт** | **1** | `RACE_HUMAN` — passives, magic; tower ×9 = PRE-006; bonuses content = PRE-005 |
+| **MVP / старт** | **1** | `RACE_HUMAN` — passives, magic; blessing abilities = PRE-005; bonuses = PRE-006; tower ×9 = PRE-007 |
 | Рост контента | +N | Полный asymmetry kit per race |
 | Early Access (цель) | **4+** | Каждая с уникальным набором passives / tower / magic |
 
@@ -207,7 +207,7 @@ ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]   # 1-based; slots 1–3 empty
 costs_gold: [500, 800, 1200]
 research_time_sec: [45, 90, 135]
 mvp: false
-note: PRE-006; Human kit TBD (9 new tracks)
+note: PRE-007; Human kit TBD (9 new tracks)
 ```
 
 ```entity
@@ -220,7 +220,7 @@ mvp: true
 
 ### Люди — 9 способностей (TBD)
 
-Список **Open / PRE-006**. Старые ID `UPG_TOWER_HUMAN_STEEL_TEMPER` … `LAST_STAND` **удалены из канона** (runtime `GameIds` — снять при PRE-006).
+Список **Open / PRE-007**. Старые ID `UPG_TOWER_HUMAN_STEEL_TEMPER` … `LAST_STAND` **удалены из канона** (runtime `GameIds` — снять при PRE-007).
 
 > **4 башни** — до **4 параллельных** исследований (разные треки). **9** треков → выбор, что качать за матч.
 
@@ -247,7 +247,7 @@ heroes: [HERO_HUMAN_1, HERO_HUMAN_2, HERO_HUMAN_3]
 bonus_slots: 12               # BONUS_SLOT_*; 2 unique TBD per race
 buildings: BUILDING_SET_HUMAN
 upgrades: UPGRADE_TREE_HUMAN
-tower_tracks: []                  # 9 TBD — PRE-006; scrap STEEL_TEMPER…LAST_STAND
+tower_tracks: []                  # 9 TBD — PRE-007; scrap STEEL_TEMPER…LAST_STAND
 magic_spells: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
 ```
 
@@ -294,14 +294,14 @@ mvp: false
 | Tower upgrade economy | **500/800/1200g**; **45/90/135s** per level |
 | Base layout | **8 зданий**; **3 lane**; тыл **к краю карты**, перед **к центру** |
 | Маги | **Casters** в волне; **уникальные заклинания** per race |
-| Magic (main) | **1 / 2 / 3** слота = main level; **800/1500/2500g**; **60/90/135s** |
+| Magic (main) | **1 / 2 / 3** слота = main level; **500/750/1000g**; **60/90/135s** |
 | Match bonus | **12** слотов per race; см. `Bonuses.md` |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
 | MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
 
 ```entity
 id: UPG_MAIN_MAGIC_ECONOMY
-costs_gold: [800, 1500, 2500]    # slot 1, 2, 3 (unlock spell)
+costs_gold: [500, 750, 1000]    # slot 1, 2, 3 (unlock spell)
 research_time_sec: [60, 90, 135]
 requires_main_level: [1, 2, 3]
 mvp: true
@@ -311,8 +311,8 @@ mvp: true
 
 - [x] Passives Human (+2/−1)
 - [x] Magic spells Human (×3)
-- [ ] Tower tracks Human (**×9**, L1–3) — invent + implement = **PRE-006**; старые ×5 scrap
+- [ ] Tower tracks Human (**×9**, L1–3) — invent + implement = **PRE-007**; старые ×5 scrap
 - [x] Gold/time за **tower** upgrades — **500/800/1200g**, **45/90/135s**
-- [x] Gold/time за **magic** upgrades — **800/1500/2500g**, **60/90/135s**
+- [x] Gold/time за **magic** upgrades — **500/750/1000g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)
-- [ ] Раса #2 — только после PRE-001..006 + GATE (`TODO.md`)
+- [ ] Раса #2 — только после PRE-001..007 + GATE (`TODO.md`)

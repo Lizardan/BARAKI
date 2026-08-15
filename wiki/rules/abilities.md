@@ -116,6 +116,13 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
   через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
   `BARAKI/Units/Seed Unit Abilities`.
 
+## Main extra ability (Divine Blessing)
+
+После `UPG_MAIN_DIVINE_BLESSING` игрок выбирает **один** stub id (1..6) через
+`MatchController.TryPickMainExtraAbility`. Выбор в `MatchPlayerState.MainExtraAbilityId`
+и снапшоте **v17**. Гейты — `MainExtraAbilityRules` (треки main). **Каста пока нет**
+(боевые эффекты = PRE-005). Не путать с `UnitAbilityDef` юнитов.
+
 ## Как добавить способность
 
 1. Добавить константу id в `AbilityIds.cs`.
@@ -136,4 +143,5 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
   (`HumanHero3Prefab_HasPriestKitWhenSeeded`, `HumanTitanPrefab_HasTitanKitWhenSeeded`).
 - `HeroAbilityCombatTests`, `CasterSpellRulesTests`, `HeroLevelRulesTests` — логика каста/приоритета/unlock.
 - `HeroAbilityRulesTests` — display names покрывают паладинов и жрецов.
-- `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts`, `MatchSnapshotApplyTests` — снапшот.
+- `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts` / `RoundTrip_V17_PreservesDivineBlessingFields`,
+  `MatchSnapshotApplyTests`, `MainExtraAbilityRulesTests`, `DivineBlessingMatchControllerTests`.

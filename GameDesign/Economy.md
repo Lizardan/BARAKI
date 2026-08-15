@@ -80,7 +80,7 @@ mvp: true
 |--------|------|------|
 | `UPG_MAIN_BUILDING_LEVEL` | **2000 / 3000** | **120 / 180 s** |
 | `UPG_MAIN_PASSIVE_GOLD` (per level) | **200** | **25 s** |
-| `UPG_MAIN_MAGIC` slot 1/2/3 | **800 / 1500 / 2500** | **60 / 90 / 135 s** |
+| `UPG_MAIN_MAGIC` slot 1/2/3 | **500 / 750 / 1000** | **60 / 90 / 135 s** |
 | `UPG_BARRACKS_LEVEL` | **1000 / 1500 / 2500** | **3 / 3 / 3 s** |
 | `UPG_TOWER_*` (per track level) | **500 / 800 / 1200** | **45 / 90 / 135 s** |
 | `UPG_MELEE_DMG` L1…L9 | **75…275** (см. `Upgrades.md`) | **8…24 s** |
@@ -90,7 +90,7 @@ mvp: true
 | `HERO_DEPLOY` | 1000 | instant |
 | `TITAN_SUMMON` (полоска над main) | **0** (пассивно) | **180 s** |
 | `TITAN_DEPLOY` (barracks) | **2500** | instant |
-| `UPG_MAIN_DIVINE_BLESSING` | TBD | TBD |
+| `UPG_MAIN_DIVINE_BLESSING` | **1000** | **45 s** |
 
 ## Spending rules
 
@@ -117,7 +117,8 @@ mvp: true
 | Interest на кошелёк | **Нет** |
 | Passive cap | Max level **9**; gate = **main level × 3** |
 | Passive gold upgrade | **200g**, **25s** per level |
-| Magic unlock | **800 / 1500 / 2500g**; **60 / 90 / 135 s** |
+| Magic unlock | **500 / 750 / 1000g**; **60 / 90 / 135 s** |
+| Divine Blessing | **1000g**; **45 s**; main L2+; 1× per match |
 | Main level upgrade | **2000 / 3000g**; **120 / 180 s** |
 | Barracks level | **1000 / 1500 / 2500g**; **3 / 3 / 3 s** |
 | Tower upgrade (per level) | **500 / 800 / 1200g**; **45 / 90 / 135 s** |

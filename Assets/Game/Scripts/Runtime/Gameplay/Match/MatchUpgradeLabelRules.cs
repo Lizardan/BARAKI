@@ -31,6 +31,23 @@ namespace Game.Gameplay.Match
         public static string FormatMagicTooltip(int nextLevel, int cost, float seconds) =>
             $"Магия — уровень {nextLevel}\n{cost}g · {seconds:0}с\n+{MatchEconomyRules.MagicDamagePerLevel:0} урона магам и новое заклинание";
 
+        public static string FormatDivineBlessingButton(int cost) =>
+            $"Благословение\n{cost}g";
+
+        public static string FormatDivineBlessingTooltip(int cost, float seconds) =>
+            $"Божественное благословение\n{cost}g · {seconds:0}с\nСнимает туман войны; открывает выбор способности main";
+
+        public static string FormatExtraAbilityMenuButton() => "Способность";
+
+        public static string FormatExtraAbilityMenuTooltip() =>
+            "Выбрать одну доп. способность main на весь матч\nМеню можно закрыть и открыть снова";
+
+        public static string FormatExtraAbilityPickedButton(int abilityId) =>
+            MainExtraAbilityRules.GetDisplayName(abilityId);
+
+        public static string FormatExtraAbilityPickedTooltip(int abilityId) =>
+            $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\nВыбрано на весь матч";
+
         public static string FormatHeroHireButton(int heroSlot, int cost) =>
             $"Герой {heroSlot}\n{cost}g";
 
@@ -121,6 +138,11 @@ namespace Game.Gameplay.Match
             if (upgradeId == GameIds.Upgrades.MainMagic)
             {
                 return $"Магия {displayLevel}";
+            }
+
+            if (upgradeId == GameIds.Upgrades.DivineBlessing)
+            {
+                return "Благосл.";
             }
 
             if (HeroRules.TryParseHireUpgradeId(upgradeId, out var heroSlot))

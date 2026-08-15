@@ -22,6 +22,9 @@ namespace Game.UI.Controllers
         const string CommandGridHiddenClass = "match-command-grid--hidden";
         const string UnitInfoHiddenClass = "match-unit-info--hidden";
         const string TooltipHiddenClass = "match-command-tooltip--hidden";
+        const string ExtraAbilityMenuHiddenClass = "match-extra-ability--hidden";
+        const string ExtraAbilityLockedClass = "match-extra-ability__btn--locked";
+        const string ExtraAbilityPickedClass = "match-extra-ability__btn--picked";
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -42,6 +45,9 @@ namespace Game.UI.Controllers
         VisualElement _commandTooltip;
         Label _commandTooltipLabel;
         VisualElement _hudRoot;
+        VisualElement _extraAbilityMenu;
+        Button _extraAbilityCloseButton;
+        readonly Button[] _extraAbilityButtons = new Button[MainExtraAbilityRules.AbilityCount];
         readonly Button[] _commandSlots = new Button[CommandSlotCount];
         readonly Action[] _commandActions = new Action[CommandSlotCount];
         readonly string[] _commandTooltips = new string[CommandSlotCount];
@@ -77,6 +83,7 @@ namespace Game.UI.Controllers
             _panelBody = root.Q<VisualElement>("InspectorPanelBody");
             _commandTooltip = root.Q<VisualElement>("CommandTooltip");
             _commandTooltipLabel = root.Q<Label>("CommandTooltipLabel");
+            BindExtraAbilityMenu(root);
 
             for (var i = 0; i < CommandSlotCount; i++)
             {
@@ -105,11 +112,39 @@ namespace Game.UI.Controllers
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
             ResolveVisualCatalog();
             SubscribeSelection();
+            if (_extraAbilityCloseButton != null)
+            {
+                _extraAbilityCloseButton.clicked += CloseExtraAbilityMenu;
+            }
         }
 
         void OnDisable()
         {
             UnsubscribeSelection();
+            if (_extraAbilityCloseButton != null)
+            {
+                _extraAbilityCloseButton.clicked -= CloseExtraAbilityMenu;
+            }
+
+            CloseExtraAbilityMenu();
+        }
+
+        void BindExtraAbilityMenu(VisualElement root)
+        {
+            _extraAbilityMenu = root.Q<VisualElement>("ExtraAbilityMenu");
+            _extraAbilityCloseButton = root.Q<Button>("ExtraAbilityCloseButton");
+            for (var i = 0; i < MainExtraAbilityRules.AbilityCount; i++)
+            {
+                var abilityId = i + 1;
+                var button = root.Q<Button>($"ExtraAbilitySlot{abilityId}");
+                _extraAbilityButtons[i] = button;
+                if (button != null)
+                {
+                    button.clicked += () => PickMainExtraAbility(abilityId);
+                }
+            }
+
+            CloseExtraAbilityMenu();
         }
 
         void LateUpdate()
@@ -167,6 +202,7 @@ namespace Game.UI.Controllers
             if (!target.HasTarget)
             {
                 ClearCommands();
+                CloseExtraAbilityMenu();
                 _selectedBuildingInstanceId = -1;
                 _commandsFingerprint = null;
                 ClearInspectorLabels();
@@ -347,7 +383,7 @@ namespace Game.UI.Controllers
                 }
             }
 
-            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}";
+            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}:{player?.DivineBlessingComplete}:{player?.MainExtraAbilityId ?? 0}";
         }
 
         void PopulateBuildingCommands(BuildingState building)
@@ -437,6 +473,7 @@ namespace Game.UI.Controllers
                         : "Магия — требуется уровень главного здания");
 
                 PopulateHeroHireCommands(player, building, queueFull);
+                PopulateDivineBlessingCommand(player, building, queueFull);
                 return;
             }
 
@@ -960,6 +997,113 @@ namespace Game.UI.Controllers
             }
 
             StartResearch(HeroRules.BuildHireUpgradeId(heroSlot));
+        }
+
+        void PopulateDivineBlessingCommand(MatchPlayerState player, BuildingState building, bool queueFull)
+        {
+            var slot = MainExtraAbilityRules.CommandSlotIndex;
+            if (player == null)
+            {
+                return;
+            }
+
+            if (player.MainExtraAbilityId != MainExtraAbilityRules.None)
+            {
+                SetCommand(
+                    slot,
+                    MatchUpgradeLabelRules.FormatExtraAbilityPickedButton(player.MainExtraAbilityId),
+                    enabled: false,
+                    action: null,
+                    MatchUpgradeLabelRules.FormatExtraAbilityPickedTooltip(player.MainExtraAbilityId));
+                return;
+            }
+
+            if (player.DivineBlessingComplete)
+            {
+                SetCommand(
+                    slot,
+                    MatchUpgradeLabelRules.FormatExtraAbilityMenuButton(),
+                    enabled: true,
+                    OpenExtraAbilityMenu,
+                    MatchUpgradeLabelRules.FormatExtraAbilityMenuTooltip());
+                return;
+            }
+
+            var controller = _matchRuntime?.Controller;
+            var queued = controller?.Research.CountUpgrade(
+                building.InstanceId,
+                GameIds.Upgrades.DivineBlessing) ?? 0;
+            var canStart = queued == 0
+                && !queueFull
+                && MatchEconomyRules.TryGetDivineBlessingUpgrade(
+                    player.MainLevel,
+                    player.DivineBlessingComplete,
+                    out var cost,
+                    out var duration)
+                && player.Gold >= cost;
+
+            SetCommand(
+                slot,
+                MatchUpgradeLabelRules.FormatDivineBlessingButton(
+                    MatchEconomyRules.DivineBlessingCost),
+                canStart,
+                () => StartResearch(GameIds.Upgrades.DivineBlessing),
+                MatchUpgradeLabelRules.FormatDivineBlessingTooltip(
+                    MatchEconomyRules.DivineBlessingCost,
+                    MatchEconomyRules.DivineBlessingSeconds));
+        }
+
+        void OpenExtraAbilityMenu()
+        {
+            if (_extraAbilityMenu == null)
+            {
+                return;
+            }
+
+            RefreshExtraAbilityMenu();
+            _extraAbilityMenu.RemoveFromClassList(ExtraAbilityMenuHiddenClass);
+            _extraAbilityMenu.BringToFront();
+        }
+
+        void CloseExtraAbilityMenu()
+        {
+            _extraAbilityMenu?.AddToClassList(ExtraAbilityMenuHiddenClass);
+        }
+
+        void RefreshExtraAbilityMenu()
+        {
+            var player = FindLocalPlayer(_matchRuntime?.Controller);
+            for (var i = 0; i < MainExtraAbilityRules.AbilityCount; i++)
+            {
+                var abilityId = i + 1;
+                var button = _extraAbilityButtons[i];
+                if (button == null)
+                {
+                    continue;
+                }
+
+                var unlocked = player != null && MainExtraAbilityRules.IsUnlocked(abilityId, player);
+                var picked = player != null && player.MainExtraAbilityId == abilityId;
+                button.text =
+                    $"{MainExtraAbilityRules.GetDisplayName(abilityId)}\n{MainExtraAbilityRules.GetGateDescription(abilityId)}";
+                button.SetEnabled(unlocked && player != null && MainExtraAbilityRules.CanPick(player, abilityId));
+                button.EnableInClassList(ExtraAbilityLockedClass, !unlocked);
+                button.EnableInClassList(ExtraAbilityPickedClass, picked);
+            }
+        }
+
+        void PickMainExtraAbility(int abilityId)
+        {
+            if (MatchNetworkCommands.IsAvailable)
+            {
+                MatchNetworkCommands.RequestPickMainExtraAbility(abilityId);
+            }
+            else
+            {
+                _matchRuntime?.Controller?.TryPickMainExtraAbility(_localPlayerSlot, abilityId);
+            }
+
+            CloseExtraAbilityMenu();
         }
 
         void PopulateHeroDeployCommands(MatchPlayerState player)

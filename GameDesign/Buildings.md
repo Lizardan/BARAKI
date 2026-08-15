@@ -303,7 +303,7 @@ mvp: true
 | Main (ruins) | **Ничего** |
 | Barracks (alive) | Upgrade level, **manual call**, **Deploy hero** (1000g) / **Deploy titan** (2500g, instant, после появления на базе) |
 | Barracks (ruins) | **Ничего** |
-| Tower (alive) | RMB target + **9 race tower upgrades** (слоты UI **4–12**; unit-only; PRE-006) |
+| Tower (alive) | RMB target + **9 race tower upgrades** (слоты UI **4–12**; unit-only; PRE-007) |
 | Tower (ruins) | **Ничего** |
 
 Stat research — через **живой** `BUILDING_MAIN` (global для расы).
@@ -330,8 +330,10 @@ note: Полоска над main (не hire); титан появляется н
 id: UPG_MAIN_DIVINE_BLESSING
 building: BUILDING_MAIN
 requires_main_level: 2
-mvp: false
-note: См. Upgrades.md — FoW off + меню extra ability
+cost_gold: 1000
+research_time_sec: 45
+mvp: true
+note: См. Upgrades.md — FoW off + меню extra ability (stub pick PRE-003; эффекты PRE-005)
 ```
 
 ## Destruction effects (summary)
@@ -352,7 +354,7 @@ note: См. Upgrades.md — FoW off + меню extra ability
 | Base spawn interval | **35 s** (level 1) |
 | Spawn speed per level | **+5%** за каждый level barracks |
 | Tower destroyed | **Ruins** (подножье); без функций; не чинится |
-| Main hall extra ability | **Divine Blessing** (L2+) → меню 1 способности; PRE-003 |
+| Main hall extra ability | **Divine Blessing** (L2+) → меню 1 способности; система PRE-003, эффекты **PRE-005** |
 | Main building levels | **1–3**; gates stat cap, hero hire & passive gold cap |
 | Main passive gold | **+0/30s** без прокачки; **+25g/level**; max **9** |
 | Main magic | **1/2/3** slots = main level; unlocks **race caster spells** |

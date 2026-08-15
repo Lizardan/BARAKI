@@ -395,6 +395,11 @@ namespace Game.Gameplay.Match
                 return TryStartMagicResearch(player, building);
             }
 
+            if (upgradeId == GameIds.Upgrades.DivineBlessing)
+            {
+                return TryStartDivineBlessingResearch(player, building);
+            }
+
             if (HeroRules.TryParseHireUpgradeId(upgradeId, out var heroSlot))
             {
                 return TryStartHeroHireResearch(player, building, heroSlot);
@@ -435,6 +440,10 @@ namespace Game.Gameplay.Match
                 _players[p.Slot].MeleeDamageLevel = Math.Max(0, p.MeleeDamageLevel);
                 _players[p.Slot].RangedDamageLevel = Math.Max(0, p.RangedDamageLevel);
                 _players[p.Slot].HpArmorLevel = Math.Max(0, p.HpArmorLevel);
+                _players[p.Slot].DivineBlessingComplete = p.DivineBlessingComplete;
+                _players[p.Slot].MainExtraAbilityId = MainExtraAbilityRules.IsValidId(p.MainExtraAbilityId)
+                    ? p.MainExtraAbilityId
+                    : MainExtraAbilityRules.None;
                 if (p.Slot < _bonusPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
                 {
                     _bonusPicks[p.Slot] = p.BonusPickSlot;
@@ -1088,6 +1097,79 @@ namespace Game.Gameplay.Match
             return true;
         }
 
+        bool TryStartDivineBlessingResearch(MatchPlayerState player, BuildingState building)
+        {
+            if (building.BuildingId != GameIds.Buildings.Main)
+            {
+                return false;
+            }
+
+            if (player.DivineBlessingComplete)
+            {
+                return false;
+            }
+
+            if (_research.CountUpgrade(building.InstanceId, GameIds.Upgrades.DivineBlessing) > 0)
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TryGetDivineBlessingUpgrade(
+                    player.MainLevel,
+                    player.DivineBlessingComplete,
+                    out var cost,
+                    out var duration))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TrySpendGold(player.Gold, cost, out var remaining))
+            {
+                return false;
+            }
+
+            var research = new BuildingResearchState(
+                building.InstanceId,
+                player.SlotIndex,
+                building.BuildingId,
+                GameIds.Upgrades.DivineBlessing,
+                cost,
+                duration);
+
+            if (!_research.TryEnqueue(research))
+            {
+                return false;
+            }
+
+            player.Gold = remaining;
+            return true;
+        }
+
+        /// <summary>
+        /// Permanent pick of one unlocked main extra ability after Divine Blessing completes.
+        /// </summary>
+        public bool TryPickMainExtraAbility(int playerSlot, int abilityId)
+        {
+            if (!IsRunning || Phase == MatchPhase.Start)
+            {
+                return false;
+            }
+
+            if (playerSlot < 0 || playerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            var player = _players[playerSlot];
+            if (player.IsEliminated || !MainExtraAbilityRules.CanPick(player, abilityId))
+            {
+                return false;
+            }
+
+            player.MainExtraAbilityId = abilityId;
+            return true;
+        }
+
         static int GetStatTrackLevel(MatchPlayerState player, string trackId)
         {
             if (trackId == GameIds.Upgrades.MeleeDamage)
@@ -1190,6 +1272,17 @@ namespace Game.Gameplay.Match
                     player.MagicLevel++;
                 }
 
+                return;
+            }
+
+            if (research.UpgradeId == GameIds.Upgrades.DivineBlessing)
+            {
+                if (research.OwnerSlot < 0 || research.OwnerSlot >= _players.Count)
+                {
+                    return;
+                }
+
+                _players[research.OwnerSlot].DivineBlessingComplete = true;
                 return;
             }
 

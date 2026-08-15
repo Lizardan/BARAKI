@@ -116,6 +116,18 @@ namespace Game.Tests
         }
 
         [Test]
+        public void IsRevealed_DivineBlessingFogDisabled_AlwaysTrue()
+        {
+            Assert.IsTrue(
+                FogVisionRules.IsRevealed(
+                    permanent: null,
+                    localLivingUnitPositions: new List<Vector3>(),
+                    visionRadius: VisionRadius,
+                    worldPosition: new Vector3(50f, 0f, -40f),
+                    fogDisabled: true));
+        }
+
+        [Test]
         public void CanSelectTarget_BlocksEnemyInFog_AllowsOwnAndRevealedEnemy()
         {
             var layout = MatchArenaGenerator.Generate(4);

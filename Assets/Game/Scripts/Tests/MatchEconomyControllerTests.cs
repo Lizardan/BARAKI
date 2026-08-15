@@ -214,7 +214,7 @@ namespace Game.Tests
         {
             var controller = CreateEarlyMatch();
             var player = controller.Players[0];
-            player.Gold = 800;
+            player.Gold = 500;
             var main = FindBuilding(controller, 0, GameIds.Buildings.Main);
 
             Assert.IsTrue(controller.TryStartResearch(
@@ -248,7 +248,7 @@ namespace Game.Tests
             controller.Tick(120f);
             Assert.AreEqual(2, player.MainLevel);
 
-            player.Gold = 1500;
+            player.Gold = 750;
             Assert.IsTrue(controller.TryStartResearch(0, main.InstanceId, GameIds.Upgrades.MainMagic));
             controller.Tick(90f);
             Assert.AreEqual(2, player.MagicLevel);

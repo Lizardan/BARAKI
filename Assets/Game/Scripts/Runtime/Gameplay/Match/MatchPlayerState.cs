@@ -21,5 +21,11 @@ namespace Game.Gameplay.Match
         public float PassiveGoldTickRemainingSeconds { get; set; } =
             MatchEconomyRules.PassiveGoldTickIntervalSeconds;
         public bool IsEliminated { get; set; }
+        /// <summary>True after <c>UPG_MAIN_DIVINE_BLESSING</c> completes (FoW off for owner).</summary>
+        public bool DivineBlessingComplete { get; set; }
+        /// <summary>
+        /// Chosen main extra ability id (1..6); <see cref="MainExtraAbilityRules.None"/> until picked.
+        /// </summary>
+        public int MainExtraAbilityId { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 ---
 doc_id: todo
-version: 0.7
+version: 0.8
 status: locked
 depends_on: [vision, technical, map_topology, platform]
 provides: [backlog, priorities, acceptance_criteria]
@@ -9,7 +9,7 @@ provides: [backlog, priorities, acceptance_criteria]
 # TODO
 
 > **Для агента:** PvP-only, без ботов. Windows + Lobby/Relay. **TDD:** тесты → код → `run_tests` → done только при green.
-> **Гейт расы #2:** PRE-001..006 (полный invent+implement бонусов и tower×9) → GATE playtest/checkup → только потом EA-001.
+> **Гейт расы #2:** PRE-001..007 (blessing abilities → бонусы → tower×9) → GATE playtest/checkup → только потом EA-001.
 
 ---
 
@@ -92,26 +92,27 @@ provides: [backlog, priorities, acceptance_criteria]
 
 ## Phase PRE-RACE2 — до расы #2
 
-> Реализация по одному ID. **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..006** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
+> Реализация по одному ID. **Следующий:** PRE-005 (эффекты Divine Blessing). **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..007** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
 | PRE-001 | Бонус-оверлей 60с + random timeout + скрытость | done | Каркас UI; 12 пустых слотов; матч не паузится; скрытность = UI-only (чужие пики не отображаются, данные технически у всех), пики в снапшоте v13 (reconnect/migration-safe); см. `Bonuses.md` |
 | PRE-002 | Титан: полоска над main + выпуск как герой | done | Полоска **180 s** над main (main L3 + все 3 героя IdleAtBase; deployed/dead → заморозка без сброса) → титан появляется на базе; выпуск из живого barracks **2500g**; CD после смерти **300 s** как герой (без повторной полоски); XP как герой; статы сид **3×** на префаб `Human_Titan`; снапшот v15 (титан + ростер героев); см. `Heroes.md` |
-| PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | pending | Research main L2+; FoW off для себя; отложенный выбор 1 ability; см. `Upgrades.md` |
+| PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | done | Research main L2+ (**1000g / 45s**); FoW off для себя; отложенный выбор 1 stub ability (гейты main tracks); эффекты abilities — **PRE-005**; снапшот v17; см. `Upgrades.md` |
 | PRE-004 | Контент героев слот 2–3 (baseline) | done | Имена TT_Mounted_Paladin / TT_Mounted_Priest; визуал Human_Hero2/3; статы baseline на префабе (`UnitCombatSettings`); 3 hero-бонуса больше не пустые по контенту |
-| PRE-005 | Наполнение всех 12 бонусов Людей (+ blessing abilities) | pending | Invent + внедрить **все 12** слотов (10 replacement + 2 unique): не пустые кнопки; эффекты работают в матче; стакаются с tower upgrades; late game ~40–60 мин — мощная армия; blessing list — с PRE-003; см. `Bonuses.md` |
-| PRE-006 | Tower upgrades ×9 (Humans) invent + implement | pending | **9 новых** треков (старые 5 scrap); только **юниты** (не герои/титан/DPS башен); L1→L2→L3 (без L1 нет L2); 4 башни → до 4 разных треков; UI: убрать stub слота 1, треки на **слотах 4–12**; удалить старые `GameIds`/entities; тесты; см. `Races.md` / `Upgrades.md` |
+| PRE-005 | Main extra abilities после Divine Blessing | pending | Invent + внедрить **6** способностей main (замена stub 1–6): эффекты работают в матче; гейты main tracks уже в PRE-003; UI имена/описания; тесты; см. `Upgrades.md` |
+| PRE-006 | Наполнение всех 12 бонусов Людей | pending | Invent + внедрить **все 12** слотов (10 replacement + 2 unique): не пустые кнопки; эффекты работают в матче; стакаются с tower upgrades; late game ~40–60 мин — мощная армия; см. `Bonuses.md` |
+| PRE-007 | Tower upgrades ×9 (Humans) invent + implement | pending | **9 новых** треков (старые 5 scrap); только **юниты** (не герои/титан/DPS башен); L1→L2→L3 (без L1 нет L2); 4 башни → до 4 разных треков; UI: убрать stub слота 1, треки на **слотах 4–12**; удалить старые `GameIds`/entities; тесты; см. `Races.md` / `Upgrades.md` |
 
 ---
 
 ## Phase GATE — Playtest + checkup (перед расой #2)
 
-> После полного PRE-001..006. Без закрытия GATE — **EA-001 не начинать**.
+> После полного PRE-001..007. Без закрытия GATE — **EA-001 не начинать**.
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
-| GATE-001 | Playtest на Людях (полный контент) | pending | Серия матчей: бонусы, tower×9, титан, blessing (если PRE-003 done), netcode/migration/reconnect; баги заведены или закрыты |
+| GATE-001 | Playtest на Людях (полный контент) | pending | Серия матчей: blessing abilities, бонусы, tower×9, титан, netcode/migration/reconnect; баги заведены или закрыты |
 | GATE-002 | Полный чекап проекта | pending | EditMode green; консоль без ошибок на smoke Bootstrap→Menu→Lobby→Match; релизный Windows-билд при необходимости |
 
 ---
@@ -120,7 +121,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | ID | Task | Status |
 |----|------|--------|
-| EA-001 | Раса #2 | deferred | **Blocked:** PRE-001..006 + GATE-001..002 |
+| EA-001 | Раса #2 | deferred | **Blocked:** PRE-001..007 + GATE-001..002 |
 | EA-002 | Lobby N=3,5 casual | deferred |
 | EA-004 | Ranked Duel (N=2) | deferred |
 | EA-005 | Ranked FFA4 (N=4) | deferred |
@@ -131,7 +132,10 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
-| 2026-08-15 | Гейт расы #2: PRE-005 = все 12 бонусов invent+work; PRE-006 = 9 новых tower tracks (unit-only, UI 4–12, scrap старых 5); Phase GATE playtest/checkup; EA-001 blocked до PRE+GATE |
+| 2026-08-15 | Порядок PRE: **PRE-005** = blessing abilities (доделать Divine Blessing) → **PRE-006** = 12 бонусов → **PRE-007** = tower ×9; следующий = PRE-005 |
+| 2026-08-15 | Split: бонусы и blessing abilities — разные ID; гейт EA = PRE-001..007 + GATE |
+| 2026-08-15 | PRE-003: Divine Blessing 1000g/45s (main L2+); FoW off владельцу; меню stub abilities 1–6 с гейтами; pick 1×; снапшот v17; magic costs → 500/750/1000g; боевые эффекты abilities → PRE-005 |
+| 2026-08-15 | Гейт расы #2: PRE-005 blessing → PRE-006 бонусы → PRE-007 tower ×9; Phase GATE; EA-001 blocked до PRE+GATE |
 | 2026-08-15 | ScriptableObjects: owner-first раскладка (`Heroes/HeroN`, `Units/Caster|Titan` + `Abilities/`); пустой scaffold убран; канон в `wiki/rules/content-assets.md` |
 | 2026-08-15 | `UnitCombatSettings`: единый prefab-компонент статов и abilities; ScriptableObjects перенесены в race-first структуру; каталоги переведены на расширение по `raceId` |
 | 2026-08-14 | Способности на префабе: каст по типу; Priest Nova по союзнику, Greater Heal — зона 10с; титан Slam/Rally/Colossus/Stomp |
@@ -161,7 +165,7 @@ provides: [backlog, priorities, acceptance_criteria]
 - [x] Full host migration + reconnect — фундамент listen-host (не optional)
 - [x] Playtest race gate — только Люди (Жуки disabled)
 - [x] Уникальные расы, без ботов, 2–5 игроков
-- [x] Бонус после race pick — каркас UI (PRE-001); полный контент = PRE-005
-- [x] До расы #2: invent+implement все 12 бонусов + 9 новых tower tracks (unit-only) → playtest/checkup → только потом EA-001
+- [x] Бонус после race pick — каркас UI (PRE-001); полный контент = PRE-006
+- [x] До расы #2: blessing abilities (**PRE-005**) → 12 бонусов (**PRE-006**) → tower ×9 (**PRE-007**) → playtest/checkup → только потом EA-001
 - [x] Старые 5 Human tower tracks scrap; 9 новых; UI башни слоты 4–12; stub слота 1 убрать
 - [x] Tower upgrades влияют только на юнитов (не герои/титан); бонусы стакаются с tower; late game ~40–60 мин
