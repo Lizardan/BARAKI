@@ -1,12 +1,18 @@
 #pragma kernel CSMain
+#pragma kernel CSExportMinimap
 
 Texture2D<float> Source;
 Texture2D<float> PermanentMask;
 RWTexture2D<float> Result;
+RWTexture2D<float4> MinimapDest;
 
 uint _Resolution;
 float _Regrow;
 float dt;
+float4 _MinimapFogColor;
+float4 _MinimapShadowColor;
+float _MinimapOpacity;
+float _MinimapDensityScale;
 
 struct Clearer
 {
@@ -46,4 +52,19 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     // Soft regrow toward full fog.
     density = lerp(density, 1.0, saturate(_Regrow * dt));
     Result[id.xy] = saturate(density);
+}
+
+[numthreads(8, 8, 1)]
+void CSExportMinimap(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Resolution || id.y >= _Resolution)
+    {
+        return;
+    }
+
+    float d = Source.Load(int3(id.xy, 0));
+    d = saturate(d * max(_MinimapDensityScale, 0.001));
+    float a = saturate(smoothstep(0.05, 0.95, d) * _MinimapOpacity);
+    float3 col = lerp(_MinimapShadowColor.rgb, _MinimapFogColor.rgb, 0.35);
+    MinimapDest[id.xy] = float4(col, a);
 }

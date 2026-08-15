@@ -190,5 +190,22 @@ namespace Game.Tests
             Assert.IsTrue(
                 FogVisionRules.ShouldShowUnitOnMinimap(0, 2, enemyMain, zones, empty, 25f, fogDisabled: true));
         }
+
+        [Test]
+        public void WorldToUv_MapsOriginToCenterAndAxesSymmetrically()
+        {
+            const float area = 200f;
+            var center = FogSimulation.WorldToUv(Vector3.zero, area);
+            Assert.AreEqual(0.5f, center.x, 0.0001f);
+            Assert.AreEqual(0.5f, center.y, 0.0001f);
+
+            var east = FogSimulation.WorldToUv(new Vector3(area * 0.5f, 0f, 0f), area);
+            Assert.AreEqual(1f, east.x, 0.0001f);
+            Assert.AreEqual(0.5f, east.y, 0.0001f);
+
+            var north = FogSimulation.WorldToUv(new Vector3(0f, 0f, area * 0.5f), area);
+            Assert.AreEqual(0.5f, north.x, 0.0001f);
+            Assert.AreEqual(1f, north.y, 0.0001f);
+        }
     }
 }

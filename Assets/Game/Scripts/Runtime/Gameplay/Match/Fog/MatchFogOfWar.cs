@@ -28,6 +28,21 @@ namespace Game.Gameplay.Match.Fog
             !_fogEnabled || IsLocalPlayerEliminated() || IsLocalPlayerDivineBlessingComplete();
         public bool IsInitialized => _initialized;
 
+        /// <summary>
+        /// Minimap fog overlay texture. Hidden when fog is off (Divine Blessing / eliminated / disabled).
+        /// </summary>
+        public bool TryGetMinimapOverlay(out Texture texture, out float areaSize)
+        {
+            texture = null;
+            areaSize = 0f;
+            if (!_initialized || FogDisabled || _simulation == null)
+            {
+                return false;
+            }
+
+            return _simulation.TryGetMinimapOverlay(out texture, out areaSize);
+        }
+
         public void Configure(MatchRuntime runtime, int localPlayerSlot)
         {
             _runtime = runtime;

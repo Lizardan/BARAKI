@@ -23,8 +23,10 @@ namespace Game.Gameplay.Match.Fog
 
         RenderTexture[] _density;
         RenderTexture _permanentMask;
+        RenderTexture _minimapOverlay;
         int _current;
         int _kernel;
+        int _exportKernel;
         int _groups;
         ComputeBuffer _clearerBuffer;
         int _clearerCapacity;
@@ -79,6 +81,7 @@ namespace Game.Gameplay.Match.Fog
             }
 
             _kernel = _compute.FindKernel("CSMain");
+            _exportKernel = _compute.FindKernel("CSExportMinimap");
             _groups = Mathf.CeilToInt(_resolution / 8f);
             _density = new RenderTexture[2];
             for (var i = 0; i < 2; i++)
@@ -101,6 +104,14 @@ namespace Game.Gameplay.Match.Fog
             _permanentMask.Create();
             BakePermanentMask(permanent);
 
+            _minimapOverlay = new RenderTexture(_resolution, _resolution, 0, RenderTextureFormat.ARGBFloat)
+            {
+                enableRandomWrite = true,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            _minimapOverlay.Create();
+
             FillDensity(1f);
             for (var i = 0; i < 8; i++)
             {
@@ -109,8 +120,35 @@ namespace Game.Gameplay.Match.Fog
 
             EnsureVolume();
             ApplyMaterialProps();
+            ExportMinimapOverlay();
             _ready = true;
             SetActiveVisual(true);
+        }
+
+        /// <summary>
+        /// RGBA overlay for the minimap (same density field as the world volume).
+        /// UV space matches <see cref="WorldToUv"/> / world XZ over <see cref="AreaSize"/>.
+        /// </summary>
+        public bool TryGetMinimapOverlay(out Texture texture, out float areaSize)
+        {
+            texture = null;
+            areaSize = 0f;
+            if (!_ready || _minimapOverlay == null)
+            {
+                return false;
+            }
+
+            texture = _minimapOverlay;
+            areaSize = _areaSize;
+            return true;
+        }
+
+        public float AreaSize => _areaSize;
+
+        public static Vector2 WorldToUv(Vector3 worldPos, float areaSize)
+        {
+            var area = Mathf.Max(1f, areaSize);
+            return new Vector2(worldPos.x / area + 0.5f, worldPos.z / area + 0.5f);
         }
 
         public void Tick(IReadOnlyList<Vector3> clearerWorldPositions, float dt)
@@ -159,6 +197,24 @@ namespace Game.Gameplay.Match.Fog
             _compute.Dispatch(_kernel, _groups, _groups, 1);
             _fogMaterial.SetTexture("_DensityTex", _density[next]);
             _current = next;
+            ExportMinimapOverlay();
+        }
+
+        void ExportMinimapOverlay()
+        {
+            if (_compute == null || _minimapOverlay == null || _density == null)
+            {
+                return;
+            }
+
+            _compute.SetInt("_Resolution", _resolution);
+            _compute.SetVector("_MinimapFogColor", _fogColor);
+            _compute.SetVector("_MinimapShadowColor", _shadowColor);
+            _compute.SetFloat("_MinimapOpacity", _opacity);
+            _compute.SetFloat("_MinimapDensityScale", Mathf.Clamp(_densityScale, 0.25f, 1.5f));
+            _compute.SetTexture(_exportKernel, "Source", _density[_current]);
+            _compute.SetTexture(_exportKernel, "MinimapDest", _minimapOverlay);
+            _compute.Dispatch(_exportKernel, _groups, _groups, 1);
         }
 
         void UploadClearers(IReadOnlyList<Vector3> clearerWorldPositions)
@@ -298,7 +354,7 @@ namespace Game.Gameplay.Match.Fog
 
         Vector2 WorldToUv(Vector3 worldPos)
         {
-            return new Vector2(worldPos.x / _areaSize + 0.5f, worldPos.z / _areaSize + 0.5f);
+            return WorldToUv(worldPos, _areaSize);
         }
 
         Vector3 UvToWorld(Vector2 uv)
@@ -333,6 +389,12 @@ namespace Game.Gameplay.Match.Fog
             {
                 _permanentMask.Release();
                 _permanentMask = null;
+            }
+
+            if (_minimapOverlay != null)
+            {
+                _minimapOverlay.Release();
+                _minimapOverlay = null;
             }
 
             if (_volumeObject != null)

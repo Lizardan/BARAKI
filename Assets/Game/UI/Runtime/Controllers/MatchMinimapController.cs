@@ -28,6 +28,7 @@ namespace Game.UI.Controllers
         MatchFogOfWar _fogOfWar;
         VisualElement _canvas;
         MatchMinimapGeometryElement _geometryElement;
+        MatchMinimapFogElement _fogElement;
         MatchMinimapViewportElement _viewportElement;
         MatchMinimapTopology _topology;
         MatchController _topologyController;
@@ -65,6 +66,15 @@ namespace Game.UI.Controllers
                 _geometryElement.style.top = 0;
                 _geometryElement.style.bottom = 0;
                 geometryLayer.Add(_geometryElement);
+
+                _fogElement = new MatchMinimapFogElement();
+                _fogElement.AddToClassList("match-minimap__fog-layer");
+                _fogElement.style.position = Position.Absolute;
+                _fogElement.style.left = 0;
+                _fogElement.style.right = 0;
+                _fogElement.style.top = 0;
+                _fogElement.style.bottom = 0;
+                geometryLayer.Add(_fogElement);
 
                 _viewportElement = new MatchMinimapViewportElement();
                 _viewportElement.style.position = Position.Absolute;
@@ -129,6 +139,7 @@ namespace Game.UI.Controllers
                 _topology = null;
                 _topologyController = null;
                 UpdateGeometry();
+                UpdateFogOverlay(arenaRadius: 0f);
                 _viewportElement?.ClearPolygon();
                 return;
             }
@@ -140,12 +151,14 @@ namespace Game.UI.Controllers
             }
 
             UpdateGeometry();
-            UpdateViewportOverlay(controller.Layout.ArenaRadius);
 
             if (_fogOfWar == null && _matchRuntime != null)
             {
                 _fogOfWar = _matchRuntime.FogOfWar;
             }
+
+            UpdateFogOverlay(controller.Layout.ArenaRadius);
+            UpdateViewportOverlay(controller.Layout.ArenaRadius);
 
             var localSlot = MatchNetworkSession.LocalSlot >= 0
                 ? MatchNetworkSession.LocalSlot
@@ -333,6 +346,35 @@ namespace Game.UI.Controllers
 
             GameplayCameraPanController.Current?.SetPanInputLocked(false);
             _heldPanInputLock = false;
+        }
+
+        void UpdateFogOverlay(float arenaRadius)
+        {
+            if (_fogElement == null)
+            {
+                return;
+            }
+
+            if (_fogOfWar == null && _matchRuntime != null)
+            {
+                _fogOfWar = _matchRuntime.FogOfWar;
+            }
+
+            if (arenaRadius <= 0.01f
+                || _fogOfWar == null
+                || !_fogOfWar.TryGetMinimapOverlay(out var overlay, out var fogAreaSize))
+            {
+                _fogElement.ClearFog();
+                return;
+            }
+
+            _fogElement.SetFogData(
+                overlay,
+                fogAreaSize,
+                arenaRadius,
+                _panelWidth,
+                _panelHeight,
+                GetViewYawDegrees());
         }
 
         void UpdateViewportOverlay(float arenaRadius)

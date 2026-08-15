@@ -150,6 +150,7 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
 После `UPG_MAIN_DIVINE_BLESSING` игрок открывает меню **2×3** и выбирает **одну** способность
 через `MatchController.TryPickMainExtraAbility`. Выбор в `MatchPlayerState.MainExtraAbilityId`
 и снапшоте **v18** (+ `MainMana`, `MainExtraAbilityCooldownRemaining`).
+Исследование также снимает FoW владельцу (мир + оверлей миникарты) — см. `fog.md`.
 
 | Id | Name | Effect | Gate |
 |----|------|--------|------|
