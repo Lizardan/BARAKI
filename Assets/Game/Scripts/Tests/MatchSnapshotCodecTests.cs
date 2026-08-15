@@ -666,6 +666,17 @@ namespace Game.Tests
             Assert.IsFalse(MatchTickAuthority.ShouldTickSimulation(MatchTickMode.Client));
         }
 
+        [Test]
+        public void TickModeAfterAuthorityDespawn_KeepsClientWhileSessionHeld()
+        {
+            Assert.AreEqual(
+                MatchTickMode.Client,
+                MatchTickAuthority.TickModeAfterAuthorityDespawn(networkedSessionHeld: true));
+            Assert.AreEqual(
+                MatchTickMode.Offline,
+                MatchTickAuthority.TickModeAfterAuthorityDespawn(networkedSessionHeld: false));
+        }
+
         /// <summary>Hand-built v5 payload (no BehaviorState / AttackSwingSerial / wave timer).</summary>
         static byte[] BuildMinimalV5SnapshotBytes()
         {

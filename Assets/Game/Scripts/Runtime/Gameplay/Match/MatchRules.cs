@@ -8,6 +8,8 @@ namespace Game.Gameplay.Match
         public const float EarlyEndSeconds = 8f * 60f;
         public const float MidEndSeconds = 18f * 60f;
         public const int StartingGold = 250;
+        /// <summary>GDD PHASE_START: camera intro may delay Early, but never longer than this.</summary>
+        public const float StartPhaseMaxWaitSeconds = 5f;
 
         public static int GetStartingGold(string raceId) => StartingGold;
 

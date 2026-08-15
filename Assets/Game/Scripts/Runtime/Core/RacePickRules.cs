@@ -120,6 +120,19 @@ namespace Game.Core
             return copy;
         }
 
+        /// <summary>
+        /// Session must be rebuilt only before sim start, and only when player count or
+        /// pick-list length drifted. Never wipe picks after <c>matchSimStarted</c> — a late
+        /// EnsureSession/RPC would otherwise reset the match for everyone.
+        /// </summary>
+        public static bool ShouldReinitializeSession(
+            int currentPlayerCount,
+            int requestedPlayerCount,
+            int pickCount,
+            bool matchSimStarted) =>
+            !matchSimStarted
+            && (currentPlayerCount != requestedPlayerCount || pickCount != requestedPlayerCount);
+
         public static bool FillLocalStandInPicks(string[] picks, IReadOnlyList<bool> localStandInSlots)
         {
             if (picks == null)

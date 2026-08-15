@@ -107,6 +107,27 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ShouldReinitializeSession_WhenCountsMatchAndNotStarted_False()
+        {
+            Assert.IsFalse(RacePickNetworkRules.ShouldReinitializeSession(3, 3, 3, matchSimStarted: false));
+        }
+
+        [Test]
+        public void ShouldReinitializeSession_WhenMatchAlreadyStarted_False()
+        {
+            Assert.IsFalse(RacePickNetworkRules.ShouldReinitializeSession(3, 3, 3, matchSimStarted: true));
+            Assert.IsFalse(RacePickNetworkRules.ShouldReinitializeSession(2, 3, 2, matchSimStarted: true));
+        }
+
+        [Test]
+        public void ShouldReinitializeSession_WhenCountDriftedBeforeStart_True()
+        {
+            Assert.IsTrue(RacePickNetworkRules.ShouldReinitializeSession(0, 3, 0, matchSimStarted: false));
+            Assert.IsTrue(RacePickNetworkRules.ShouldReinitializeSession(2, 3, 2, matchSimStarted: false));
+            Assert.IsTrue(RacePickNetworkRules.ShouldReinitializeSession(3, 3, 0, matchSimStarted: false));
+        }
+
+        [Test]
         public void PendingSubmit_ClaimsBeforeNetworkCall_RestoresOnReject()
         {
             string pending = GameIds.Races.Human;

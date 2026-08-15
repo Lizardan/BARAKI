@@ -61,22 +61,14 @@ namespace Game.UI.Controllers
             }
 
             var localSlot = ResolveLocalSlot();
-            var useSnapshot = _matchRuntime.TickMode == MatchTickMode.Client;
-            var deadline = useSnapshot
-                ? (BonusPickHudRules.TryGetSnapshotDeadline(
-                    _matchRuntime.LastNetworkSnapshot,
-                    out var snapshotDeadline)
-                    ? snapshotDeadline
-                    : 0f)
-                : controller.BonusPickDeadlineSeconds;
-            var ownPick = useSnapshot
-                ? (BonusPickHudRules.TryGetSnapshotBonusPick(
-                    _matchRuntime.LastNetworkSnapshot,
-                    localSlot,
-                    out var snapshotSlot)
-                    ? snapshotSlot
-                    : BonusPickRules.NoneSlot)
-                : controller.GetBonusPickSlot(localSlot);
+            BonusPickHudRules.ResolveOverlay(
+                useSnapshot: _matchRuntime.TickMode == MatchTickMode.Client,
+                snapshot: _matchRuntime.LastNetworkSnapshot,
+                localSlot,
+                controller.BonusPickDeadlineSeconds,
+                controller.GetBonusPickSlot(localSlot),
+                out var deadline,
+                out var ownPick);
 
             if (!BonusPickHudRules.IsPickWindowOpen(deadline, ownPick))
             {

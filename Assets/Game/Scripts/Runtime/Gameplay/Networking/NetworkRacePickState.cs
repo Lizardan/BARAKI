@@ -43,6 +43,7 @@ namespace Game.Gameplay.Networking
                 ("client", IsClient),
                 ("players", _playerCount.Value),
                 ("clientId", NetworkManager != null ? (long)NetworkManager.LocalClientId : -1L));
+            TryStartMatchFromReplicatedState();
             NotifyChanged();
             SessionFlowTracker.NotifyChanged();
         }
@@ -87,9 +88,11 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            if (_playerCount.Value == playerCount &&
-                _racePicks.Count == playerCount &&
-                !_matchSimStarted.Value)
+            if (!RacePickNetworkRules.ShouldReinitializeSession(
+                    _playerCount.Value,
+                    playerCount,
+                    _racePicks.Count,
+                    _matchSimStarted.Value))
             {
                 return;
             }
@@ -241,21 +244,9 @@ namespace Game.Gameplay.Networking
             }
 
             _matchSimStarted.Value = true;
-            var raceIds = RacePickNetworkRules.ToRaceIdsArray(picks);
-            var localSlot = ResolveLocalSlot();
-            var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
-            GameSession.UpdateActiveSetup(setup);
-            PlaytestLog.Info(
-                "Match",
-                "Begin",
-                ("players", _playerCount.Value),
-                ("slot", localSlot),
-                ("races", string.Join(",", raceIds)));
-
-            var runtime = MatchRuntime.Current;
-            runtime?.StartMatch(raceIds, localSlot);
-
-            BeginMatchClientRpc(EncodeRaceIds(raceIds));
+            ApplyMatchSetupAndStart(picks);
+            MatchNetworkAuthority.Instance?.PublishSnapshotNow();
+            BeginMatchClientRpc(EncodeRaceIds(RacePickNetworkRules.ToRaceIdsArray(picks)));
             NotifyChanged();
             SessionFlowTracker.NotifyChanged();
         }
@@ -268,21 +259,42 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            var raceIds = DecodeRaceIds(payload);
+            ApplyMatchSetupAndStart(DecodeRaceIds(payload));
+        }
+
+        void ApplyMatchSetupAndStart(string[] picks)
+        {
+            if (!RacePickNetworkRules.IsComplete(picks))
+            {
+                return;
+            }
+
+            var raceIds = RacePickNetworkRules.ToRaceIdsArray(picks);
             var localSlot = ResolveLocalSlot();
+            var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
+            GameSession.UpdateActiveSetup(setup);
             PlaytestLog.Info(
                 "Match",
                 "Begin",
+                ("server", IsServer),
                 ("slot", localSlot),
                 ("players", _playerCount.Value),
                 ("races", string.Join(",", raceIds)));
-            var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
-            GameSession.UpdateActiveSetup(setup);
 
             var runtime = MatchRuntime.Current;
             runtime?.StartMatch(raceIds, localSlot);
             NotifyChanged();
             SessionFlowTracker.NotifyChanged();
+        }
+
+        void TryStartMatchFromReplicatedState()
+        {
+            if (IsServer || !_matchSimStarted.Value)
+            {
+                return;
+            }
+
+            ApplyMatchSetupAndStart(ToMutablePickArray());
         }
 
         private static int ResolveLocalSlot()
@@ -313,11 +325,17 @@ namespace Game.Gameplay.Networking
             return text.Split('\n');
         }
 
-        private void OnRacePicksChanged(NetworkListEvent<FixedString32Bytes> changeEvent) =>
+        private void OnRacePicksChanged(NetworkListEvent<FixedString32Bytes> changeEvent)
+        {
+            TryStartMatchFromReplicatedState();
             NotifyChanged();
+        }
 
-        private void OnMatchSimStartedChanged(bool previous, bool current) =>
+        private void OnMatchSimStartedChanged(bool previous, bool current)
+        {
+            TryStartMatchFromReplicatedState();
             NotifyChanged();
+        }
 
         private void OnPlayerCountChanged(int previous, int current) =>
             NotifyChanged();

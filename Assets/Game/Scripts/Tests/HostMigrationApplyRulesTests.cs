@@ -92,5 +92,41 @@ namespace Game.Tests
             Assert.IsTrue(HostMigrationApplyRules.PreferLastGoodOverLiveCapture(new byte[] { 1 }, true));
             Assert.IsFalse(HostMigrationApplyRules.PreferLastGoodOverLiveCapture(null, true));
         }
+
+        [Test]
+        public void TryCaptureState_PrefersLastGoodBytes()
+        {
+            var lastGood = new byte[] { 1, 2, 3 };
+            Assert.IsTrue(HostMigrationApplyRules.TryCaptureState(lastGood, null, out var captured));
+            Assert.AreSame(lastGood, captured);
+        }
+
+        [Test]
+        public void TryCaptureState_FallsBackToLiveController()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+            controller.Players[0].Gold = 777;
+
+            Assert.IsTrue(HostMigrationApplyRules.TryCaptureState(null, controller, out var captured));
+            Assert.IsNotNull(captured);
+            Assert.Greater(captured.Length, 0);
+
+            var restored = new MatchController();
+            restored.StartMatch(MatchConfig.MvpDefault(2));
+            restored.BeginEarlyPhase();
+            Assert.IsTrue(HostMigrationApplyRules.TryApplyLastGood(restored, captured, previousHostSlot: 0));
+            Assert.AreEqual(777, restored.Players[0].Gold);
+        }
+
+        [Test]
+        public void TryCaptureState_EmptyWithoutLiveController_Fails()
+        {
+            Assert.IsFalse(HostMigrationApplyRules.TryCaptureState(null, null, out var captured));
+            Assert.IsNull(captured);
+            Assert.IsFalse(HostMigrationApplyRules.TryCaptureState(new byte[0], null, out captured));
+            Assert.IsNull(captured);
+        }
     }
 }

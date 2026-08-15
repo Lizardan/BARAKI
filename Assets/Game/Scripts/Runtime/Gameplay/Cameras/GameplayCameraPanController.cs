@@ -46,6 +46,9 @@ namespace Game.Gameplay.Cameras
 
         public bool IsPanLocked => _hasFocusTarget || _externalPanLock;
 
+        /// <summary>True while a scripted/minimap focus move is still in flight.</summary>
+        public bool IsFocusInProgress => _hasFocusTarget;
+
         /// <summary>Current visual yaw (may be mid-tween toward <see cref="TargetYawDegrees"/>).</summary>
         public float YawDegrees => _yawDegrees;
 

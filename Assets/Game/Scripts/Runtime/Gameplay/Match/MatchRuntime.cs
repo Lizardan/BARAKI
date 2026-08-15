@@ -29,6 +29,7 @@ namespace Game.Gameplay.Match
         private MatchTickMode _tickMode = MatchTickMode.Offline;
         private MatchSnapshot _lastNetworkSnapshot;
         private byte[] _lastNetworkSnapshotBytes;
+        private float _startPhaseRealtime = -1f;
 
         private GameplayCameraPanController _panController;
         private MatchSelectionBridge _selectionBridge;
@@ -82,6 +83,7 @@ namespace Game.Gameplay.Match
             Controller = null;
             _lastNetworkSnapshot = null;
             _lastNetworkSnapshotBytes = null;
+            _startPhaseRealtime = -1f;
             PrepareArena();
         }
 
@@ -91,6 +93,10 @@ namespace Game.Gameplay.Match
             {
                 return;
             }
+
+            // Cinematic Start→Early is local (camera / timeout). Do not gate it on tick
+            // mode: clients never tick, and the listen-host ticks from MatchNetworkAuthority.
+            TryBeginEarlyPhaseWhenReady();
 
             if (!MatchTickAuthority.ShouldTickSimulation(_tickMode))
             {
@@ -104,7 +110,6 @@ namespace Game.Gameplay.Match
             }
 
             Controller?.Tick(Time.deltaTime);
-            TryBeginEarlyPhaseWhenReady();
         }
 
         public void SetNetworkTickMode(MatchTickMode mode)
@@ -148,7 +153,13 @@ namespace Game.Gameplay.Match
                 _panController = GameplayCameraPanController.Current;
             }
 
-            if (_panController != null && _panController.IsPanLocked)
+            // Wait for the base-focus fly-in, but never for race-pick pan lock — that used
+            // to freeze the match clock if the overlay failed to unlock. Timeout matches
+            // GDD PHASE_START so a stuck camera cannot hold the sim forever.
+            var cameraBusy = _panController != null && _panController.IsFocusInProgress;
+            var waitedLongEnough = _startPhaseRealtime >= 0f
+                && Time.realtimeSinceStartup - _startPhaseRealtime >= MatchRules.StartPhaseMaxWaitSeconds;
+            if (cameraBusy && !waitedLongEnough)
             {
                 return;
             }
@@ -196,6 +207,7 @@ namespace Game.Gameplay.Match
 
             Controller.StartMatch(config);
             _isMatchStarted = true;
+            _startPhaseRealtime = Time.realtimeSinceStartup;
             EnsureSelectionBridge();
             EnsureFogOfWar(localPlayerSlot);
             _selectionBridge.BeginMatch();

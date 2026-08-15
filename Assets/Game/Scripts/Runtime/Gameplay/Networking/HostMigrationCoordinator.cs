@@ -198,26 +198,14 @@ namespace Game.Gameplay.Networking
             }
 
             var activeRuntime = runtime ?? MatchRuntime.Current;
-            var lastGood = activeRuntime?.LastNetworkSnapshotBytes;
-            if (lastGood is { Length: > 0 })
+            if (HostMigrationApplyRules.TryCaptureState(
+                    activeRuntime?.LastNetworkSnapshotBytes,
+                    activeRuntime?.Controller,
+                    out var captured))
             {
-                CapturedStateBytes = lastGood;
+                CapturedStateBytes = captured;
                 AdvanceAfterStateTransfer(true);
                 TryBeginRebindDriver();
-                return;
-            }
-
-            // Clients normally have empty local sim — live capture is only a fallback for host.
-            if (activeRuntime?.Controller != null && MatchNetworkSession.LocalSlot == PreviousHostSlot)
-            {
-                var snapshot = MatchSnapshotCodec.Capture(activeRuntime.Controller);
-                CapturedStateBytes = MatchSnapshotCodec.Serialize(snapshot);
-                AdvanceAfterStateTransfer(CapturedStateBytes is { Length: > 0 });
-                if (Phase != HostMigrationRules.MigrationPhase.Aborted)
-                {
-                    TryBeginRebindDriver();
-                }
-
                 return;
             }
 

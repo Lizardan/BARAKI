@@ -394,7 +394,7 @@ namespace Game.Gameplay.Networking
             using var stream = new System.IO.MemoryStream(bytes);
             using var reader = new System.IO.BinaryReader(stream);
             var version = reader.ReadInt32();
-            if (version is not (1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or 15 or 16 or 17))
+            if (version < 1 || version > CurrentVersion)
             {
                 throw new InvalidOperationException($"Unsupported snapshot version {version}.");
             }
@@ -1004,9 +1004,17 @@ namespace Game.Gameplay.Networking
         Client = 2,
     }
 
-    public static class MatchTickAuthority
-    {
-        public static bool ShouldTickSimulation(MatchTickMode mode) =>
-            mode is MatchTickMode.Offline or MatchTickMode.Server;
-    }
+        public static class MatchTickAuthority
+        {
+            public static bool ShouldTickSimulation(MatchTickMode mode) =>
+                mode is MatchTickMode.Offline or MatchTickMode.Server;
+
+            /// <summary>
+            /// Listen-host drop despawns authority. Keep Client mode while the session
+            /// handle is still held so peers do not start independent Offline sims
+            /// (split-brain) during host-migration grace/rebind.
+            /// </summary>
+            public static MatchTickMode TickModeAfterAuthorityDespawn(bool networkedSessionHeld) =>
+                networkedSessionHeld ? MatchTickMode.Client : MatchTickMode.Offline;
+        }
 }

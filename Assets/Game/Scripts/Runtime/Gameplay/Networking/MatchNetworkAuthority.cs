@@ -61,10 +61,11 @@ namespace Game.Gameplay.Networking
                 Instance = null;
             }
 
-            _tickMode = MatchTickMode.Offline;
+            _tickMode = MatchTickAuthority.TickModeAfterAuthorityDespawn(
+                MatchNetworkSession.IsNetworked && MatchNetworkSession.HasHandle);
             if (_matchRuntime != null)
             {
-                _matchRuntime.SetNetworkTickMode(MatchTickMode.Offline);
+                _matchRuntime.SetNetworkTickMode(_tickMode);
             }
         }
 
@@ -255,8 +256,9 @@ namespace Game.Gameplay.Networking
             PublishSnapshotNow();
         }
 
-        void PublishSnapshotNow()
+        public void PublishSnapshotNow()
         {
+            EnsureRuntime();
             if (!IsServer || _matchRuntime?.Controller == null)
             {
                 return;
@@ -445,10 +447,7 @@ namespace Game.Gameplay.Networking
             if (_snapshotAccumulator >= 1f / SnapshotHz)
             {
                 _snapshotAccumulator = 0f;
-                var snapshot = MatchSnapshotCodec.Capture(_matchRuntime.Controller);
-                var bytes = MatchSnapshotCodec.Serialize(snapshot);
-                _matchRuntime.StoreLastNetworkSnapshot(snapshot, bytes);
-                ApplySnapshotClientRpc(bytes);
+                PublishSnapshotNow();
             }
         }
 
@@ -457,6 +456,16 @@ namespace Game.Gameplay.Networking
         {
             if (IsServer)
             {
+                return;
+            }
+
+            EnsureRuntime();
+            if (_matchRuntime == null)
+            {
+                PlaytestLog.Warn(
+                    "Match",
+                    "SnapshotNoRuntime",
+                    ("bytes", bytes != null ? bytes.Length : 0));
                 return;
             }
 
@@ -696,9 +705,10 @@ namespace Game.Gameplay.Networking
 
         private void EnsureRuntime()
         {
-            if (_matchRuntime == null)
+            var current = MatchRuntime.Current;
+            if (current != null)
             {
-                _matchRuntime = MatchRuntime.Current;
+                _matchRuntime = current;
             }
 
             if (_matchRuntime == null)

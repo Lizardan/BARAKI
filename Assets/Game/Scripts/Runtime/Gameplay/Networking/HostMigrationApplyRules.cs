@@ -27,6 +27,27 @@ namespace Game.Gameplay.Networking
             return true;
         }
 
+        public static bool TryCaptureState(
+            byte[] lastGoodBytes,
+            MatchController liveController,
+            out byte[] captured)
+        {
+            if (lastGoodBytes is { Length: > 0 })
+            {
+                captured = lastGoodBytes;
+                return true;
+            }
+
+            if (liveController == null)
+            {
+                captured = null;
+                return false;
+            }
+
+            captured = MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(liveController));
+            return captured is { Length: > 0 };
+        }
+
         public static bool PreferLastGoodOverLiveCapture(byte[] lastGoodBytes, bool hasLiveController) =>
             lastGoodBytes is { Length: > 0 } || !hasLiveController;
     }

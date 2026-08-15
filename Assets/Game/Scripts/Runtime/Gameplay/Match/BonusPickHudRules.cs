@@ -50,5 +50,37 @@ namespace Game.Gameplay.Match
         /// <summary>True while the local bonus pick window is open (deadline counting, no pick yet).</summary>
         public static bool IsPickWindowOpen(float deadlineSeconds, int ownPickSlot) =>
             deadlineSeconds > 0f && ownPickSlot == BonusPickRules.NoneSlot;
+
+        /// <summary>
+        /// Clients prefer the snapshot when it has arrived; otherwise they keep the local
+        /// controller values from <c>StartMatch</c> so the overlay is not blank until the
+        /// first snapshot (or after a dropped snapshot RPC).
+        /// </summary>
+        public static void ResolveOverlay(
+            bool useSnapshot,
+            MatchSnapshot snapshot,
+            int localSlot,
+            float controllerDeadline,
+            int controllerPick,
+            out float deadlineSeconds,
+            out int ownPickSlot)
+        {
+            deadlineSeconds = controllerDeadline;
+            ownPickSlot = controllerPick;
+            if (!useSnapshot)
+            {
+                return;
+            }
+
+            if (TryGetSnapshotDeadline(snapshot, out var snapshotDeadline))
+            {
+                deadlineSeconds = snapshotDeadline;
+            }
+
+            if (TryGetSnapshotBonusPick(snapshot, localSlot, out var snapshotPick))
+            {
+                ownPickSlot = snapshotPick;
+            }
+        }
     }
 }

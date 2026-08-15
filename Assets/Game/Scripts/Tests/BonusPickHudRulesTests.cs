@@ -80,6 +80,65 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ResolveOverlay_ClientWithoutSnapshot_FallsBackToController()
+        {
+            BonusPickHudRules.ResolveOverlay(
+                useSnapshot: true,
+                snapshot: null,
+                localSlot: 0,
+                controllerDeadline: 55f,
+                controllerPick: BonusPickRules.NoneSlot,
+                out var deadline,
+                out var ownPick);
+
+            Assert.AreEqual(55f, deadline, 0.01f);
+            Assert.AreEqual(BonusPickRules.NoneSlot, ownPick);
+            Assert.IsTrue(BonusPickHudRules.IsPickWindowOpen(deadline, ownPick));
+        }
+
+        [Test]
+        public void ResolveOverlay_ClientWithSnapshot_PrefersSnapshot()
+        {
+            var snapshot = new MatchSnapshot
+            {
+                BonusPickDeadlineSeconds = 12f,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot { Slot = 1, BonusPickSlot = 4 },
+                },
+            };
+
+            BonusPickHudRules.ResolveOverlay(
+                useSnapshot: true,
+                snapshot,
+                localSlot: 1,
+                controllerDeadline: 60f,
+                controllerPick: BonusPickRules.NoneSlot,
+                out var deadline,
+                out var ownPick);
+
+            Assert.AreEqual(12f, deadline, 0.01f);
+            Assert.AreEqual(4, ownPick);
+        }
+
+        [Test]
+        public void ResolveOverlay_HostIgnoresSnapshot()
+        {
+            var snapshot = new MatchSnapshot { BonusPickDeadlineSeconds = 1f };
+            BonusPickHudRules.ResolveOverlay(
+                useSnapshot: false,
+                snapshot,
+                localSlot: 0,
+                controllerDeadline: 40f,
+                controllerPick: BonusPickRules.NoneSlot,
+                out var deadline,
+                out var ownPick);
+
+            Assert.AreEqual(40f, deadline, 0.01f);
+            Assert.AreEqual(BonusPickRules.NoneSlot, ownPick);
+        }
+
+        [Test]
         public void TryRequestPick_NoBridge_ReturnsFalse()
         {
             Assert.IsFalse(BonusPickNetworkFacade.TryRequestPick(3));
