@@ -514,12 +514,14 @@ namespace Game.Gameplay.Match
             int ownerSlot,
             BuildingVisualCatalog buildingCatalog)
         {
+            var localRotation = BaseLayoutDefinition.GetLocalRotation(buildingId);
+
             if (buildingCatalog != null && buildingCatalog.TryGetPrefab(buildingId, out var prefab))
             {
                 var instance = Object.Instantiate(prefab, slotRoot, false);
                 instance.name = buildingId;
                 instance.transform.localPosition = localPosition;
-                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localRotation = localRotation;
                 instance.transform.localScale = Vector3.one;
 
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(ownerSlot));
@@ -530,7 +532,7 @@ namespace Game.Gameplay.Match
             marker.name = buildingId;
             marker.transform.SetParent(slotRoot, false);
             marker.transform.localPosition = localPosition;
-            marker.transform.localRotation = Quaternion.identity;
+            marker.transform.localRotation = localRotation;
             marker.transform.localScale = GetScale(buildingId);
 
             DestroyCollider(marker.GetComponent<Collider>());

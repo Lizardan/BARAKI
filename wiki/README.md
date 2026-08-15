@@ -16,6 +16,7 @@
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
 | `rules/content-assets.md` | Owner-first ScriptableObjects: Heroes/HeroN, Units/Caster|Titan, Catalogs/Shared |
+| `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |
 
 ## Что здесь не дублируется
 

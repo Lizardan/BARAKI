@@ -72,6 +72,44 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BaseLayout_Facing_MainAndCenterTowardRoad_SidesTowardCreepExit()
+        {
+            Assert.AreEqual(Vector3.forward, BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.Main));
+            Assert.AreEqual(
+                Vector3.forward,
+                BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.BarracksCenter));
+            Assert.AreEqual(
+                Vector3.left,
+                BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.BarracksLeft));
+            Assert.AreEqual(
+                Vector3.right,
+                BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.BarracksRight));
+            Assert.AreEqual(
+                Vector3.forward,
+                BaseLayoutDefinition.GetLocalFacingDirection(GameIds.Buildings.TowerNw));
+        }
+
+        [Test]
+        public void BaseLayout_LocalRotation_DoorAxisAlignsWithFacing()
+        {
+            // TT meshes: door on +X; after GetLocalRotation the door axis is the desired face.
+            AssertDoorFaces(GameIds.Buildings.Main, Vector3.forward);
+            AssertDoorFaces(GameIds.Buildings.BarracksCenter, Vector3.forward);
+            AssertDoorFaces(GameIds.Buildings.BarracksLeft, Vector3.left);
+            AssertDoorFaces(GameIds.Buildings.BarracksRight, Vector3.right);
+        }
+
+        static void AssertDoorFaces(string buildingId, Vector3 expectedFace)
+        {
+            var rotation = BaseLayoutDefinition.GetLocalRotation(buildingId);
+            var doorAxis = rotation * Vector3.right;
+            Assert.Greater(
+                Vector3.Dot(doorAxis.normalized, expectedFace.normalized),
+                0.99f,
+                $"{buildingId} door should face {expectedFace}, got {doorAxis}");
+        }
+
+        [Test]
         public void SlotRotation_ForwardPointsTowardArenaCenter()
         {
             var layout = MatchArenaGenerator.Generate(4, arenaRadius: 50f);

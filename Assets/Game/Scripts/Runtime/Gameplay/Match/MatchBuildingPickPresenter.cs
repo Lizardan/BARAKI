@@ -1,11 +1,13 @@
 using System.Collections.Generic;
-using Game.Core;
 using Game.Gameplay.Match.Selection;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>World-position pick proxies for buildings from <see cref="BuildingRegistry"/>.</summary>
+    /// <summary>
+    /// Pick colliders for buildings. Prefers mesh colliders on greybox visuals so clicks match
+    /// the visible silhouette (AABB proxies steal hits through empty space of tall buildings).
+    /// </summary>
     public sealed class MatchBuildingPickPresenter : MonoBehaviour
     {
         const string PickRootName = "MatchBuildingPickRoot";
@@ -13,6 +15,8 @@ namespace Game.Gameplay.Match
         [SerializeField] private MatchRuntime _runtime;
 
         readonly List<Collider> _colliders = new();
+        readonly List<GameObject> _ownedProxies = new();
+        readonly List<GameObject> _attachedVisualHosts = new();
         Transform _pickRoot;
 
         void Awake()
@@ -42,21 +46,101 @@ namespace Game.Gameplay.Match
 
             foreach (var building in controller.Buildings.Buildings)
             {
-                var size = MatchPickFootprint.GetBuildingPickSize(building.BuildingId) * MatchPickFootprint.PickSizeMargin;
-                var proxy = new GameObject($"Pick_{building.BuildingId}_{building.InstanceId}");
-                proxy.transform.SetParent(_pickRoot, false);
-                proxy.transform.position = building.WorldPosition;
+                if (!TryAttachVisualPick(building, bridge, out var collider))
+                {
+                    collider = CreateFallbackProxyPick(building, bridge);
+                }
 
-                var collider = MatchPickColliderUtility.EnsurePickCollider(
-                    proxy,
-                    new Vector3(0f, size.y * 0.5f, 0f),
-                    size);
-
-                var handle = proxy.AddComponent<MatchPickHandle>();
-                handle.ConfigureBuilding(building.InstanceId);
-                bridge.RegisterPickCollider(collider, MatchPickTarget.Building(building.InstanceId));
-                _colliders.Add(collider);
+                if (collider != null)
+                {
+                    _colliders.Add(collider);
+                }
             }
+        }
+
+        bool TryAttachVisualPick(BuildingState building, MatchSelectionBridge bridge, out Collider collider)
+        {
+            collider = null;
+            var visual = FindBuildingVisual(building);
+            if (visual == null)
+            {
+                return false;
+            }
+
+            var meshFilter = visual.GetComponentInChildren<MeshFilter>();
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+            {
+                return false;
+            }
+
+            var host = meshFilter.gameObject;
+            collider = MatchPickColliderUtility.EnsureMeshPickCollider(host, meshFilter.sharedMesh);
+            if (collider == null)
+            {
+                return false;
+            }
+
+            var handle = host.GetComponent<MatchPickHandle>();
+            if (handle == null)
+            {
+                handle = host.AddComponent<MatchPickHandle>();
+            }
+
+            handle.ConfigureBuilding(building.InstanceId);
+            bridge.RegisterPickCollider(collider, MatchPickTarget.Building(building.InstanceId));
+            _attachedVisualHosts.Add(host);
+            return true;
+        }
+
+        Collider CreateFallbackProxyPick(BuildingState building, MatchSelectionBridge bridge)
+        {
+            var size = MatchPickFootprint.GetBuildingPickSize(building.BuildingId);
+            var proxy = new GameObject($"Pick_{building.BuildingId}_{building.InstanceId}");
+            proxy.transform.SetParent(_pickRoot, false);
+            proxy.transform.position = building.WorldPosition;
+
+            var greybox = MatchArenaGreybox.Current;
+            if (greybox != null
+                && greybox.Layout != null
+                && building.OwnerSlot >= 0
+                && building.OwnerSlot < greybox.Layout.Slots.Count)
+            {
+                var slot = greybox.Layout.Slots[building.OwnerSlot];
+                proxy.transform.rotation = slot.BaseRotation * BaseLayoutDefinition.GetLocalRotation(building.BuildingId);
+            }
+
+            var collider = MatchPickColliderUtility.EnsurePickCollider(
+                proxy,
+                new Vector3(0f, size.y * 0.5f, 0f),
+                size);
+
+            var handle = proxy.AddComponent<MatchPickHandle>();
+            handle.ConfigureBuilding(building.InstanceId);
+            bridge.RegisterPickCollider(collider, MatchPickTarget.Building(building.InstanceId));
+            _ownedProxies.Add(proxy);
+            return collider;
+        }
+
+        static Transform FindBuildingVisual(BuildingState building)
+        {
+            var greybox = MatchArenaGreybox.Current;
+            if (greybox == null)
+            {
+                greybox = Object.FindFirstObjectByType<MatchArenaGreybox>();
+            }
+
+            if (greybox == null)
+            {
+                return null;
+            }
+
+            var slotRoot = greybox.transform.Find($"GreyboxVisual/Player_{building.OwnerSlot}");
+            if (slotRoot == null)
+            {
+                return null;
+            }
+
+            return slotRoot.Find(building.BuildingId);
         }
 
         void ClearPicks()
@@ -74,6 +158,20 @@ namespace Game.Gameplay.Match
             }
 
             _colliders.Clear();
+
+            foreach (var host in _attachedVisualHosts)
+            {
+                MatchPickColliderUtility.RemovePickCollider(host);
+            }
+
+            _attachedVisualHosts.Clear();
+
+            foreach (var proxy in _ownedProxies)
+            {
+                DestroyPickObject(proxy);
+            }
+
+            _ownedProxies.Clear();
 
             if (_pickRoot != null)
             {

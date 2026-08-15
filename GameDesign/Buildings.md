@@ -89,10 +89,18 @@ id: BASE_LAYOUT
 buildings_total: 8
 map_placement: perimeter_edge
 base_orientation:
-  front_local_axis: +Y
-  front_faces: map_center
-  rear_local_axis: -Y
+  front_local_axis: +Z          # Unity base local; GDD 2D +Y maps to +Z
+  front_faces: map_center       # central road / spoke
+  rear_local_axis: -Z
   rear_faces: map_edge
+building_facing:                # door direction in base local (see wiki/rules/arena-buildings.md)
+  BUILDING_MAIN: +Z
+  BUILDING_BARRACKS_CENTER: +Z
+  BUILDING_BARRACKS_LEFT: -X    # creep exit
+  BUILDING_BARRACKS_RIGHT: +X   # creep exit
+  towers: +Z
+  tt_model_door_axis: +X        # BuildingModelYawDegrees −90 → align door to facing
+  runtime: BaseLayoutDefinition.GetLocalRotation
 main: BUILDING_MAIN
 barracks: [BUILDING_BARRACKS_LEFT, BUILDING_BARRACKS_CENTER, BUILDING_BARRACKS_RIGHT]
 towers: [BUILDING_TOWER_NW, BUILDING_TOWER_NE, BUILDING_TOWER_SW, BUILDING_TOWER_SE]

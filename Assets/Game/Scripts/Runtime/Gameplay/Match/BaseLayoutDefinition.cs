@@ -16,6 +16,12 @@ namespace Game.Gameplay.Match
         /// <summary>MAIN→barracks distance as a multiple of main→tower distance (legacy 2f; 1.5f = 25% closer).</summary>
         public const float BarracksOffsetFactor = 1.5f;
 
+        /// <summary>
+        /// TT building meshes are authored with the door on local +X; yaw maps door → transform forward (+Z).
+        /// Same pack quirk as <see cref="UnitGreyboxVisuals.AnimatedHumanModelYawDegrees"/>.
+        /// </summary>
+        public const float BuildingModelYawDegrees = -90f;
+
         public static IReadOnlyDictionary<string, Vector3> GetLocalOffsets(float mainToTowerDistance)
         {
             var d = mainToTowerDistance;
@@ -31,6 +37,30 @@ namespace Game.Gameplay.Match
                 [GameIds.Buildings.BarracksLeft] = new(-barracks, 0f, 0f),
                 [GameIds.Buildings.BarracksRight] = new(barracks, 0f, 0f),
             };
+        }
+
+        /// <summary>
+        /// Desired door/face direction in base local space.
+        /// Main and center barracks face the central road (+Z); side barracks face creep exit (±X).
+        /// </summary>
+        public static Vector3 GetLocalFacingDirection(string buildingId) => buildingId switch
+        {
+            GameIds.Buildings.BarracksLeft => Vector3.left,
+            GameIds.Buildings.BarracksRight => Vector3.right,
+            _ => Vector3.forward,
+        };
+
+        /// <summary>Local rotation so the building door faces <see cref="GetLocalFacingDirection"/>.</summary>
+        public static Quaternion GetLocalRotation(string buildingId)
+        {
+            var face = GetLocalFacingDirection(buildingId);
+            if (face.sqrMagnitude < 0.0001f)
+            {
+                face = Vector3.forward;
+            }
+
+            return Quaternion.LookRotation(face.normalized, Vector3.up)
+                   * Quaternion.Euler(0f, BuildingModelYawDegrees, 0f);
         }
 
         public static string GetLaneForBarracks(string barracksId) => barracksId switch

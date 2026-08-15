@@ -30,11 +30,15 @@ namespace Game.Gameplay.Match
 
         private void Awake()
         {
-            Current = this;
             if (_buildOnAwake)
             {
                 Rebuild();
             }
+        }
+
+        private void OnEnable()
+        {
+            Current = this;
         }
 
         private void OnDisable()

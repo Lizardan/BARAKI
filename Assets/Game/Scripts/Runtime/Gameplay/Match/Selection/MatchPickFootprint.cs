@@ -5,7 +5,6 @@ namespace Game.Gameplay.Match.Selection
 {
     public static class MatchPickFootprint
     {
-        public const float PickSizeMargin = 1.15f;
         public const float RingMargin = 1.1f;
         public const float DefaultUnitDiameter = 1.8f;
 
