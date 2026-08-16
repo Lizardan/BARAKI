@@ -19,19 +19,23 @@ ScriptableObjects/
         └── Units/
             ├── Melee/
             │   ├── UNIT_HUMAN_MELEE.asset
-            │   └── Bonus/UNIT_HUMAN_MELEE_BONUS.asset
-            ├── Ranged/ … Bonus/
+            │   └── Bonus/
+            │       ├── UNIT_HUMAN_MELEE_BONUS.asset
+            │       └── Abilities/         # Cleave
+            ├── Ranged/ … Bonus/Abilities/ # Deadeye
             ├── Caster/
             │   ├── UNIT_HUMAN_CASTER.asset
             │   ├── Abilities/             # Mend / Frost / Resurrect
-            │   └── Bonus/UNIT_HUMAN_CASTER_BONUS.asset
+            │   └── Bonus/
+            │       ├── UNIT_HUMAN_CASTER_BONUS.asset
+            │       └── Abilities/         # Battlemace
             ├── Siege/
             │   ├── UNIT_HUMAN_SIEGE.asset
             │   └── Bonus/
             │       ├── UNIT_HUMAN_SIEGE_BONUS.asset
             │       └── Abilities/         # siege-regen-aura
-            ├── Flying/ … Bonus/
-            ├── Super/ … Bonus/
+            ├── Flying/ … Bonus/Abilities/ # Last Call
+            ├── Super/ … Bonus/Abilities/  # Catapult
             └── Titan/
                 └── Abilities/             # Rally / Stomp / Slam / Colossus
 ```

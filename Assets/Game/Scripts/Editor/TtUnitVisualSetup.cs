@@ -165,27 +165,27 @@ namespace Game.Editor
                 "ballista_05_death",
                 UnitRole.Super),
             UnitSetup("Human_Melee_BONUS", UnitVisualPrefabBuilder.HumanMeleeBonusPath, "Human_Melee_BONUS",
-                "TT_Halberdier", "animation_infantry/Infantry",
-                "infantry_01_idle", "infantry_03_run",
+                "TT_Halberdier", "animation_infantry/Polearm",
+                "polearm_01_idle", "polearm_03_run",
                 new[]
                 {
-                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
-                    Local("animation_infantry/Infantry", "infantry_04_attack_B"),
+                    Local("animation_infantry/Polearm", "polearm_04_attack_A"),
+                    Local("animation_infantry/Polearm", "polearm_04_attack_B"),
                 },
                 null,
-                "infantry_06_death_A",
+                "polearm_06_death_A",
                 UnitRole.Melee,
                 useBonusDefinition: true),
             UnitSetup("Human_Ranged_BONUS", UnitVisualPrefabBuilder.HumanRangedBonusPath, "Human_Ranged_BONUS",
-                "TT_Crossbowman", "animation_infantry/Archer",
-                "archer_01_idle", "archer_03_run",
+                "TT_Crossbowman", "animation_infantry/Crossbow",
+                "crossbow_01_idle", "crossbow_03_run",
                 new[]
                 {
-                    Local("animation_infantry/Archer", "archer_04_attack_A"),
-                    Local("animation_infantry/Archer", "archer_04_attack_B"),
+                    Local("animation_infantry/Crossbow", "crossbow_04_attack_A"),
+                    Local("animation_infantry/Crossbow", "crossbow_04_attack_B"),
                 },
                 null,
-                "archer_06_death_A",
+                "crossbow_06_death_A",
                 UnitRole.Ranged,
                 useBonusDefinition: true),
             UnitSetup("Human_Caster_BONUS", UnitVisualPrefabBuilder.HumanCasterBonusPath, "Human_Caster_BONUS",
@@ -193,7 +193,9 @@ namespace Game.Editor
                 "staff_01_idle", "staff_03_run",
                 new[]
                 {
+                    // AttackVariant 0 = ranged staff, 1 = hybrid melee mace (infantry swing).
                     Local("animation_infantry/Staff", "staff_04_attack_B"),
+                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
                 },
                 new[]
                 {
@@ -203,28 +205,31 @@ namespace Game.Editor
                 "staff_06_death_A",
                 UnitRole.Caster,
                 useBonusDefinition: true),
+            // Foot Paladin — infantry Shield, not cavalry_shield (mounted clips tip the rig sideways).
+            // shield_04_attack_B.FBX internal clip is misnamed "shield_attack_B" — use A only.
             UnitSetup("Human_Siege_BONUS", UnitVisualPrefabBuilder.HumanSiegeBonusPath, "Human_Siege_BONUS",
-                "TT_Paladin", "animation_cavalry/cavalry_shield",
-                "cav_shield_01_idle", "cav_shield_03_run",
-                new[] { Local("animation_cavalry/cavalry_shield", "cav_shield_04_attack") },
+                "TT_Paladin", "animation_infantry/Shield",
+                "shield_01_idle", "shield_03_run",
+                new[] { Local("animation_infantry/Shield", "shield_04_attack_A") },
                 null,
-                "cav_shield_06_death_A",
+                "shield_06_death_A",
                 UnitRole.Siege,
                 useBonusDefinition: true),
+            // Horse archer — cavalry_archer bow set, not bare horse cavalry.
             UnitSetup("Human_Flying_BONUS", UnitVisualPrefabBuilder.HumanFlyingBonusPath, "Human_Flying_BONUS",
-                "Fly_Hors_Archer", "animation_cavalry/cavalry",
-                "cavalry_01_idle", "cavalry_03_run",
-                new[] { Local("animation_cavalry/cavalry", "cavalry_04_attack") },
+                "Fly_Hors_Archer", "animation_cavalry/cavalry_archer",
+                "cav_archer_01_idle", "cav_archer_03_run",
+                new[] { Local("animation_cavalry/cavalry_archer", "cav_archer_04_attack") },
                 null,
-                "cavalry_06_death_A",
+                "cav_archer_06_death_A",
                 UnitRole.Flying,
                 useBonusDefinition: true),
             UnitSetup("Human_Super_BONUS", UnitVisualPrefabBuilder.HumanSuperBonusPath, "Human_Super_BONUS",
-                "machines/TT_Catapult_lvl1", "animation_machines/Ballista",
-                "ballista_01_idle", "ballista_02_move",
-                new[] { Local("animation_machines/Ballista", "ballista_03_attack") },
+                "machines/TT_Catapult_lvl1", "animation_machines/Catapult",
+                "catapult_01_idle", "catapult_02_move",
+                new[] { Local("animation_machines/Catapult", "catapult_03_attack") },
                 null,
-                "ballista_05_death",
+                "catapult_05_death",
                 UnitRole.Super,
                 useBonusDefinition: true),
             new(
@@ -436,6 +441,8 @@ namespace Game.Editor
                     {
                         SeedBalance(settings, setup);
                     }
+
+                    ApplyWeaponVisibility(root, setup);
 
                     PrefabUtility.SaveAsPrefabAsset(root, setup.DestinationPath);
                 }
@@ -727,6 +734,40 @@ namespace Game.Editor
             }
 
             throw new InvalidOperationException("Missing clip " + clipName + " at " + fbxPath);
+        }
+
+        static void ApplyWeaponVisibility(GameObject root, VisualSetup setup)
+        {
+            // Base caster keeps staff only — TT source ships with an extra active dagger.
+            if (setup.Role == UnitRole.Caster && !setup.UseBonusDefinition)
+            {
+                foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (transform.name == "w_dagger_C")
+                    {
+                        transform.gameObject.SetActive(false);
+                    }
+                }
+
+                return;
+            }
+
+            // Bonus caster: staff + mace both visible (one per hand); only attack clip switches.
+            if (setup.Role == UnitRole.Caster && setup.UseBonusDefinition)
+            {
+                foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+                {
+                    var name = transform.name;
+                    if (name.StartsWith("w_staff", System.StringComparison.Ordinal))
+                    {
+                        transform.gameObject.SetActive(name == "w_staff_C");
+                    }
+                    else if (name.StartsWith("w_mace", System.StringComparison.Ordinal))
+                    {
+                        transform.gameObject.SetActive(name == "w_mace");
+                    }
+                }
+            }
         }
 
         static Texture2D[] LoadTeamTextures()

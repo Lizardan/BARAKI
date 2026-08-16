@@ -951,7 +951,8 @@ namespace Game.Gameplay.Match
             }
 
             player.Gold = remaining;
-            var stats = ResolveUnitStats(player, role);
+            var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role);
+            var stats = ResolveUnitStats(player, role, bonusSlot);
             // Same forward clearance band as auto-wave creeps (not barracks center / inside mesh).
             var spawnDistance = CombatFormationRules.BarracksSpawnForwardClearance;
             _combat.SpawnUnit(
@@ -959,7 +960,8 @@ namespace Game.Gameplay.Match
                 barracks.LaneId,
                 role,
                 stats,
-                distanceAlongLane: spawnDistance);
+                distanceAlongLane: spawnDistance,
+                bonusSlot: bonusSlot);
             return true;
         }
 
@@ -1805,8 +1807,14 @@ namespace Game.Gameplay.Match
             return BarracksManualCallRules.GetDefaultSquadCounts(barracksLevel);
         }
 
-        UnitCombatStats ResolveUnitStats(MatchPlayerState player, UnitRole role) =>
-            UnitStatsResolver.Resolve(CombatCatalog, UnitVisualCatalog, player.RaceId, role, player);
+        UnitCombatStats ResolveUnitStats(MatchPlayerState player, UnitRole role, int bonusSlot = 0) =>
+            UnitStatsResolver.Resolve(
+                CombatCatalog,
+                UnitVisualCatalog,
+                player.RaceId,
+                role,
+                player,
+                bonusSlot: bonusSlot);
 
         void SpawnParkedHero(int ownerSlot, int heroSlot)
         {

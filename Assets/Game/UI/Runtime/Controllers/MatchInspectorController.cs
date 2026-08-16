@@ -265,7 +265,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            _title.text = MatchInspectorFormatting.FormatRole(unit.Role);
+            _title.text = MatchInspectorFormatting.FormatUnitTitle(unit.Role, unit.BonusSlot);
             _owner.text = string.Empty;
             _hp.text = $"HP: {MatchInspectorFormatting.FormatHp(unit.CurrentHp, unit.Stats.MaxHp)}";
             _meta.text = string.Empty;
@@ -758,6 +758,17 @@ namespace Game.UI.Controllers
             ResolveVisualCatalog();
             var player = FindLocalPlayer(_matchRuntime?.Controller);
             var raceId = player != null ? player.RaceId : GameIds.Races.Human;
+            var bonusSlot = player != null
+                ? HumanBonusUnitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role)
+                : 0;
+            if (bonusSlot > 0
+                && _visualCatalog != null
+                && _visualCatalog.TryGetBonusPortrait(raceId, bonusSlot, out var bonusPortrait)
+                && bonusPortrait != null)
+            {
+                return bonusPortrait;
+            }
+
             if (_visualCatalog != null
                 && _visualCatalog.TryGetPortrait(raceId, role, heroSlot, out var portrait)
                 && portrait != null)

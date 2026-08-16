@@ -53,6 +53,14 @@ namespace Game.Tests
             Assert.AreEqual(
                 AbilityAnimRules.CavalryOrMachineAttackClipSeconds,
                 AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Hero, HeroAbilityRules.PaladinSlot));
+            Assert.AreEqual(
+                AbilityAnimRules.CavalryOrMachineAttackClipSeconds,
+                AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Siege));
+            Assert.AreEqual(
+                AbilityAnimRules.InfantryAttackClipSeconds,
+                AbilityAnimRules.ResolveAttackClipSeconds(
+                    UnitRole.Siege,
+                    bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege)));
         }
 
         [Test]

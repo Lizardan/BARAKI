@@ -79,6 +79,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void EffectiveBonusSlotForRole_OnlyMatchesOwnRole()
+        {
+            Assert.AreEqual(1, HumanBonusUnitRules.EffectiveBonusSlotForRole(1, UnitRole.Melee));
+            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(1, UnitRole.Ranged));
+            Assert.AreEqual(3, HumanBonusUnitRules.EffectiveBonusSlotForRole(3, UnitRole.Caster));
+            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(0, UnitRole.Melee));
+        }
+
+        [Test]
         public void CasterBonus_HybridMelee_WhenCloserThanTwoMeters()
         {
             Assert.IsTrue(HumanBonusUnitRules.IsHybridMeleeRange(1.9f));
@@ -93,6 +102,32 @@ namespace Game.Tests
                 * (1f + 2 * MatchEconomyRules.MeleeDamagePercentPerLevel);
             Assert.GreaterOrEqual(damage, min - 0.01f);
             Assert.LessOrEqual(damage, max + 0.01f);
+        }
+
+        [Test]
+        public void CasterBonus_IsHybridMeleeNow_RequiresBonusSlotAndCloseTarget()
+        {
+            var combat = CreateCombat();
+            var caster = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Caster, CasterStats(),
+                distanceAlongLane: 20f, bonusSlot: 3);
+            Assert.IsTrue(HumanBonusUnitRules.IsHybridMeleeNow(
+                caster, caster.WorldPosition, caster.WorldPosition + new Vector3(1.5f, 0f, 0f)));
+            Assert.IsFalse(HumanBonusUnitRules.IsHybridMeleeNow(
+                caster, caster.WorldPosition, caster.WorldPosition + new Vector3(3f, 0f, 0f)));
+
+            var baseCaster = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Caster, CasterStats(),
+                distanceAlongLane: 24f, bonusSlot: 0);
+            Assert.IsFalse(HumanBonusUnitRules.IsHybridMeleeNow(
+                baseCaster, baseCaster.WorldPosition, baseCaster.WorldPosition + new Vector3(1f, 0f, 0f)));
+        }
+
+        [Test]
+        public void CasterBonus_AttackVariants_StaffZeroMaceOne()
+        {
+            Assert.AreEqual(0f, HumanCasterBonusWeaponVisuals.StaffAttackVariant);
+            Assert.AreEqual(1f, HumanCasterBonusWeaponVisuals.MaceAttackVariant);
         }
 
         [Test]
@@ -207,6 +242,9 @@ namespace Game.Tests
 
         static UnitCombatStats MeleeStats() =>
             new(UnitRole.Melee, 200f, 0f, 10f, 10f, 1f, 1.5f, 4f, 8);
+
+        static UnitCombatStats CasterStats() =>
+            new(UnitRole.Caster, 80f, 0f, 4f, 5f, 1f, 6f, 3.5f, 10, 200f);
 
         static UnitCombatStats RangedStats() =>
             new(UnitRole.Ranged, 70f, 0f, 6f, 8f, 1f, 8f, 3.5f, 6);

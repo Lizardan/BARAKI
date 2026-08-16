@@ -1,7 +1,10 @@
 using Game.Core;
+using Game.Editor;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using NUnit.Framework;
+using UnityEditor;
 
 namespace Game.Tests
 {
@@ -28,15 +31,70 @@ namespace Game.Tests
         }
 
         [Test]
-        public void TryManualCallUnit_NotEnoughGold_Fails()
+        public void TryManualCallUnit_WithMatchingBonusPick_SpawnsBonusUnit()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateControllerWithCatalogs();
+            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee)));
             controller.BeginEarlyPhase();
-            controller.Players[0].Gold = 10;
+            controller.Players[0].Gold = 200;
 
             var barracksBuilding = FindBarracks(controller, 0);
-            Assert.IsFalse(controller.TryManualCallUnit(0, barracksBuilding.InstanceId, UnitRole.Melee));
+            Assert.IsTrue(controller.TryManualCallUnit(0, barracksBuilding.InstanceId, UnitRole.Melee));
+
+            var spawned = FindOwnedMelee(controller, 0);
+            Assert.IsNotNull(spawned);
+            Assert.AreEqual(1, spawned.BonusSlot);
+            Assert.AreEqual(2f, spawned.Stats.AttackRange, 0.01f, "Melee BONUS range should be 2.");
+            Assert.Less(spawned.Stats.MaxHp, 120f, "Melee BONUS HP should be below base 120.");
+        }
+
+        [Test]
+        public void TryManualCallUnit_WithOtherRoleBonus_SpawnsBaseUnit()
+        {
+            var controller = CreateControllerWithCatalogs();
+            Assert.IsNotNull(controller.CombatCatalog);
+            Assert.IsNotNull(controller.UnitVisualCatalog);
+            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster)));
+            controller.BeginEarlyPhase();
+            controller.Players[0].Gold = 200;
+
+            var barracksBuilding = FindBarracks(controller, 0);
+            Assert.IsTrue(controller.TryManualCallUnit(0, barracksBuilding.InstanceId, UnitRole.Melee));
+
+            MatchUnitState spawned = FindOwnedMelee(controller, 0);
+            Assert.IsNotNull(spawned);
+            Assert.AreEqual(0, spawned.BonusSlot);
+            Assert.AreEqual(1.5f, spawned.Stats.AttackRange, 0.01f);
+        }
+
+        static MatchUnitState FindOwnedMelee(MatchController controller, int ownerSlot)
+        {
+            MatchUnitState spawned = null;
+            for (var i = 0; i < controller.Combat.Units.Count; i++)
+            {
+                var unit = controller.Combat.Units[i];
+                if (unit.OwnerSlot == ownerSlot && unit.Role == UnitRole.Melee)
+                {
+                    spawned = unit;
+                }
+            }
+
+            return spawned;
+        }
+
+        static MatchController CreateControllerWithCatalogs()
+        {
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            Assume.That(raceCatalog != null, "RaceCatalog missing.");
+            var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(
+                UnitVisualPrefabBuilder.CatalogPath);
+            Assume.That(visualCatalog != null, "UnitVisualCatalog missing.");
+
+            var controller = new MatchController();
+            controller.CombatCatalog = new RaceCatalogCombatCatalog(raceCatalog);
+            controller.UnitVisualCatalog = visualCatalog;
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            return controller;
         }
 
         static BuildingState FindBarracks(MatchController controller, int ownerSlot)

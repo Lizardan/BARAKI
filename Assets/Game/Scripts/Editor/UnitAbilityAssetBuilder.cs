@@ -99,7 +99,12 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreatePriest();
             yield return AbilityKitDefaults.CreateTitan();
             yield return AbilityKitDefaults.CreateCaster();
+            yield return AbilityKitDefaults.CreateMeleeBonus();
+            yield return AbilityKitDefaults.CreateRangedBonus();
+            yield return AbilityKitDefaults.CreateCasterBonus();
             yield return AbilityKitDefaults.CreateSiegeRegen();
+            yield return AbilityKitDefaults.CreateFlyingBonus();
+            yield return AbilityKitDefaults.CreateSuperBonus();
         }
 
         static void EnsureFolder()
@@ -109,9 +114,8 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero2Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero3Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanCasterAbilities);
-            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanSiegeBonus);
-            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanSiegeAbilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
+            ContentAssetPaths.EnsureHumanUnitFolders();
         }
 
         static string LegacyAbilityPath(int abilityId) =>
@@ -222,32 +226,20 @@ namespace Game.Editor
             return def;
         }
 
-        static string GetAbilityDirectory(int abilityId)
+        static string GetAbilityDirectory(int abilityId) => abilityId switch
         {
-            if (abilityId == AbilityIds.AuraHpRegen)
-            {
-                return ContentAssetPaths.HumanSiegeAbilities;
-            }
-
-            if (abilityId < AbilityIds.Heal)
-            {
-                return ContentAssetPaths.HumanCasterAbilities;
-            }
-
-            if (abilityId < AbilityIds.Smite)
-            {
-                return ContentAssetPaths.HumanHero1Abilities;
-            }
-
-            if (abilityId < AbilityIds.HolyNova)
-            {
-                return ContentAssetPaths.HumanHero2Abilities;
-            }
-
-            return abilityId < AbilityIds.Rally
-                ? ContentAssetPaths.HumanHero3Abilities
-                : ContentAssetPaths.HumanTitanAbilities;
-        }
+            AbilityIds.AuraHpRegen => ContentAssetPaths.HumanSiegeAbilities,
+            AbilityIds.MeleeCleave => ContentAssetPaths.HumanMeleeAbilities,
+            AbilityIds.RangedCrit => ContentAssetPaths.HumanRangedAbilities,
+            AbilityIds.CasterHybrid => ContentAssetPaths.HumanCasterBonusAbilities,
+            AbilityIds.FlyingSpawn => ContentAssetPaths.HumanFlyingAbilities,
+            AbilityIds.SuperCatapult => ContentAssetPaths.HumanSuperAbilities,
+            _ when abilityId < AbilityIds.Heal => ContentAssetPaths.HumanCasterAbilities,
+            _ when abilityId < AbilityIds.Smite => ContentAssetPaths.HumanHero1Abilities,
+            _ when abilityId < AbilityIds.HolyNova => ContentAssetPaths.HumanHero2Abilities,
+            _ when abilityId < AbilityIds.Rally => ContentAssetPaths.HumanHero3Abilities,
+            _ => ContentAssetPaths.HumanTitanAbilities,
+        };
 
         /// <summary>Finds an existing def by <see cref="UnitAbilityDef.AbilityId"/> regardless of its file name.</summary>
         static UnitAbilityDef FindByAbilityId(int abilityId)

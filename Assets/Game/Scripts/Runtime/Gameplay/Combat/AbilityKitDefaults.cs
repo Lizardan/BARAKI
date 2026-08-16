@@ -235,6 +235,109 @@ namespace Game.Gameplay.Combat
                 fx: AbilityFx.Ring(AbilityFxColors.Heal)),
         };
 
+        /// <summary>Melee unit bonus: on-hit cleave (AbilityId 51).</summary>
+        public static UnitAbilityDef[] CreateMeleeBonus() => new[]
+        {
+            Passive(
+                AbilityIds.MeleeCleave,
+                "Cleave",
+                "При ударе 15% шанс: урон удара по врагам в радиусе 2 (цель не дублируется).",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                percent: HumanBonusUnitRules.OnHitProcChance,
+                radius: HumanBonusUnitRules.MeleeAoeRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.Strike, 0.55f)),
+        };
+
+        /// <summary>Ranged unit bonus: on-hit crit (AbilityId 52).</summary>
+        public static UnitAbilityDef[] CreateRangedBonus() => new[]
+        {
+            Passive(
+                AbilityIds.RangedCrit,
+                "Deadeye",
+                "При попадании 15% шанс: урон выстрела ×2.",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                percent: HumanBonusUnitRules.OnHitProcChance,
+                damage: HumanBonusUnitRules.RangedCritMultiplier,
+                fx: AbilityFx.Burst(AbilityFxColors.Strike)),
+        };
+
+        /// <summary>Caster unit bonus: spell kit + hybrid melee under 2 m (AbilityId 53).</summary>
+        public static UnitAbilityDef[] CreateCasterBonus()
+        {
+            var spells = CreateCaster();
+            var hybrid = Passive(
+                AbilityIds.CasterHybrid,
+                "Battlemace",
+                "Ближе 2 м бьёт булавой (8–10 × MeleeDamageLevel), иначе обычная ranged-атака. Спеллы кастера сохраняются.",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                radius: HumanBonusUnitRules.HybridMeleeRange,
+                damage: HumanBonusUnitRules.HybridMeleeDamageMax,
+                fx: AbilityFx.Ring(AbilityFxColors.Paladin, 0.45f));
+            var kit = new UnitAbilityDef[spells.Length + 1];
+            System.Array.Copy(spells, kit, spells.Length);
+            kit[spells.Length] = hybrid;
+            return kit;
+        }
+
+        /// <summary>Flying unit bonus: on-death spawn (AbilityId 54).</summary>
+        public static UnitAbilityDef[] CreateFlyingBonus() => new[]
+        {
+            Passive(
+                AbilityIds.FlyingSpawn,
+                "Last Call",
+                "При гибели 25% шанс призвать базового ranged на месте смерти.",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                percent: HumanBonusUnitRules.OnDeathSpawnChance,
+                fx: AbilityFx.Plus(AbilityFxColors.Resurrect)),
+        };
+
+        /// <summary>Super unit bonus: catapult parabola + splash (AbilityId 55).</summary>
+        public static UnitAbilityDef[] CreateSuperBonus() => new[]
+        {
+            Passive(
+                AbilityIds.SuperCatapult,
+                "Catapult",
+                "Параболический снаряд: splash 50% урона в радиусе 3.",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                percent: HumanBonusUnitRules.CatapultAoeDamagePercent,
+                radius: HumanBonusUnitRules.CatapultAoeRadius,
+                fx: AbilityFx.RingBurst(AbilityFxColors.Ultimate, ringDuration: 0.7f, burstHeight: 1.6f)),
+        };
+
+        /// <summary>Bonus-unit kit for a role (slots 1–6). Empty for non-bonus roles.</summary>
+        public static UnitAbilityDef[] CreateBonus(UnitRole role) => role switch
+        {
+            UnitRole.Melee => CreateMeleeBonus(),
+            UnitRole.Ranged => CreateRangedBonus(),
+            UnitRole.Caster => CreateCasterBonus(),
+            UnitRole.Siege => CreateSiegeRegen(),
+            UnitRole.Flying => CreateFlyingBonus(),
+            UnitRole.Super => CreateSuperBonus(),
+            _ => System.Array.Empty<UnitAbilityDef>(),
+        };
+
+        /// <summary>Prefab / spawn kit: bonus slot wins over base role kit.</summary>
+        public static UnitAbilityDef[] CreateForSpawn(UnitRole role, int heroSlot, int bonusSlot)
+        {
+            if (HumanBonusUnitRules.IsBonusSlot(bonusSlot)
+                && HumanBonusUnitRules.RoleForBonusSlot(bonusSlot) == role)
+            {
+                return CreateBonus(role);
+            }
+
+            return Create(role, heroSlot);
+        }
+
         public static UnitAbilityDef[] CreateCaster() => new[]
         {
             Active(
@@ -331,7 +434,8 @@ namespace Game.Gameplay.Combat
             float radius = 0f,
             AbilityFx fx = default,
             AbilityUnlock unlock = AbilityUnlock.HeroLevel,
-            float flatBonus = 0f) =>
+            float flatBonus = 0f,
+            float damage = 0f) =>
             UnitAbilityDef.Create(
                 abilityId,
                 name,
@@ -341,6 +445,7 @@ namespace Game.Gameplay.Combat
                 unlockValue,
                 behaviour,
                 fx,
+                damage: damage,
                 percent: percent,
                 radius: radius,
                 flatBonus: flatBonus);
@@ -379,5 +484,7 @@ namespace Game.Gameplay.Combat
             b.Configure(stat);
             return b;
         }
+
+        static PassiveTraitBehaviour Trait() => ScriptableObject.CreateInstance<PassiveTraitBehaviour>();
     }
 }

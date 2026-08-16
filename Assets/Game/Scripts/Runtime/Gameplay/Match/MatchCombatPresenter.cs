@@ -381,8 +381,21 @@ namespace Game.Gameplay.Match
                 && visual.LastBehaviorState != UnitBehaviorState.Cast;
             visual.LastBehaviorState = behaviorState;
 
+            var hybridMelee = TryResolveCasterBonusHybridMelee(unit, combat, visual);
+
+            float? attackVariant = null;
+            if (HumanBonusUnitRules.IsCasterBonus(unit))
+            {
+                attackVariant = hybridMelee
+                    ? HumanCasterBonusWeaponVisuals.MaceAttackVariant
+                    : HumanCasterBonusWeaponVisuals.StaffAttackVariant;
+            }
+
             var attackInterval = combat.GetAttackIntervalSeconds(unit);
-            var attackClipLength = AbilityAnimRules.ResolveAttackClipSeconds(unit.Role, unit.HeroSlot);
+            var attackClipLength = AbilityAnimRules.ResolveAttackClipSeconds(
+                unit.Role,
+                unit.HeroSlot,
+                unit.BonusSlot);
             UnitCombatAnimatorDriver.Tick(
                 visual.Animator,
                 visual.AnimPlayback,
@@ -393,14 +406,37 @@ namespace Game.Gameplay.Match
                 visual.LocomotionScaleVsCreep,
                 attackInterval,
                 attackClipLength,
-                enteringCast);
+                enteringCast,
+                attackVariant);
 
             if (fireAttack
-                && CombatAttackRules.UsesMeleeStrike(unit.Role, unit.IsHero, unit.HeroSlot))
+                && (hybridMelee
+                    || CombatAttackRules.UsesMeleeStrike(unit.Role, unit.IsHero, unit.HeroSlot)))
             {
                 visual.PendingImpactFxSeconds =
                     CombatAttackRules.ResolveSwingImpactDelay(attackInterval, unit.Role);
             }
+        }
+
+        static bool TryResolveCasterBonusHybridMelee(
+            MatchUnitState unit,
+            MatchCombatSystem combat,
+            UnitVisual visual)
+        {
+            if (!HumanBonusUnitRules.IsCasterBonus(unit)
+                || combat == null
+                || !unit.CurrentTargetId.HasValue)
+            {
+                return false;
+            }
+
+            if (!combat.TryGetUnitWorldPosition(unit.CurrentTargetId.Value, out var targetPosition))
+            {
+                return false;
+            }
+
+            var attackerPosition = visual.Root != null ? visual.Root.position : unit.WorldPosition;
+            return HumanBonusUnitRules.IsHybridMeleeNow(unit, attackerPosition, targetPosition);
         }
 
         float ResolveClientRenderTime(MatchController controller)
@@ -644,7 +680,11 @@ namespace Game.Gameplay.Match
         }
 
         const float AuraDiscFillAlpha = 0.28f;
-        const float AuraDiscHeight = 0.02f;
+        /// <summary>Above ground mesh to avoid z-fighting with the floor.</summary>
+        const float AuraDiscHeight = 0.12f;
+        /// <summary>Transparent+ so the disc draws after opaque ground / roads.</summary>
+        const int AuraDiscRenderQueue = (int)RenderQueue.Transparent + 80;
+        const int AuraDiscSortingOrder = 32;
 
         Transform CreateAuraDisc(Transform parent, float radius)
         {
@@ -653,10 +693,13 @@ namespace Game.Gameplay.Match
             go.transform.localPosition = new Vector3(0f, AuraDiscHeight, 0f);
 
             var filter = go.AddComponent<MeshFilter>();
-            filter.sharedMesh = RoadPlatformMesh.BuildDisc(radius * 2f, AuraDiscHeight * 2f);
+            filter.sharedMesh = RoadPlatformMesh.BuildDisc(radius * 2f, 0.02f);
 
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = GetAuraDiscMaterial();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingOrder = AuraDiscSortingOrder;
             return go.transform;
         }
 
@@ -681,9 +724,15 @@ namespace Game.Gameplay.Match
             s_auraDiscMaterial.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
             s_auraDiscMaterial.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             s_auraDiscMaterial.SetInt("_ZWrite", 0);
+            // Prefer drawing on top of coplanar ground without writing depth.
+            if (s_auraDiscMaterial.HasProperty("_ZTest"))
+            {
+                s_auraDiscMaterial.SetInt("_ZTest", (int)CompareFunction.LessEqual);
+            }
+
             s_auraDiscMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             s_auraDiscMaterial.DisableKeyword("_ALPHATEST_ON");
-            s_auraDiscMaterial.renderQueue = (int)RenderQueue.Transparent;
+            s_auraDiscMaterial.renderQueue = AuraDiscRenderQueue;
             return s_auraDiscMaterial;
         }
 

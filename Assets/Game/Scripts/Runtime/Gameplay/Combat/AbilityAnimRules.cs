@@ -62,9 +62,16 @@ namespace Game.Gameplay.Combat
         /// <c>Animator.speed = clipLength / attackInterval</c> so mid-clip impact stays mid-clip
         /// when attack speed (and Haste Aura) change.
         /// </summary>
-        public static float ResolveAttackClipSeconds(UnitRole role, int heroSlot = 0)
+        public static float ResolveAttackClipSeconds(UnitRole role, int heroSlot = 0, int bonusSlot = 0)
         {
             if (role == UnitRole.Hero && heroSlot == HeroAbilityRules.KingSlot)
+            {
+                return InfantryAttackClipSeconds;
+            }
+
+            // Siege BONUS is foot Paladin (infantry Shield); base Siege stays mounted cavalry.
+            if (role == UnitRole.Siege
+                && bonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
             {
                 return InfantryAttackClipSeconds;
             }

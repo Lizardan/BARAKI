@@ -39,24 +39,28 @@ namespace Game.Editor
             seeded += Seed(visualCatalog, catalog, UnitRole.Hero, 3, AbilityKitDefaults.CreatePriest()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Caster, 0, AbilityKitDefaults.CreateCaster()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Titan, 0, AbilityKitDefaults.CreateTitan()) ? 1 : 0;
-            seeded += Seed(
-                visualCatalog,
-                catalog,
-                UnitRole.Caster,
-                0,
-                AbilityKitDefaults.CreateCaster(),
-                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster))
-                ? 1
-                : 0;
-            seeded += Seed(
-                visualCatalog,
-                catalog,
-                UnitRole.Siege,
-                0,
-                AbilityKitDefaults.CreateSiegeRegen(),
-                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
-                ? 1
-                : 0;
+
+            foreach (var role in new[]
+                     {
+                         UnitRole.Melee,
+                         UnitRole.Ranged,
+                         UnitRole.Caster,
+                         UnitRole.Siege,
+                         UnitRole.Flying,
+                         UnitRole.Super,
+                     })
+            {
+                seeded += Seed(
+                    visualCatalog,
+                    catalog,
+                    role,
+                    0,
+                    AbilityKitDefaults.CreateBonus(role),
+                    bonusSlot: HumanBonusUnitRules.BonusSlotForRole(role))
+                    ? 1
+                    : 0;
+            }
+
             AssetDatabase.SaveAssets();
             Debug.Log($"UnitAbilitySeeder: seeded {seeded} prefab(s).");
         }

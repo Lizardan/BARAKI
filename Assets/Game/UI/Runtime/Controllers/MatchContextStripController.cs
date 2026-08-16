@@ -182,7 +182,7 @@ namespace Game.UI.Controllers
             var isHero = unit.IsHero && unit.HeroSlot >= 1;
             _title.text = isHero
                 ? MatchInspectorFormatting.FormatHeroName(unit.HeroSlot)
-                : MatchInspectorFormatting.FormatRole(unit.Role);
+                : MatchInspectorFormatting.FormatUnitTitle(unit.Role, unit.BonusSlot);
             SetOwnerVisible(false);
             _hpStat.text = $"HP: {MatchInspectorFormatting.FormatHp(unit.CurrentHp, stats.MaxHp)}";
             _stat1.text = $"Урон: {MatchInspectorFormatting.FormatDamageRange(stats.DamageMin, stats.DamageMax)}";
@@ -277,10 +277,22 @@ namespace Game.UI.Controllers
                 raceId = controller.Players[unit.OwnerSlot].RaceId;
             }
 
-            if (_visualCatalog != null
-                && _visualCatalog.TryGetPortrait(raceId, unit.Role, unit.HeroSlot, out var portrait)
-                && portrait != null
-                && _portrait != null)
+            Texture2D portrait = null;
+            if (_visualCatalog != null)
+            {
+                if (HumanBonusUnitRules.IsBonusSlot(unit.BonusSlot)
+                    && HumanBonusUnitRules.RoleForBonusSlot(unit.BonusSlot) == unit.Role)
+                {
+                    _visualCatalog.TryGetBonusPortrait(raceId, unit.BonusSlot, out portrait);
+                }
+
+                if (portrait == null)
+                {
+                    _visualCatalog.TryGetPortrait(raceId, unit.Role, unit.HeroSlot, out portrait);
+                }
+            }
+
+            if (portrait != null && _portrait != null)
             {
                 _portrait.style.backgroundImage = new StyleBackground(portrait);
                 _portrait.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover);

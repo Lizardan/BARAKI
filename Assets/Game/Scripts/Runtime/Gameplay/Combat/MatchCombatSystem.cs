@@ -636,13 +636,16 @@ namespace Game.Gameplay.Combat
                 var player = wave.OwnerSlot >= 0 && wave.OwnerSlot < _players.Count
                     ? _players[wave.OwnerSlot]
                     : null;
+                var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(
+                    player?.BonusPickSlot ?? 0,
+                    slot.Role);
                 var stats = UnitStatsResolver.Resolve(
                     catalog,
                     UnitVisualCatalog,
                     wave.OwnerRaceId,
                     slot.Role,
                     player,
-                    bonusSlot: player?.BonusPickSlot ?? 0);
+                    bonusSlot: bonusSlot);
                 var unitMarchSpeed = RaceMarchSpeedRules.GetMarchSpeed(race, definition);
                 var spawnDistance = CombatFormationRules.GetSpawnDistanceForRow(
                     slot.RowIndex,
@@ -666,7 +669,7 @@ namespace Game.Gameplay.Combat
                     LaneId = wave.LaneId,
                     Role = slot.Role,
                     Stats = stats,
-                    BonusSlot = player?.BonusPickSlot ?? 0,
+                    BonusSlot = bonusSlot,
                     MarchMoveSpeed = unitMarchSpeed,
                     SpawnDistance = spawnDistance,
                     FormationOffset = formationOffset,
@@ -2033,9 +2036,10 @@ namespace Game.Gameplay.Combat
 
             attacker.AttackSwingSerial++;
 
-            var useHybridMelee = attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster)
-                && HumanBonusUnitRules.IsHybridMeleeRange(
-                    HorizontalDistance(attacker.WorldPosition, target.WorldPosition));
+            var useHybridMelee = HumanBonusUnitRules.IsHybridMeleeNow(
+                attacker,
+                attacker.WorldPosition,
+                target.WorldPosition);
 
             float rawDamage;
             if (useHybridMelee)
@@ -2559,14 +2563,7 @@ namespace Game.Gameplay.Combat
 
             if (!TryCopyAbilitiesFromPrefab(unit))
             {
-                if (unit.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
-                {
-                    unit.Abilities = AbilityKitDefaults.CreateSiegeRegen();
-                }
-                else
-                {
-                    unit.Abilities = AbilityKitDefaults.Create(unit.Role, unit.HeroSlot);
-                }
+                unit.Abilities = AbilityKitDefaults.CreateForSpawn(unit.Role, unit.HeroSlot, unit.BonusSlot);
             }
 
             var count = unit.Abilities?.Length ?? 0;

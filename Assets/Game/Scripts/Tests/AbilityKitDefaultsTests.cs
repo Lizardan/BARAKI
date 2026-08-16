@@ -73,6 +73,7 @@ namespace Game.Tests
 
         static IEnumerable<UnitAbilityDef> CollectAllDefaults()
         {
+            var seen = new HashSet<int>();
             foreach (var kit in new[]
                      {
                          AbilityKitDefaults.CreateKing(),
@@ -80,17 +81,58 @@ namespace Game.Tests
                          AbilityKitDefaults.CreatePriest(),
                          AbilityKitDefaults.CreateTitan(),
                          AbilityKitDefaults.CreateCaster(),
+                         AbilityKitDefaults.CreateMeleeBonus(),
+                         AbilityKitDefaults.CreateRangedBonus(),
+                         AbilityKitDefaults.CreateCasterBonus(),
                          AbilityKitDefaults.CreateSiegeRegen(),
+                         AbilityKitDefaults.CreateFlyingBonus(),
+                         AbilityKitDefaults.CreateSuperBonus(),
                      })
             {
                 foreach (var def in kit)
                 {
-                    if (def != null)
+                    if (def != null && seen.Add(def.AbilityId))
                     {
                         yield return def;
                     }
                 }
             }
+        }
+
+        [Test]
+        public void BonusKits_HaveAlwaysUnlockedPassives()
+        {
+            Assert.AreEqual(AbilityIds.MeleeCleave, AbilityKitDefaults.CreateMeleeBonus()[0].AbilityId);
+            Assert.AreEqual(AbilityUnlock.Always, AbilityKitDefaults.CreateMeleeBonus()[0].Unlock);
+            Assert.AreEqual(4, AbilityKitDefaults.CreateCasterBonus().Length);
+            Assert.AreEqual(AbilityIds.CasterHybrid, AbilityKitDefaults.CreateCasterBonus()[^1].AbilityId);
+            Assert.AreEqual(AbilityIds.SuperCatapult, AbilityKitDefaults.CreateBonus(UnitRole.Super)[0].AbilityId);
+        }
+
+        [Test]
+        public void CreateForSpawn_UsesBonusKitWhenBonusSlotMatchesRole()
+        {
+            var kit = AbilityKitDefaults.CreateForSpawn(
+                UnitRole.Ranged,
+                heroSlot: 0,
+                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged));
+            Assert.AreEqual(1, kit.Length);
+            Assert.AreEqual(AbilityIds.RangedCrit, kit[0].AbilityId);
+
+            var baseKit = AbilityKitDefaults.CreateForSpawn(UnitRole.Ranged, 0, bonusSlot: 0);
+            Assert.AreEqual(0, baseKit.Length);
+        }
+
+        [Test]
+        public void HumanMeleeBonusPrefab_HasCleaveWhenSeeded()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanMeleeBonusPath);
+            Assert.IsNotNull(prefab);
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings, "Seed Human_Melee_BONUS via BARAKI/Units/Seed Unit Abilities.");
+            Assert.AreEqual(1, settings.Abilities.Length);
+            Assert.AreEqual(AbilityIds.MeleeCleave, settings.Abilities[0].AbilityId);
         }
 
         [Test]

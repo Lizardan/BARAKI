@@ -249,7 +249,8 @@ namespace Game.Gameplay.Match
             float visualScaleVsCreep = 1f,
             float attackIntervalSeconds = 1f,
             float attackClipLength = ReferenceAttackClipLength,
-            bool enteringCast = false)
+            bool enteringCast = false,
+            float? attackVariantOverride = null)
         {
             if (animator == null)
             {
@@ -294,8 +295,8 @@ namespace Game.Gameplay.Match
 
             if (fireAttack && HasParameter(animator, AttackVariantParam))
             {
-                // Pools are A/B (2) or single; Random.Range upper is exclusive.
-                var variant = ResolveRandomVariant(2);
+                var variant = attackVariantOverride
+                    ?? ResolveRandomVariant(2);
                 animator.SetFloat(AttackVariantParam, variant);
             }
 

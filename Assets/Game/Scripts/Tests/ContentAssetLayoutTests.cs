@@ -58,6 +58,16 @@ namespace Game.Tests
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanCasterAbilities }).Length);
             Assert.AreEqual(1, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanSiegeAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanMeleeAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanRangedAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanCasterBonusAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanFlyingAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanSuperAbilities }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanTitanAbilities }).Length);
         }
@@ -117,7 +127,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void AbilityCatalog_HasTwentyUniqueIds()
+        public void AbilityCatalog_HasTwentyFiveUniqueIds()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(
                 ContentAssetPaths.UnitAbilityCatalog);
@@ -133,8 +143,10 @@ namespace Game.Tests
                 Assert.IsTrue(ids.Add(def.AbilityId), $"Duplicate ability id {def.AbilityId}.");
             }
 
-            Assert.AreEqual(20, ids.Count);
+            Assert.AreEqual(25, ids.Count);
             Assert.IsTrue(ids.Contains(AbilityIds.AuraHpRegen));
+            Assert.IsTrue(ids.Contains(AbilityIds.MeleeCleave));
+            Assert.IsTrue(ids.Contains(AbilityIds.SuperCatapult));
         }
 
         [Test]

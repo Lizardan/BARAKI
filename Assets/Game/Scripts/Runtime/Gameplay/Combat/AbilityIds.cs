@@ -29,6 +29,16 @@ namespace Game.Gameplay.Combat
 
         /// <summary>Siege bonus passive: +HP/s aura (PRE-006a).</summary>
         public const int AuraHpRegen = 50;
+        /// <summary>Melee bonus: on-hit cleave AoE.</summary>
+        public const int MeleeCleave = 51;
+        /// <summary>Ranged bonus: on-hit crit ×2.</summary>
+        public const int RangedCrit = 52;
+        /// <summary>Caster bonus: hybrid mace melee under short range.</summary>
+        public const int CasterHybrid = 53;
+        /// <summary>Flying bonus: chance to spawn a base ranged on death.</summary>
+        public const int FlyingSpawn = 54;
+        /// <summary>Super bonus: parabolic catapult splash.</summary>
+        public const int SuperCatapult = 55;
 
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;

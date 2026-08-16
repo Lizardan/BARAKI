@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6646563668571257077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7ad132048d4c444963b2637e51d984, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.PassiveTraitBehaviour
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: last-call
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 54
+  _displayName: Last Call
+  _description: "\u041F\u0440\u0438 \u0433\u0438\u0431\u0435\u043B\u0438 25% \u0448\u0430\u043D\u0441
+    \u043F\u0440\u0438\u0437\u0432\u0430\u0442\u044C \u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E
+    ranged \u043D\u0430 \u043C\u0435\u0441\u0442\u0435 \u0441\u043C\u0435\u0440\u0442\u0438."
+  _kind: 1
+  _unlock: 0
+  _unlockValue: 0
+  _damage: 0
+  _heal: 0
+  _healPerSecond: 0
+  _radius: 0
+  _castRange: 0
+  _cooldownSeconds: 0
+  _durationSeconds: 0
+  _percent: 0.25
+  _manaCost: 0
+  _stunSeconds: 0
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Kind: 0
+    Color: {r: 1, g: 0.85, b: 0.25, a: 1}
+    DurationSeconds: 0
+    BurstHeight: 0
+  _behaviour: {fileID: -6646563668571257077}

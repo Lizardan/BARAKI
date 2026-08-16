@@ -32,8 +32,18 @@ namespace Game.Editor
 
         public const string HumanCasterAbilities = HumanCaster + "/Abilities";
         public const string HumanTitanAbilities = HumanTitan + "/Abilities";
+        public const string HumanMeleeBonus = HumanMelee + "/Bonus";
+        public const string HumanRangedBonus = HumanRanged + "/Bonus";
+        public const string HumanCasterBonus = HumanCaster + "/Bonus";
         public const string HumanSiegeBonus = HumanSiege + "/Bonus";
+        public const string HumanFlyingBonus = HumanFlying + "/Bonus";
+        public const string HumanSuperBonus = HumanSuper + "/Bonus";
+        public const string HumanMeleeAbilities = HumanMeleeBonus + "/Abilities";
+        public const string HumanRangedAbilities = HumanRangedBonus + "/Abilities";
+        public const string HumanCasterBonusAbilities = HumanCasterBonus + "/Abilities";
         public const string HumanSiegeAbilities = HumanSiegeBonus + "/Abilities";
+        public const string HumanFlyingAbilities = HumanFlyingBonus + "/Abilities";
+        public const string HumanSuperAbilities = HumanSuperBonus + "/Abilities";
 
         public const string HumanHeroes = Humans + "/Heroes";
         public const string HumanHero1 = HumanHeroes + "/Hero1";
@@ -137,9 +147,14 @@ namespace Game.Editor
             EnsureFolder(HumanRanged + "/Bonus");
             EnsureFolder(HumanCaster + "/Bonus");
             EnsureFolder(HumanSiegeBonus);
-            EnsureFolder(HumanSiegeAbilities);
             EnsureFolder(HumanFlying + "/Bonus");
             EnsureFolder(HumanSuper + "/Bonus");
+            EnsureFolder(HumanMeleeAbilities);
+            EnsureFolder(HumanRangedAbilities);
+            EnsureFolder(HumanCasterBonusAbilities);
+            EnsureFolder(HumanSiegeAbilities);
+            EnsureFolder(HumanFlyingAbilities);
+            EnsureFolder(HumanSuperAbilities);
             EnsureFolder(HumanCasterAbilities);
             EnsureFolder(HumanTitanAbilities);
         }

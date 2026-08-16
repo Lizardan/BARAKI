@@ -667,6 +667,22 @@ namespace Game.Tests
         {
             Assert.AreEqual("Титан", MatchInspectorFormatting.FormatRole(UnitRole.Titan));
         }
+
+        [Test]
+        public void FormatUnitTitle_BonusSlot_AddsEnhancedSuffix()
+        {
+            Assert.AreEqual("Осадный", MatchInspectorFormatting.FormatUnitTitle(UnitRole.Siege, 0));
+            Assert.AreEqual(
+                "Осадный · усиленный",
+                MatchInspectorFormatting.FormatUnitTitle(
+                    UnitRole.Siege,
+                    HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege)));
+            Assert.AreEqual(
+                "Осадный",
+                MatchInspectorFormatting.FormatUnitTitle(
+                    UnitRole.Siege,
+                    HumanBonusUnitRules.BonusSlotForRole(UnitRole.Flying)));
+        }
     }
 
     public sealed class UnitCombatAnimatorDriverTests

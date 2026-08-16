@@ -15,9 +15,11 @@
 }
 
 .bonus-pick__panel {
-    width: 560px;
-    max-width: 92%;
-    padding: 16px 18px 14px;
+    /* Same footprint as match-bottom-dock__panel so ui-btn--square keeps barracks proportions. */
+    width: 350px;
+    min-width: 350px;
+    max-width: 350px;
+    padding: 6px;
 }
 
 .bonus-pick__inner {
@@ -44,15 +46,16 @@
 }
 
 .bonus-pick__grid {
+    flex-grow: 1;
     flex-direction: row;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-start;
+    align-content: flex-start;
+    padding: 4px;
 }
 
 .bonus-pick__slot {
-    width: 31%;
-    margin-bottom: 8px;
-    font-size: 12px;
+    /* size from ui-btn--square (same as match-command-grid__slot) */
     overflow: hidden;
     position: relative;
 }
@@ -69,10 +72,10 @@
 
 .bonus-pick__portrait {
     position: absolute;
-    left: 4px;
-    top: 4px;
-    right: 4px;
-    bottom: 4px;
+    left: 6px;
+    top: 6px;
+    right: 6px;
+    bottom: 6px;
     picking-mode: ignore;
     background-color: rgba(0, 0, 0, 0);
     background-size: cover;

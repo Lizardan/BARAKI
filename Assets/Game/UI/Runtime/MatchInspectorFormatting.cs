@@ -1,4 +1,5 @@
 using Game.Core;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
@@ -49,7 +50,7 @@ namespace Game.UI
                 return FormatHeroName(unit.HeroSlot);
             }
 
-            return FormatRole(unit.Role);
+            return FormatUnitTitle(unit.Role, unit.BonusSlot);
         }
 
         public static string FormatOwnerLabel(int ownerSlot) => $"Игрок {ownerSlot + 1}";
@@ -72,6 +73,19 @@ namespace Game.UI
             UnitRole.Titan => "Титан",
             _ => role.ToString(),
         };
+
+        /// <summary>Role label; bonus units get «усиленный» suffix when slot matches role.</summary>
+        public static string FormatUnitTitle(UnitRole role, int bonusSlot)
+        {
+            var baseName = FormatRole(role);
+            if (!HumanBonusUnitRules.IsBonusSlot(bonusSlot)
+                || HumanBonusUnitRules.RoleForBonusSlot(bonusSlot) != role)
+            {
+                return baseName;
+            }
+
+            return $"{baseName} · усиленный";
+        }
 
         public static string FormatStatValue(float value) => value.ToString("0.#");
 
