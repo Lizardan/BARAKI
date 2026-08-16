@@ -68,6 +68,18 @@ namespace Game.Gameplay.Match
             _ => string.Empty,
         };
 
+        /// <summary>Short effect text for bonus overlay tooltips (slots 1–6). Empty for 7–12.</summary>
+        public static string GetSlotDescription(int slot) => slot switch
+        {
+            1 => "Усиленный melee: −20 HP, дальность 2. On-hit 15%: AoE по врагам радиус 2.",
+            2 => "Усиленный ranged: +1 броня. On-hit 15%: урон ×2.",
+            3 => "Усиленный caster: +20 HP. Ближе 2 м — удар булавой (8–10), иначе ranged.",
+            4 => "Усиленный siege: +50 HP. Аура: +1 HP/с союзникам в радиусе 8.",
+            5 => "Усиленный flying: +10 HP. On-death 25%: спавн базового ranged.",
+            6 => "Усиленный super: дальность 10. Параболический снаряд, AoE 50% радиус 3.",
+            _ => string.Empty,
+        };
+
         /// <summary>Random valid bonus slot for timeout picks (Bonuses.md timeout_pick).</summary>
         public static int GetRandomSlot(Random random)
         {

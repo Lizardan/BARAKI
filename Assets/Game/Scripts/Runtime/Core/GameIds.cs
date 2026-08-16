@@ -55,6 +55,12 @@ namespace Game.Core
             public const string HumanSiege = "UNIT_HUMAN_SIEGE";
             public const string HumanFlying = "UNIT_HUMAN_FLYING";
             public const string HumanSuper = "UNIT_HUMAN_SUPER";
+            public const string HumanMeleeBonus = "UNIT_HUMAN_MELEE_BONUS";
+            public const string HumanRangedBonus = "UNIT_HUMAN_RANGED_BONUS";
+            public const string HumanCasterBonus = "UNIT_HUMAN_CASTER_BONUS";
+            public const string HumanSiegeBonus = "UNIT_HUMAN_SIEGE_BONUS";
+            public const string HumanFlyingBonus = "UNIT_HUMAN_FLYING_BONUS";
+            public const string HumanSuperBonus = "UNIT_HUMAN_SUPER_BONUS";
         }
 
         public static class Squads

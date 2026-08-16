@@ -14,6 +14,12 @@ namespace Game.Gameplay.Data
         [SerializeField] private UnitDefinition _siege;
         [SerializeField] private UnitDefinition _flying;
         [SerializeField] private UnitDefinition _super;
+        [SerializeField] private UnitDefinition _meleeBonus;
+        [SerializeField] private UnitDefinition _rangedBonus;
+        [SerializeField] private UnitDefinition _casterBonus;
+        [SerializeField] private UnitDefinition _siegeBonus;
+        [SerializeField] private UnitDefinition _flyingBonus;
+        [SerializeField] private UnitDefinition _superBonus;
         [SerializeField] private HeroDefinition[] _heroes;
         [SerializeField] private string[] _positivePassiveIds;
         [SerializeField] private string _negativePassiveId;
@@ -38,6 +44,18 @@ namespace Game.Gameplay.Data
             UnitRole.Siege => _siege,
             UnitRole.Flying => _flying,
             UnitRole.Super => _super,
+            _ => null,
+        };
+
+        /// <summary>Enhanced unit definition for a bonus pick (1..6); null when not authored.</summary>
+        public UnitDefinition GetUnitBonus(UnitRole role) => role switch
+        {
+            UnitRole.Melee => _meleeBonus,
+            UnitRole.Ranged => _rangedBonus,
+            UnitRole.Caster => _casterBonus,
+            UnitRole.Siege => _siegeBonus,
+            UnitRole.Flying => _flyingBonus,
+            UnitRole.Super => _superBonus,
             _ => null,
         };
 

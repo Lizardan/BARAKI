@@ -18,7 +18,8 @@ namespace Game.Gameplay.Combat
             bool isParabolic,
             int? targetBuildingInstanceId = null,
             int? sourceBuildingInstanceId = null,
-            string sourceBuildingId = null)
+            string sourceBuildingId = null,
+            bool appliesSplashAoe = false)
         {
             ProjectileId = projectileId;
             AttackerUnitId = attackerUnitId;
@@ -34,6 +35,7 @@ namespace Game.Gameplay.Combat
             StartPosition = startPosition;
             TargetPosition = targetPosition;
             IsParabolic = isParabolic;
+            AppliesSplashAoe = appliesSplashAoe;
         }
 
         public int ProjectileId { get; }
@@ -53,6 +55,8 @@ namespace Game.Gameplay.Combat
         public UnityEngine.Vector3 StartPosition { get; }
         public UnityEngine.Vector3 TargetPosition { get; }
         public bool IsParabolic { get; }
+        /// <summary>Bonus Super (catapult): splash on impact; host damage only.</summary>
+        public bool AppliesSplashAoe { get; }
         public float Elapsed { get; set; }
 
         public float Progress => FlightDuration > 0f ? Elapsed / FlightDuration : 1f;

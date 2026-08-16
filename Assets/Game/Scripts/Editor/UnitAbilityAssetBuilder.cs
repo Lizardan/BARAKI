@@ -99,6 +99,7 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreatePriest();
             yield return AbilityKitDefaults.CreateTitan();
             yield return AbilityKitDefaults.CreateCaster();
+            yield return AbilityKitDefaults.CreateSiegeRegen();
         }
 
         static void EnsureFolder()
@@ -108,6 +109,8 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero2Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanHero3Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanCasterAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanSiegeBonus);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanSiegeAbilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
         }
 
@@ -221,6 +224,11 @@ namespace Game.Editor
 
         static string GetAbilityDirectory(int abilityId)
         {
+            if (abilityId == AbilityIds.AuraHpRegen)
+            {
+                return ContentAssetPaths.HumanSiegeAbilities;
+            }
+
             if (abilityId < AbilityIds.Heal)
             {
                 return ContentAssetPaths.HumanCasterAbilities;

@@ -27,33 +27,70 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanContent_IsGroupedByOwner()
+        public void HumanContent_IsGroupedByRoleAndBonus()
         {
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
-                ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE.asset"));
+                ContentAssetPaths.HumanMelee + "/UNIT_HUMAN_MELEE.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanMelee + "/Bonus/UNIT_HUMAN_MELEE_BONUS.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanCaster + "/UNIT_HUMAN_CASTER.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanCaster + "/Bonus/UNIT_HUMAN_CASTER_BONUS.asset"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanSiegeBonus + "/UNIT_HUMAN_SIEGE_BONUS.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
                 ContentAssetPaths.HumanHero1 + "/HERO_HUMAN_1.asset"));
-            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
-                ContentAssetPaths.HumanHero2 + "/HERO_HUMAN_2.asset"));
-            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
-                ContentAssetPaths.HumanHero3 + "/HERO_HUMAN_3.asset"));
 
-            Assert.AreEqual(6, AssetDatabase.FindAssets(
+            // Bonus defs must not sit flat next to base in Units/.
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE_BONUS.asset"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE.asset"));
+
+            Assert.AreEqual(12, AssetDatabase.FindAssets(
                 "t:UnitDefinition", new[] { ContentAssetPaths.HumanUnits }).Length);
             Assert.AreEqual(3, AssetDatabase.FindAssets(
                 "t:HeroDefinition", new[] { ContentAssetPaths.HumanHeroes }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero1Abilities }).Length);
-            Assert.AreEqual(4, AssetDatabase.FindAssets(
-                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero2Abilities }).Length);
-            Assert.AreEqual(4, AssetDatabase.FindAssets(
-                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanHero3Abilities }).Length);
             Assert.AreEqual(3, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanCasterAbilities }).Length);
+            Assert.AreEqual(1, AssetDatabase.FindAssets(
+                "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanSiegeAbilities }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
                 "t:UnitAbilityDef", new[] { ContentAssetPaths.HumanTitanAbilities }).Length);
+        }
+
+        [Test]
+        public void HumanPortraits_AreGroupedByRaceAndKind()
+        {
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraitUnits + "/Melee.png"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraitHeroes + "/Hero1.png"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraitBonus + "/Melee.png"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.PortraitRoot + "/Human_Melee.png"));
+        }
+
+        [Test]
+        public void HumanPrefabs_LiveInRoleFolders()
+        {
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanMeleePath));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanMeleeBonusPath));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanHero1Path));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanTitanPath));
+
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanPath + "/Human_Melee.prefab"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanHeroesPath + "/Human_Hero1.prefab"));
         }
 
         [Test]
@@ -71,6 +108,8 @@ namespace Game.Tests
                          ContentAssetPaths.HumanUnits + "/Enhanced",
                          ContentAssetPaths.HumanHeroes + "/Base",
                          ContentAssetPaths.HumanHeroes + "/Enhanced",
+                         UnitVisualPrefabBuilder.HumanPath + "/Controllers",
+                         UnitVisualPrefabBuilder.HumanHeroesPath + "/Controllers",
                      })
             {
                 Assert.IsFalse(AssetDatabase.IsValidFolder(path), path);
@@ -78,7 +117,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void AbilityCatalog_HasNineteenUniqueIds()
+        public void AbilityCatalog_HasTwentyUniqueIds()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(
                 ContentAssetPaths.UnitAbilityCatalog);
@@ -94,7 +133,8 @@ namespace Game.Tests
                 Assert.IsTrue(ids.Add(def.AbilityId), $"Duplicate ability id {def.AbilityId}.");
             }
 
-            Assert.AreEqual(19, ids.Count);
+            Assert.AreEqual(20, ids.Count);
+            Assert.IsTrue(ids.Contains(AbilityIds.AuraHpRegen));
         }
 
         [Test]
@@ -102,12 +142,12 @@ namespace Game.Tests
         {
             var prefabFolders = new[]
             {
-                "Assets/Game/Prefabs/Races/Humans/Units",
-                "Assets/Game/Prefabs/Races/Humans/Heroes",
+                UnitVisualPrefabBuilder.HumanPath,
+                UnitVisualPrefabBuilder.HumanHeroesPath,
             };
 
             var prefabGuids = AssetDatabase.FindAssets("t:Prefab", prefabFolders);
-            Assert.AreEqual(10, prefabGuids.Length);
+            Assert.AreEqual(16, prefabGuids.Length);
 
             foreach (var guid in prefabGuids)
             {

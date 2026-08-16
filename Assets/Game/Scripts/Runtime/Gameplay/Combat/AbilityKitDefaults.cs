@@ -74,10 +74,12 @@ namespace Game.Gameplay.Combat
             Passive(
                 AbilityIds.AuraDamagePercent,
                 "Attack Aura",
-                "Пока герой жив, армия владельца наносит больше урона.",
+                "Пока герой жив, армия владельца рядом с ним наносит больше урона.",
                 7,
                 Aura(AuraStat.Damage),
-                percent: HeroAbilityRules.AuraDamageBonusPercent),
+                percent: HeroAbilityRules.AuraDamageBonusPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.AuraDamage)),
         };
 
         public static UnitAbilityDef[] CreatePaladin() => new[]
@@ -117,10 +119,12 @@ namespace Game.Gameplay.Combat
             Passive(
                 AbilityIds.AuraAttackSpeedPercent,
                 "Haste Aura",
-                "Пока герой жив, армия владельца атакует быстрее.",
+                "Пока герой жив, армия владельца рядом с ним атакует быстрее.",
                 7,
                 Aura(AuraStat.AttackSpeed),
-                percent: HeroAbilityRules.AuraAttackSpeedBonusPercent),
+                percent: HeroAbilityRules.AuraAttackSpeedBonusPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.AuraAttackSpeed)),
         };
 
         public static UnitAbilityDef[] CreatePriest() => new[]
@@ -163,10 +167,12 @@ namespace Game.Gameplay.Combat
             Passive(
                 AbilityIds.AuraArmorPercent,
                 "Iron Aura",
-                "Пока герой жив, армия владельца получает больше брони.",
+                "Пока герой жив, армия владельца рядом с ним получает больше брони.",
                 7,
                 Aura(AuraStat.Armor),
-                percent: HeroAbilityRules.AuraArmorBonusPercent),
+                percent: HeroAbilityRules.AuraArmorBonusPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.AuraArmor)),
         };
 
         public static UnitAbilityDef[] CreateTitan() => new[]
@@ -206,10 +212,27 @@ namespace Game.Gameplay.Combat
             Passive(
                 AbilityIds.AuraMaxHpPercent,
                 "Colossus",
-                "Пока титан жив, армия владельца крепче (больше запаса здоровья).",
+                "Пока титан жив, армия владельца рядом с ним крепче (больше запаса здоровья).",
                 7,
                 Aura(AuraStat.MaxHp),
-                percent: HeroAbilityRules.AuraMaxHpBonusPercent),
+                percent: HeroAbilityRules.AuraMaxHpBonusPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.AuraMaxHp)),
+        };
+
+        /// <summary>Siege unit bonus: passive HP regen aura (AbilityId 50).</summary>
+        public static UnitAbilityDef[] CreateSiegeRegen() => new[]
+        {
+            Passive(
+                AbilityIds.AuraHpRegen,
+                "Siege Regen Aura",
+                "Пока носитель жив, союзники рядом восстанавливают здоровье.",
+                0,
+                Aura(AuraStat.HpRegen),
+                unlock: AbilityUnlock.Always,
+                flatBonus: HumanBonusUnitRules.RegenAuraFlatBonus,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: AbilityFx.Ring(AbilityFxColors.Heal)),
         };
 
         public static UnitAbilityDef[] CreateCaster() => new[]
@@ -304,16 +327,23 @@ namespace Game.Gameplay.Combat
             string description,
             int unlockValue,
             UnitAbilityBehaviour behaviour,
-            float percent) =>
+            float percent = 0f,
+            float radius = 0f,
+            AbilityFx fx = default,
+            AbilityUnlock unlock = AbilityUnlock.HeroLevel,
+            float flatBonus = 0f) =>
             UnitAbilityDef.Create(
                 abilityId,
                 name,
                 description,
                 AbilityKind.Passive,
-                AbilityUnlock.HeroLevel,
+                unlock,
                 unlockValue,
                 behaviour,
-                percent: percent);
+                fx,
+                percent: percent,
+                radius: radius,
+                flatBonus: flatBonus);
 
         static HealAreaBehaviour HealArea() => ScriptableObject.CreateInstance<HealAreaBehaviour>();
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Core;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEngine;
@@ -128,6 +129,12 @@ namespace Game.Gameplay.Networking
         public int HeroSlot;
         /// <summary>Parked idle champion at base. False on pre-v15 snapshots.</summary>
         public bool IsParkedAtBase;
+        /// <summary>Enhanced unit variant (1..6 from the bonus pick), 0 = base. 0 on pre-v19 snapshots.</summary>
+        public int BonusSlot;
+        /// <summary>Passive aura disc radius (0 = none). 0 on pre-v19 snapshots.</summary>
+        public float AuraRadius;
+        /// <summary>RGBA int aura color (see <see cref="AbilityFx.ToRgbaInt"/>). 0 on pre-v19 snapshots.</summary>
+        public int AuraColorPacked;
     }
 
     public struct MatchResearchSnapshot
@@ -200,7 +207,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 18;
+        public const int CurrentVersion = 19;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -281,6 +288,9 @@ namespace Game.Gameplay.Networking
                     writer.Write(u.Xp);
                     writer.Write(u.HeroSlot);
                     writer.Write(u.IsParkedAtBase);
+                    writer.Write(u.BonusSlot);
+                    writer.Write(u.AuraRadius);
+                    writer.Write(u.AuraColorPacked);
                 }
             }
 
@@ -536,6 +546,13 @@ namespace Game.Gameplay.Networking
                     unit.IsParkedAtBase = reader.ReadBoolean();
                 }
 
+                if (version >= 19)
+                {
+                    unit.BonusSlot = reader.ReadInt32();
+                    unit.AuraRadius = reader.ReadSingle();
+                    unit.AuraColorPacked = reader.ReadInt32();
+                }
+
                 snapshot.Units[i] = unit;
             }
 
@@ -761,6 +778,14 @@ namespace Game.Gameplay.Networking
                     }
                 }
 
+                var auraRadius = 0f;
+                var auraColorPacked = 0;
+                if (controller.Combat.TryGetAuraVisual(u, out var visualRadius, out var visualColorPacked))
+                {
+                    auraRadius = visualRadius;
+                    auraColorPacked = visualColorPacked;
+                }
+
                 units.Add(new MatchUnitSnapshot
                 {
                     UnitId = u.UnitId,
@@ -780,6 +805,9 @@ namespace Game.Gameplay.Networking
                     AttackSwingSerial = u.AttackSwingSerial,
                     HeroSlot = u.HeroSlot,
                     IsParkedAtBase = u.IsParkedAtBase,
+                    BonusSlot = u.BonusSlot,
+                    AuraRadius = auraRadius,
+                    AuraColorPacked = auraColorPacked,
                 });
             }
 

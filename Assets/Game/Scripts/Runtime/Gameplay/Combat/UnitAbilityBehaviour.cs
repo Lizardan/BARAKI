@@ -11,6 +11,8 @@ namespace Game.Gameplay.Combat
         AttackSpeed = 1,
         Armor = 2,
         MaxHp = 3,
+        /// <summary>Flat HP/s regeneration (def <see cref="UnitAbilityDef.FlatBonus"/>), not a percent.</summary>
+        HpRegen = 4,
     }
 
     /// <summary>How a cast is presented (ring / burst / plus / combinations).</summary>
@@ -54,6 +56,21 @@ namespace Game.Gameplay.Combat
 
         public static AbilityFx SkyBeam(Color color, float duration = 1.1f, float height = 36f) =>
             new() { Kind = FxKind.SkyBeam, Color = color, DurationSeconds = duration, BurstHeight = height };
+
+        /// <summary>Packs a color into a 32-bit RGBA int for snapshot transport.</summary>
+        public static int ToRgbaInt(Color color)
+        {
+            var c = (Color32)color;
+            return (c.r << 24) | (c.g << 16) | (c.b << 8) | c.a;
+        }
+
+        /// <summary>Unpacks a color from <see cref="ToRgbaInt"/>.</summary>
+        public static Color FromRgbaInt(int packed) =>
+            new Color32(
+                (byte)((packed >> 24) & 0xFF),
+                (byte)((packed >> 16) & 0xFF),
+                (byte)((packed >> 8) & 0xFF),
+                (byte)(packed & 0xFF));
     }
 
     /// <summary>Everything a behaviour needs to resolve and apply a single cast.</summary>

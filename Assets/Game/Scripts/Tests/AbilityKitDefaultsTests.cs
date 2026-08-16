@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using Game.Editor;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -78,6 +80,7 @@ namespace Game.Tests
                          AbilityKitDefaults.CreatePriest(),
                          AbilityKitDefaults.CreateTitan(),
                          AbilityKitDefaults.CreateCaster(),
+                         AbilityKitDefaults.CreateSiegeRegen(),
                      })
             {
                 foreach (var def in kit)
@@ -94,7 +97,7 @@ namespace Game.Tests
         public void HumanHero3Prefab_HasPriestKitWhenSeeded()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Game/Prefabs/Races/Humans/Heroes/Human_Hero3.prefab");
+                UnitVisualPrefabBuilder.HumanHero3Path);
             Assert.IsNotNull(prefab);
             var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
             Assert.IsNotNull(settings, "Seed Human_Hero3 via BARAKI/Units/Seed Unit Abilities.");
@@ -108,7 +111,7 @@ namespace Game.Tests
         public void HumanTitanPrefab_HasTitanKitWhenSeeded()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Game/Prefabs/Races/Humans/Units/Human_Titan.prefab");
+                UnitVisualPrefabBuilder.HumanTitanPath);
             Assert.IsNotNull(prefab);
             var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
             Assert.IsNotNull(settings, "Seed Human_Titan via BARAKI/Units/Seed Unit Abilities.");

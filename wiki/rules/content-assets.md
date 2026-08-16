@@ -1,7 +1,7 @@
 # Структура ScriptableObject-контента
 
-`Assets/Game/ScriptableObjects` организован **по владельцу кита**: открыл `Hero1` /
-`Caster` / `Titan` — сразу видно definition и abilities этого юнита/героя.
+Контент расы лежит **по роли**: открыл `Melee` / `Caster` / `Hero1` — сразу видно
+базовый def и (если есть) `Bonus/` + `Abilities/`.
 
 ```text
 ScriptableObjects/
@@ -13,57 +13,72 @@ ScriptableObjects/
     └── Humans/
         ├── RACE_HUMAN.asset
         ├── Heroes/
-        │   ├── Hero1/                     # def + Abilities героя 1
+        │   ├── Hero1/                     # def + Abilities
         │   ├── Hero2/
         │   └── Hero3/
         └── Units/
-            ├── UNIT_HUMAN_MELEE.asset     # юниты без кита — плоско
-            ├── UNIT_HUMAN_RANGED.asset
-            ├── …
-            ├── Caster/                    # def + Abilities кастера
-            └── Titan/                     # Abilities титана
-                └── Abilities/
+            ├── Melee/
+            │   ├── UNIT_HUMAN_MELEE.asset
+            │   └── Bonus/UNIT_HUMAN_MELEE_BONUS.asset
+            ├── Ranged/ … Bonus/
+            ├── Caster/
+            │   ├── UNIT_HUMAN_CASTER.asset
+            │   ├── Abilities/             # Mend / Frost / Resurrect
+            │   └── Bonus/UNIT_HUMAN_CASTER_BONUS.asset
+            ├── Siege/
+            │   ├── UNIT_HUMAN_SIEGE.asset
+            │   └── Bonus/
+            │       ├── UNIT_HUMAN_SIEGE_BONUS.asset
+            │       └── Abilities/         # siege-regen-aura
+            ├── Flying/ … Bonus/
+            ├── Super/ … Bonus/
+            └── Titan/
+                └── Abilities/             # Rally / Stomp / Slam / Colossus
+```
+
+Тот же шаблон у префабов и портретов:
+
+```text
+Prefabs/Races/Humans/
+├── Units/{Role}/Human_{Role}.prefab (+ .controller рядом)
+│            └── Bonus/Human_{Role}_BONUS.prefab
+├── Heroes/HeroN/Human_HeroN.prefab
+└── Buildings/
+
+Art/UI/UnitPortraits/Humans/
+├── Units/{Melee|Ranged|…|Titan}.png
+├── Heroes/{Hero1|Hero2|Hero3}.png
+└── Bonus/{Melee|…|Super}.png
 ```
 
 ## Правила
 
-- Новая раса: `Races/<PluralRaceName>/` с теми же категориями `Heroes/` и `Units/`.
-- Титан: runtime-scale `UnitGreyboxVisuals.TitanVsCreepScale` (**×3** к creep), aura —
-  `MatchCombatPresenter.AttachTitanDivineAura` (TT burning_small + soft point light).
-  Масштаб применяется при любом spawn (park на базе и deploy с barracks).
-  Walk: `UnitCombatAnimatorDriver` крутит `Animator.speed` =
-  `(moveSpeed / 4) / visualScaleVsCreep` (титан ≈ ×⅓ к крипу при той же скорости);
-  Attack: `clipLength / attackInterval` (реальная длина TT-клипа: пехота/staff **1.5 с**,
-  кавалерия/баллиста **1 с**; Haste Aura ускоряет клип); Cast/Death/Stand = 1.
-  Удар/вылет всегда на `interval × 0.5` (= середина ускоренного клипа).
-  Attack range: `TitanRules.AttackRange` = **3** (сид/sync с Hero1 ×3 не затирает;
-  vs-titan hit reach через `CombatRules.GetUnitAttackReach` — мили бьют с ≥3).
-
-## TT unit anim pools
-
-Контроллеры собирает `TtUnitVisualSetup` (`BARAKI/Units/Rebuild TT Prefabs`):
-
-- **Attack** — пул A/B где есть (`infantry/archer/staff_04_attack_*`); один клип у siege/flying/super/hero2/hero3.
-- **Cast** — у caster/heroes/titan: staff/cav_staff cast A/B, titan Rally → `infantry_07_punch_A/B`,
-  king Group Heal → `staff_07_cast_*`, paladin Shield → `cav_staff_07_cast_*`.
-- Вариант выбирается на свинг (`AttackVariant`) / вход в Cast (`CastVariant`).
-- Автоатака: урон/вылет снаряда в `SwingImpactNormalizedTime` (0.5) от интервала атаки;
-  лучники — на **0.25**, кастер — на **0.35**, балиста (Super) — на **0.1**. Кастер Attack только `staff_04_attack_B` (без sword `attack_A`).
-  Длины клипов — `AbilityAnimRules.ResolveAttackClipSeconds` / cast-lock.
-- Визуалы снарядов (`CombatAttackVisualBuilder`, `Resources/Art/`):
-  - лучник / flying / башни — `ProjectileBolt` (меш Bolt_lvl1 ×0.5, root ×0.8625 = прежний 0.75 +15%);
-  - балиста (Super) / main / barracks — `ProjectileBoltLvl3` (меш Bolt_lvl3 ×1, как на юните);
-  - кастер / герои — сфера fireball диаметром **0.55** + trail (`ProjectileFire`).
+- Новая раса: `Races/<PluralRaceName>/` с теми же категориями `Heroes/` и `Units/{Role}/`.
+- Бонусные варианты **всегда** в `Bonus/` под ролью — не плоско рядом с базой.
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
-  `AI`, `Tech`, `Passives`, `Buildings`) **не создавать заранее**.
-- Герой/кит с abilities — отдельная папка владельца (`Heroes/Hero1`, `Units/Caster`),
-  abilities внутри `Abilities/`. Так не смешиваются киты разных героев.
-- Обычные юниты без abilities лежат плоско в `Units/`.
+  `AI`, `Tech`, `Passives`, `Buildings`, общие `Controllers/`) **не создавать заранее**.
+- Герой/кит с abilities — папка владельца (`Heroes/Hero1`, `Units/Caster`); abilities внутри
+  `Abilities/`. Аура бонусного Siege — в `Units/Siege/Bonus/Abilities/`.
 - `Catalogs` — только lookup: `RaceCatalog`, `UnitVisualCatalog`, `UnitAbilityCatalog`.
-- `Shared` — только действительно одинаковый межрасовый контент. Human caster spells не shared.
-- Все editor-пути — из `ContentAssetPaths`. Перемещения — через `AssetDatabase.MoveAsset`
-  (сохраняются `.meta`, GUID и ссылки).
+- `Shared` — только действительно одинаковый межрасовый контент.
+- Все editor-пути — из `ContentAssetPaths` / `UnitVisualPrefabBuilder`. Перемещения —
+  через `AssetDatabase.MoveAsset` (сохраняются `.meta`, GUID и ссылки).
+  Миграция: меню `BARAKI/Content/Migrate To Role Folders`.
 - `RaceCatalog` / `UnitVisualCatalog` — записи по `raceId`; Human-builders обновляют только свою.
 - `UnitAbilityCatalog` глобальный: ability id уникален между расами.
 - Имена definition-ассетов стабильны (`UNIT_HUMAN_*`, `HERO_HUMAN_*`); ability-файлы —
   kebab-case от `DisplayName`.
+
+## Титан / анимации / снаряды
+
+- Титан: runtime-scale `UnitGreyboxVisuals.TitanVsCreepScale` (**×3** к creep), aura —
+  `MatchCombatPresenter.AttachTitanDivineAura`. Attack range: `TitanRules.AttackRange` = **3**.
+- Контроллеры собирает `TtUnitVisualSetup` (`BARAKI/Units/Rebuild TT Prefabs`) **рядом** с
+  префабом (не в общей `Controllers/`).
+- Attack/Cast пулы и тайминги удара — как раньше (`AbilityAnimRules`,
+  `CombatAttackRules.SwingImpactNormalizedTime`).
+- Визуалы снарядов (`CombatAttackVisualBuilder`, `Resources/Art/`):
+  - лучник / flying / башни — `ProjectileBolt`;
+  - балиста (Super) / main / barracks — `ProjectileBoltLvl3`;
+  - катапульта (Super BONUS, `AppliesSplashAoe`) — `ProjectileCatapultRock`;
+  - кастер / герои — fireball + trail (`ProjectileFire`).

@@ -17,7 +17,7 @@ namespace Game.Editor
         public static void EnsureContent()
         {
             EnsureFolder(ContentAssetPaths.HumanUnits);
-            EnsureFolder(ContentAssetPaths.HumanCaster);
+            ContentAssetPaths.EnsureHumanUnitFolders();
             EnsureFolder(ContentAssetPaths.HumanHero1);
             EnsureFolder(ContentAssetPaths.HumanHero2);
             EnsureFolder(ContentAssetPaths.HumanHero3);
@@ -26,12 +26,14 @@ namespace Game.Editor
             EnsureFolder(ContentAssetPaths.SharedUpgrades);
 
             var humanUnits = CreateHumanUnits();
+            var humanBonusUnits = CreateHumanBonusUnits();
             var humanHeroes = CreateHeroes();
 
             var human = CreateRace(
                 GameIds.Races.Human,
                 "Люди",
                 humanUnits,
+                humanBonusUnits,
                 humanHeroes,
                 new[] { GameIds.Passives.HumanSteelArms, GameIds.Passives.HumanFortifiedLine },
                 GameIds.Passives.HumanLevyTax);
@@ -77,6 +79,26 @@ namespace Game.Editor
                     90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
                 CreateUnit(GameIds.Units.HumanSuper, GameIds.Races.Human, UnitRole.Super,
                     500f, 2f, 30f, 40f, 0.5f, 8f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+            };
+        }
+
+        /// <summary>PRE-006a enhanced defs (stats from Plans/PRE-006a-unit-bonuses.md).</summary>
+        private static UnitDefinition[] CreateHumanBonusUnits()
+        {
+            return new[]
+            {
+                CreateUnit(GameIds.Units.HumanMeleeBonus, GameIds.Races.Human, UnitRole.Melee,
+                    100f, 1f, 8f, 10f, 1f, 2f, 4f, 8),
+                CreateUnit(GameIds.Units.HumanRangedBonus, GameIds.Races.Human, UnitRole.Ranged,
+                    70f, 1f, 6f, 8f, 1f, 8f, RaceMarchSpeedRules.BaseMarchSpeed, 6),
+                CreateUnit(GameIds.Units.HumanCasterBonus, GameIds.Races.Human, UnitRole.Caster,
+                    80f, 0f, 4f, 5f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 7),
+                CreateUnit(GameIds.Units.HumanSiegeBonus, GameIds.Races.Human, UnitRole.Siege,
+                    250f, 0f, 12f, 16f, 1f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
+                CreateUnit(GameIds.Units.HumanFlyingBonus, GameIds.Races.Human, UnitRole.Flying,
+                    100f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
+                CreateUnit(GameIds.Units.HumanSuperBonus, GameIds.Races.Human, UnitRole.Super,
+                    500f, 2f, 30f, 40f, 0.5f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
         }
 
@@ -154,6 +176,7 @@ namespace Game.Editor
             string id,
             string displayName,
             UnitDefinition[] units,
+            UnitDefinition[] bonusUnits,
             HeroDefinition[] heroes,
             string[] positivePassives,
             string negativePassive)
@@ -169,6 +192,16 @@ namespace Game.Editor
             so.FindProperty("_siege").objectReferenceValue = units[3];
             so.FindProperty("_flying").objectReferenceValue = units[4];
             so.FindProperty("_super").objectReferenceValue = units[5];
+            if (bonusUnits != null && bonusUnits.Length >= 6)
+            {
+                so.FindProperty("_meleeBonus").objectReferenceValue = bonusUnits[0];
+                so.FindProperty("_rangedBonus").objectReferenceValue = bonusUnits[1];
+                so.FindProperty("_casterBonus").objectReferenceValue = bonusUnits[2];
+                so.FindProperty("_siegeBonus").objectReferenceValue = bonusUnits[3];
+                so.FindProperty("_flyingBonus").objectReferenceValue = bonusUnits[4];
+                so.FindProperty("_superBonus").objectReferenceValue = bonusUnits[5];
+            }
+
             so.FindProperty("_heroes").arraySize = heroes.Length;
             for (var i = 0; i < heroes.Length; i++)
             {

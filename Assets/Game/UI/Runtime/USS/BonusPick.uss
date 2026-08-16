@@ -53,12 +53,54 @@
     width: 31%;
     margin-bottom: 8px;
     font-size: 12px;
+    overflow: hidden;
+    position: relative;
 }
 
 .bonus-pick__slot--picked {
     opacity: 0.6;
     background-color: rgb(86, 103, 122);
     border-color: rgb(125, 117, 104);
+}
+
+.bonus-pick__slot--locked {
+    opacity: 0.45;
+}
+
+.bonus-pick__portrait {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    picking-mode: ignore;
+    background-color: rgba(0, 0, 0, 0);
+    background-size: cover;
+    -unity-background-scale-mode: scale-and-crop;
+    background-position-x: 50%;
+    background-position-y: 0%;
+    overflow: hidden;
+}
+
+.bonus-pick-tooltip {
+    position: absolute;
+    max-width: 240px;
+    padding: 8px 10px;
+    background-color: rgba(9, 9, 10, 0.96);
+    border-width: 2px;
+    border-color: rgba(125, 117, 104, 0.55);
+    z-index: 1000;
+}
+
+.bonus-pick-tooltip--hidden {
+    display: none;
+}
+
+.bonus-pick-tooltip__label {
+    font-size: 12px;
+    color: rgb(239, 228, 207);
+    white-space: normal;
+    -unity-text-align: middle-left;
 }
 
 .bonus-pick--hidden {

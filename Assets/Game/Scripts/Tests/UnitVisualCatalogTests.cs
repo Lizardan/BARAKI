@@ -42,7 +42,7 @@ namespace Game.Tests
             Assert.IsNotNull(prefab);
             Assert.AreEqual("Human_Melee", prefab.name);
             Assert.AreEqual(
-                UnitVisualPrefabBuilder.HumanPath + "/Human_Melee.prefab",
+                UnitVisualPrefabBuilder.HumanMeleePath,
                 AssetDatabase.GetAssetPath(prefab));
         }
 
@@ -53,7 +53,7 @@ namespace Game.Tests
             Assert.IsNotNull(prefab);
             Assert.AreEqual("Human_Ranged", prefab.name);
             Assert.AreEqual(
-                UnitVisualPrefabBuilder.HumanPath + "/Human_Ranged.prefab",
+                UnitVisualPrefabBuilder.HumanRangedPath,
                 AssetDatabase.GetAssetPath(prefab));
         }
 
@@ -64,7 +64,7 @@ namespace Game.Tests
             Assert.IsNotNull(prefab);
             Assert.AreEqual("Human_Caster", prefab.name);
             Assert.AreEqual(
-                UnitVisualPrefabBuilder.HumanPath + "/Human_Caster.prefab",
+                UnitVisualPrefabBuilder.HumanCasterPath,
                 AssetDatabase.GetAssetPath(prefab));
         }
 
@@ -570,7 +570,7 @@ namespace Game.Tests
             Assert.IsNotNull(animator.runtimeAnimatorController);
             Assert.AreEqual("Human_Hero1", animator.runtimeAnimatorController.name);
             Assert.AreEqual(
-                TtUnitVisualSetup.HeroControllersFolder + "/Human_Hero1.controller",
+                TtUnitVisualSetup.ControllerBeside(UnitVisualPrefabBuilder.HumanHero1Path, "Human_Hero1"),
                 AssetDatabase.GetAssetPath(animator.runtimeAnimatorController));
         }
 

@@ -8,6 +8,7 @@ using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Game.Gameplay.Match
 {
@@ -35,6 +36,9 @@ namespace Game.Gameplay.Match
             public bool IsParkedAtBase;
             /// <summary>World model scale relative to melee creep (titan ≈ 3).</summary>
             public float LocomotionScaleVsCreep = 1f;
+            /// <summary>Persistent semi-transparent disc under passive-aura bearers. Null = no aura.</summary>
+            public Transform AuraDisc;
+            public Renderer AuraDiscRenderer;
         }
 
         sealed class DyingVisual
@@ -61,6 +65,7 @@ namespace Game.Gameplay.Match
         readonly Dictionary<int, bool> _projectileHitsBuilding = new();
         Transform _root;
         Transform _projectileRoot;
+        static Material s_auraDiscMaterial;
 
         void Awake()
         {
@@ -251,6 +256,7 @@ namespace Game.Gameplay.Match
                     visual.Model.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 }
 
+                SyncAuraDisc(visual, unit, combat);
                 DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing);
                 TickPendingImpactFx(visual, unit, combat, Time.deltaTime);
 
@@ -529,7 +535,12 @@ namespace Game.Gameplay.Match
             Transform model = null;
             Animator animator = null;
             if (_visualCatalog != null
-                && _visualCatalog.TryGetPrefab(raceId, unit.Role, unit.HeroSlot, out var prefab)
+                && _visualCatalog.TryGetPrefab(
+                    raceId,
+                    unit.Role,
+                    unit.HeroSlot,
+                    unit.BonusSlot,
+                    out var prefab)
                 && prefab != null)
             {
                 var instance = Instantiate(prefab, root);
@@ -582,6 +593,98 @@ namespace Game.Gameplay.Match
             };
             AttachUnitPickCollider(unitVisual, unit);
             return unitVisual;
+        }
+
+        /// <summary>Persistent passive-aura disc under a bearer (radius + color replicated via v19).</summary>
+        void SyncAuraDisc(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
+        {
+            float radius;
+            int packedColor;
+            if (_runtime.TickMode == MatchTickMode.Client)
+            {
+                radius = unit.AuraRadius;
+                packedColor = unit.AuraColorPacked;
+            }
+            else if (!combat.TryGetAuraVisual(unit, out radius, out packedColor))
+            {
+                radius = 0f;
+            }
+
+            if (radius <= 0f)
+            {
+                if (visual.AuraDisc != null)
+                {
+                    DestroyManaged(visual.AuraDisc.gameObject);
+                    visual.AuraDisc = null;
+                    visual.AuraDiscRenderer = null;
+                }
+
+                return;
+            }
+
+            if (visual.AuraDisc == null)
+            {
+                visual.AuraDisc = CreateAuraDisc(visual.Root, radius);
+                visual.AuraDiscRenderer = visual.AuraDisc != null
+                    ? visual.AuraDisc.GetComponent<Renderer>()
+                    : null;
+            }
+
+            if (visual.AuraDiscRenderer == null)
+            {
+                return;
+            }
+
+            var color = AbilityFx.FromRgbaInt(packedColor);
+            color.a *= AuraDiscFillAlpha;
+            var block = new MaterialPropertyBlock();
+            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
+            block.SetColor(Shader.PropertyToID("_Color"), color);
+            visual.AuraDiscRenderer.SetPropertyBlock(block);
+        }
+
+        const float AuraDiscFillAlpha = 0.28f;
+        const float AuraDiscHeight = 0.02f;
+
+        Transform CreateAuraDisc(Transform parent, float radius)
+        {
+            var go = new GameObject("AuraDisc");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, AuraDiscHeight, 0f);
+
+            var filter = go.AddComponent<MeshFilter>();
+            filter.sharedMesh = RoadPlatformMesh.BuildDisc(radius * 2f, AuraDiscHeight * 2f);
+
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = GetAuraDiscMaterial();
+            return go.transform;
+        }
+
+        static Material GetAuraDiscMaterial()
+        {
+            if (s_auraDiscMaterial != null)
+            {
+                return s_auraDiscMaterial;
+            }
+
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                return null;
+            }
+
+            s_auraDiscMaterial = new Material(shader)
+            {
+                name = "AuraDisc",
+            };
+            s_auraDiscMaterial.SetFloat("_Surface", 1f);
+            s_auraDiscMaterial.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            s_auraDiscMaterial.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            s_auraDiscMaterial.SetInt("_ZWrite", 0);
+            s_auraDiscMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            s_auraDiscMaterial.DisableKeyword("_ALPHATEST_ON");
+            s_auraDiscMaterial.renderQueue = (int)RenderQueue.Transparent;
+            return s_auraDiscMaterial;
         }
 
         void SyncProjectiles(MatchCombatSystem combat)

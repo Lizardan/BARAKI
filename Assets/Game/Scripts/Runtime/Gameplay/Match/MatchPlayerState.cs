@@ -28,6 +28,8 @@ namespace Game.Gameplay.Match
         /// Chosen main extra ability id (1..6); <see cref="MainExtraAbilityRules.None"/> until picked.
         /// </summary>
         public int MainExtraAbilityId { get; set; }
+        /// <summary>Chosen unit bonus slot (1..6); <see cref="BonusPickRules.NoneSlot"/> until picked.</summary>
+        public int BonusPickSlot { get; set; }
         public float MainMana { get; set; }
         public float MainManaMax { get; private set; }
         public float MainExtraAbilityCooldownRemaining { get; set; }

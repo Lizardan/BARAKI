@@ -19,9 +19,9 @@ namespace Game.Gameplay.Combat
             float marchSpawnDistance = 0f,
             bool isHero = false,
             int heroSlot = 0,
-            int level = 1)
-        {
-            UnitId = unitId;
+            int level = 1,
+            int bonusSlot = 0)
+        {            UnitId = unitId;
             OwnerSlot = ownerSlot;
             LaneId = laneId;
             Role = role;
@@ -41,6 +41,7 @@ namespace Game.Gameplay.Combat
             IsParkedAtBase = false;
             Abilities = System.Array.Empty<UnitAbilityDef>();
             AbilityCooldownRemaining = System.Array.Empty<float>();
+            BonusSlot = bonusSlot;
         }
 
         public int UnitId { get; }
@@ -48,6 +49,11 @@ namespace Game.Gameplay.Combat
         public string LaneId { get; set; }
         public UnitRole Role { get; }
         public UnitCombatStats Stats { get; }
+        /// <summary>
+        /// Enhanced unit variant (1..6 from the bonus pick), 0 = base unit.
+        /// Picked once before the first wave; replicated via snapshot v19.
+        /// </summary>
+        public int BonusSlot { get; set; }
         public bool IsHero { get; }
         /// <summary>True for heroes and titans: kills grant their owner XP and double bounty.</summary>
         public bool IsChampion => IsHero || Role == UnitRole.Titan;
@@ -56,6 +62,14 @@ namespace Game.Gameplay.Combat
         public int Level { get; }
         /// <summary>Copied ability kit (shared def references). Empty = no spells.</summary>
         public UnitAbilityDef[] Abilities { get; set; }
+
+        /// <summary>
+        /// Replicated aura visuals (snapshot v19). Radius &gt; 0 = passive aura disc to draw under the unit;
+        /// <see cref="AuraColorPacked"/> is an RGBA int (see <see cref="AbilityFx.ToRgbaInt"/>).
+        /// Client-only for rendering; host resolves auras live via the combat system.
+        /// </summary>
+        public float AuraRadius { get; set; }
+        public int AuraColorPacked { get; set; }
 
         /// <summary>Per-slot cooldown remaining, parallel to <see cref="Abilities"/>.</summary>
         public float[] AbilityCooldownRemaining { get; set; }

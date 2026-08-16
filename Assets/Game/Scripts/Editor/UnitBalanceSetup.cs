@@ -68,6 +68,30 @@ namespace Game.Editor
                 synced.Add($"{role}: {path}");
             }
 
+            for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
+            {
+                var role = Game.Gameplay.Combat.HumanBonusUnitRules.RoleForBonusSlot(bonusSlot);
+                var definition = race.GetUnitBonus(role);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                if (!TrySyncPrefab(
+                        visualCatalog,
+                        GameIds.Races.Human,
+                        role,
+                        heroSlot: 0,
+                        settings => settings.CopyFrom(definition),
+                        out var path,
+                        bonusSlot))
+                {
+                    continue;
+                }
+
+                synced.Add($"{role} BONUS: {path}");
+            }
+
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
             {
                 var hero = race.GetHeroBySlot(slot);
@@ -120,12 +144,14 @@ namespace Game.Editor
             UnitRole role,
             int heroSlot,
             System.Action<UnitCombatSettings> apply,
-            out string path)
+            out string path,
+            int bonusSlot = 0)
         {
             path = null;
-            if (!visualCatalog.TryGetPrefab(raceId, role, heroSlot, out var prefab) || prefab == null)
+            if (!visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var prefab) || prefab == null)
             {
-                Debug.LogWarning($"UnitBalanceSetup: no prefab for {role} slot {heroSlot}.");
+                Debug.LogWarning(
+                    $"UnitBalanceSetup: no prefab for {role} slot {heroSlot} bonus {bonusSlot}.");
                 return false;
             }
 

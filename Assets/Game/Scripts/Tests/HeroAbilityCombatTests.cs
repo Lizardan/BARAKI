@@ -299,7 +299,7 @@ namespace Game.Tests
         public void PaladinAura_BoostsOwnerArmyAttackSpeed()
         {
             var controller = CreateEarlyMatch();
-            controller.Combat.SpawnUnit(
+            var paladin = controller.Combat.SpawnUnit(
                 0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
                 distanceAlongLane: 5f, isHero: true, heroSlot: 2, level: 7);
             var warrior = controller.Combat.SpawnUnit(
@@ -309,6 +309,7 @@ namespace Game.Tests
                 1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
                 distanceAlongLane: 30f);
             warrior.WorldPosition = enemy.WorldPosition + new Vector3(1f, 0f, 0f);
+            paladin.WorldPosition = warrior.WorldPosition + new Vector3(3f, 0f, 0f);
             warrior.CurrentTargetId = enemy.UnitId;
             warrior.AttackCooldownRemaining = 0f;
 
@@ -480,7 +481,7 @@ namespace Game.Tests
         public void PriestAura_BoostsOwnerArmyArmor()
         {
             var controller = CreateEarlyMatch();
-            controller.Combat.SpawnUnit(
+            var priest = controller.Combat.SpawnUnit(
                 0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
                 distanceAlongLane: 5f, isHero: true, heroSlot: 3, level: 7);
             var warrior = controller.Combat.SpawnUnit(
@@ -489,6 +490,7 @@ namespace Game.Tests
             var enemy = controller.Combat.SpawnUnit(
                 1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
                 distanceAlongLane: 30f);
+            priest.WorldPosition = warrior.WorldPosition + new Vector3(2f, 0f, 0f);
 
             controller.Combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
                 enemy.UnitId, warrior.UnitId, 100f, 0.1f));
@@ -565,12 +567,13 @@ namespace Game.Tests
         public void TitanColossus_RaisesArmyMaxHpWhileAlive()
         {
             var controller = CreateEarlyMatch();
-            controller.Combat.SpawnUnit(
+            var titan = controller.Combat.SpawnUnit(
                 0, GameIds.Lanes.Left, UnitRole.Titan, TitanStats(),
                 distanceAlongLane: 5f, level: 7);
             var warrior = controller.Combat.SpawnUnit(
                 0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
                 distanceAlongLane: 25f);
+            titan.WorldPosition = warrior.WorldPosition + new Vector3(2f, 0f, 0f);
             warrior.CurrentHp = 800f;
 
             controller.Combat.Tick(0.01f);

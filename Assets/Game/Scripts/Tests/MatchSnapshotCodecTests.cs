@@ -304,6 +304,43 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V19_PreservesBonusAndAuraFields()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 1,
+                Phase = 1,
+                MatchTimeSeconds = 8f,
+                WinnerSlot = -1,
+                Units = new[]
+                {
+                    new MatchUnitSnapshot
+                    {
+                        UnitId = 9,
+                        OwnerSlot = 0,
+                        UnitDefId = "Melee",
+                        LaneId = GameIds.Lanes.Left,
+                        PosX = 1f,
+                        PosZ = 2f,
+                        FacingX = 0f,
+                        FacingZ = 1f,
+                        Health = 80f,
+                        IsAlive = true,
+                        BonusSlot = 4,
+                        AuraRadius = 8f,
+                        AuraColorPacked = unchecked((int)0xFF33CC55),
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(4, restored.Units[0].BonusSlot);
+            Assert.AreEqual(8f, restored.Units[0].AuraRadius, 0.01f);
+            Assert.AreEqual(unchecked((int)0xFF33CC55), restored.Units[0].AuraColorPacked);
+        }
+
+        [Test]
         public void RoundTrip_V13_PreservesBonusPickFields()
         {
             var original = new MatchSnapshot

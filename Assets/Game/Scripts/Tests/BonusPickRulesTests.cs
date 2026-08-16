@@ -96,6 +96,22 @@ namespace Game.Tests
         }
 
         [Test]
+        public void GetSlotDescription_IsNonEmptyForUnitBonusSlots()
+        {
+            for (var slot = 1; slot <= 6; slot++)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(BonusPickRules.GetSlotDescription(slot)), $"slot {slot}");
+            }
+
+            for (var slot = 7; slot <= BonusPickRules.SlotCount; slot++)
+            {
+                Assert.AreEqual(string.Empty, BonusPickRules.GetSlotDescription(slot), $"slot {slot}");
+            }
+
+            Assert.AreEqual(string.Empty, BonusPickRules.GetSlotDescription(0));
+        }
+
+        [Test]
         public void GetRandomSlot_StaysWithinValidRange()
         {
             var random = new Random(42);

@@ -20,12 +20,23 @@ namespace Game.Gameplay.Match
         static Material _fireMaterial;
         static GameObject _boltPrefab;
         static GameObject _boltLvl3Prefab;
+        static GameObject _catapultRockPrefab;
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
-            var visual = UsesFireballVisual(projectile.AttackerRole)
-                ? CreateFireball(projectile)
-                : CreateBolt(projectile, ResolveBoltScale(projectile), ResolveBoltPrefab(projectile));
+            GameObject visual;
+            if (UsesCatapultRockVisual(projectile))
+            {
+                visual = CreateBolt(projectile, scale: 1f, ResolveCatapultRockPrefab());
+            }
+            else if (UsesFireballVisual(projectile.AttackerRole))
+            {
+                visual = CreateFireball(projectile);
+            }
+            else
+            {
+                visual = CreateBolt(projectile, ResolveBoltScale(projectile), ResolveBoltPrefab(projectile));
+            }
 
             visual.transform.SetParent(parent, false);
             return visual;
@@ -33,6 +44,14 @@ namespace Game.Gameplay.Match
 
         static bool UsesFireballVisual(UnitRole role) =>
             role is UnitRole.Caster or UnitRole.Hero;
+
+        /// <summary>Bonus Super catapult: splash shots use the rock mesh (parabolic alone is not enough —
+        /// EditMode projectile helpers often set IsParabolic for all roles).</summary>
+        static bool UsesCatapultRockVisual(CombatProjectileState projectile) =>
+            projectile != null
+            && projectile.AppliesSplashAoe
+            && projectile.AttackerRole == UnitRole.Super
+            && !projectile.IsBuildingAttack;
 
         static bool UsesBallistaBolt(CombatProjectileState projectile)
         {
@@ -92,6 +111,16 @@ namespace Game.Gameplay.Match
         }
 
         static GameObject LoadBoltLvl3Prefab() => Resources.Load<GameObject>("Art/ProjectileBoltLvl3");
+
+        static GameObject ResolveCatapultRockPrefab()
+        {
+            if (_catapultRockPrefab == null)
+            {
+                _catapultRockPrefab = Resources.Load<GameObject>("Art/ProjectileCatapultRock");
+            }
+
+            return _catapultRockPrefab != null ? _catapultRockPrefab : LoadBoltPrefabCached();
+        }
 
         static void CreateRoleCube(Transform parent, float scale, Color color)
         {

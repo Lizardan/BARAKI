@@ -10,7 +10,7 @@ namespace Game.Editor
     /// <summary>Bakes 128px unit prefab thumbnails into <see cref="UnitVisualCatalog"/> portraits.</summary>
     public static class UnitPortraitBaker
     {
-        public const string PortraitFolder = "Assets/Game/Art/UI/UnitPortraits";
+        public const string PortraitFolder = ContentAssetPaths.PortraitRoot;
         public const int Size = 128;
         const int RenderSize = 256;
         const int PaddingPx = 2;
@@ -25,14 +25,16 @@ namespace Game.Editor
                 return;
             }
 
-            EnsureFolder(PortraitFolder);
-            BakeRace(catalog, "Human", GameIds.Races.Human);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitUnits);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitHeroes);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonus);
+            BakeRace(catalog, GameIds.Races.Human);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        static void BakeRace(UnitVisualCatalog catalog, string prefix, string raceId)
+        static void BakeRace(UnitVisualCatalog catalog, string raceId)
         {
             var so = new SerializedObject(catalog);
             var set = FindRaceVisuals(so.FindProperty("_races"), raceId);
@@ -67,17 +69,62 @@ namespace Game.Editor
                     continue;
                 }
 
-                var path = $"{PortraitFolder}/{prefix}_{roles[i]}.png";
+                var path = $"{ContentAssetPaths.HumanPortraitUnits}/{roles[i]}.png";
                 var texture = RenderPrefabThumbnail(prefab, path);
                 set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
             }
 
-            BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1Portrait", $"{PortraitFolder}/{prefix}_Hero1.png");
-            BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2Portrait", $"{PortraitFolder}/{prefix}_Hero2.png");
-            BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3Portrait", $"{PortraitFolder}/{prefix}_Hero3.png");
-            BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait", $"{PortraitFolder}/{prefix}_Titan.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1Portrait",
+                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero1.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2Portrait",
+                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero2.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3Portrait",
+                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero3.png");
+            BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait",
+                $"{ContentAssetPaths.HumanPortraitUnits}/Titan.png");
+
+            BakeBonusPortraits(catalog, set, raceId);
 
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void BakeBonusPortraits(
+            UnitVisualCatalog catalog,
+            SerializedProperty set,
+            string raceId)
+        {
+            var portraitProps = new[]
+            {
+                "_meleeBonusPortrait",
+                "_rangedBonusPortrait",
+                "_casterBonusPortrait",
+                "_siegeBonusPortrait",
+                "_flyingBonusPortrait",
+                "_superBonusPortrait",
+            };
+            var roles = new[]
+            {
+                UnitRole.Melee,
+                UnitRole.Ranged,
+                UnitRole.Caster,
+                UnitRole.Siege,
+                UnitRole.Flying,
+                UnitRole.Super,
+            };
+
+            for (var i = 0; i < roles.Length; i++)
+            {
+                var bonusSlot = i + 1;
+                if (!catalog.TryGetPrefab(raceId, roles[i], heroSlot: 0, bonusSlot, out var prefab)
+                    || prefab == null)
+                {
+                    continue;
+                }
+
+                var path = $"{ContentAssetPaths.HumanPortraitBonus}/{roles[i]}.png";
+                var texture = RenderPrefabThumbnail(prefab, path);
+                set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
+            }
         }
 
         static SerializedProperty FindRaceVisuals(SerializedProperty races, string raceId)

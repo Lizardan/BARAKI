@@ -49,6 +49,7 @@ namespace Game.Gameplay.Combat
             public string LaneId;
             public UnitRole Role;
             public UnitCombatStats Stats;
+            public int BonusSlot;
             public float MarchMoveSpeed;
             public float SpawnDistance;
             public Vector3 FormationOffset;
@@ -640,7 +641,8 @@ namespace Game.Gameplay.Combat
                     UnitVisualCatalog,
                     wave.OwnerRaceId,
                     slot.Role,
-                    player);
+                    player,
+                    bonusSlot: player?.BonusPickSlot ?? 0);
                 var unitMarchSpeed = RaceMarchSpeedRules.GetMarchSpeed(race, definition);
                 var spawnDistance = CombatFormationRules.GetSpawnDistanceForRow(
                     slot.RowIndex,
@@ -664,6 +666,7 @@ namespace Game.Gameplay.Combat
                     LaneId = wave.LaneId,
                     Role = slot.Role,
                     Stats = stats,
+                    BonusSlot = player?.BonusPickSlot ?? 0,
                     MarchMoveSpeed = unitMarchSpeed,
                     SpawnDistance = spawnDistance,
                     FormationOffset = formationOffset,
@@ -690,7 +693,8 @@ namespace Game.Gameplay.Combat
             Vector3 formationOffset = default,
             bool isHero = false,
             int heroSlot = 0,
-            int level = 1)
+            int level = 1,
+            int bonusSlot = 0)
         {
             if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
             {
@@ -714,7 +718,8 @@ namespace Game.Gameplay.Combat
                 marchSpawnDistance: distanceAlongLane,
                 isHero: isHero,
                 heroSlot: heroSlot,
-                level: level);
+                level: level,
+                bonusSlot: bonusSlot);
             unit.MarchProgressDistance = progressDistance;
             ApplySpawnFacing(unit, route, distanceAlongLane);
             ApplyMarchFocusFromLane(unit, ownerSlot, laneId);
@@ -953,6 +958,9 @@ namespace Game.Gameplay.Combat
                 existing.BehaviorState = behaviorState;
                 existing.AttackSwingSerial = snap.AttackSwingSerial;
                 existing.IsParkedAtBase = snap.IsParkedAtBase;
+                existing.BonusSlot = snap.BonusSlot;
+                existing.AuraRadius = snap.AuraRadius;
+                existing.AuraColorPacked = snap.AuraColorPacked;
                 existing.MarchProgressDistance = _routes != null
                     && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
                     ? route.ProjectDistance(position)
@@ -987,6 +995,9 @@ namespace Game.Gameplay.Combat
             unit.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
             unit.AttackSwingSerial = snap.AttackSwingSerial;
             unit.IsParkedAtBase = snap.IsParkedAtBase;
+            unit.BonusSlot = snap.BonusSlot;
+            unit.AuraRadius = snap.AuraRadius;
+            unit.AuraColorPacked = snap.AuraColorPacked;
             if (_routes != null && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var spawnRoute))
             {
                 unit.MarchProgressDistance = spawnRoute.ProjectDistance(position);
@@ -1168,6 +1179,7 @@ namespace Game.Gameplay.Combat
             }
 
             TickHealZones(deltaTime);
+            TickAuraRegen(deltaTime);
             ClampUnitsToEffectiveMaxHp();
         }
 
@@ -1248,7 +1260,8 @@ namespace Game.Gameplay.Combat
                 worldPosition,
                 route.FindMarchWaypointIndex(worldPosition),
                 pending.MarchMoveSpeed,
-                pending.SpawnDistance);
+                pending.SpawnDistance,
+                bonusSlot: pending.BonusSlot);
             unit.MarchProgressDistance = progressDistance;
             ApplySpawnFacing(unit, route, pending.SpawnDistance);
             ApplyMarchFocusFromLane(unit, pending.OwnerSlot, pending.LaneId);
@@ -2019,15 +2032,33 @@ namespace Game.Gameplay.Combat
             }
 
             attacker.AttackSwingSerial++;
-            var rawDamage = CombatRules.RollDamage(
-                attacker.Stats.DamageMin,
-                attacker.Stats.DamageMax,
-                _random);
+
+            var useHybridMelee = attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster)
+                && HumanBonusUnitRules.IsHybridMeleeRange(
+                    HorizontalDistance(attacker.WorldPosition, target.WorldPosition));
+
+            float rawDamage;
+            if (useHybridMelee)
+            {
+                var owner = attacker.OwnerSlot >= 0 && attacker.OwnerSlot < _players.Count
+                    ? _players[attacker.OwnerSlot]
+                    : null;
+                rawDamage = HumanBonusUnitRules.RollHybridMeleeDamage(owner, _random);
+            }
+            else
+            {
+                rawDamage = CombatRules.RollDamage(
+                    attacker.Stats.DamageMin,
+                    attacker.Stats.DamageMax,
+                    _random);
+            }
+
             var impactDelay = CombatAttackRules.ResolveSwingImpactDelay(
                 GetUnitAttackInterval(attacker),
                 attacker.Role);
 
-            if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot))
+            if (useHybridMelee
+                || CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot))
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -2103,7 +2134,8 @@ namespace Game.Gameplay.Combat
 
             var shotStart = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
             var shotEnd = CombatProjectileTrajectory.GetProjectileTarget(target.WorldPosition);
-            var isParabolic = CombatAttackRules.UsesParabolicArc(attacker.Role);
+            var usesCatapult = HumanBonusUnitRules.UsesCatapultSplash(attacker.BonusSlot);
+            var isParabolic = usesCatapult || CombatAttackRules.UsesParabolicArc(attacker.Role);
             var flight = CombatProjectileTrajectory.ComputeFlightDuration(
                 shotStart,
                 shotEnd,
@@ -2118,7 +2150,8 @@ namespace Game.Gameplay.Combat
                 flight,
                 shotStart,
                 shotEnd,
-                isParabolic);
+                isParabolic,
+                appliesSplashAoe: usesCatapult);
             EmitNetworkProjectileSpawn(unitProjectile);
         }
 
@@ -2134,10 +2167,29 @@ namespace Game.Gameplay.Combat
             }
 
             var attacker = GetUnitById(projectile.AttackerUnitId);
+            var rawDamage = projectile.RawDamage;
+            if (attacker != null
+                && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged)
+                && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
+            {
+                rawDamage *= HumanBonusUnitRules.RangedCritMultiplier;
+            }
+
             var target = GetUnitById(projectile.TargetUnitId);
             if (target != null && target.IsAlive)
             {
-                ApplyDamage(attacker, target, projectile.RawDamage, projectile.AttackerOwnerSlot);
+                ApplyDamage(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
+            }
+
+            if (projectile.AppliesSplashAoe)
+            {
+                ApplySplashDamage(
+                    attacker,
+                    projectile.TargetPosition,
+                    rawDamage * HumanBonusUnitRules.CatapultAoeDamagePercent,
+                    HumanBonusUnitRules.CatapultAoeRadius,
+                    projectile.AttackerOwnerSlot,
+                    excludeUnitId: projectile.TargetUnitId);
             }
         }
 
@@ -2159,6 +2211,59 @@ namespace Game.Gameplay.Combat
             {
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
                 ApplyDamage(attacker, target, strike.RawDamage, killerSlot);
+
+                if (attacker != null
+                    && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee)
+                    && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
+                {
+                    ApplySplashDamage(
+                        attacker,
+                        target.WorldPosition,
+                        strike.RawDamage,
+                        HumanBonusUnitRules.MeleeAoeRadius,
+                        killerSlot,
+                        excludeUnitId: target.UnitId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// AoE damage to living enemies around a point (excludes one unit id — the primary hit).
+        /// </summary>
+        public void ApplySplashDamage(
+            MatchUnitState attacker,
+            Vector3 center,
+            float rawDamage,
+            float radius,
+            int killerOwnerSlot,
+            int excludeUnitId)
+        {
+            if (rawDamage <= 0f || radius <= 0f)
+            {
+                return;
+            }
+
+            _nearbyBuffer.Clear();
+            _spatialGrid.Rebuild(_units);
+            _spatialGrid.Query(center, radius, _nearbyBuffer);
+            var radiusSq = radius * radius;
+            for (var i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                var other = _nearbyBuffer[i];
+                if (other == null
+                    || !other.IsAlive
+                    || other.UnitId == excludeUnitId
+                    || other.OwnerSlot == killerOwnerSlot)
+                {
+                    continue;
+                }
+
+                if (HorizontalDistanceSq(center, other.WorldPosition) > radiusSq)
+                {
+                    continue;
+                }
+
+                ApplyDamage(attacker, other, rawDamage, killerOwnerSlot);
             }
         }
 
@@ -2193,15 +2298,72 @@ namespace Game.Gameplay.Combat
 
             var bounty = CombatRules.ComputeKillBounty(target.Stats.GoldBounty, target.IsChampion);
             GrantGold(killerOwnerSlot, bounty);
+
+            var deathOwnerSlot = target.OwnerSlot;
+            var deathLaneId = target.LaneId;
+            var deathPosition = target.WorldPosition;
+            var deathBonusSlot = target.BonusSlot;
+            var deathMarchFocus = target.MarchFocusOpponentSlot;
+
             _corpses.Add(new CombatCorpseState(target));
             RemoveUnit(target);
+            TrySpawnFlyingBonusOnDeath(deathOwnerSlot, deathLaneId, deathPosition, deathBonusSlot, deathMarchFocus);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
-                target.OwnerSlot,
+                deathOwnerSlot,
                 target.UnitId,
                 bounty,
                 target.Role,
                 attacker?.UnitId ?? 0));
+        }
+
+        void TrySpawnFlyingBonusOnDeath(
+            int ownerSlot,
+            string laneId,
+            Vector3 worldPosition,
+            int bonusSlot,
+            int marchFocusOpponentSlot)
+        {
+            if (bonusSlot != HumanBonusUnitRules.BonusSlotForRole(UnitRole.Flying)
+                || !HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnDeathSpawnChance))
+            {
+                return;
+            }
+
+            if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
+            {
+                return;
+            }
+
+            var player = ownerSlot >= 0 && ownerSlot < _players.Count ? _players[ownerSlot] : null;
+            var raceId = player?.RaceId ?? GameIds.Races.Human;
+            var stats = UnitStatsResolver.Resolve(
+                catalog: null,
+                UnitVisualCatalog,
+                raceId,
+                UnitRole.Ranged,
+                player,
+                bonusSlot: 0);
+
+            var progressDistance = route.ProjectDistance(worldPosition);
+            var spawned = new MatchUnitState(
+                _nextUnitId++,
+                ownerSlot,
+                laneId,
+                UnitRole.Ranged,
+                stats,
+                stats.MaxHp,
+                worldPosition,
+                route.FindMarchWaypointIndex(worldPosition),
+                marchSpawnDistance: progressDistance,
+                bonusSlot: 0);
+            spawned.MarchProgressDistance = progressDistance;
+            spawned.MarchFocusOpponentSlot = marchFocusOpponentSlot;
+            ApplySpawnFacing(spawned, route, progressDistance);
+            ApplyMarchFocusFromLane(spawned, ownerSlot, laneId);
+            AttachAbilities(spawned);
+            _units.Add(spawned);
+            _unitById[spawned.UnitId] = spawned;
         }
 
         int GetUnitOwnerSlot(int unitId)
@@ -2221,7 +2383,7 @@ namespace Game.Gameplay.Combat
                 return 1f;
             }
 
-            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.Damage);
+            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.Damage, attacker.WorldPosition);
         }
 
         float GetArmyAttackSpeedMultiplier(MatchUnitState attacker)
@@ -2231,7 +2393,7 @@ namespace Game.Gameplay.Combat
                 return 1f;
             }
 
-            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.AttackSpeed);
+            return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.AttackSpeed, attacker.WorldPosition);
         }
 
         float GetEffectiveArmor(MatchUnitState target)
@@ -2242,7 +2404,7 @@ namespace Game.Gameplay.Combat
             }
 
             var armor = target.Stats.Armor;
-            armor *= 1f + GetAuraPercent(target.OwnerSlot, AuraStat.Armor);
+            armor *= 1f + GetAuraPercent(target.OwnerSlot, AuraStat.Armor, target.WorldPosition);
 
             if (target.ArmorBuffRemaining > 0f)
             {
@@ -2261,10 +2423,14 @@ namespace Game.Gameplay.Combat
                 return 0f;
             }
 
-            return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp));
+            return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp, unit.WorldPosition));
         }
 
-        float GetAuraPercent(int ownerSlot, AuraStat stat)
+        /// <summary>
+        /// Strongest unlocked passive-aura contribution for <paramref name="stat"/> among the owner's
+        /// living aura bearers within <paramref name="position"/>'s aura radius (radius 0 = whole army).
+        /// </summary>
+        float GetAuraPercent(int ownerSlot, AuraStat stat, Vector3 position)
         {
             var best = 0f;
             for (var i = 0; i < _units.Count; i++)
@@ -2288,6 +2454,17 @@ namespace Game.Gameplay.Combat
                         continue;
                     }
 
+                    var radius = def.Radius > 0f ? def.Radius : HeroAbilityRules.AuraRadius;
+                    if (radius > 0f)
+                    {
+                        var dx = candidate.WorldPosition.x - position.x;
+                        var dz = candidate.WorldPosition.z - position.z;
+                        if (dx * dx + dz * dz > radius * radius)
+                        {
+                            continue;
+                        }
+                    }
+
                     var ctx = new UnitAbilityContext(
                         this,
                         candidate,
@@ -2303,6 +2480,41 @@ namespace Game.Gameplay.Combat
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// Resolves the persistent aura disc a unit should display: radius + packed color of its
+        /// first unlocked passive aura (used by snapshot capture on the host).
+        /// </summary>
+        public bool TryGetAuraVisual(MatchUnitState unit, out float radius, out int packedColor)
+        {
+            radius = 0f;
+            packedColor = 0;
+            if (unit == null || !unit.IsAlive || unit.Abilities == null)
+            {
+                return false;
+            }
+
+            for (var s = 0; s < unit.Abilities.Length; s++)
+            {
+                var def = unit.Abilities[s];
+                if (def == null
+                    || !def.IsPassiveAura
+                    || def.Radius <= 0f
+                    || !IsAbilitySlotUnlocked(unit, def))
+                {
+                    continue;
+                }
+
+                radius = def.Radius;
+                var color = def.Fx.Kind != FxKind.Plus && def.Fx.Color != default(Color)
+                    ? def.Fx.Color
+                    : new Color(0.85f, 0.85f, 0.85f, 1f);
+                packedColor = AbilityFx.ToRgbaInt(color);
+                return true;
+            }
+
+            return false;
         }
 
         float GetUnitAttackInterval(MatchUnitState unit) =>
@@ -2347,7 +2559,14 @@ namespace Game.Gameplay.Combat
 
             if (!TryCopyAbilitiesFromPrefab(unit))
             {
-                unit.Abilities = AbilityKitDefaults.Create(unit.Role, unit.HeroSlot);
+                if (unit.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
+                {
+                    unit.Abilities = AbilityKitDefaults.CreateSiegeRegen();
+                }
+                else
+                {
+                    unit.Abilities = AbilityKitDefaults.Create(unit.Role, unit.HeroSlot);
+                }
             }
 
             var count = unit.Abilities?.Length ?? 0;
@@ -2362,7 +2581,12 @@ namespace Game.Gameplay.Combat
             }
 
             var raceId = GetPlayerRaceId(unit.OwnerSlot);
-            if (!UnitVisualCatalog.TryGetPrefab(raceId, unit.Role, unit.HeroSlot, out var prefab)
+            if (!UnitVisualCatalog.TryGetPrefab(
+                    raceId,
+                    unit.Role,
+                    unit.HeroSlot,
+                    unit.BonusSlot,
+                    out var prefab)
                 || prefab == null)
             {
                 return false;
@@ -2602,6 +2826,38 @@ namespace Game.Gameplay.Combat
                         GetEffectiveMaxHp(allies[a]),
                         heal);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Applies HP/s regeneration from passive HpRegen auras: every living owner unit inside the
+        /// bearer's radius regenerates (the bearer heals itself too, distance 0).
+        /// </summary>
+        void TickAuraRegen(float deltaTime)
+        {
+            if (deltaTime <= 0f)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                var regen = GetAuraPercent(unit.OwnerSlot, AuraStat.HpRegen, unit.WorldPosition);
+                if (regen <= 0f)
+                {
+                    continue;
+                }
+
+                unit.CurrentHp = HeroAbilityRules.ApplyHeal(
+                    unit.CurrentHp,
+                    GetEffectiveMaxHp(unit),
+                    regen * deltaTime);
             }
         }
 

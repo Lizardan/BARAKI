@@ -39,6 +39,24 @@ namespace Game.Editor
             seeded += Seed(visualCatalog, catalog, UnitRole.Hero, 3, AbilityKitDefaults.CreatePriest()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Caster, 0, AbilityKitDefaults.CreateCaster()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Titan, 0, AbilityKitDefaults.CreateTitan()) ? 1 : 0;
+            seeded += Seed(
+                visualCatalog,
+                catalog,
+                UnitRole.Caster,
+                0,
+                AbilityKitDefaults.CreateCaster(),
+                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster))
+                ? 1
+                : 0;
+            seeded += Seed(
+                visualCatalog,
+                catalog,
+                UnitRole.Siege,
+                0,
+                AbilityKitDefaults.CreateSiegeRegen(),
+                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
+                ? 1
+                : 0;
             AssetDatabase.SaveAssets();
             Debug.Log($"UnitAbilitySeeder: seeded {seeded} prefab(s).");
         }
@@ -48,11 +66,14 @@ namespace Game.Editor
             UnitAbilityCatalog abilityCatalog,
             UnitRole role,
             int heroSlot,
-            UnitAbilityDef[] defaults)
+            UnitAbilityDef[] defaults,
+            int bonusSlot = 0)
         {
-            if (!catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, out var prefab) || prefab == null)
+            if (!catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, bonusSlot, out var prefab)
+                || prefab == null)
             {
-                Debug.LogWarning($"UnitAbilitySeeder: no prefab for {role} slot {heroSlot}.");
+                Debug.LogWarning(
+                    $"UnitAbilitySeeder: no prefab for {role} slot {heroSlot} bonus {bonusSlot}.");
                 return false;
             }
 

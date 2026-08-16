@@ -14,5 +14,8 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
+        <ui:VisualElement name="BonusPickTooltip" class="bonus-pick-tooltip bonus-pick-tooltip--hidden" picking-mode="Ignore">
+            <ui:Label name="BonusPickTooltipLabel" text="" class="bonus-pick-tooltip__label" picking-mode="Ignore" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

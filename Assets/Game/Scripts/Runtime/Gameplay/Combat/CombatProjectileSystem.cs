@@ -44,7 +44,8 @@ namespace Game.Gameplay.Combat
             float flightDuration,
             UnityEngine.Vector3 start,
             UnityEngine.Vector3 end,
-            bool isParabolic)
+            bool isParabolic,
+            bool appliesSplashAoe = false)
         {
             var projectile = new CombatProjectileState(
                 _nextId++,
@@ -57,7 +58,8 @@ namespace Game.Gameplay.Combat
                 flightDuration,
                 start,
                 end,
-                isParabolic);
+                isParabolic,
+                appliesSplashAoe: appliesSplashAoe);
             _active.Add(projectile);
             return projectile;
         }

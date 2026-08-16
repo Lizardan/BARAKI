@@ -13,5 +13,10 @@ namespace Game.Gameplay.Combat
         public static readonly Color Paladin = new(1f, 0.84f, 0.28f);
         public static readonly Color Priest = new(0.78f, 0.92f, 1f);
         public static readonly Color DivineSmite = new(1f, 0.92f, 0.45f);
+
+        public static readonly Color AuraDamage = new(0.9f, 0.2f, 0.15f);
+        public static readonly Color AuraAttackSpeed = new(0.95f, 0.8f, 0.15f);
+        public static readonly Color AuraArmor = new(0.7f, 0.72f, 0.78f);
+        public static readonly Color AuraMaxHp = new(0.95f, 0.5f, 0.15f);
     }
 }

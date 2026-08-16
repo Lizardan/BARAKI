@@ -216,7 +216,17 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
-            return BonusPickNetworkRules.TryApplyPick(_bonusPicks, playerSlot, bonusSlot);
+            if (!BonusPickNetworkRules.TryApplyPick(_bonusPicks, playerSlot, bonusSlot))
+            {
+                return false;
+            }
+
+            if (playerSlot >= 0 && playerSlot < _players.Count)
+            {
+                _players[playerSlot].BonusPickSlot = bonusSlot;
+            }
+
+            return true;
         }
 
         public bool TryGetResearch(int buildingInstanceId, out BuildingResearchState research) =>
@@ -455,6 +465,11 @@ namespace Game.Gameplay.Match
                 if (p.Slot < _bonusPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
                 {
                     _bonusPicks[p.Slot] = p.BonusPickSlot;
+                }
+
+                if (p.Slot < _players.Count && BonusPickRules.IsValidSlot(p.BonusPickSlot))
+                {
+                    _players[p.Slot].BonusPickSlot = p.BonusPickSlot;
                 }
 
                 if (p.Slot < _titanStates.Count)

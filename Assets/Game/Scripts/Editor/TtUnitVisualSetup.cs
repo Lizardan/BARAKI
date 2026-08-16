@@ -24,8 +24,13 @@ namespace Game.Editor
         const string TtTextureFolder =
             "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/models/materials/color/Units/Textures";
         const string LegacyHumanHeroPath = "Assets/Game/Prefabs/Races/Humans/Heroes/Human_Hero.prefab";
-        public const string ControllersFolder = "Assets/Game/Prefabs/Races/Humans/Units/Controllers";
-        public const string HeroControllersFolder = "Assets/Game/Prefabs/Races/Humans/Heroes/Controllers";
+
+        /// <summary>AnimatorController path next to its prefab (role folder / Bonus).</summary>
+        public static string ControllerBeside(string prefabPath, string controllerName)
+        {
+            var dir = Path.GetDirectoryName(prefabPath)?.Replace('\\', '/') ?? UnitVisualPrefabBuilder.HumanPath;
+            return $"{dir}/{controllerName}.controller";
+        }
 
         static readonly string[] TeamTextureFiles =
         {
@@ -62,6 +67,7 @@ namespace Game.Editor
             public readonly UnitRole Role;
             public readonly int HeroSlot;
             public readonly bool SeedTitanStats;
+            public readonly bool UseBonusDefinition;
 
             public VisualSetup(
                 string prefabName,
@@ -76,7 +82,8 @@ namespace Game.Editor
                 string deathClip,
                 UnitRole role,
                 int heroSlot = 0,
-                bool seedTitanStats = false)
+                bool seedTitanStats = false,
+                bool useBonusDefinition = false)
             {
                 PrefabName = prefabName;
                 DestinationPath = destinationPath;
@@ -91,6 +98,7 @@ namespace Game.Editor
                 Role = role;
                 HeroSlot = heroSlot;
                 SeedTitanStats = seedTitanStats;
+                UseBonusDefinition = useBonusDefinition;
             }
         }
 
@@ -156,10 +164,73 @@ namespace Game.Editor
                 null,
                 "ballista_05_death",
                 UnitRole.Super),
+            UnitSetup("Human_Melee_BONUS", UnitVisualPrefabBuilder.HumanMeleeBonusPath, "Human_Melee_BONUS",
+                "TT_Halberdier", "animation_infantry/Infantry",
+                "infantry_01_idle", "infantry_03_run",
+                new[]
+                {
+                    Local("animation_infantry/Infantry", "infantry_04_attack_A"),
+                    Local("animation_infantry/Infantry", "infantry_04_attack_B"),
+                },
+                null,
+                "infantry_06_death_A",
+                UnitRole.Melee,
+                useBonusDefinition: true),
+            UnitSetup("Human_Ranged_BONUS", UnitVisualPrefabBuilder.HumanRangedBonusPath, "Human_Ranged_BONUS",
+                "TT_Crossbowman", "animation_infantry/Archer",
+                "archer_01_idle", "archer_03_run",
+                new[]
+                {
+                    Local("animation_infantry/Archer", "archer_04_attack_A"),
+                    Local("animation_infantry/Archer", "archer_04_attack_B"),
+                },
+                null,
+                "archer_06_death_A",
+                UnitRole.Ranged,
+                useBonusDefinition: true),
+            UnitSetup("Human_Caster_BONUS", UnitVisualPrefabBuilder.HumanCasterBonusPath, "Human_Caster_BONUS",
+                "TT_HighPriest", "animation_infantry/Staff",
+                "staff_01_idle", "staff_03_run",
+                new[]
+                {
+                    Local("animation_infantry/Staff", "staff_04_attack_B"),
+                },
+                new[]
+                {
+                    Local("animation_infantry/Staff", "staff_07_cast_A"),
+                    Local("animation_infantry/Staff", "staff_07_cast_B"),
+                },
+                "staff_06_death_A",
+                UnitRole.Caster,
+                useBonusDefinition: true),
+            UnitSetup("Human_Siege_BONUS", UnitVisualPrefabBuilder.HumanSiegeBonusPath, "Human_Siege_BONUS",
+                "TT_Paladin", "animation_cavalry/cavalry_shield",
+                "cav_shield_01_idle", "cav_shield_03_run",
+                new[] { Local("animation_cavalry/cavalry_shield", "cav_shield_04_attack") },
+                null,
+                "cav_shield_06_death_A",
+                UnitRole.Siege,
+                useBonusDefinition: true),
+            UnitSetup("Human_Flying_BONUS", UnitVisualPrefabBuilder.HumanFlyingBonusPath, "Human_Flying_BONUS",
+                "Fly_Hors_Archer", "animation_cavalry/cavalry",
+                "cavalry_01_idle", "cavalry_03_run",
+                new[] { Local("animation_cavalry/cavalry", "cavalry_04_attack") },
+                null,
+                "cavalry_06_death_A",
+                UnitRole.Flying,
+                useBonusDefinition: true),
+            UnitSetup("Human_Super_BONUS", UnitVisualPrefabBuilder.HumanSuperBonusPath, "Human_Super_BONUS",
+                "machines/TT_Catapult_lvl1", "animation_machines/Ballista",
+                "ballista_01_idle", "ballista_02_move",
+                new[] { Local("animation_machines/Ballista", "ballista_03_attack") },
+                null,
+                "ballista_05_death",
+                UnitRole.Super,
+                useBonusDefinition: true),
             new(
                 "Human_Hero1",
                 UnitVisualPrefabBuilder.HumanHero1Path,
-                HeroControllersFolder + "/Human_Hero1.controller",
+                ControllerBeside(UnitVisualPrefabBuilder.HumanHero1Path, "Human_Hero1"),
                 "TT_King",
                 "animation_infantry/Infantry",
                 "infantry_01_idle",
@@ -180,7 +251,7 @@ namespace Game.Editor
             new(
                 "Human_Hero2",
                 UnitVisualPrefabBuilder.HumanHero2Path,
-                HeroControllersFolder + "/Human_Hero2.controller",
+                ControllerBeside(UnitVisualPrefabBuilder.HumanHero2Path, "Human_Hero2"),
                 "TT_Mounted_Paladin",
                 "animation_cavalry/cavalry_shield",
                 "cav_shield_01_idle",
@@ -197,7 +268,7 @@ namespace Game.Editor
             new(
                 "Human_Hero3",
                 UnitVisualPrefabBuilder.HumanHero3Path,
-                HeroControllersFolder + "/Human_Hero3.controller",
+                ControllerBeside(UnitVisualPrefabBuilder.HumanHero3Path, "Human_Hero3"),
                 "TT_Mounted_Priest",
                 "animation_cavalry/cavalry_staff",
                 "cav_staff_01_idle",
@@ -214,7 +285,7 @@ namespace Game.Editor
             new(
                 "Human_Titan",
                 UnitVisualPrefabBuilder.HumanTitanPath,
-                ControllersFolder + "/Human_Titan.controller",
+                ControllerBeside(UnitVisualPrefabBuilder.HumanTitanPath, "Human_Titan"),
                 "TT_Peasant",
                 "animation_infantry/Infantry",
                 "infantry_01_idle",
@@ -245,11 +316,12 @@ namespace Game.Editor
             ClipRef[] attackClips,
             ClipRef[] castClips,
             string deathClip,
-            UnitRole role) =>
+            UnitRole role,
+            bool useBonusDefinition = false) =>
             new(
                 prefabName,
                 destinationPath,
-                ControllersFolder + "/" + controllerName + ".controller",
+                ControllerBeside(destinationPath, controllerName),
                 ttPrefab,
                 animSubfolder,
                 idleClip,
@@ -257,7 +329,8 @@ namespace Game.Editor
                 attackClips,
                 castClips,
                 deathClip,
-                role);
+                role,
+                useBonusDefinition: useBonusDefinition);
 
         [MenuItem("BARAKI/Units/Rebuild TT Prefabs")]
         public static void RebuildFromMenu()
@@ -267,14 +340,17 @@ namespace Game.Editor
 
         public static void RebuildAll()
         {
-            EnsureFolder(ControllersFolder);
-            EnsureFolder(HeroControllersFolder);
-            EnsureFolder(UnitVisualPrefabBuilder.HumanPath);
-            EnsureFolder(UnitVisualPrefabBuilder.HumanHeroesPath);
+            UnitVisualPrefabBuilder.EnsureHumanPrefabFolders();
             RenameLegacyHeroPrefab();
 
             foreach (var setup in Setups)
             {
+                var dir = Path.GetDirectoryName(setup.ControllerPath)?.Replace('\\', '/');
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    ContentAssetPaths.EnsureFolder(dir);
+                }
+
                 DeleteStaleController(setup.ControllerPath);
                 BuildPrefab(setup);
             }
@@ -418,7 +494,13 @@ namespace Game.Editor
                 return;
             }
 
-            settings.CopyFrom(race.GetUnit(setup.Role));
+            var definition = setup.UseBonusDefinition
+                ? race.GetUnitBonus(setup.Role)
+                : race.GetUnit(setup.Role);
+            if (definition != null)
+            {
+                settings.CopyFrom(definition);
+            }
         }
 
         static RaceDefinition LoadHumanRace()

@@ -16,9 +16,10 @@ namespace Game.Gameplay.Combat
             string raceId,
             UnitRole role,
             MatchPlayerState player = null,
-            int heroSlot = 0)
+            int heroSlot = 0,
+            int bonusSlot = 0)
         {
-            var stats = ResolveBase(catalog, visualCatalog, raceId, role, heroSlot);
+            var stats = ResolveBase(catalog, visualCatalog, raceId, role, heroSlot, bonusSlot);
             return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
@@ -31,8 +32,29 @@ namespace Game.Gameplay.Combat
             UnitVisualCatalog visualCatalog,
             string raceId,
             UnitRole role,
-            int heroSlot = 0)
+            int heroSlot = 0,
+            int bonusSlot = 0)
         {
+            if (HumanBonusUnitRules.BonusSlotForRole(role) == bonusSlot)
+            {
+                if (visualCatalog != null
+                    && visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var bonusPrefab)
+                    && bonusPrefab != null)
+                {
+                    var bonusSettings = bonusPrefab.GetComponentInChildren<UnitCombatSettings>();
+                    if (bonusSettings != null)
+                    {
+                        return BuildFromSettings(bonusSettings, role);
+                    }
+                }
+
+                var bonusDefinition = catalog?.GetRace(raceId)?.GetUnitBonus(role);
+                if (bonusDefinition != null)
+                {
+                    return UnitCombatStats.FromDefinition(bonusDefinition);
+                }
+            }
+
             if (visualCatalog != null
                 && visualCatalog.TryGetPrefab(raceId, role, heroSlot, out var prefab)
                 && prefab != null)

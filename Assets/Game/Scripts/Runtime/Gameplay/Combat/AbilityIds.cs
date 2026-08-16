@@ -27,6 +27,9 @@ namespace Game.Gameplay.Combat
         public const int Slam = 42;
         public const int AuraMaxHpPercent = 43;
 
+        /// <summary>Siege bonus passive: +HP/s aura (PRE-006a).</summary>
+        public const int AuraHpRegen = 50;
+
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;
         /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>

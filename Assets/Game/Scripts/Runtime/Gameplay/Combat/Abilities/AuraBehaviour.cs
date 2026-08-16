@@ -22,15 +22,18 @@ namespace Game.Gameplay.Combat
 
         public override float QueryAura(in UnitAbilityContext ctx, AuraStat stat)
         {
-            return stat == _stat ? ctx.Def.Percent : 0f;
+            return stat == _stat
+                ? stat == AuraStat.HpRegen ? ctx.Def.FlatBonus : ctx.Def.Percent
+                : 0f;
         }
 
         public override string DescribeParams() => _stat switch
         {
-            AuraStat.Damage => "Пассивно: +урон армии владельца",
-            AuraStat.AttackSpeed => "Пассивно: +скорость атаки армии владельца",
-            AuraStat.Armor => "Пассивно: +броня армии владельца",
-            AuraStat.MaxHp => "Пассивно: +запас здоровья армии владельца",
+            AuraStat.Damage => "Пассивно: +урон армии владельца рядом с носителем",
+            AuraStat.AttackSpeed => "Пассивно: +скорость атаки армии владельца рядом с носителем",
+            AuraStat.Armor => "Пассивно: +броня армии владельца рядом с носителем",
+            AuraStat.MaxHp => "Пассивно: +запас здоровья армии владельца рядом с носителем",
+            AuraStat.HpRegen => "Пассивно: регенерация здоровья армии владельца рядом с носителем",
             _ => string.Empty,
         };
     }

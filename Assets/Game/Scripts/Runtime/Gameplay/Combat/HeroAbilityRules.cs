@@ -16,6 +16,9 @@ namespace Game.Gameplay.Combat
         public const int PaladinSlot = 2;
         public const int PriestSlot = 3;
 
+        /// <summary>Passive auras boost owner army only within this horizontal radius of the bearer.</summary>
+        public const float AuraRadius = 8f;
+
         public const float StrikeRadius = 4f;
         public const float StrikeDamage = 60f;
         public const float StrikeCooldownSeconds = 6f;
