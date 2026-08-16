@@ -9,18 +9,23 @@ namespace Game.Gameplay.Match
         static readonly Color HumanSpellColor = new(0.9f, 0.15f, 0.1f);
 
         const float ProjectileScale = 2f;
-        /// <summary>Bolt prefab already carries a 0.5 normalized scale; these multipliers keep small shots compact and big shots prominent.</summary>
-        const float BoltScaleLarge = 1f;
-        const float BoltScaleSmall = 0.75f;
+        /// <summary>
+        /// Archer/flying/tower arrows: <c>ProjectileBolt</c> (Bolt_lvl1 ×0.5), root ×0.8625 (+15% vs prior 0.75).
+        /// Ballista / main / barracks: <c>ProjectileBoltLvl3</c> at 1:1 with unit Bolt_lvl3.
+        /// </summary>
+        const float BoltScaleBallista = 1f;
+        const float BoltScaleArrow = 0.75f * 1.15f;
+        const float FireballDiameter = 0.55f;
 
         static Material _fireMaterial;
         static GameObject _boltPrefab;
+        static GameObject _boltLvl3Prefab;
 
         public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
         {
             var visual = UsesFireballVisual(projectile.AttackerRole)
                 ? CreateFireball(projectile)
-                : CreateBolt(projectile, ResolveBoltScale(projectile));
+                : CreateBolt(projectile, ResolveBoltScale(projectile), ResolveBoltPrefab(projectile));
 
             visual.transform.SetParent(parent, false);
             return visual;
@@ -29,27 +34,41 @@ namespace Game.Gameplay.Match
         static bool UsesFireballVisual(UnitRole role) =>
             role is UnitRole.Caster or UnitRole.Hero;
 
-        static float ResolveBoltScale(CombatProjectileState projectile)
+        static bool UsesBallistaBolt(CombatProjectileState projectile)
         {
             if (projectile.IsBuildingAttack)
             {
-                return BuildingRules.IsMain(projectile.SourceBuildingId) ? BoltScaleLarge : BoltScaleSmall;
+                return BuildingRules.IsMain(projectile.SourceBuildingId)
+                    || BuildingRules.IsBarracks(projectile.SourceBuildingId);
             }
 
-            return projectile.AttackerRole == UnitRole.Super ? BoltScaleLarge : BoltScaleSmall;
+            return projectile.AttackerRole == UnitRole.Super;
+        }
+
+        static float ResolveBoltScale(CombatProjectileState projectile) =>
+            UsesBallistaBolt(projectile) ? BoltScaleBallista : BoltScaleArrow;
+
+        static GameObject ResolveBoltPrefab(CombatProjectileState projectile)
+        {
+            if (UsesBallistaBolt(projectile))
+            {
+                if (_boltLvl3Prefab == null) _boltLvl3Prefab = LoadBoltLvl3Prefab();
+                return _boltLvl3Prefab != null ? _boltLvl3Prefab : LoadBoltPrefabCached();
+            }
+
+            return LoadBoltPrefabCached();
         }
 
         static Material LoadMaterial(string path) => Resources.Load<Material>(path);
 
-        static GameObject CreateBolt(CombatProjectileState projectile, float scale)
+        static GameObject CreateBolt(CombatProjectileState projectile, float scale, GameObject boltPrefab)
         {
             var root = new GameObject($"Projectile_{projectile.ProjectileId}");
             root.transform.localScale = Vector3.one * scale;
 
-            if (_boltPrefab == null) _boltPrefab = LoadBoltPrefab();
-            if (_boltPrefab != null)
+            if (boltPrefab != null)
             {
-                var bolt = Object.Instantiate(_boltPrefab, root.transform, false);
+                var bolt = Object.Instantiate(boltPrefab, root.transform, false);
                 bolt.name = "Bolt";
             }
             else
@@ -66,7 +85,13 @@ namespace Game.Gameplay.Match
             return root;
         }
 
-        static GameObject LoadBoltPrefab() => Resources.Load<GameObject>("Art/ProjectileBolt");
+        static GameObject LoadBoltPrefabCached()
+        {
+            if (_boltPrefab == null) _boltPrefab = Resources.Load<GameObject>("Art/ProjectileBolt");
+            return _boltPrefab;
+        }
+
+        static GameObject LoadBoltLvl3Prefab() => Resources.Load<GameObject>("Art/ProjectileBoltLvl3");
 
         static void CreateRoleCube(Transform parent, float scale, Color color)
         {
@@ -104,12 +129,12 @@ namespace Game.Gameplay.Match
 
             var core = CreatePrimitiveRoot(PrimitiveType.Sphere, "Core");
             core.transform.SetParent(root.transform, false);
-            core.transform.localScale = Vector3.one * (0.24f * ProjectileScale);
+            core.transform.localScale = Vector3.one * FireballDiameter;
             ApplyMaterial(core, _fireMaterial);
 
             var trail = root.AddComponent<TrailRenderer>();
             trail.time = 0.25f;
-            trail.startWidth = 0.22f;
+            trail.startWidth = FireballDiameter * (0.22f / 0.48f);
             trail.endWidth = 0f;
             trail.material = _fireMaterial;
             var gradient = new Gradient();

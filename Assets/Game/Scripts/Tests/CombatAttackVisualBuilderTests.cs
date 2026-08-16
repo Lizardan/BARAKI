@@ -41,7 +41,7 @@ namespace Game.Tests
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
             Assert.IsNotNull(visual.transform.Find("Bolt"), "Ranged shot should use the bolt prefab");
-            AssertScaleNear(visual.transform.localScale, 0.75f);
+            AssertScaleNear(visual.transform.localScale, 0.75f * 1.15f);
             Assert.IsTrue(visual.GetComponentsInChildren<Collider>().Length == 0, "Bolt must not have colliders");
             AssertTeamColorApplied(visual, MatchPlayerColors.GetSlotColor(1));
 
@@ -57,21 +57,20 @@ namespace Game.Tests
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
             Assert.IsNotNull(visual.transform.Find("Bolt"), "Flying shot should use the bolt prefab");
-            AssertScaleNear(visual.transform.localScale, 0.75f);
+            AssertScaleNear(visual.transform.localScale, 0.75f * 1.15f);
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
         }
 
         [Test]
-        public void CreateProjectileVisual_Super_BuildsLargeBolt()
+        public void CreateProjectileVisual_Super_BuildsBallistaBoltLvl3AtUnitScale()
         {
             var projectile = BuildProjectile(UnitRole.Super, ownerSlot: 0);
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNotNull(visual.transform.Find("Bolt"), "Super shot should use the bolt prefab");
-            AssertScaleNear(visual.transform.localScale, 1f);
+            AssertBallistaBolt(visual);
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
@@ -84,7 +83,9 @@ namespace Game.Tests
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNotNull(visual.transform.Find("Core"), "Fireball should have a Core child");
+            var core = visual.transform.Find("Core");
+            Assert.IsNotNull(core, "Fireball should have a Core child");
+            AssertScaleNear(core.localScale, 0.55f);
             Assert.IsNotNull(visual.GetComponent<TrailRenderer>(), "Fireball should carry a TrailRenderer");
             Assert.IsTrue(visual.GetComponentsInChildren<Collider>().Length == 0, "Fireball must not have colliders");
 
@@ -99,7 +100,9 @@ namespace Game.Tests
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNotNull(visual.transform.Find("Core"), "Priest shot should use the caster fireball");
+            var core = visual.transform.Find("Core");
+            Assert.IsNotNull(core, "Priest shot should use the caster fireball");
+            AssertScaleNear(core.localScale, 0.55f);
             Assert.IsNotNull(visual.GetComponent<TrailRenderer>(), "Priest shot should carry a TrailRenderer");
 
             Object.DestroyImmediate(visual);
@@ -107,33 +110,66 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CreateProjectileVisual_BuildingShot_IsSmallOwnerColoredBolt()
+        public void CreateProjectileVisual_TowerShot_IsArrowSizedOwnerColoredBolt()
         {
             var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 3, fromBuilding: true, sourceBuildingId: "BUILDING_TOWER");
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNotNull(visual.transform.Find("Bolt"), "Building shot should use the bolt prefab");
-            Assert.IsNull(visual.GetComponent<TrailRenderer>(), "Building shot should have no trail");
-            AssertScaleNear(visual.transform.localScale, 0.75f);
+            Assert.IsNotNull(visual.transform.Find("Bolt"), "Tower shot should use the bolt prefab");
+            Assert.IsNull(visual.GetComponent<TrailRenderer>(), "Tower shot should have no trail");
+            AssertScaleNear(visual.transform.localScale, 0.75f * 1.15f);
             AssertTeamColorApplied(visual, MatchPlayerColors.GetSlotColor(3));
+
+            var meshFilter = visual.GetComponentInChildren<MeshFilter>(true);
+            Assert.IsNotNull(meshFilter?.sharedMesh);
+            Assert.AreEqual("Bolt_lvl1", meshFilter.sharedMesh.name, "Towers keep the archer arrow mesh");
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
         }
 
         [Test]
-        public void CreateProjectileVisual_MainBuildingShot_IsLargeBolt()
+        public void CreateProjectileVisual_MainBuildingShot_IsBallistaBolt()
         {
             var projectile = BuildProjectile(UnitRole.Ranged, ownerSlot: 1, fromBuilding: true, sourceBuildingId: Game.Core.GameIds.Buildings.Main);
             var root = new GameObject("Root");
             var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
 
-            Assert.IsNotNull(visual.transform.Find("Bolt"), "Main building shot should use the bolt prefab");
-            AssertScaleNear(visual.transform.localScale, 1f);
+            AssertBallistaBolt(visual);
 
             Object.DestroyImmediate(visual);
             Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void CreateProjectileVisual_BarracksShot_IsBallistaBolt()
+        {
+            var projectile = BuildProjectile(
+                UnitRole.Ranged,
+                ownerSlot: 2,
+                fromBuilding: true,
+                sourceBuildingId: Game.Core.GameIds.Buildings.BarracksCenter);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            AssertBallistaBolt(visual);
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
+        static void AssertBallistaBolt(GameObject visual)
+        {
+            var bolt = visual.transform.Find("Bolt");
+            Assert.IsNotNull(bolt, "Should use the bolt prefab");
+            AssertScaleNear(visual.transform.localScale, 1f);
+
+            var meshFilter = bolt.GetComponentInChildren<MeshFilter>(true);
+            Assert.IsNotNull(meshFilter, "Ballista bolt needs a MeshFilter");
+            Assert.IsNotNull(meshFilter.sharedMesh, "Ballista bolt needs a mesh");
+            Assert.AreEqual("Bolt_lvl3", meshFilter.sharedMesh.name, "Must match unit Bolt_lvl3");
+            AssertScaleNear(meshFilter.transform.localScale, 1f);
         }
 
         static void AssertScaleNear(Vector3 scale, float expected)

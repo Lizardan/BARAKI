@@ -66,6 +66,14 @@ namespace Game.Tests
                 CombatAttackRules.SwingImpactNormalizedTime,
                 CombatAttackRules.ResolveSwingImpactNormalizedTime(UnitRole.Melee),
                 0.001f);
+            Assert.AreEqual(
+                0.1f,
+                CombatAttackRules.ResolveSwingImpactDelay(1f, UnitRole.Super),
+                0.001f);
+            Assert.AreEqual(
+                CombatAttackRules.SuperSwingImpactNormalizedTime,
+                CombatAttackRules.ResolveSwingImpactNormalizedTime(UnitRole.Super),
+                0.001f);
         }
 
         [Test]

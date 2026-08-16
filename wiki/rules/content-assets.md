@@ -48,8 +48,12 @@ ScriptableObjects/
   king Group Heal → `staff_07_cast_*`, paladin Shield → `cav_staff_07_cast_*`.
 - Вариант выбирается на свинг (`AttackVariant`) / вход в Cast (`CastVariant`).
 - Автоатака: урон/вылет снаряда в `SwingImpactNormalizedTime` (0.5) от интервала атаки;
-  лучники — на **0.25**, кастер — на **0.35**. Кастер Attack только `staff_04_attack_B` (без sword `attack_A`).
+  лучники — на **0.25**, кастер — на **0.35**, балиста (Super) — на **0.1**. Кастер Attack только `staff_04_attack_B` (без sword `attack_A`).
   Длины клипов — `AbilityAnimRules.ResolveAttackClipSeconds` / cast-lock.
+- Визуалы снарядов (`CombatAttackVisualBuilder`, `Resources/Art/`):
+  - лучник / flying / башни — `ProjectileBolt` (меш Bolt_lvl1 ×0.5, root ×0.8625 = прежний 0.75 +15%);
+  - балиста (Super) / main / barracks — `ProjectileBoltLvl3` (меш Bolt_lvl3 ×1, как на юните);
+  - кастер / герои — сфера fireball диаметром **0.55** + trail (`ProjectileFire`).
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
   `AI`, `Tech`, `Passives`, `Buildings`) **не создавать заранее**.
 - Герой/кит с abilities — отдельная папка владельца (`Heroes/Hero1`, `Units/Caster`),

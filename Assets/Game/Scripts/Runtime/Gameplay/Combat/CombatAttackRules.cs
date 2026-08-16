@@ -17,6 +17,9 @@ namespace Game.Gameplay.Combat
         /// <summary>Casters release the fireball slightly before mid-staff swing.</summary>
         public const float CasterSwingImpactNormalizedTime = 0.35f;
 
+        /// <summary>Ballista (Super) releases near the start of the TT ballista attack clip.</summary>
+        public const float SuperSwingImpactNormalizedTime = 0.1f;
+
         /// <summary>Legacy alias — prefer <see cref="ResolveSwingImpactDelay"/>.</summary>
         public const float MeleeStrikeDuration = 0.14f;
 
@@ -30,6 +33,7 @@ namespace Game.Gameplay.Combat
             {
                 UnitRole.Ranged => RangedSwingImpactNormalizedTime,
                 UnitRole.Caster => CasterSwingImpactNormalizedTime,
+                UnitRole.Super => SuperSwingImpactNormalizedTime,
                 _ => SwingImpactNormalizedTime,
             };
 
