@@ -15,8 +15,11 @@ namespace Game.Gameplay.Combat
         public static readonly Color DivineSmite = new(1f, 0.92f, 0.45f);
 
         public static readonly Color AuraDamage = new(0.9f, 0.2f, 0.15f);
-        public static readonly Color AuraAttackSpeed = new(0.95f, 0.8f, 0.15f);
-        public static readonly Color AuraArmor = new(0.7f, 0.72f, 0.78f);
+        /// <summary>Paladin haste — green runic ring (not gold sparkle).</summary>
+        public static readonly Color AuraAttackSpeed = new(0.3f, 0.92f, 0.35f);
+        public static readonly Color AuraArmor = new(0.55f, 0.72f, 0.95f);
         public static readonly Color AuraMaxHp = new(0.95f, 0.5f, 0.15f);
+        /// <summary>Siege / paladin-style regen — holy yellow light (not green mend).</summary>
+        public static readonly Color AuraHpRegen = new(1f, 0.88f, 0.35f);
     }
 }

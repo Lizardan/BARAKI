@@ -35,8 +35,8 @@ namespace Game.Gameplay.Match
         /// <summary>Titan world scale relative to a regular creep (melee baseline).</summary>
         public const float TitanVsCreepScale = 3f;
 
-        /// <summary>Local scale of the looping divine burn FX parented under the titan root.</summary>
-        public const float TitanAuraFxScale = 0.5f;
+        /// <summary>Local scale of permanent CFXR Rays on the Titan model (body power FX).</summary>
+        public const float TitanBodyRaysLocalScale = 0.55f;
 
         /// <summary>Extra multiplier on top of shared Human animated scale for champions.</summary>
         public static float GetChampionVisualScale(UnitRole role) =>

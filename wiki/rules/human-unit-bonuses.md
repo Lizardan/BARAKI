@@ -14,8 +14,30 @@
 
 ## Ауры (визуал)
 
-Диск под носителем: `y = 0.12`, `renderQueue = Transparent+80`, `sortingOrder = 32`, ZWrite off —
-поверх земли без мерцания z-fight.
+Пассивные ауры — CFXR loop под носителем (не soft-диск):
+
+| Носитель | AbilityId | Prefab | Тинт |
+|----------|-----------|--------|------|
+| King | 13 Damage | CFXR3 Magic Aura A (Runic) | crimson |
+| Paladin | 23 Haste | CFXR3 Magic Aura A (Runic) **без Rays** | green |
+| Priest | 33 Armor | CFXR3 Magic Aura A (Runic) | silver-blue |
+| Titan | 43 MaxHp | CFXR3 Magic Aura A (Runic) **без Rays** | warm orange |
+| Siege BONUS | 50 Regen | CFXR3 Magic Aura A (Runic) **без Rays** | **holy yellow** (свет паладина, не green heal) |
+
+У всех пассивных аур child `Rays` снимается (`AuraFxVisuals.StripNamedChildren`).
+У Titan отдельно на модели всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp) —
+это body-FX «мощное существо», не аура армии. Когда MaxHp-аура разлокнута,
+поверх добавляется обычное кольцо без Rays.
+
+Правила: `PassiveAuraFxRules` + `AuraFxVisuals`; префабы в `MatchFxCatalog` (`AuraShinyLoop` / `AuraRunicLoop`).
+Все пассивные ауры — **Runic** (Shiny в каталоге пока не используется).
+Масштаб ≈ `auraRadius / reference × 0.2` (визуал в 5× меньше механики; Runic ~1.1, Shiny ~1.4). Звук CFXR muted.
+Демо: `BARAKI/FX/Build Aura Demo Scene` → `Assets/Game/Scenes/AuraFxDemo.unity`.
+
+Soft glow-диск остаётся только у splash Catapult на прилёте (1 с).
+
+`TryGetAuraVisual` рисует ауру только для `AuraBehaviour` (например Siege Regen). Пассивы-трейты
+с `Radius` для AoE/splash (Cleave, Catapult) не показывают.
 
 ## Механики (`HumanBonusUnitRules` + ability defs)
 
@@ -26,7 +48,14 @@
 | 3 Caster | 1–3 + 53 Battlemace | Active+Passive | спеллы кастера; `< 2 м` — melee 8–10 × MeleeDamageLevel + **infantry AttackVariant 1** (staff ranged=0); посох и булава видны одновременно |
 | 4 Siege | 50 Siege Regen Aura | Passive | +1 HP/с в радиусе 8 |
 | 5 Flying | 54 Last Call | Passive | On-death 25%: спавн базового Ranged |
-| 6 Super | 55 Catapult | Passive | Парабола + splash 50% raw в радиусе 3 |
+| 6 Super | 55 Catapult | Passive | Парабола + splash 50% raw в радиусе 3 **в точке прилёта**; диск splash 1 с |
+
+## Super artillery
+
+- Base Super range **10**, BONUS **12**; оба с **min range 5** (атака только в полосе 5…max).
+- Ближе 5 — отступают; дальше max — chase.
+- После `BeginAttack` Super держит Attack до конца интервала атаки даже если цель умерла;
+  снаряд всё равно вылетает в locked aim.
 
 Пассивы бонусов — обычные `UnitAbilityDef` на BONUS-префабах (`UnitCombatSettings`),
 папка `Units/{Role}/Bonus/Abilities/`. Базовые melee/ranged/siege/flying/super без бонуса —

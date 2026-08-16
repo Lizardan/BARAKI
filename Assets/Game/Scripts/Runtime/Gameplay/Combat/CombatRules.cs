@@ -76,5 +76,37 @@ namespace Game.Gameplay.Combat
         {
             return Mathf.Max(stats.AttackRange * 2.5f, 8f);
         }
+
+        /// <summary>
+        /// Super artillery cannot fire inside this radius (inclusive band is
+        /// <c>[min, max]</c> with max = AttackRange / building reach).
+        /// </summary>
+        public const float SuperMinAttackRange = 5f;
+
+        public static float GetMinAttackRange(UnitRole attackerRole) =>
+            attackerRole == UnitRole.Super ? SuperMinAttackRange : 0f;
+
+        /// <summary>True when distance is inside the unit's fireable band (min..max).</summary>
+        public static bool IsWithinAttackBand(
+            float distance,
+            float attackRange,
+            UnitRole attackerRole,
+            UnitRole targetRole)
+        {
+            var min = GetMinAttackRange(attackerRole);
+            var max = GetUnitAttackReach(attackRange, targetRole);
+            return distance >= min && distance <= max;
+        }
+
+        /// <summary>Building attack band using surface distance vs building reach.</summary>
+        public static bool IsWithinBuildingAttackBand(
+            float surfaceDistance,
+            float attackRange,
+            UnitRole attackerRole)
+        {
+            var min = GetMinAttackRange(attackerRole);
+            var max = GetBuildingAttackReach(attackRange);
+            return surfaceDistance >= min && surfaceDistance <= max;
+        }
     }
 }

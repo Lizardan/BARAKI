@@ -6,13 +6,17 @@ using UnityEngine;
 
 namespace Game.Editor
 {
-    /// <summary>Assigns TT_RTS FX prefabs to a <see cref="MatchFxCatalog"/> and wires it into Game.unity.</summary>
+    /// <summary>Assigns TT_RTS FX prefabs + CFXR passive auras to a <see cref="MatchFxCatalog"/> and wires it into Game.unity.</summary>
     public static class MatchFxSetup
     {
         public const string CatalogPath = "Assets/Game/Resources/Fx/MatchFxCatalog.asset";
         public const string GameScenePath = "Assets/Game/Scenes/Game.unity";
 
         const string FxPrefabsRoot = "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/FX/FX_prefabs";
+        const string CfxrShinyPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Misc/CFXR2 Shiny Item (Loop).prefab";
+        const string CfxrRunicPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab";
 
         [MenuItem("BARAKI/FX/Setup Scene (TT_RTS)")]
         public static void Run()
@@ -33,7 +37,9 @@ namespace Game.Editor
                 LoadFx("FX_machine_destroyed"),
                 LoadFx("FX_Building_Destroyed_mid"),
                 LoadFx("FX_Building_burning"),
-                LoadFx("FX_Building_burning_small"));
+                LoadFx("FX_Building_burning_small"),
+                LoadRequiredPrefab(CfxrShinyPath),
+                LoadRequiredPrefab(CfxrRunicPath));
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
@@ -94,10 +100,15 @@ namespace Game.Editor
 
         static GameObject LoadFx(string name)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{FxPrefabsRoot}/{name}.prefab");
+            return LoadRequiredPrefab($"{FxPrefabsRoot}/{name}.prefab");
+        }
+
+        static GameObject LoadRequiredPrefab(string path)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null)
             {
-                throw new System.InvalidOperationException($"Missing FX prefab: {FxPrefabsRoot}/{name}.prefab");
+                throw new System.InvalidOperationException($"Missing FX prefab: {path}");
             }
 
             return prefab;

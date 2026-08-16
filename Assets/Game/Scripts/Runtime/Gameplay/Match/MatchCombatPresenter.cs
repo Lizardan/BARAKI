@@ -36,9 +36,13 @@ namespace Game.Gameplay.Match
             public bool IsParkedAtBase;
             /// <summary>World model scale relative to melee creep (titan ≈ 3).</summary>
             public float LocomotionScaleVsCreep = 1f;
-            /// <summary>Persistent semi-transparent disc under passive-aura bearers. Null = no aura.</summary>
-            public Transform AuraDisc;
-            public Renderer AuraDiscRenderer;
+            /// <summary>Persistent CFXR loop under passive-aura bearers. Null = no aura.</summary>
+            public GameObject AuraFx;
+            public PassiveAuraFxKind AuraFxKind;
+            public float AuraFxRadius;
+            public int AuraFxAbilityId;
+            /// <summary>Loaded bolt/rock meshes on Super artillery (hidden while a swing is committed).</summary>
+            public GameObject[] AmmoObjects;
         }
 
         sealed class DyingVisual
@@ -63,9 +67,11 @@ namespace Game.Gameplay.Match
         readonly List<DyingVisual> _dyingVisuals = new();
         readonly Dictionary<int, Transform> _projectileVisuals = new();
         readonly Dictionary<int, bool> _projectileHitsBuilding = new();
+        readonly HashSet<int> _projectileSplashIds = new();
         Transform _root;
         Transform _projectileRoot;
         static Material s_auraDiscMaterial;
+        static Texture2D s_auraGlowTexture;
 
         void Awake()
         {
@@ -257,6 +263,7 @@ namespace Game.Gameplay.Match
                 }
 
                 SyncAuraDisc(visual, unit, combat);
+                SyncSuperAmmoVisibility(visual, unit);
                 DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing);
                 TickPendingImpactFx(visual, unit, combat, Time.deltaTime);
 
@@ -607,7 +614,7 @@ namespace Game.Gameplay.Match
 
             if (unit.Role == UnitRole.Titan)
             {
-                AttachTitanDivineAura(root);
+                AttachTitanBodyRays(model != null ? model : root);
             }
 
             statusBars.SetHealth(1f);
@@ -626,65 +633,128 @@ namespace Game.Gameplay.Match
                 Role = unit.Role,
                 IsParkedAtBase = unit.IsParkedAtBase,
                 LocomotionScaleVsCreep = ResolveLocomotionScaleVsCreep(unit.Role),
+                AmmoObjects = CacheSuperAmmoObjects(model, unit.Role),
             };
             AttachUnitPickCollider(unitVisual, unit);
             return unitVisual;
         }
 
-        /// <summary>Persistent passive-aura disc under a bearer (radius + color replicated via v19).</summary>
+        static GameObject[] CacheSuperAmmoObjects(Transform model, UnitRole role)
+        {
+            if (model == null || role != UnitRole.Super)
+            {
+                return null;
+            }
+
+            var list = new List<GameObject>(4);
+            var transforms = model.GetComponentsInChildren<Transform>(true);
+            for (var i = 0; i < transforms.Length; i++)
+            {
+                var t = transforms[i];
+                if (IsSuperAmmoTransformName(t.name))
+                {
+                    list.Add(t.gameObject);
+                }
+            }
+
+            return list.Count > 0 ? list.ToArray() : null;
+        }
+
+        static bool IsSuperAmmoTransformName(string name) =>
+            name is "Bolt_lvl1" or "Bolt_lvl2" or "Bolt_lvl3"
+                or "projectile_lvl1" or "projectile_lvl2" or "projectile_lvl3";
+
+        /// <summary>
+        /// While Super has a committed attack swing, hide the carriage ammo so the in-flight
+        /// projectile is the only bolt/rock (matches the TT release pose).
+        /// </summary>
+        static void SyncSuperAmmoVisibility(UnitVisual visual, MatchUnitState unit)
+        {
+            if (visual?.AmmoObjects == null || unit == null || unit.Role != UnitRole.Super)
+            {
+                return;
+            }
+
+            var visible = unit.AttackCommitRemainingSeconds <= 0f;
+            for (var i = 0; i < visual.AmmoObjects.Length; i++)
+            {
+                var ammo = visual.AmmoObjects[i];
+                if (ammo != null && ammo.activeSelf != visible)
+                {
+                    ammo.SetActive(visible);
+                }
+            }
+        }
+
+        /// <summary>Persistent CFXR aura under a bearer (radius + tint via ability id / v19 color).</summary>
         void SyncAuraDisc(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
         {
             float radius;
             int packedColor;
+            int abilityId;
             if (_runtime.TickMode == MatchTickMode.Client)
             {
                 radius = unit.AuraRadius;
                 packedColor = unit.AuraColorPacked;
+                abilityId = radius > 0f
+                    ? PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFx.FromRgbaInt(packedColor))
+                    : 0;
             }
-            else if (!combat.TryGetAuraVisual(unit, out radius, out packedColor))
+            else if (!combat.TryGetAuraVisual(unit, out radius, out packedColor, out abilityId))
             {
                 radius = 0f;
+                abilityId = 0;
             }
 
-            if (radius <= 0f)
+            if (radius <= 0f || abilityId == 0)
             {
-                if (visual.AuraDisc != null)
+                ClearAuraFx(visual);
+                return;
+            }
+
+            var kind = PassiveAuraFxRules.ResolveKind(abilityId);
+            var needsRebuild = visual.AuraFx == null
+                || visual.AuraFxKind != kind
+                || visual.AuraFxAbilityId != abilityId
+                || !Mathf.Approximately(visual.AuraFxRadius, radius);
+
+            if (needsRebuild)
+            {
+                ClearAuraFx(visual);
+                var prefab = _fxCatalog != null ? _fxCatalog.GetPassiveAuraPrefab(kind) : null;
+                if (prefab == null)
                 {
-                    DestroyManaged(visual.AuraDisc.gameObject);
-                    visual.AuraDisc = null;
-                    visual.AuraDiscRenderer = null;
+                    return;
                 }
 
-                return;
+                var tint = PassiveAuraFxRules.ResolveTint(abilityId);
+                visual.AuraFx = AuraFxVisuals.Attach(visual.Root, prefab, kind, tint, radius);
+                visual.AuraFxKind = kind;
+                visual.AuraFxRadius = radius;
+                visual.AuraFxAbilityId = abilityId;
             }
-
-            if (visual.AuraDisc == null)
-            {
-                visual.AuraDisc = CreateAuraDisc(visual.Root, radius);
-                visual.AuraDiscRenderer = visual.AuraDisc != null
-                    ? visual.AuraDisc.GetComponent<Renderer>()
-                    : null;
-            }
-
-            if (visual.AuraDiscRenderer == null)
-            {
-                return;
-            }
-
-            var color = AbilityFx.FromRgbaInt(packedColor);
-            color.a *= AuraDiscFillAlpha;
-            var block = new MaterialPropertyBlock();
-            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
-            block.SetColor(Shader.PropertyToID("_Color"), color);
-            visual.AuraDiscRenderer.SetPropertyBlock(block);
         }
 
-        const float AuraDiscFillAlpha = 0.28f;
+        static void ClearAuraFx(UnitVisual visual)
+        {
+            if (visual.AuraFx != null)
+            {
+                DestroyManaged(visual.AuraFx);
+                visual.AuraFx = null;
+            }
+
+            visual.AuraFxRadius = 0f;
+            visual.AuraFxAbilityId = 0;
+        }
+
+        const float AuraDiscFillAlpha = 0.16f;
         /// <summary>Above ground mesh to avoid z-fighting with the floor.</summary>
         const float AuraDiscHeight = 0.12f;
         /// <summary>Transparent+ so the disc draws after opaque ground / roads.</summary>
         const int AuraDiscRenderQueue = (int)RenderQueue.Transparent + 80;
         const int AuraDiscSortingOrder = 32;
+        const int AuraGlowTextureSize = 128;
+        const string AuraDiscMaterialName = "AuraDiscGlow";
 
         Transform CreateAuraDisc(Transform parent, float radius)
         {
@@ -693,7 +763,7 @@ namespace Game.Gameplay.Match
             go.transform.localPosition = new Vector3(0f, AuraDiscHeight, 0f);
 
             var filter = go.AddComponent<MeshFilter>();
-            filter.sharedMesh = RoadPlatformMesh.BuildDisc(radius * 2f, 0.02f);
+            filter.sharedMesh = GetOrBuildAuraGlowQuad(radius * 2f);
 
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = GetAuraDiscMaterial();
@@ -703,9 +773,77 @@ namespace Game.Gameplay.Match
             return go.transform;
         }
 
+        static Mesh GetOrBuildAuraGlowQuad(float diameter)
+        {
+            // One shared unit quad; scale via transform would fight parent unit scale —
+            // bake diameter into the mesh so each aura radius stays world-correct.
+            var half = diameter * 0.5f;
+            var mesh = new Mesh
+            {
+                name = $"AuraGlowQuad_{diameter:0.##}",
+                vertices = new[]
+                {
+                    new Vector3(-half, 0f, -half),
+                    new Vector3(half, 0f, -half),
+                    new Vector3(half, 0f, half),
+                    new Vector3(-half, 0f, half),
+                },
+                uv = new[]
+                {
+                    new Vector2(0f, 0f),
+                    new Vector2(1f, 0f),
+                    new Vector2(1f, 1f),
+                    new Vector2(0f, 1f),
+                },
+                // Up-facing (Y+) so the soft glow reads on the ground plane.
+                triangles = new[] { 0, 1, 2, 0, 2, 3 },
+            };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        static Texture2D GetOrCreateAuraGlowTexture()
+        {
+            if (s_auraGlowTexture != null)
+            {
+                return s_auraGlowTexture;
+            }
+
+            var size = AuraGlowTextureSize;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, mipChain: false)
+            {
+                name = "AuraGlowRadial",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+
+            var center = (size - 1) * 0.5f;
+            var maxDist = center;
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var dx = (x - center) / maxDist;
+                    var dy = (y - center) / maxDist;
+                    var t = Mathf.Sqrt(dx * dx + dy * dy);
+                    // Soft glow: bright core, long transparent falloff to the rim.
+                    var falloff = 1f - Mathf.Clamp01(t);
+                    var alpha = falloff * falloff * (3f - 2f * falloff); // smoothstep-ish
+                    alpha = Mathf.Pow(alpha, 1.35f);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+            s_auraGlowTexture = tex;
+            return s_auraGlowTexture;
+        }
+
         static Material GetAuraDiscMaterial()
         {
-            if (s_auraDiscMaterial != null)
+            if (s_auraDiscMaterial != null && s_auraDiscMaterial.name == AuraDiscMaterialName)
             {
                 return s_auraDiscMaterial;
             }
@@ -718,16 +856,25 @@ namespace Game.Gameplay.Match
 
             s_auraDiscMaterial = new Material(shader)
             {
-                name = "AuraDisc",
+                name = AuraDiscMaterialName,
+                hideFlags = HideFlags.HideAndDontSave,
             };
             s_auraDiscMaterial.SetFloat("_Surface", 1f);
+            // Soft additive: tinted light bloom instead of an opaque paint disc.
+            s_auraDiscMaterial.SetFloat("_Blend", 2f); // Additive (URP Unlit)
             s_auraDiscMaterial.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            s_auraDiscMaterial.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            s_auraDiscMaterial.SetInt("_DstBlend", (int)BlendMode.One);
             s_auraDiscMaterial.SetInt("_ZWrite", 0);
-            // Prefer drawing on top of coplanar ground without writing depth.
+            s_auraDiscMaterial.SetInt("_Cull", (int)CullMode.Off);
             if (s_auraDiscMaterial.HasProperty("_ZTest"))
             {
                 s_auraDiscMaterial.SetInt("_ZTest", (int)CompareFunction.LessEqual);
+            }
+
+            var glow = GetOrCreateAuraGlowTexture();
+            if (glow != null && s_auraDiscMaterial.HasProperty("_BaseMap"))
+            {
+                s_auraDiscMaterial.SetTexture("_BaseMap", glow);
             }
 
             s_auraDiscMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
@@ -747,6 +894,12 @@ namespace Game.Gameplay.Match
                 activeIds.Add(projectile.ProjectileId);
                 _projectileHitsBuilding[projectile.ProjectileId] =
                     projectile.TargetBuildingInstanceId.HasValue || projectile.IsBuildingAttack;
+                if (projectile.AppliesSplashAoe
+                    || (projectile.IsParabolic && projectile.AttackerRole == UnitRole.Super))
+                {
+                    _projectileSplashIds.Add(projectile.ProjectileId);
+                }
+
                 if (!_projectileVisuals.TryGetValue(projectile.ProjectileId, out var visual)
                     || visual == null)
                 {
@@ -771,11 +924,18 @@ namespace Game.Gameplay.Match
             {
                 if (_projectileVisuals.TryGetValue(projectileId, out var visual) && visual != null)
                 {
-                    SpawnProjectileImpactFx(projectileId, visual.position);
+                    var impactPosition = visual.position;
+                    SpawnProjectileImpactFx(projectileId, impactPosition);
+                    if (_projectileSplashIds.Contains(projectileId))
+                    {
+                        SpawnCatapultSplashDisc(impactPosition);
+                    }
+
                     DestroyManaged(visual.gameObject);
                 }
 
                 _projectileVisuals.Remove(projectileId);
+                _projectileSplashIds.Remove(projectileId);
             }
         }
 
@@ -791,6 +951,39 @@ namespace Game.Gameplay.Match
                 hitsBuilding ? _fxCatalog.BuildingImpact : _fxCatalog.Blood,
                 impactPosition,
                 hitsBuilding ? ImpactFxLifetimeSeconds : BloodFxLifetimeSeconds);
+        }
+
+        void SpawnCatapultSplashDisc(Vector3 impactPosition)
+        {
+            if (!CanSpawnFx() || _root == null)
+            {
+                return;
+            }
+
+            var disc = CreateAuraDisc(_root, HumanBonusUnitRules.CatapultAoeRadius);
+            if (disc == null)
+            {
+                return;
+            }
+
+            disc.name = "CatapultSplashDisc";
+            disc.SetParent(_root, true);
+            disc.position = new Vector3(impactPosition.x, AuraDiscHeight, impactPosition.z);
+            disc.localRotation = Quaternion.identity;
+            disc.localScale = Vector3.one;
+
+            var renderer = disc.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                var color = AbilityFxColors.Ultimate;
+                color.a *= AuraDiscFillAlpha;
+                var block = new MaterialPropertyBlock();
+                block.SetColor(Shader.PropertyToID("_BaseColor"), color);
+                block.SetColor(Shader.PropertyToID("_Color"), color);
+                renderer.SetPropertyBlock(block);
+            }
+
+            Destroy(disc.gameObject, HumanBonusUnitRules.CatapultSplashDiscSeconds);
         }
 
         void SpawnFx(GameObject prefab, Vector3 position, float lifetimeSeconds)
@@ -971,92 +1164,35 @@ namespace Game.Gameplay.Match
             return body.transform;
         }
 
-        void AttachTitanDivineAura(Transform root)
+        void AttachTitanBodyRays(Transform host)
         {
-            if (root == null || _fxCatalog == null)
+            if (host == null || _fxCatalog == null || _fxCatalog.AuraRunicLoop == null)
             {
                 return;
             }
 
-            // Prefer the smaller building burn; fall back to the full ruin fire.
-            var prefab = _fxCatalog.BuildingImpact != null
-                ? _fxCatalog.BuildingImpact
-                : _fxCatalog.BuildingBurning;
-            if (prefab == null)
-            {
-                return;
-            }
-
-            var fx = Instantiate(prefab, root);
-            fx.name = "TitanDivineAura";
-            fx.transform.localPosition = new Vector3(0f, 0.2f, 0f);
-            fx.transform.localRotation = Quaternion.identity;
-            fx.transform.localScale = Vector3.one * UnitGreyboxVisuals.TitanAuraFxScale;
-            SoftenLoopingFx(fx);
-            EnsureTitanGlowLight(root);
+            AuraFxVisuals.AttachBodyRays(
+                host,
+                _fxCatalog.AuraRunicLoop,
+                AbilityFxColors.AuraMaxHp,
+                UnitGreyboxVisuals.TitanBodyRaysLocalScale);
+            EnsureTitanGlowLight(host);
         }
 
-        static void SoftenLoopingFx(GameObject fx)
+        static void EnsureTitanGlowLight(Transform host)
         {
-            if (fx == null)
-            {
-                return;
-            }
-
-            var systems = fx.GetComponentsInChildren<ParticleSystem>(true);
-            for (var i = 0; i < systems.Length; i++)
-            {
-                var ps = systems[i];
-                if (ps == null)
-                {
-                    continue;
-                }
-
-                var main = ps.main;
-                main.maxParticles = Mathf.Max(6, main.maxParticles / 3);
-
-                var emission = ps.emission;
-                emission.rateOverTimeMultiplier *= 0.4f;
-            }
-
-            var lights = fx.GetComponentsInChildren<Light>(true);
-            for (var i = 0; i < lights.Length; i++)
-            {
-                var light = lights[i];
-                if (light == null)
-                {
-                    continue;
-                }
-
-                light.intensity *= 0.45f;
-                light.range *= 0.7f;
-            }
-
-            var audio = fx.GetComponentsInChildren<AudioSource>(true);
-            for (var i = 0; i < audio.Length; i++)
-            {
-                if (audio[i] != null)
-                {
-                    audio[i].mute = true;
-                    audio[i].enabled = false;
-                }
-            }
-        }
-
-        static void EnsureTitanGlowLight(Transform root)
-        {
-            if (root == null || root.Find("TitanDivineGlow") != null)
+            if (host == null || host.Find("TitanDivineGlow") != null)
             {
                 return;
             }
 
             var glow = new GameObject("TitanDivineGlow");
-            glow.transform.SetParent(root, false);
+            glow.transform.SetParent(host, false);
             glow.transform.localPosition = new Vector3(0f, 1.4f, 0f);
             var light = glow.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(1f, 0.58f, 0.28f, 1f);
-            light.intensity = 1.35f;
+            light.color = AbilityFxColors.AuraMaxHp;
+            light.intensity = 1.1f;
             light.range = 5.5f;
             light.shadows = LightShadows.None;
         }

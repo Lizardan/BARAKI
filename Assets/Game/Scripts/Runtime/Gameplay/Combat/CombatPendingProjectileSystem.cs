@@ -66,13 +66,15 @@ namespace Game.Gameplay.Combat
             int targetUnitId,
             float rawDamage,
             float delaySeconds,
-            int? targetBuildingInstanceId = null)
+            int? targetBuildingInstanceId = null,
+            UnityEngine.Vector3 aimWorldPosition = default)
         {
             AttackerUnitId = attackerUnitId;
             TargetUnitId = targetUnitId;
             TargetBuildingInstanceId = targetBuildingInstanceId;
             RawDamage = rawDamage;
             TimeRemaining = delaySeconds;
+            AimWorldPosition = aimWorldPosition;
         }
 
         public int AttackerUnitId { get; }
@@ -80,6 +82,8 @@ namespace Game.Gameplay.Combat
         public int? TargetBuildingInstanceId { get; }
         public float RawDamage { get; }
         public float TimeRemaining { get; set; }
+        /// <summary>Locked aim at BeginAttack; used when the target dies mid-swing.</summary>
+        public UnityEngine.Vector3 AimWorldPosition { get; }
     }
 
     public interface IPendingProjectileHandler

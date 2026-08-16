@@ -84,6 +84,13 @@ namespace Game.Gameplay.Combat
         public float MarchSpawnDistance { get; }
         public float MarchProgressDistance { get; set; }
         public float AttackCooldownRemaining { get; set; }
+        /// <summary>
+        /// Super artillery: seconds left to finish the committed attack anim after BeginAttack.
+        /// While &gt; 0 the unit stays in Attack even if the target already died.
+        /// </summary>
+        public float AttackCommitRemainingSeconds { get; set; }
+        /// <summary>World aim point for a committed Super shot (last known target / impact).</summary>
+        public Vector3 AttackCommitAimPosition { get; set; }
         /// <summary>Remaining self-buff seconds from the Ultimate (+damage). Transient host state.</summary>
         public float UltimateBuffRemaining { get; set; }
         /// <summary>Remaining Paladin Shield armor-buff seconds. Transient host state.</summary>

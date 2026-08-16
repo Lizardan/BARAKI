@@ -217,6 +217,76 @@ namespace Game.Tests
             Assert.Greater(ally.CurrentHp, allyBefore);
         }
 
+        [Test]
+        public void TryGetAuraVisual_SiegeRegen_ShowsDisc_CatapultTraitDoesNot()
+        {
+            var combat = CreateCombat();
+            var siege = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Siege, SiegeStats(),
+                distanceAlongLane: 20f, bonusSlot: 4);
+            siege.Abilities = AbilityKitDefaults.CreateSiegeRegen();
+            siege.AbilityCooldownRemaining = new float[siege.Abilities.Length];
+
+            Assert.IsTrue(combat.TryGetAuraVisual(siege, out var radius, out _));
+            Assert.AreEqual(HeroAbilityRules.AuraRadius, radius, 0.001f);
+
+            var catapult = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Super, SuperStats(),
+                distanceAlongLane: 10f, bonusSlot: 6);
+            catapult.Abilities = AbilityKitDefaults.CreateSuperBonus();
+            catapult.AbilityCooldownRemaining = new float[catapult.Abilities.Length];
+
+            Assert.IsFalse(combat.TryGetAuraVisual(catapult, out _, out _));
+        }
+
+        [Test]
+        public void SuperAttackBand_RequiresMinRangeFive()
+        {
+            Assert.IsFalse(CombatRules.IsWithinAttackBand(4.9f, 10f, UnitRole.Super, UnitRole.Melee));
+            Assert.IsTrue(CombatRules.IsWithinAttackBand(5f, 10f, UnitRole.Super, UnitRole.Melee));
+            Assert.IsTrue(CombatRules.IsWithinAttackBand(10f, 10f, UnitRole.Super, UnitRole.Melee));
+            Assert.IsFalse(CombatRules.IsWithinAttackBand(10.1f, 10f, UnitRole.Super, UnitRole.Melee));
+            Assert.IsTrue(CombatRules.IsWithinAttackBand(12f, 12f, UnitRole.Super, UnitRole.Melee));
+            Assert.IsTrue(CombatRules.IsWithinAttackBand(1f, 8f, UnitRole.Ranged, UnitRole.Melee));
+        }
+
+        [Test]
+        public void SuperPendingShot_FiresIntoEmptyWhenTargetDies()
+        {
+            var combat = CreateCombat();
+            var attacker = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Super, SuperStats(),
+                distanceAlongLane: 20f, bonusSlot: 0);
+            var target = combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            target.WorldPosition = attacker.WorldPosition + new Vector3(8f, 0f, 0f);
+            var aim = target.WorldPosition;
+
+            combat.ReleasePendingProjectile(new CombatPendingProjectileState(
+                attacker.UnitId,
+                target.UnitId,
+                rawDamage: 40f,
+                delaySeconds: 0f,
+                aimWorldPosition: aim));
+
+            // Kill target, then release a second pending shot locked to aim.
+            combat.ApplyDamage(attacker, target, 10_000f, attacker.OwnerSlot);
+            Assert.IsFalse(target.IsAlive);
+
+            var beforeCount = combat.Projectiles.Count;
+            combat.ReleasePendingProjectile(new CombatPendingProjectileState(
+                attacker.UnitId,
+                target.UnitId,
+                rawDamage: 40f,
+                delaySeconds: 0f,
+                aimWorldPosition: aim));
+            Assert.Greater(combat.Projectiles.Count, beforeCount);
+            var last = combat.Projectiles[combat.Projectiles.Count - 1];
+            Assert.AreEqual(aim.x, last.TargetPosition.x, 0.01f);
+            Assert.AreEqual(aim.z, last.TargetPosition.z, 0.01f);
+        }
+
         static MatchCombatSystem CreateCombat(int seed = 12345)
         {
             var controller = new MatchController();

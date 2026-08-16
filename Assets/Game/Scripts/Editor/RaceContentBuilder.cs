@@ -78,7 +78,7 @@ namespace Game.Editor
                 CreateUnit(GameIds.Units.HumanFlying, GameIds.Races.Human, UnitRole.Flying,
                     90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
                 CreateUnit(GameIds.Units.HumanSuper, GameIds.Races.Human, UnitRole.Super,
-                    500f, 2f, 30f, 40f, 0.5f, 8f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+                    500f, 2f, 30f, 40f, 0.5f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
         }
 
@@ -98,7 +98,7 @@ namespace Game.Editor
                 CreateUnit(GameIds.Units.HumanFlyingBonus, GameIds.Races.Human, UnitRole.Flying,
                     100f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
                 CreateUnit(GameIds.Units.HumanSuperBonus, GameIds.Races.Human, UnitRole.Super,
-                    500f, 2f, 30f, 40f, 0.5f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+                    500f, 2f, 30f, 40f, 0.5f, 12f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
         }
 

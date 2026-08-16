@@ -1334,6 +1334,11 @@ namespace Game.Gameplay.Combat
                 }
             }
 
+            if (TickSuperAttackCommit(unit, deltaTime))
+            {
+                return;
+            }
+
             if (!TryGetEffectiveRoute(unit, out var route))
             {
                 return;
@@ -1368,11 +1373,21 @@ namespace Game.Gameplay.Combat
             if (buildingTarget != null)
             {
                 var buildingDistance = GetBuildingSurfaceDistance(unit.WorldPosition, buildingTarget);
-                var buildingReach = CombatRules.GetBuildingAttackReach(unit.Stats.AttackRange);
-                if (buildingDistance <= buildingReach)
+                var buildingMin = CombatRules.GetMinAttackRange(unit.Role);
+                if (CombatRules.IsWithinBuildingAttackBand(
+                        buildingDistance,
+                        unit.Stats.AttackRange,
+                        unit.Role))
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
                     TickBuildingAttack(unit, buildingTarget, deltaTime);
+                    return;
+                }
+
+                if (buildingDistance < buildingMin)
+                {
+                    unit.BehaviorState = UnitBehaviorState.Chase;
+                    TickRetreatFromPoint(unit, route, buildingTarget.WorldPosition, deltaTime);
                     return;
                 }
 
@@ -1385,11 +1400,22 @@ namespace Game.Gameplay.Combat
             if (target != null && CombatRules.CanAttackTarget(unit.Role, target.Role))
             {
                 var distance = HorizontalDistance(unit.WorldPosition, target.WorldPosition);
-                var reach = CombatRules.GetUnitAttackReach(unit.Stats.AttackRange, target.Role);
-                if (distance <= reach)
+                var minRange = CombatRules.GetMinAttackRange(unit.Role);
+                if (CombatRules.IsWithinAttackBand(
+                        distance,
+                        unit.Stats.AttackRange,
+                        unit.Role,
+                        target.Role))
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
                     TickAttack(unit, target, deltaTime);
+                    return;
+                }
+
+                if (distance < minRange)
+                {
+                    unit.BehaviorState = UnitBehaviorState.Chase;
+                    TickRetreatFromPoint(unit, route, target.WorldPosition, deltaTime);
                     return;
                 }
 
@@ -1497,8 +1523,11 @@ namespace Game.Gameplay.Combat
             }
 
             var distance = HorizontalDistance(unit.WorldPosition, target.WorldPosition);
-            var reach = CombatRules.GetUnitAttackReach(unit.Stats.AttackRange, target.Role);
-            if (distance > reach)
+            if (!CombatRules.IsWithinAttackBand(
+                    distance,
+                    unit.Stats.AttackRange,
+                    unit.Role,
+                    target.Role))
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
                 return;
@@ -1580,6 +1609,12 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
+                // Super artillery ignores targets inside min range (cannot fire there).
+                if (distance < CombatRules.GetMinAttackRange(unit.Role))
+                {
+                    continue;
+                }
+
                 var score = distance;
                 if (IsEngagedByAlly(other, unit.OwnerSlot))
                 {
@@ -1656,10 +1691,122 @@ namespace Game.Gameplay.Combat
 
         void ClearTarget(MatchUnitState unit)
         {
+            if (unit == null)
+            {
+                return;
+            }
+
+            if (unit.Role == UnitRole.Super
+                && (unit.AttackCommitRemainingSeconds > 0f || HasPendingProjectileFor(unit.UnitId)))
+            {
+                unit.CurrentTargetId = null;
+                unit.CurrentTargetBuildingInstanceId = null;
+                unit.BehaviorState = UnitBehaviorState.Attack;
+                return;
+            }
+
             unit.CurrentTargetId = null;
             unit.CurrentTargetBuildingInstanceId = null;
             unit.BehaviorState = UnitBehaviorState.Move;
             unit.TargetScanCooldown = 0f;
+        }
+
+        void CommitSuperAttackSwing(MatchUnitState attacker, Vector3 aimWorldPosition)
+        {
+            if (attacker == null || attacker.Role != UnitRole.Super)
+            {
+                return;
+            }
+
+            attacker.AttackCommitAimPosition = aimWorldPosition;
+            attacker.AttackCommitRemainingSeconds = GetUnitAttackInterval(attacker);
+            attacker.BehaviorState = UnitBehaviorState.Attack;
+        }
+
+        /// <summary>
+        /// Holds Super in Attack until the committed swing anim finishes (even if target died).
+        /// </summary>
+        bool TickSuperAttackCommit(MatchUnitState unit, float deltaTime)
+        {
+            if (unit.Role != UnitRole.Super || unit.AttackCommitRemainingSeconds <= 0f)
+            {
+                return false;
+            }
+
+            unit.AttackCommitRemainingSeconds = Mathf.Max(0f, unit.AttackCommitRemainingSeconds - deltaTime);
+            unit.BehaviorState = UnitBehaviorState.Attack;
+            UpdateFacingTowards(unit, unit.AttackCommitAimPosition, deltaTime);
+            unit.AttackCooldownRemaining = Mathf.Max(0f, unit.AttackCooldownRemaining - deltaTime);
+
+            if (unit.AttackCommitRemainingSeconds > 0f || HasPendingProjectileFor(unit.UnitId))
+            {
+                return true;
+            }
+
+            unit.CurrentTargetId = null;
+            unit.CurrentTargetBuildingInstanceId = null;
+            unit.BehaviorState = UnitBehaviorState.Move;
+            unit.TargetScanCooldown = 0f;
+            return false;
+        }
+
+        bool HasPendingProjectileFor(int attackerUnitId)
+        {
+            var active = _pendingProjectiles.Active;
+            for (var i = 0; i < active.Count; i++)
+            {
+                if (active[i].AttackerUnitId == attackerUnitId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void TickRetreatFromPoint(
+            MatchUnitState unit,
+            LaneRoute route,
+            Vector3 threatPosition,
+            float deltaTime)
+        {
+            var maxStep = unit.MarchMoveSpeed * deltaTime;
+            if (maxStep <= 0.0001f)
+            {
+                return;
+            }
+
+            var away = unit.WorldPosition - threatPosition;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.0001f)
+            {
+                away = -unit.FacingDirection;
+                away.y = 0f;
+            }
+
+            if (away.sqrMagnitude < 0.0001f)
+            {
+                away = Vector3.forward;
+            }
+
+            away.Normalize();
+            var destination = unit.WorldPosition + away * Mathf.Max(maxStep, 1f);
+            var allies = CollectAlliesForAvoidance(unit);
+            var previousPosition = unit.WorldPosition;
+            var proposed = UnitLocomotionRules.MoveTowards(
+                unit.WorldPosition,
+                destination,
+                maxStep,
+                allies,
+                out var moveFacing,
+                unit.UnitId);
+            unit.WorldPosition = ApplyWalkableMovement(
+                route,
+                previousPosition,
+                proposed,
+                maxStep,
+                unit.MarchProgressDistance);
+            ApplyMoveFacing(unit, moveFacing, previousPosition, deltaTime);
         }
 
         BuildingState GetBuildingByInstanceId(int? instanceId)
@@ -1797,8 +1944,7 @@ namespace Game.Gameplay.Combat
             }
 
             var distance = GetBuildingSurfaceDistance(unit.WorldPosition, building);
-            var buildingReach = CombatRules.GetBuildingAttackReach(unit.Stats.AttackRange);
-            if (distance > buildingReach)
+            if (!CombatRules.IsWithinBuildingAttackBand(distance, unit.Stats.AttackRange, unit.Role))
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
                 return;
@@ -1842,12 +1988,14 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            CommitSuperAttackSwing(attacker, building.WorldPosition);
             _pendingProjectiles.Spawn(new CombatPendingProjectileState(
                 attacker.UnitId,
                 targetUnitId: -1,
                 rawDamage,
                 impactDelay,
-                targetBuildingInstanceId: building.InstanceId));
+                targetBuildingInstanceId: building.InstanceId,
+                aimWorldPosition: building.WorldPosition));
         }
 
         MatchUnitState GetUnitById(int? unitId)
@@ -2082,11 +2230,13 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            CommitSuperAttackSwing(attacker, target.WorldPosition);
             _pendingProjectiles.Spawn(new CombatPendingProjectileState(
                 attacker.UnitId,
                 target.UnitId,
                 rawDamage,
-                impactDelay));
+                impactDelay,
+                aimWorldPosition: target.WorldPosition));
         }
 
         public void ReleasePendingProjectile(CombatPendingProjectileState pending)
@@ -2102,57 +2252,78 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            var usesCatapult = HumanBonusUnitRules.UsesCatapultSplash(attacker.BonusSlot);
+            var isParabolic = usesCatapult || CombatAttackRules.UsesParabolicArc(attacker.Role);
+            var start = CombatProjectileTrajectory.GetProjectileOrigin(attacker);
+
             if (pending.TargetBuildingInstanceId.HasValue)
             {
                 var building = GetBuildingByInstanceId(pending.TargetBuildingInstanceId);
-                if (building == null || building.IsRuins)
+                var aim = building != null && !building.IsRuins
+                    ? building.WorldPosition
+                    : pending.AimWorldPosition;
+                if (aim == default)
                 {
                     return;
                 }
 
-                var start = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
-                var end = CombatProjectileTrajectory.GetProjectileTarget(building.WorldPosition);
+                var end = CombatProjectileTrajectory.GetProjectileTarget(aim);
                 var duration = CombatProjectileTrajectory.ComputeFlightDuration(
                     start,
                     end,
                     CombatAttackRules.ProjectileSpeed);
-                var projectile = _projectiles.SpawnBuildingAttack(
-                    attacker.UnitId,
-                    building.InstanceId,
-                    attacker.OwnerSlot,
-                    attacker.Role,
-                    GetPlayerRaceId(attacker.OwnerSlot),
-                    pending.RawDamage,
-                    duration,
-                    start,
-                    end);
+                var projectile = building != null && !building.IsRuins
+                    ? _projectiles.SpawnBuildingAttack(
+                        attacker.UnitId,
+                        building.InstanceId,
+                        attacker.OwnerSlot,
+                        attacker.Role,
+                        GetPlayerRaceId(attacker.OwnerSlot),
+                        pending.RawDamage,
+                        duration,
+                        start,
+                        end,
+                        isParabolic,
+                        appliesSplashAoe: usesCatapult)
+                    : _projectiles.Spawn(
+                        attacker.UnitId,
+                        targetUnitId: -1,
+                        attacker.OwnerSlot,
+                        attacker.Role,
+                        GetPlayerRaceId(attacker.OwnerSlot),
+                        pending.RawDamage,
+                        duration,
+                        start,
+                        end,
+                        isParabolic,
+                        appliesSplashAoe: usesCatapult);
                 EmitNetworkProjectileSpawn(projectile);
                 return;
             }
 
             var target = GetUnitById(pending.TargetUnitId);
-            if (target == null || !target.IsAlive)
+            var unitAim = target != null && target.IsAlive
+                ? target.WorldPosition
+                : pending.AimWorldPosition;
+            if (unitAim == default)
             {
                 return;
             }
 
-            var shotStart = CombatProjectileTrajectory.GetProjectileOrigin(attacker.WorldPosition);
-            var shotEnd = CombatProjectileTrajectory.GetProjectileTarget(target.WorldPosition);
-            var usesCatapult = HumanBonusUnitRules.UsesCatapultSplash(attacker.BonusSlot);
-            var isParabolic = usesCatapult || CombatAttackRules.UsesParabolicArc(attacker.Role);
+            var shotEnd = CombatProjectileTrajectory.GetProjectileTarget(unitAim);
             var flight = CombatProjectileTrajectory.ComputeFlightDuration(
-                shotStart,
+                start,
                 shotEnd,
                 CombatAttackRules.ProjectileSpeed);
             var unitProjectile = _projectiles.Spawn(
                 attacker.UnitId,
-                target.UnitId,
+                target != null && target.IsAlive ? target.UnitId : -1,
                 attacker.OwnerSlot,
                 attacker.Role,
                 GetPlayerRaceId(attacker.OwnerSlot),
                 pending.RawDamage,
                 flight,
-                shotStart,
+                start,
                 shotEnd,
                 isParabolic,
                 appliesSplashAoe: usesCatapult);
@@ -2167,6 +2338,19 @@ namespace Game.Gameplay.Combat
                     projectile.TargetBuildingInstanceId.Value,
                     projectile.RawDamage,
                     projectile.AttackerOwnerSlot);
+
+                if (projectile.AppliesSplashAoe)
+                {
+                    var attackerVsBuilding = GetUnitById(projectile.AttackerUnitId);
+                    ApplySplashDamage(
+                        attackerVsBuilding,
+                        projectile.TargetPosition,
+                        projectile.RawDamage * HumanBonusUnitRules.CatapultAoeDamagePercent,
+                        HumanBonusUnitRules.CatapultAoeRadius,
+                        projectile.AttackerOwnerSlot,
+                        excludeUnitId: -1);
+                }
+
                 return;
             }
 
@@ -2488,12 +2672,22 @@ namespace Game.Gameplay.Combat
 
         /// <summary>
         /// Resolves the persistent aura disc a unit should display: radius + packed color of its
-        /// first unlocked passive aura (used by snapshot capture on the host).
+        /// first unlocked passive <see cref="AuraBehaviour"/> (used by snapshot capture on the host).
+        /// Passive traits that only reuse <c>Radius</c> for on-hit AoE / splash (cleave, catapult)
+        /// must not draw a disc.
         /// </summary>
-        public bool TryGetAuraVisual(MatchUnitState unit, out float radius, out int packedColor)
+        public bool TryGetAuraVisual(MatchUnitState unit, out float radius, out int packedColor) =>
+            TryGetAuraVisual(unit, out radius, out packedColor, out _);
+
+        public bool TryGetAuraVisual(
+            MatchUnitState unit,
+            out float radius,
+            out int packedColor,
+            out int abilityId)
         {
             radius = 0f;
             packedColor = 0;
+            abilityId = 0;
             if (unit == null || !unit.IsAlive || unit.Abilities == null)
             {
                 return false;
@@ -2505,15 +2699,17 @@ namespace Game.Gameplay.Combat
                 if (def == null
                     || !def.IsPassiveAura
                     || def.Radius <= 0f
+                    || def.Behaviour is not AuraBehaviour
                     || !IsAbilitySlotUnlocked(unit, def))
                 {
                     continue;
                 }
 
                 radius = def.Radius;
+                abilityId = def.AbilityId;
                 var color = def.Fx.Kind != FxKind.Plus && def.Fx.Color != default(Color)
                     ? def.Fx.Color
-                    : new Color(0.85f, 0.85f, 0.85f, 1f);
+                    : PassiveAuraFxRules.ResolveTint(abilityId);
                 packedColor = AbilityFx.ToRgbaInt(color);
                 return true;
             }

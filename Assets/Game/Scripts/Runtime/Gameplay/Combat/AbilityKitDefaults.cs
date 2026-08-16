@@ -232,7 +232,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 flatBonus: HumanBonusUnitRules.RegenAuraFlatBonus,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.Heal)),
+                fx: AbilityFx.Ring(AbilityFxColors.AuraHpRegen)),
         };
 
         /// <summary>Melee unit bonus: on-hit cleave (AbilityId 51).</summary>
@@ -305,7 +305,7 @@ namespace Game.Gameplay.Combat
             Passive(
                 AbilityIds.SuperCatapult,
                 "Catapult",
-                "Параболический снаряд: splash 50% урона в радиусе 3.",
+                "Параболический снаряд: splash 50% урона в радиусе 3 от точки прилёта.",
                 0,
                 Trait(),
                 unlock: AbilityUnlock.Always,

@@ -24,9 +24,10 @@ namespace Game.Gameplay.Combat
         public const float HybridMeleeDamageMin = 8f;
         public const float HybridMeleeDamageMax = 10f;
         public const float OnDeathSpawnChance = 0.25f;
-        public const float CatapultRangeBonus = 2f;
+        public const float CatapultRangeBonus = 2f; // base Super 10 → BONUS 12
         public const float CatapultAoeRadius = 3f;
         public const float CatapultAoeDamagePercent = 0.5f;
+        public const float CatapultSplashDiscSeconds = 1f;
         public const int RegenAuraAbilityId = 50;
         public const float RegenAuraFlatBonus = 1f;
 

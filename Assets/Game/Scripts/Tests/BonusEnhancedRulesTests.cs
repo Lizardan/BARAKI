@@ -48,7 +48,7 @@ namespace Game.Tests
             Assert.AreEqual(80f, ResolveBonus(catalog, UnitRole.Caster).MaxHp, 0.01f);
             Assert.AreEqual(250f, ResolveBonus(catalog, UnitRole.Siege).MaxHp, 0.01f);
             Assert.AreEqual(100f, ResolveBonus(catalog, UnitRole.Flying).MaxHp, 0.01f);
-            Assert.AreEqual(10f, ResolveBonus(catalog, UnitRole.Super).AttackRange, 0.01f);
+            Assert.AreEqual(12f, ResolveBonus(catalog, UnitRole.Super).AttackRange, 0.01f);
         }
 
         [Test]
