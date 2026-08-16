@@ -28,3 +28,7 @@ Listen-host (host-as-server) + NGO. Клиенты **не** тикают сим�
 `MatchNetworkAuthority.OnNetworkDespawn` при живом session handle оставляет `TickMode.Client` — **не** `Offline`. Иначе каждый клиент начинает свою симуляцию (split-brain), бонус-оверлей «внезапно появляется», и они играют не друг с другом.
 
 Capture для миграции: last-good bytes, иначе **локальный** `MatchController` любого пира (не только слот бывшего хоста). Пустой last-good на клиентах — норма, если снапшот не дошёл.
+
+## Прочее
+
+- `MatchLobbyHeartbeat.Ensure()` вне Play Mode возвращает `null` (нельзя `DontDestroyOnLoad` в EditMode). Вызовы `MatchNetworkSession` (`ApplyHandle`/`Shutdown`) используют `?.`.

@@ -15,6 +15,11 @@ namespace Game.Gameplay.Networking
 
         public static MatchLobbyHeartbeat Ensure()
         {
+            if (!Application.isPlaying)
+            {
+                return null;
+            }
+
             if (s_instance != null)
             {
                 return s_instance;

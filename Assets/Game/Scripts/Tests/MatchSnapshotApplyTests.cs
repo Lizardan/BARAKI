@@ -202,7 +202,7 @@ namespace Game.Tests
             var host = new MatchController();
             host.StartMatch(MatchConfig.MvpDefault(2));
             host.BeginEarlyPhase();
-            var rangedStats = new UnitCombatStats(UnitRole.Ranged, 100f, 0f, 1f, 8f, 0.1f, 12f, 0f, 1);
+            var rangedStats = new UnitCombatStats(UnitRole.Ranged, 100f, 0f, 1f, 8f, 10f, 12f, 0f, 1);
             var enemyStats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 0.1f, 1f, 0f, 1);
             var ranged = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Ranged, rangedStats);
             var enemy = host.Combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, enemyStats);

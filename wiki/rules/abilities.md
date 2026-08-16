@@ -68,8 +68,10 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 ## Runtime-поток каста (`MatchCombatSystem`)
 
 1. `AttachAbilityKit` (L2240): копирует ссылки def-ов с префаба героя в `MatchUnitState.Abilities`.
-2. Каждый тик `TryCastKitAbilities` (L2299): тикает кулдауны слотов, затем по порядку кита
-   для каждого активного def: `IsAbilitySlotUnlocked` → кулдаун слота → `TryCastAbility`.
+2. Кулдауны слотов тикает `TickAbilityCooldowns` **каждый тик** в начале `TickUnit` — в том числе
+   во время cast-lock (эффективный кулдаун = значение def-а, без накидки на анимацию).
+   Затем `TryCastKitAbilities` (L2299) по порядку кита для каждого активного def:
+   `IsAbilitySlotUnlocked` → кулдаун слота → `TryCastAbility`.
    Кастованный слот **прерывает** остальные (приоритет = позиция в списке).
 3. `IsAbilitySlotUnlocked` (L2280): `Always` / `HeroLevel` (`unit.Level >= UnlockValue`) /
    `MagicLevel` (`GetMagicLevel(ownerSlot) >= UnlockValue`).
@@ -83,6 +85,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
    - `AbilityAnimKind.Cast` (Mend, Group Heal, Rally, Shield, …) → `BehaviorState.Cast`,
      лок = `CastLockSeconds` (~1.1 с).
    Эффект умения применяется сразу; лок только на AI/анимацию.
+   Когда cast-lock истекает в текущем тике, юнит **не** возвращается раньше времени: в том же тике
+   кастует следующую готовую способность (кулдауны уже могли обнулиться — см. п.2).
 6. Пассивные ауры кастуются всегда через `QueryAura` (см. ниже).
 
 ## Анимации способностей (`AbilityAnimRules`)

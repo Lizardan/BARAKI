@@ -1249,6 +1249,8 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
+            TickAbilityCooldowns(unit, deltaTime);
+
             if (unit.FrozenRemainingSeconds > 0f)
             {
                 unit.FrozenRemainingSeconds = Mathf.Max(0f, unit.FrozenRemainingSeconds - deltaTime);
@@ -1263,7 +1265,10 @@ namespace Game.Gameplay.Combat
                 unit.BehaviorState = unit.CastLockUsesAttackAnim
                     ? UnitBehaviorState.Attack
                     : UnitBehaviorState.Cast;
-                return;
+                if (unit.CastLockRemainingSeconds > 0f)
+                {
+                    return;
+                }
             }
 
             if (!TryGetEffectiveRoute(unit, out var route))
@@ -2389,8 +2394,28 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// Ticks per-slot cooldowns, then casts the first unlocked ready active ability in kit order.
+        /// Ticks per-slot cooldowns every tick (even during cast-lock), then casts the first
+        /// unlocked ready active ability in kit order.
         /// </summary>
+        void TickAbilityCooldowns(MatchUnitState unit, float deltaTime)
+        {
+            var defs = unit.Abilities;
+            if (defs == null || defs.Length == 0)
+            {
+                return;
+            }
+
+            if (unit.AbilityCooldownRemaining == null || unit.AbilityCooldownRemaining.Length != defs.Length)
+            {
+                unit.AbilityCooldownRemaining = new float[defs.Length];
+            }
+
+            for (var i = 0; i < defs.Length; i++)
+            {
+                unit.AbilityCooldownRemaining[i] = Mathf.Max(0f, unit.AbilityCooldownRemaining[i] - deltaTime);
+            }
+        }
+
         bool TryCastKitAbilities(MatchUnitState unit, float deltaTime)
         {
             var defs = unit.Abilities;
@@ -2399,20 +2424,10 @@ namespace Game.Gameplay.Combat
                 return false;
             }
 
-            if (unit.AbilityCooldownRemaining == null || unit.AbilityCooldownRemaining.Length != defs.Length)
-            {
-                unit.AbilityCooldownRemaining = new float[defs.Length];
-            }
-
             unit.UltimateBuffRemaining = Mathf.Max(0f, unit.UltimateBuffRemaining - deltaTime);
             if (unit.UltimateBuffRemaining <= 0f)
             {
                 unit.UltimateBuffPercent = 0f;
-            }
-
-            for (var i = 0; i < defs.Length; i++)
-            {
-                unit.AbilityCooldownRemaining[i] = Mathf.Max(0f, unit.AbilityCooldownRemaining[i] - deltaTime);
             }
 
             for (var i = 0; i < defs.Length; i++)

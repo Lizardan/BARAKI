@@ -77,7 +77,7 @@ namespace Game.Gameplay.Networking
 
             IsNetworked = MatchNetworkEndpoint.TryParse(handle.TransportEndpoint, out var endpoint)
                             && endpoint.IsNetworked;
-            MatchLobbyHeartbeat.Ensure().Bind(handle.LobbyId);
+            MatchLobbyHeartbeat.Ensure()?.Bind(handle.LobbyId);
         }
 
         public static async UniTask<bool> TryStartTransportAsync(
@@ -232,7 +232,7 @@ namespace Game.Gameplay.Networking
             ListenHostSlot = NetworkLobbySlotRules.HostSlot;
             s_cachedRoster = null;
             HostMigrationSession.Clear();
-            MatchLobbyHeartbeat.Ensure().Bind(null);
+            MatchLobbyHeartbeat.Ensure()?.Bind(null);
             MatchPauseGate.SetDisconnectHoldPaused(false);
             MatchPauseGate.SetUserPaused(false);
             // Leaving a cleared session must not leave stale joinable lobby presence.

@@ -523,6 +523,7 @@ namespace Game.Tests
             combat.UnitKilled += e => killEvent = e;
 
             combat.Tick(0.2f);
+            combat.Tick(5.5f);
 
             Assert.AreEqual(1, combat.Units.Count);
             Assert.AreEqual(killerGoldBefore + 12, controller.Players[0].Gold);
@@ -719,6 +720,7 @@ namespace Game.Tests
             combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meetDistance1);
             combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats, meetDistance1 + 10f);
 
+            combat.Tick(0.2f);
             combat.Tick(0.2f);
             Assert.AreEqual(2, combat.Units.Count);
 

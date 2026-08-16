@@ -51,10 +51,10 @@ namespace Game.Tests
         [Test]
         public void CreateForLocalParticipants_AssignsUniqueFirstSlots()
         {
-            var assignment = MatchSlotAssignment.CreateForLocalParticipants(6, localParticipantCount: 2, new Random(3));
+            var assignment = MatchSlotAssignment.CreateForLocalParticipants(5, localParticipantCount: 2, new Random(3));
 
             Assert.AreEqual(assignment.SlotOrder[0], assignment.LocalPlayerSlot);
-            Assert.AreEqual(6, assignment.SlotOrder.Length);
+            Assert.AreEqual(5, assignment.SlotOrder.Length);
         }
     }
 }
