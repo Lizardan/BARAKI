@@ -485,7 +485,8 @@ namespace Game.Gameplay.Match
                 snapshot.Units,
                 snapshot.SpellCasts,
                 CombatCatalog,
-                snapshot.Projectiles);
+                snapshot.Projectiles,
+                snapshot.MatchTimeSeconds);
             LinkChampionUnitsFromCombat();
 
             MatchTimeSeconds = snapshot.MatchTimeSeconds;

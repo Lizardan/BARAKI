@@ -362,6 +362,45 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeSnapshot_BuildsRenderSamplesForInterpolation()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            var stats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 1f, 1.5f, 4f, 1);
+            var unit = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats, 5f);
+            unit.WorldPosition = new Vector3(12f, 0.15f, 3f);
+            unit.FacingDirection = Vector3.right;
+            unit.AttackSwingSerial = 4;
+
+            var first = MatchSnapshotCodec.Capture(host);
+
+            host.Tick(1f);
+            unit.WorldPosition = new Vector3(14f, 0.15f, 3f);
+            unit.FacingDirection = Vector3.back;
+            unit.AttackSwingSerial = 5;
+            var second = MatchSnapshotCodec.Capture(host);
+            Assert.Greater(second.MatchTimeSeconds, first.MatchTimeSeconds);
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(first);
+            client.ApplyAuthoritativeSnapshot(second);
+
+            var midTime = (first.MatchTimeSeconds + second.MatchTimeSeconds) * 0.5f;
+            Assert.IsTrue(
+                client.Combat.TryGetUnitRenderPair(unit.UnitId, midTime, out var prev, out var next, out var alpha));
+            Assert.AreEqual(first.MatchTimeSeconds, prev.TimeSeconds);
+            Assert.AreEqual(second.MatchTimeSeconds, next.TimeSeconds);
+            Assert.Greater(alpha, 0.2f);
+            Assert.Less(alpha, 0.8f);
+
+            var interpolated = Vector3.Lerp(prev.Position, next.Position, alpha);
+            Assert.Greater(interpolated.x, 12f);
+            Assert.Less(interpolated.x, 14f);
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_RetargetsCenterOpponentSlot()
         {
             var host = new MatchController();

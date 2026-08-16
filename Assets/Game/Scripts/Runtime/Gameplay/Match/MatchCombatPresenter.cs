@@ -177,34 +177,73 @@ namespace Game.Gameplay.Match
                 }
 
                 var isFirstSpawn = !visual.HasSpawned;
-                if (isFirstSpawn
-                    || !NetworkUnitVisualRules.ShouldLerpPositions(_runtime.TickMode))
+                var renderPosition = position;
+                var renderBehavior = unit.BehaviorState;
+                var renderAttackSwing = unit.AttackSwingSerial;
+                Quaternion? renderRotation = null;
+
+                if (_runtime.TickMode == MatchTickMode.Client && !isFirstSpawn)
                 {
-                    visual.Root.position = position;
-                    visual.HasSpawned = true;
+                    // Snapshot interpolation: sample the authoritative buffer at renderTime
+                    // (server time minus a small delay), so 15 Hz snapshots become smooth motion.
+                    var renderTime = ResolveClientRenderTime(controller);
+                    if (combat.TryGetUnitRenderPair(
+                            unit.UnitId,
+                            renderTime,
+                            out var prev,
+                            out var next,
+                            out var alpha))
+                    {
+                        renderPosition = Vector3.Lerp(prev.Position, next.Position, alpha);
+                        renderRotation = NetworkUnitVisualRules.ResolveRenderFacing(prev.Facing, next.Facing, alpha);
+                        if (alpha < 0.5f)
+                        {
+                            renderBehavior = prev.BehaviorState;
+                            renderAttackSwing = prev.AttackSwingSerial;
+                        }
+                        else
+                        {
+                            renderBehavior = next.BehaviorState;
+                            renderAttackSwing = next.AttackSwingSerial;
+                        }
+                    }
+                }
+
+                if (_runtime.TickMode == MatchTickMode.Client || isFirstSpawn)
+                {
+                    visual.Root.position = renderPosition;
                 }
                 else
                 {
                     visual.Root.position = NetworkUnitVisualRules.StepToward(
                         visual.Root.position,
-                        position,
-                        Time.deltaTime);
+                        renderPosition,
+                        Time.deltaTime,
+                        NetworkUnitVisualRules.HostCatchUpPerSecond);
                 }
 
+                visual.HasSpawned = true;
                 visual.IsParkedAtBase = unit.IsParkedAtBase;
 
-                var facing = unit.FacingDirection;
-                facing.y = 0f;
-                if (facing.sqrMagnitude > 0.0001f)
+                if (renderRotation.HasValue)
                 {
-                    var targetRotation = Quaternion.LookRotation(facing.normalized, Vector3.up);
-                    // Instant facing only on first visual spawn; otherwise keep smooth turn.
-                    visual.Root.rotation = isFirstSpawn
-                        ? targetRotation
-                        : Quaternion.Slerp(
-                            visual.Root.rotation,
-                            targetRotation,
-                            8f * Time.deltaTime);
+                    visual.Root.rotation = renderRotation.Value;
+                }
+                else
+                {
+                    var facing = unit.FacingDirection;
+                    facing.y = 0f;
+                    if (facing.sqrMagnitude > 0.0001f)
+                    {
+                        var targetRotation = Quaternion.LookRotation(facing.normalized, Vector3.up);
+                        // Instant facing only on first visual spawn; otherwise keep smooth turn.
+                        visual.Root.rotation = isFirstSpawn
+                            ? targetRotation
+                            : Quaternion.Slerp(
+                                visual.Root.rotation,
+                                targetRotation,
+                                8f * Time.deltaTime);
+                    }
                 }
 
                 if (visual.Model != null)
@@ -212,7 +251,7 @@ namespace Game.Gameplay.Match
                     visual.Model.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 }
 
-                DriveAnimator(visual, unit, combat);
+                DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing);
                 TickPendingImpactFx(visual, unit, combat, Time.deltaTime);
 
                 visual.StatusBars.SetHealth(unit.CurrentHp / unit.Stats.MaxHp);
@@ -306,7 +345,12 @@ namespace Game.Gameplay.Match
             }
         }
 
-        void DriveAnimator(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
+        void DriveAnimator(
+            UnitVisual visual,
+            MatchUnitState unit,
+            MatchCombatSystem combat,
+            UnitBehaviorState behaviorState,
+            int attackSwingSerial)
         {
             if (visual.Animator == null)
             {
@@ -321,22 +365,22 @@ namespace Game.Gameplay.Match
             }
 
             var fireAttack = false;
-            if (unit.AttackSwingSerial != visual.LastAttackSwingSerial)
+            if (attackSwingSerial != visual.LastAttackSwingSerial)
             {
-                visual.LastAttackSwingSerial = unit.AttackSwingSerial;
-                fireAttack = unit.AttackSwingSerial > 0;
+                visual.LastAttackSwingSerial = attackSwingSerial;
+                fireAttack = attackSwingSerial > 0;
             }
 
-            var enteringCast = unit.BehaviorState == UnitBehaviorState.Cast
+            var enteringCast = behaviorState == UnitBehaviorState.Cast
                 && visual.LastBehaviorState != UnitBehaviorState.Cast;
-            visual.LastBehaviorState = unit.BehaviorState;
+            visual.LastBehaviorState = behaviorState;
 
             var attackInterval = combat.GetAttackIntervalSeconds(unit);
             var attackClipLength = AbilityAnimRules.ResolveAttackClipSeconds(unit.Role, unit.HeroSlot);
             UnitCombatAnimatorDriver.Tick(
                 visual.Animator,
                 visual.AnimPlayback,
-                unit.BehaviorState,
+                behaviorState,
                 fireAttack,
                 fireDeath: false,
                 unit.MarchMoveSpeed,
@@ -351,6 +395,17 @@ namespace Game.Gameplay.Match
                 visual.PendingImpactFxSeconds =
                     CombatAttackRules.ResolveSwingImpactDelay(attackInterval, unit.Role);
             }
+        }
+
+        float ResolveClientRenderTime(MatchController controller)
+        {
+            var serverTimeEstimate = controller.MatchTimeSeconds;
+            if (_runtime != null && _runtime.LastSnapshotArrivalRealtime >= 0f)
+            {
+                serverTimeEstimate += Time.time - _runtime.LastSnapshotArrivalRealtime;
+            }
+
+            return serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds;
         }
 
         void TickPendingImpactFx(

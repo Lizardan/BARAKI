@@ -37,6 +37,7 @@ namespace Game.Gameplay.Combat
         readonly List<AbilityCastEvent> _presenterAbilityCasts = new();
         readonly List<HeroHealZoneState> _healZones = new();
         readonly List<MatchProjectileSnapshot> _networkProjectileSpawns = new();
+        readonly Dictionary<int, UnitRenderTrack> _renderTracks = new();
         int _spellCastSerial;
         int _lastAppliedSpellSerial;
         int _lastAppliedProjectileId;
@@ -733,7 +734,8 @@ namespace Game.Gameplay.Combat
             MatchUnitSnapshot[] snapshots,
             MatchSpellSnapshot[] spellCasts = null,
             ICombatUnitCatalog catalog = null,
-            MatchProjectileSnapshot[] projectiles = null)
+            MatchProjectileSnapshot[] projectiles = null,
+            float matchTimeSeconds = 0f)
         {
             _spatialGrid.Clear();
             var keep = new HashSet<int>();
@@ -748,7 +750,7 @@ namespace Game.Gameplay.Combat
                     }
 
                     keep.Add(snap.UnitId);
-                    UpsertAuthoritativeUnit(snap, catalog);
+                    UpsertAuthoritativeUnit(snap, catalog, matchTimeSeconds);
                 }
             }
 
@@ -760,6 +762,7 @@ namespace Game.Gameplay.Combat
                 }
 
                 _unitById.Remove(_units[i].UnitId);
+                _renderTracks.Remove(_units[i].UnitId);
                 var last = _units.Count - 1;
                 if (i != last)
                 {
@@ -771,6 +774,28 @@ namespace Game.Gameplay.Combat
 
             ApplyAuthoritativeSpellCasts(spellCasts);
             ApplyAuthoritativeProjectiles(projectiles);
+        }
+
+        /// <summary>
+        /// Client rendering: returns the authoritative sample pair bracketing
+        /// <paramref name="renderTimeSeconds"/> for snapshot interpolation.
+        /// </summary>
+        public bool TryGetUnitRenderPair(
+            int unitId,
+            float renderTimeSeconds,
+            out UnitRenderSample prev,
+            out UnitRenderSample next,
+            out float alpha)
+        {
+            if (_renderTracks.TryGetValue(unitId, out var track))
+            {
+                return track.TryGetPair(renderTimeSeconds, out prev, out next, out alpha);
+            }
+
+            prev = default;
+            next = default;
+            alpha = 0f;
+            return false;
         }
 
         /// <summary>
@@ -900,7 +925,7 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        void UpsertAuthoritativeUnit(MatchUnitSnapshot snap, ICombatUnitCatalog catalog)
+        void UpsertAuthoritativeUnit(MatchUnitSnapshot snap, ICombatUnitCatalog catalog, float matchTimeSeconds)
         {
             MatchSnapshotCodec.TryParseUnitRole(snap.UnitDefId, out var role);
             var laneId = string.IsNullOrEmpty(snap.LaneId) ? GameIds.Lanes.Center : snap.LaneId;
@@ -915,6 +940,8 @@ namespace Game.Gameplay.Combat
                 facing.Normalize();
             }
 
+            var behaviorState = (UnitBehaviorState)snap.BehaviorState;
+
             if (_unitById.TryGetValue(snap.UnitId, out var existing)
                 && existing.LaneId == laneId
                 && existing.Role == role)
@@ -923,13 +950,14 @@ namespace Game.Gameplay.Combat
                 existing.CurrentMana = Mathf.Max(0f, snap.Mana);
                 existing.WorldPosition = position;
                 existing.FacingDirection = facing;
-                existing.BehaviorState = (UnitBehaviorState)snap.BehaviorState;
+                existing.BehaviorState = behaviorState;
                 existing.AttackSwingSerial = snap.AttackSwingSerial;
                 existing.IsParkedAtBase = snap.IsParkedAtBase;
                 existing.MarchProgressDistance = _routes != null
                     && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
                     ? route.ProjectDistance(position)
                     : existing.MarchProgressDistance;
+                AddRenderSample(existing.UnitId, matchTimeSeconds, position, facing, behaviorState, snap.AttackSwingSerial);
                 return;
             }
 
@@ -937,6 +965,7 @@ namespace Game.Gameplay.Combat
             {
                 _unitById.Remove(existing.UnitId);
                 _units.Remove(existing);
+                _renderTracks.Remove(existing.UnitId);
             }
 
             var stats = ResolveSnapshotStats(role, snap.OwnerSlot, snap.Health, snap.Level, snap.HeroSlot, catalog);
@@ -968,6 +997,24 @@ namespace Game.Gameplay.Combat
             _unitById[unit.UnitId] = unit;
             AttachAbilities(unit);
             _nextUnitId = Mathf.Max(_nextUnitId, snap.UnitId + 1);
+            AddRenderSample(unit.UnitId, matchTimeSeconds, position, facing, behaviorState, snap.AttackSwingSerial);
+        }
+
+        void AddRenderSample(
+            int unitId,
+            float matchTimeSeconds,
+            Vector3 position,
+            Vector3 facing,
+            UnitBehaviorState behaviorState,
+            int attackSwingSerial)
+        {
+            if (!_renderTracks.TryGetValue(unitId, out var track))
+            {
+                track = new UnitRenderTrack();
+                _renderTracks[unitId] = track;
+            }
+
+            track.Add(matchTimeSeconds, position, facing, behaviorState, attackSwingSerial);
         }
 
         UnitCombatStats ResolveSnapshotStats(

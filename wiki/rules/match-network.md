@@ -29,6 +29,23 @@ Listen-host (host-as-server) + NGO. Клиенты **не** тикают сим�
 
 Capture для миграции: last-good bytes, иначе **локальный** `MatchController` любого пира (не только слот бывшего хоста). Пустой last-good на клиентах — норма, если снапшот не дошёл.
 
+## Плавный рендер юнитов (snapshot interpolation)
+
+Хост тикает симуляцию 30 Гц, снапшоты идут 15 Гц + джиттер — прямое применение на клиенте дёргает
+юнитов. Рендер клиентов построен на **snapshot interpolation** по серверному времени:
+
+- `MatchCombatSystem.ApplyAuthoritativeUnits(..., matchTimeSeconds)` пишет каждый снапшот юнита в
+  `UnitRenderTrack` (кольцевой буфер до 8 сэмплов, дубликаты/обратные таймстампы отбрасываются).
+  Один track на `unitId`, чистится при удалении юнита.
+- Презентер (`MatchCombatPresenter`) на клиенте семплирует пару по `renderTime`:
+  `serverTimeEstimate = snapshot.MatchTimeSeconds + (Time.time - MatchRuntime.LastSnapshotArrivalRealtime)`,
+  `renderTime = serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds` (0.13 с ≈ 2 снапшота).
+  Позиция — `Vector3.Lerp(prev, next, alpha)`, поворот — `ResolveRenderFacing` (анти-crossing по world-up),
+  `BehaviorState` / `AttackSwingSerial` — из ближайшего по `alpha` сэмпла (анимации тоже плавные).
+- Хост/оффлайн: позиция догоняется `StepToward(HostCatchUpPerSecond = 40f)` (тики 30 Гц «ступенчатые»),
+  поворот — прежний `Slerp(8f * dt)`. Первый спавн визуала всегда — мгновенный snap.
+- `LastSnapshotArrivalRealtime` сбрасывается на `OnSessionStarted` и не выставляется вне `ApplyNetworkSnapshot`.
+
 ## Прочее
 
 - `MatchLobbyHeartbeat.Ensure()` вне Play Mode возвращает `null` (нельзя `DontDestroyOnLoad` в EditMode). Вызовы `MatchNetworkSession` (`ApplyHandle`/`Shutdown`) используют `?.`.

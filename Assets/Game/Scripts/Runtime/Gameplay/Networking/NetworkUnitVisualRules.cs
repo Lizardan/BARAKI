@@ -7,6 +7,12 @@ namespace Game.Gameplay.Networking
     {
         public const float DefaultCatchUpPerSecond = 14f;
 
+        /// <summary>Render-delay applied on clients before sampling the snapshot buffer (≈2 snapshots).</summary>
+        public const float ClientInterpDelaySeconds = 0.13f;
+
+        /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
+        public const float HostCatchUpPerSecond = 40f;
+
         public static Vector3 StepToward(
             Vector3 current,
             Vector3 target,
@@ -24,5 +30,24 @@ namespace Game.Gameplay.Networking
 
         public static bool ShouldLerpPositions(MatchTickMode tickMode) =>
             tickMode == MatchTickMode.Client;
+
+        /// <summary>Resolves the render facing between two snapshot facings without crossing the world-up axis.</summary>
+        public static Quaternion ResolveRenderFacing(Vector3 prevFacing, Vector3 nextFacing, float alpha)
+        {
+            var from = prevFacing.sqrMagnitude > 0.0001f ? prevFacing.normalized : Vector3.forward;
+            var to = nextFacing.sqrMagnitude > 0.0001f ? nextFacing.normalized : Vector3.forward;
+            if (Vector3.Dot(from, to) < 0f)
+            {
+                return Quaternion.LookRotation(to, Vector3.up);
+            }
+
+            var direction = Vector3.Slerp(from, to, Mathf.Clamp01(alpha));
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                direction = to;
+            }
+
+            return Quaternion.LookRotation(direction, Vector3.up);
+        }
     }
 }

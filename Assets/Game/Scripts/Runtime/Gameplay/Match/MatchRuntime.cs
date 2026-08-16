@@ -40,6 +40,8 @@ namespace Game.Gameplay.Match
         public MatchSnapshot LastNetworkSnapshot => _lastNetworkSnapshot;
         /// <summary>Raw last-good snapshot bytes for host migration (all peers).</summary>
         public byte[] LastNetworkSnapshotBytes => _lastNetworkSnapshotBytes;
+        /// <summary>Local <see cref="Time.time"/> when the last network snapshot arrived (client render-time anchor).</summary>
+        public float LastSnapshotArrivalRealtime { get; private set; } = -1f;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
         public MatchFogOfWar FogOfWar => GetComponent<MatchFogOfWar>();
@@ -83,6 +85,7 @@ namespace Game.Gameplay.Match
             Controller = null;
             _lastNetworkSnapshot = null;
             _lastNetworkSnapshotBytes = null;
+            LastSnapshotArrivalRealtime = -1f;
             _startPhaseRealtime = -1f;
             PrepareArena();
         }
@@ -125,6 +128,7 @@ namespace Game.Gameplay.Match
         public void ApplyNetworkSnapshot(MatchSnapshot snapshot, byte[] rawBytes = null)
         {
             StoreLastNetworkSnapshot(snapshot, rawBytes);
+            LastSnapshotArrivalRealtime = Time.time;
             Controller?.ApplyAuthoritativeSnapshot(snapshot);
         }
 
