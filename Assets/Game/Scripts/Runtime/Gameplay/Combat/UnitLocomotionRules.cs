@@ -12,6 +12,12 @@ namespace Game.Gameplay.Combat
         public const float AvoidanceStrength = 3.5f;
         public const float StoppingDistance = 0.2f;
 
+        /// <summary>
+        /// Longitudinal braking gap: an ally straight ahead closer than this slows the unit
+        /// (WC3-style flow). Lateral avoidance is never damped, so crowds slip around instead of jamming.
+        /// </summary>
+        public static float AllyBrakeGap => 0.75f * CombatFormationRules.MinUnitSeparation;
+
         /// <summary>Max yaw turn rate for sim FacingDirection (visual Slerp tracks this).</summary>
         public const float FacingTurnDegreesPerSecond = 450f;
 
@@ -67,45 +73,109 @@ namespace Game.Gameplay.Combat
             }
 
             var force = Vector3.zero;
-            var blockedAhead = false;
             if (allies == null || allies.Count == 0)
             {
                 return force;
             }
 
             var radiusSq = avoidanceRadius * avoidanceRadius;
+            var right = Vector3.Cross(Vector3.up, desiredDirection).normalized;
+            var spreadSign = spreadSeed % 2 == 0 ? 1f : -1f;
+            var blockedAhead = false;
+
             foreach (var ally in allies)
             {
                 var allyPosition = ally.WorldPosition;
                 allyPosition.y = 0f;
                 var away = position - allyPosition;
                 var distSq = away.sqrMagnitude;
-                if (distSq < 0.000001f || distSq > radiusSq)
+                if (distSq > radiusSq)
                 {
                     continue;
                 }
 
-                var dist = Mathf.Sqrt(distSq);
                 var lateral = away - desiredDirection * Vector3.Dot(away, desiredDirection);
                 if (lateral.sqrMagnitude > 0.0001f)
                 {
                     lateral.Normalize();
-                    force += lateral * (1f / dist);
+                    if (distSq < 0.000001f)
+                    {
+                        // Exact overlap: push apart at full strength along the lateral axis.
+                        force += lateral;
+                    }
+                    else
+                    {
+                        // Smooth falloff, no 1/dist spike: force peaks at contact and fades at the radius.
+                        var dist = Mathf.Sqrt(distSq);
+                        force += lateral * (1f - dist / avoidanceRadius);
+                    }
                 }
                 else
                 {
                     blockedAhead = true;
+                    if (distSq < 0.000001f)
+                    {
+                        // Exact overlap straight ahead: deterministic side push by spread seed.
+                        force += right * spreadSign;
+                    }
                 }
             }
 
             if (blockedAhead && force.sqrMagnitude < 0.0001f)
             {
-                var right = Vector3.Cross(Vector3.up, desiredDirection).normalized;
-                var spreadSign = spreadSeed % 2 == 0 ? 1f : -1f;
                 force = right * spreadSign;
             }
 
             return force * avoidanceStrength;
+        }
+
+        /// <summary>
+        /// Longitudinal brake factor in [0..1] from the closest ally ahead on the movement axis.
+        /// Allies behind, far off to the side or overlapped do not brake (they must slide around).
+        /// </summary>
+        static float ComputeAllyBrake(
+            Vector3 position,
+            Vector3 desiredDirection,
+            IReadOnlyList<MatchUnitState> allies)
+        {
+            if (allies == null || allies.Count == 0)
+            {
+                return 1f;
+            }
+
+            var brakeGap = AllyBrakeGap;
+            var closestForward = brakeGap;
+            foreach (var ally in allies)
+            {
+                var allyPosition = ally.WorldPosition;
+                allyPosition.y = 0f;
+                var toOther = allyPosition - position;
+                var distSq = toOther.sqrMagnitude;
+                if (distSq < 0.0001f || distSq >= brakeGap * brakeGap)
+                {
+                    continue;
+                }
+
+                var dForward = Vector3.Dot(toOther, desiredDirection);
+                if (dForward <= 0f || dForward >= closestForward)
+                {
+                    continue;
+                }
+
+                if (dForward / Mathf.Sqrt(distSq) < 0.5f)
+                {
+                    continue;
+                }
+
+                closestForward = dForward;
+            }
+
+            if (closestForward >= brakeGap)
+            {
+                return 1f;
+            }
+
+            return Mathf.Clamp01(closestForward / brakeGap);
         }
 
         public static Vector3 MoveTowards(
@@ -149,7 +219,22 @@ namespace Game.Gameplay.Combat
                 finalDirection.Normalize();
             }
 
-            var step = finalDirection * maxStep;
+            // Brake only the longitudinal component (WC3-style follow-with-gap); the lateral
+            // component stays full so units still slip around crowds instead of jamming up.
+            var brake = ComputeAllyBrake(position, desired, allies);
+            var forwardComponent = Vector3.Dot(finalDirection, desired);
+            var lateralComponent = finalDirection - desired * forwardComponent;
+            var stepDirection = desired * (forwardComponent * brake) + lateralComponent;
+            if (stepDirection.sqrMagnitude < 0.0001f)
+            {
+                stepDirection = finalDirection;
+            }
+            else
+            {
+                stepDirection.Normalize();
+            }
+
+            var step = stepDirection * maxStep;
             if (step.sqrMagnitude > toDestination.sqrMagnitude)
             {
                 step = toDestination;

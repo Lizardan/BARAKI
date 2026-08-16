@@ -71,6 +71,70 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ComputeAllyAvoidance_ExactOverlap_PushesApartBySpreadSeed()
+        {
+            var ally = new MatchUnitState(1, 0, Game.Core.GameIds.Lanes.Center, UnitRole.Melee, UnitStats(), 100f, Vector3.zero);
+            var allies = new List<MatchUnitState> { ally };
+
+            var force = UnitLocomotionRules.ComputeAllyAvoidance(
+                Vector3.zero,
+                Vector3.forward,
+                allies,
+                UnitLocomotionRules.AvoidanceRadius,
+                UnitLocomotionRules.AvoidanceStrength,
+                spreadSeed: 1);
+
+            Assert.Greater(force.sqrMagnitude, 0.0001f, "Exact overlap must still produce a separation force.");
+            Assert.Less(force.x, 0f, "Odd spreadSeed should push to -right so overlapping units split.");
+            Assert.AreEqual(0f, force.y, 0.0001f);
+        }
+
+        [Test]
+        public void MoveTowards_BrakesWhenAllyStraightAhead()
+        {
+            var ally = new MatchUnitState(1, 0, Game.Core.GameIds.Lanes.Center, UnitRole.Melee, UnitStats(), 100f, new Vector3(0f, 0f, 2f));
+            var allies = new List<MatchUnitState> { ally };
+            var start = new Vector3(0f, 0f, 0f);
+            var destination = new Vector3(0f, 0f, 4f);
+
+            var withAlly = UnitLocomotionRules.MoveTowards(start, destination, 1f, allies, out _, spreadSeed: 2);
+            var clear = UnitLocomotionRules.MoveTowards(start, destination, 1f, null, out _);
+
+            Assert.Less(withAlly.z, clear.z, "Forward progress must slow when an ally blocks the path.");
+            Assert.Greater(Mathf.Abs(withAlly.x), 0.05f, "Unit should still sidestep around the ally.");
+            Assert.Greater(clear.z, 0.2f);
+        }
+
+        [Test]
+        public void MoveTowards_DoesNotBrakeWhenAllyBeside()
+        {
+            var ally = new MatchUnitState(1, 0, Game.Core.GameIds.Lanes.Center, UnitRole.Melee, UnitStats(), 100f, new Vector3(2f, 0f, 0f));
+            var allies = new List<MatchUnitState> { ally };
+            var start = new Vector3(0f, 0f, 0f);
+            var destination = new Vector3(0f, 0f, 4f);
+
+            var result = UnitLocomotionRules.MoveTowards(start, destination, maxStep: 1f, allies, out _, spreadSeed: 2);
+
+            Assert.AreEqual(1f, Vector3.Distance(start, result), 0.001f,
+                "A side-by-side ally must not brake the full step.");
+            Assert.Greater(Mathf.Abs(result.x), 0.05f);
+        }
+
+        static UnitCombatStats UnitStats()
+        {
+            return new UnitCombatStats(
+                UnitRole.Melee,
+                maxHp: 100f,
+                armor: 0f,
+                damageMin: 1f,
+                damageMax: 1f,
+                attackSpeed: 1f,
+                attackRange: 1.5f,
+                moveSpeed: 4f,
+                goldBounty: 1);
+        }
+
+        [Test]
         public void TryGetFacingFromDisplacement_ReturnsNormalizedHorizontalDelta()
         {
             Assert.IsTrue(UnitLocomotionRules.TryGetFacingFromDisplacement(

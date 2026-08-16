@@ -1404,7 +1404,6 @@ namespace Game.Gameplay.Combat
                 unit.WorldPosition,
                 maxStep,
                 unit.MarchProgressDistance);
-            destination = ApplyRouteBypassIfBlocked(unit, route, destination);
             var allies = CollectMarchAlliesForAvoidance(unit, route);
             var previousPosition = unit.WorldPosition;
             var proposed = UnitLocomotionRules.MoveTowards(
@@ -1869,8 +1868,8 @@ namespace Game.Gameplay.Combat
                 }
 
                 var otherDistance = other.MarchProgressDistance;
-                if (otherDistance <= myDistance + 0.35f
-                    || otherDistance > myDistance + aheadGapMax)
+                var dProgress = otherDistance - myDistance;
+                if (dProgress < -0.35f || dProgress > aheadGapMax)
                 {
                     continue;
                 }
@@ -1880,15 +1879,19 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                if (HorizontalDistanceSq(myPosition, other.WorldPosition) > queryRadius * queryRadius)
+                var toOther = other.WorldPosition - myPosition;
+                toOther.y = 0f;
+                var toOtherSq = toOther.sqrMagnitude;
+                if (toOtherSq > queryRadius * queryRadius)
                 {
                     continue;
                 }
 
-                var toOther = other.WorldPosition - myPosition;
-                toOther.y = 0f;
-                if (toOther.sqrMagnitude < 0.001f
-                    || Vector3.Dot(toOther.normalized, forward) < 0.35f)
+                // Same-row units (|dProgress| small) and exact overlaps separate regardless of
+                // facing; only clearly-ahead allies require the ahead check (avoids pushing the
+                // unit backward from trailing column-mates).
+                if (dProgress > 0.35f
+                    && Vector3.Dot(toOther.normalized, forward) < 0.35f)
                 {
                     continue;
                 }
@@ -1938,55 +1941,6 @@ namespace Game.Gameplay.Combat
         static bool IsSameFlightCategory(MatchUnitState a, MatchUnitState b)
         {
             return (a.Role == UnitRole.Flying) == (b.Role == UnitRole.Flying);
-        }
-
-        Vector3 ApplyRouteBypassIfBlocked(MatchUnitState unit, LaneRoute route, Vector3 destination)
-        {
-            var myDistance = route.ProjectDistanceForward(unit.WorldPosition, unit.MarchProgressDistance);
-            var forward = route.EvaluateDirectionAtDistance(myDistance);
-            var right = Vector3.Cross(Vector3.up, forward).normalized;
-            var aheadGap = CombatFormationRules.MinLaneFollowGap * 0.5f;
-
-            _nearbyBuffer.Clear();
-            _spatialGrid.Query(unit.WorldPosition, CombatFormationRules.MinUnitSeparation * 3f, _nearbyBuffer);
-
-            foreach (var other in _nearbyBuffer)
-            {
-                if (other.UnitId == unit.UnitId
-                    || !other.IsAlive
-                    || other.OwnerSlot != unit.OwnerSlot
-                    || other.LaneId != unit.LaneId
-                    || !IsSameFlightCategory(unit, other))
-                {
-                    continue;
-                }
-
-                var otherDistance = route.ProjectDistanceForward(
-                    other.WorldPosition,
-                    other.MarchProgressDistance);
-                if (otherDistance <= myDistance + aheadGap)
-                {
-                    continue;
-                }
-
-                if (otherDistance - myDistance > 5f)
-                {
-                    continue;
-                }
-
-                var toOther = other.WorldPosition - unit.WorldPosition;
-                toOther.y = 0f;
-                if (toOther.sqrMagnitude < 0.001f
-                    || Vector3.Dot(toOther.normalized, forward) < 0.45f)
-                {
-                    continue;
-                }
-
-                var spreadSign = unit.UnitId % 2 == 0 ? 1f : -1f;
-                return destination + right * (CombatFormationRules.MinUnitSeparation * spreadSign);
-            }
-
-            return destination;
         }
 
         bool IsEngagedByAlly(MatchUnitState enemy, int ownerSlot)
