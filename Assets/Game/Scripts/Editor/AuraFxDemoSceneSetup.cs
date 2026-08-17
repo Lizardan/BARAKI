@@ -1,4 +1,5 @@
 using Game.Gameplay.Combat;
+using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -8,7 +9,7 @@ namespace Game.Editor
 {
     /// <summary>
     /// Builds a standalone preview scene with Human aura bearers + CFXR loops
-    /// (King / Paladin / Priest / Titan / Siege BONUS).
+    /// (King / Paladin / Priest / Titan / Siege BONUS) at in-game presenter scale.
     /// </summary>
     public static class AuraFxDemoSceneSetup
     {
@@ -43,13 +44,13 @@ namespace Game.Editor
             var camera = Camera.main;
             if (camera != null)
             {
-                camera.transform.position = new Vector3(0f, 14f, -16f);
-                camera.transform.rotation = Quaternion.Euler(42f, 0f, 0f);
+                camera.transform.position = new Vector3(2f, 20f, -24f);
+                camera.transform.rotation = Quaternion.Euler(40f, 0f, 0f);
             }
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
-            ground.transform.localScale = new Vector3(4f, 1f, 2.5f);
+            ground.transform.localScale = new Vector3(6f, 1f, 3f);
             var groundRenderer = ground.GetComponent<Renderer>();
             if (groundRenderer != null)
             {
@@ -64,20 +65,23 @@ namespace Game.Editor
                 root,
                 "King · Damage Aura · Runic crimson",
                 UnitVisualPrefabBuilder.HumanHero1Path,
+                UnitRole.Hero,
                 AbilityIds.AuraDamagePercent,
-                new Vector3(-10f, 0f, 0f),
+                new Vector3(-14f, 0f, 0f),
                 catalog);
             PlaceBearer(
                 root,
                 "Paladin · Haste Aura · Runic green",
                 UnitVisualPrefabBuilder.HumanHero2Path,
+                UnitRole.Hero,
                 AbilityIds.AuraAttackSpeedPercent,
-                new Vector3(-5f, 0f, 0f),
+                new Vector3(-7f, 0f, 0f),
                 catalog);
             PlaceBearer(
                 root,
                 "Priest · Armor Aura · Runic silver-blue",
                 UnitVisualPrefabBuilder.HumanHero3Path,
+                UnitRole.Hero,
                 AbilityIds.AuraArmorPercent,
                 new Vector3(0f, 0f, 0f),
                 catalog);
@@ -85,16 +89,18 @@ namespace Game.Editor
                 root,
                 "Titan · MaxHp Aura · Runic orange + body Rays",
                 UnitVisualPrefabBuilder.HumanTitanPath,
+                UnitRole.Titan,
                 AbilityIds.AuraMaxHpPercent,
-                new Vector3(6f, 0f, 0f),
+                new Vector3(9f, 0f, 0f),
                 catalog,
                 attachBodyRays: true);
             PlaceBearer(
                 root,
                 "Siege BONUS · Regen Aura · Runic holy yellow",
                 UnitVisualPrefabBuilder.HumanSiegeBonusPath,
+                UnitRole.Siege,
                 AbilityIds.AuraHpRegen,
-                new Vector3(12f, 0f, 0f),
+                new Vector3(18f, 0f, 0f),
                 catalog);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -117,6 +123,7 @@ namespace Game.Editor
             Transform parent,
             string label,
             string prefabPath,
+            UnitRole role,
             int abilityId,
             Vector3 position,
             MatchFxCatalog catalog,
@@ -128,33 +135,46 @@ namespace Game.Editor
                 throw new System.InvalidOperationException($"Missing unit prefab: {prefabPath}");
             }
 
+            var presenterScale = UnitGreyboxVisuals.ResolveAnimatedPresenterScale(role);
+            var wrapper = new GameObject(label);
+            wrapper.transform.SetParent(parent, false);
+            wrapper.transform.position = position;
+            wrapper.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+
             var unit = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            unit.name = label;
-            unit.transform.SetParent(parent, false);
-            unit.transform.position = position;
-            unit.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            unit.name = prefab.name;
+            unit.transform.SetParent(wrapper.transform, false);
+            unit.transform.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(role);
+            unit.transform.localRotation = Quaternion.identity;
+            unit.transform.localScale = prefab.transform.localScale * presenterScale;
+
+            var animator = unit.GetComponentInChildren<Animator>();
+            if (animator != null)
+            {
+                animator.applyRootMotion = false;
+            }
 
             if (attachBodyRays && catalog.AuraRunicLoop != null)
             {
                 AuraFxVisuals.AttachBodyRays(
-                    unit.transform,
+                    wrapper.transform,
                     catalog.AuraRunicLoop,
                     AbilityFxColors.AuraMaxHp,
-                    UnitGreyboxVisuals.TitanBodyRaysLocalScale);
+                    presenterScale);
             }
 
             var kind = PassiveAuraFxRules.ResolveKind(abilityId);
             var tint = PassiveAuraFxRules.ResolveTint(abilityId);
             var prefabFx = catalog.GetPassiveAuraPrefab(kind);
-            AuraFxVisuals.Attach(unit.transform, prefabFx, kind, tint, HeroAbilityRules.AuraRadius);
+            AuraFxVisuals.Attach(wrapper.transform, prefabFx, kind, tint, HeroAbilityRules.AuraRadius);
 
             var labelGo = new GameObject("Label");
-            labelGo.transform.SetParent(unit.transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, 3.2f, 0f);
+            labelGo.transform.SetParent(wrapper.transform, false);
+            labelGo.transform.localPosition = new Vector3(0f, 2.4f * presenterScale, 0f);
             var text = labelGo.AddComponent<TextMesh>();
             text.text = label.Replace(" · ", "\n");
             text.fontSize = 28;
-            text.characterSize = 0.08f;
+            text.characterSize = 0.08f * Mathf.Lerp(1f, presenterScale / 1.25f, 0.35f);
             text.anchor = TextAnchor.LowerCenter;
             text.alignment = TextAlignment.Center;
             text.color = Color.white;

@@ -589,17 +589,15 @@ namespace Game.Gameplay.Match
                 var instance = Instantiate(prefab, root);
                 instance.name = prefab.name;
                 animator = instance.GetComponentInChildren<Animator>();
-                var scale = _unitVisualScale;
+                var scale = UnitGreyboxVisuals.ResolveAnimatedPresenterScale(unit.Role, _unitVisualScale);
                 if (animator != null)
                 {
-                    scale *= UnitGreyboxVisuals.AnimatedHumanScaleFactor;
                     animator.applyRootMotion = false;
                 }
 
-                scale *= UnitGreyboxVisuals.GetChampionVisualScale(unit.Role);
-
                 // Keep authored prefab normalize and apply presenter scale on top.
                 instance.transform.localScale = prefab.transform.localScale * scale;
+                instance.transform.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));
                 model = instance.transform;
             }
@@ -614,7 +612,7 @@ namespace Game.Gameplay.Match
 
             if (unit.Role == UnitRole.Titan)
             {
-                AttachTitanBodyRays(model != null ? model : root);
+                AttachTitanBodyRays(root);
             }
 
             statusBars.SetHealth(1f);
@@ -1175,7 +1173,7 @@ namespace Game.Gameplay.Match
                 host,
                 _fxCatalog.AuraRunicLoop,
                 AbilityFxColors.AuraMaxHp,
-                UnitGreyboxVisuals.TitanBodyRaysLocalScale);
+                UnitGreyboxVisuals.ResolveAnimatedPresenterScale(UnitRole.Titan, _unitVisualScale));
             EnsureTitanGlowLight(host);
         }
 

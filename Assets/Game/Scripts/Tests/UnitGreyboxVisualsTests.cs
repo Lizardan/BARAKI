@@ -35,6 +35,14 @@ namespace Game.Tests
                 * UnitGreyboxVisuals.GetChampionVisualScale(UnitRole.Titan),
                 titan,
                 0.001f);
+            Assert.AreEqual(
+                titan,
+                UnitGreyboxVisuals.ResolveAnimatedPresenterScale(UnitRole.Titan),
+                0.001f);
+            Assert.AreEqual(
+                UnitGreyboxVisuals.Scale * UnitGreyboxVisuals.AnimatedHumanScaleFactor * 1.15f,
+                UnitGreyboxVisuals.ResolveAnimatedPresenterScale(UnitRole.Hero),
+                0.001f);
         }
     }
 }

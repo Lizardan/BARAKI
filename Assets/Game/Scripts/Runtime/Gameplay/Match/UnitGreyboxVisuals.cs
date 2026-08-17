@@ -35,8 +35,26 @@ namespace Game.Gameplay.Match
         /// <summary>Titan world scale relative to a regular creep (melee baseline).</summary>
         public const float TitanVsCreepScale = 3f;
 
-        /// <summary>Local scale of permanent CFXR Rays on the Titan model (body power FX).</summary>
+        /// <summary>Local scale of permanent CFXR Rays on an unscaled Titan root (body power FX).</summary>
         public const float TitanBodyRaysLocalScale = 0.55f;
+
+        /// <summary>Chest-height of Titan body Rays on an unscaled prefab, multiplied by presenter scale.</summary>
+        public const float TitanBodyRaysLocalY = 1.05f;
+
+        /// <summary>
+        /// Presenter scale applied on top of the authored prefab:
+        /// <c>_unitVisualScale × AnimatedHumanScaleFactor × champion</c>.
+        /// </summary>
+        public static float ResolveAnimatedPresenterScale(UnitRole role, float unitVisualScale = Scale) =>
+            unitVisualScale * AnimatedHumanScaleFactor * GetChampionVisualScale(role);
+
+        /// <summary>World scale of Titan body Rays so they fill the scaled in-game model.</summary>
+        public static float ResolveTitanBodyRaysScale(float presenterScale) =>
+            TitanBodyRaysLocalScale * Mathf.Max(0.01f, presenterScale);
+
+        /// <summary>World Y of Titan body Rays on an unscaled unit root.</summary>
+        public static float ResolveTitanBodyRaysHeight(float presenterScale) =>
+            TitanBodyRaysLocalY * Mathf.Max(0.01f, presenterScale);
 
         /// <summary>Extra multiplier on top of shared Human animated scale for champions.</summary>
         public static float GetChampionVisualScale(UnitRole role) =>

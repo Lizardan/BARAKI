@@ -25,8 +25,8 @@
 | Siege BONUS | 50 Regen | CFXR3 Magic Aura A (Runic) **без Rays** | **holy yellow** (свет паладина, не green heal) |
 
 У всех пассивных аур child `Rays` снимается (`AuraFxVisuals.StripNamedChildren`).
-У Titan отдельно на модели всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp) —
-это body-FX «мощное существо», не аура армии. Когда MaxHp-аура разлокнута,
+У Titan отдельно на **корне визуала** (не на scaled-модели) всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp) —
+это body-FX «мощное существо», не аура армии. Когда MaxHp-аура разлокнута (уровень 7),
 поверх добавляется обычное кольцо без Rays.
 
 Правила: `PassiveAuraFxRules` + `AuraFxVisuals`; префабы в `MatchFxCatalog` (`AuraShinyLoop` / `AuraRunicLoop`).

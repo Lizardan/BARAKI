@@ -29,6 +29,7 @@ namespace Game.Gameplay.Match
             StripNamedChildren(fx, RaysChildName);
             ApplyTint(fx, tint);
             SoftenLoop(fx);
+            RestartLoops(fx);
             return fx;
         }
 
@@ -40,7 +41,7 @@ namespace Game.Gameplay.Match
             Transform parent,
             GameObject runicPrefab,
             Color tint,
-            float localScale)
+            float presenterScale)
         {
             if (parent == null || runicPrefab == null)
             {
@@ -49,14 +50,29 @@ namespace Game.Gameplay.Match
 
             var fx = Object.Instantiate(runicPrefab, parent);
             fx.name = "TitanBodyRays";
-            fx.transform.localPosition = new Vector3(0f, 1.05f, 0f);
             fx.transform.localRotation = Quaternion.identity;
-            fx.transform.localScale = Vector3.one * Mathf.Max(0.05f, localScale);
+            SetBodyRaysPlacement(fx, presenterScale);
             KeepOnlyNamedChildren(fx, RaysChildName);
-            DisableRootParticleAndLight(fx);
+            MuteRootParticlesKeepChildren(fx);
             ApplyTint(fx, tint);
             SoftenLoop(fx);
+            RestartLoops(fx);
             return fx;
+        }
+
+        public static void SetBodyRaysPlacement(GameObject fx, float presenterScale)
+        {
+            if (fx == null)
+            {
+                return;
+            }
+
+            fx.transform.localPosition = new Vector3(
+                0f,
+                UnitGreyboxVisuals.ResolveTitanBodyRaysHeight(presenterScale),
+                0f);
+            fx.transform.localScale = Vector3.one
+                * UnitGreyboxVisuals.ResolveTitanBodyRaysScale(presenterScale);
         }
 
         public static void StripNamedChildren(GameObject root, string childName)
@@ -153,24 +169,16 @@ namespace Game.Gameplay.Match
             }
         }
 
-        static void DisableRootParticleAndLight(GameObject fx)
+        static void MuteRootParticlesKeepChildren(GameObject fx)
         {
-            // CFXR_Effect requires a ParticleSystem on the same GameObject — disable, don't destroy.
-            var cfxr = fx.GetComponent("CFXR_Effect");
-            if (cfxr != null)
-            {
-                if (cfxr is Behaviour behaviour)
-                {
-                    behaviour.enabled = false;
-                }
-            }
-
+            // Do not ParticleSystem.Stop(withChildren: true) — that also kills the Rays child.
+            DisableCfxrAutoClear(fx);
             var ps = fx.GetComponent<ParticleSystem>();
             if (ps != null)
             {
-                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 var emission = ps.emission;
                 emission.enabled = false;
+                ps.Clear(withChildren: false);
                 var renderer = fx.GetComponent<ParticleSystemRenderer>();
                 if (renderer != null)
                 {
@@ -182,6 +190,41 @@ namespace Game.Gameplay.Match
             if (light != null)
             {
                 light.enabled = false;
+            }
+        }
+
+        static void DisableCfxrAutoClear(GameObject fx)
+        {
+            var cfxr = fx.GetComponent("CFXR_Effect");
+            if (cfxr == null)
+            {
+                return;
+            }
+
+            var field = cfxr.GetType().GetField("clearBehavior");
+            if (field != null)
+            {
+                field.SetValue(cfxr, 0);
+            }
+        }
+
+        static void RestartLoops(GameObject fx)
+        {
+            if (fx == null)
+            {
+                return;
+            }
+
+            var systems = fx.GetComponentsInChildren<ParticleSystem>(true);
+            for (var i = 0; i < systems.Length; i++)
+            {
+                var ps = systems[i];
+                if (ps == null || ps.gameObject == fx)
+                {
+                    continue;
+                }
+
+                ps.Play(withChildren: false);
             }
         }
 
@@ -266,14 +309,9 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            if (Application.isPlaying)
-            {
-                Object.Destroy(target);
-            }
-            else
-            {
-                Object.DestroyImmediate(target);
-            }
+            // Immediate: delayed Destroy leaves CFXR children alive for a frame and can
+            // trip clearBehavior (disable the whole aura FX).
+            Object.DestroyImmediate(target);
         }
     }
 }
