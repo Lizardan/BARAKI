@@ -10,14 +10,15 @@ namespace Game.Editor
 {
     /// <summary>
     /// Builds <see cref="UnitVisualCatalog"/> from ready combat unit, hero, and titan prefabs.
-    /// Prefabs live under <c>Prefabs/Races/Humans/Units/{Role}/</c> (+ <c>Bonus/</c>) and
-    /// <c>Heroes/HeroN/</c> — matching ScriptableObjects layout.
+    /// Prefabs live under <c>Prefabs/Races/Humans/{Units|BonusUnits}/{Role}/</c> and
+    /// <c>Heroes/{HeroN|Titan}/</c> — matching ScriptableObjects layout.
     /// </summary>
     public static class UnitVisualPrefabBuilder
     {
         public const string RootPath = "Assets/Game/Prefabs/Races";
         public const string HumanRoot = RootPath + "/Humans";
         public const string HumanPath = HumanRoot + "/Units";
+        public const string HumanBonusUnitsPath = HumanRoot + "/BonusUnits";
         public const string HumanHeroesPath = HumanRoot + "/Heroes";
         public const string CatalogPath = ContentAssetPaths.UnitVisualCatalog;
 
@@ -27,14 +28,14 @@ namespace Game.Editor
         public const string HumanSiegePath = HumanPath + "/Siege/Human_Siege.prefab";
         public const string HumanFlyingPath = HumanPath + "/Flying/Human_Flying.prefab";
         public const string HumanSuperPath = HumanPath + "/Super/Human_Super.prefab";
-        public const string HumanTitanPath = HumanPath + "/Titan/Human_Titan.prefab";
+        public const string HumanTitanPath = HumanHeroesPath + "/Titan/Human_Titan.prefab";
 
-        public const string HumanMeleeBonusPath = HumanPath + "/Melee/Bonus/Human_Melee_BONUS.prefab";
-        public const string HumanRangedBonusPath = HumanPath + "/Ranged/Bonus/Human_Ranged_BONUS.prefab";
-        public const string HumanCasterBonusPath = HumanPath + "/Caster/Bonus/Human_Caster_BONUS.prefab";
-        public const string HumanSiegeBonusPath = HumanPath + "/Siege/Bonus/Human_Siege_BONUS.prefab";
-        public const string HumanFlyingBonusPath = HumanPath + "/Flying/Bonus/Human_Flying_BONUS.prefab";
-        public const string HumanSuperBonusPath = HumanPath + "/Super/Bonus/Human_Super_BONUS.prefab";
+        public const string HumanMeleeBonusPath = HumanBonusUnitsPath + "/Melee/Human_Melee_BONUS.prefab";
+        public const string HumanRangedBonusPath = HumanBonusUnitsPath + "/Ranged/Human_Ranged_BONUS.prefab";
+        public const string HumanCasterBonusPath = HumanBonusUnitsPath + "/Caster/Human_Caster_BONUS.prefab";
+        public const string HumanSiegeBonusPath = HumanBonusUnitsPath + "/Siege/Human_Siege_BONUS.prefab";
+        public const string HumanFlyingBonusPath = HumanBonusUnitsPath + "/Flying/Human_Flying_BONUS.prefab";
+        public const string HumanSuperBonusPath = HumanBonusUnitsPath + "/Super/Human_Super_BONUS.prefab";
 
         public const string HumanHero1Path = HumanHeroesPath + "/Hero1/Human_Hero1.prefab";
         public const string HumanHero2Path = HumanHeroesPath + "/Hero2/Human_Hero2.prefab";
@@ -81,23 +82,24 @@ namespace Game.Editor
             EnsureFolder(RootPath);
             EnsureFolder(HumanRoot);
             EnsureFolder(HumanPath);
+            EnsureFolder(HumanBonusUnitsPath);
             EnsureFolder(HumanHeroesPath);
             EnsureFolder(HumanPath + "/Melee");
-            EnsureFolder(HumanPath + "/Melee/Bonus");
             EnsureFolder(HumanPath + "/Ranged");
-            EnsureFolder(HumanPath + "/Ranged/Bonus");
             EnsureFolder(HumanPath + "/Caster");
-            EnsureFolder(HumanPath + "/Caster/Bonus");
             EnsureFolder(HumanPath + "/Siege");
-            EnsureFolder(HumanPath + "/Siege/Bonus");
             EnsureFolder(HumanPath + "/Flying");
-            EnsureFolder(HumanPath + "/Flying/Bonus");
             EnsureFolder(HumanPath + "/Super");
-            EnsureFolder(HumanPath + "/Super/Bonus");
-            EnsureFolder(HumanPath + "/Titan");
+            EnsureFolder(HumanBonusUnitsPath + "/Melee");
+            EnsureFolder(HumanBonusUnitsPath + "/Ranged");
+            EnsureFolder(HumanBonusUnitsPath + "/Caster");
+            EnsureFolder(HumanBonusUnitsPath + "/Siege");
+            EnsureFolder(HumanBonusUnitsPath + "/Flying");
+            EnsureFolder(HumanBonusUnitsPath + "/Super");
             EnsureFolder(HumanHeroesPath + "/Hero1");
             EnsureFolder(HumanHeroesPath + "/Hero2");
             EnsureFolder(HumanHeroesPath + "/Hero3");
+            EnsureFolder(HumanHeroesPath + "/Titan");
         }
 
         static GameObject[] LoadAnimatedHumanPrefabs()

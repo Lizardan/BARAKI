@@ -58,7 +58,7 @@ Soft glow-диск остаётся только у splash Catapult на при�
   снаряд всё равно вылетает в locked aim.
 
 Пассивы бонусов — обычные `UnitAbilityDef` на BONUS-префабах (`UnitCombatSettings`),
-папка `Units/{Role}/Bonus/Abilities/`. Базовые melee/ranged/siege/flying/super без бонуса —
+папка `BonusUnits/{Role}/Abilities/`. Базовые melee/ranged/siege/flying/super без бонуса —
 без способностей.
 
 ## UI
@@ -68,9 +68,10 @@ Soft glow-диск остаётся только у splash Catapult на при�
 
 ## Контент
 
-- Defs / префабы / портреты — по роли: `Units/{Role}/` + `Bonus/` (см. `wiki/rules/content-assets.md`).
+- Defs / префабы / портреты — по категории: `Units/{Role}/`, `BonusUnits/{Role}/`,
+  `Heroes/{HeroN|Titan}/` (см. `wiki/rules/content-assets.md`).
 - Меню: `Rebuild TT Prefabs` → `Build Ability Defs` → `Sync Balance` → `Seed Unit Abilities`.
-- Миграция раскладки: `BARAKI/Content/Migrate To Role Folders`.
+- Миграция раскладки: `BARAKI/Content/Migrate Content Folders`.
 
 ## Bonus-модели и анимации (`TtUnitVisualSetup`)
 

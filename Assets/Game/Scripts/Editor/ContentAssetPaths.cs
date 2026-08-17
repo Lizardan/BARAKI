@@ -6,7 +6,9 @@ namespace Game.Editor
 {
     /// <summary>
     /// Canonical editor paths for ScriptableObject game content.
-    /// Layout is race → role folder → optional Bonus/ (and Abilities/ when the kit has spells).
+    /// Layout is race → category (<c>Units</c> / <c>BonusUnits</c> / <c>Heroes</c>) → role folder
+    /// → optional <c>Abilities/</c>. Titan lives with heroes. <c>BonusHeroes/</c> is reserved
+    /// (do not create the empty folder until those assets exist).
     /// </summary>
     public static class ContentAssetPaths
     {
@@ -22,22 +24,27 @@ namespace Game.Editor
         public const string HumanRace = Humans + "/RACE_HUMAN.asset";
 
         public const string HumanUnits = Humans + "/Units";
+        public const string HumanBonusUnits = Humans + "/BonusUnits";
+        public const string HumanHeroes = Humans + "/Heroes";
+        public const string HumanBonusHeroes = Humans + "/BonusHeroes";
+
         public const string HumanMelee = HumanUnits + "/Melee";
         public const string HumanRanged = HumanUnits + "/Ranged";
         public const string HumanCaster = HumanUnits + "/Caster";
         public const string HumanSiege = HumanUnits + "/Siege";
         public const string HumanFlying = HumanUnits + "/Flying";
         public const string HumanSuper = HumanUnits + "/Super";
-        public const string HumanTitan = HumanUnits + "/Titan";
+        public const string HumanTitan = HumanHeroes + "/Titan";
+
+        public const string HumanMeleeBonus = HumanBonusUnits + "/Melee";
+        public const string HumanRangedBonus = HumanBonusUnits + "/Ranged";
+        public const string HumanCasterBonus = HumanBonusUnits + "/Caster";
+        public const string HumanSiegeBonus = HumanBonusUnits + "/Siege";
+        public const string HumanFlyingBonus = HumanBonusUnits + "/Flying";
+        public const string HumanSuperBonus = HumanBonusUnits + "/Super";
 
         public const string HumanCasterAbilities = HumanCaster + "/Abilities";
         public const string HumanTitanAbilities = HumanTitan + "/Abilities";
-        public const string HumanMeleeBonus = HumanMelee + "/Bonus";
-        public const string HumanRangedBonus = HumanRanged + "/Bonus";
-        public const string HumanCasterBonus = HumanCaster + "/Bonus";
-        public const string HumanSiegeBonus = HumanSiege + "/Bonus";
-        public const string HumanFlyingBonus = HumanFlying + "/Bonus";
-        public const string HumanSuperBonus = HumanSuper + "/Bonus";
         public const string HumanMeleeAbilities = HumanMeleeBonus + "/Abilities";
         public const string HumanRangedAbilities = HumanRangedBonus + "/Abilities";
         public const string HumanCasterBonusAbilities = HumanCasterBonus + "/Abilities";
@@ -45,7 +52,6 @@ namespace Game.Editor
         public const string HumanFlyingAbilities = HumanFlyingBonus + "/Abilities";
         public const string HumanSuperAbilities = HumanSuperBonus + "/Abilities";
 
-        public const string HumanHeroes = Humans + "/Heroes";
         public const string HumanHero1 = HumanHeroes + "/Hero1";
         public const string HumanHero2 = HumanHeroes + "/Hero2";
         public const string HumanHero3 = HumanHeroes + "/Hero3";
@@ -61,7 +67,7 @@ namespace Game.Editor
         public const string HumanPortraits = PortraitRoot + "/Humans";
         public const string HumanPortraitUnits = HumanPortraits + "/Units";
         public const string HumanPortraitHeroes = HumanPortraits + "/Heroes";
-        public const string HumanPortraitBonus = HumanPortraits + "/Bonus";
+        public const string HumanPortraitBonusUnits = HumanPortraits + "/BonusUnits";
 
         public static string HumanHeroFolder(int slot) =>
             slot switch
@@ -93,8 +99,17 @@ namespace Game.Editor
             _ => HumanUnits,
         };
 
-        public static string HumanUnitBonusFolder(UnitRole role) =>
-            HumanUnitRoleFolder(role) + "/Bonus";
+        public static string HumanUnitBonusFolder(UnitRole role) => role switch
+        {
+            UnitRole.Melee => HumanMeleeBonus,
+            UnitRole.Ranged => HumanRangedBonus,
+            UnitRole.Caster => HumanCasterBonus,
+            UnitRole.Siege => HumanSiegeBonus,
+            UnitRole.Flying => HumanFlyingBonus,
+            UnitRole.Super => HumanSuperBonus,
+            UnitRole.Titan => HumanBonusHeroes + "/Titan",
+            _ => HumanBonusUnits,
+        };
 
         public static string HumanUnitDefinitionPath(string unitId)
         {
@@ -136,19 +151,20 @@ namespace Game.Editor
         public static void EnsureHumanUnitFolders()
         {
             EnsureFolder(HumanUnits);
+            EnsureFolder(HumanBonusUnits);
+            EnsureFolder(HumanHeroes);
             EnsureFolder(HumanMelee);
             EnsureFolder(HumanRanged);
             EnsureFolder(HumanCaster);
             EnsureFolder(HumanSiege);
             EnsureFolder(HumanFlying);
             EnsureFolder(HumanSuper);
-            EnsureFolder(HumanTitan);
-            EnsureFolder(HumanMelee + "/Bonus");
-            EnsureFolder(HumanRanged + "/Bonus");
-            EnsureFolder(HumanCaster + "/Bonus");
+            EnsureFolder(HumanMeleeBonus);
+            EnsureFolder(HumanRangedBonus);
+            EnsureFolder(HumanCasterBonus);
             EnsureFolder(HumanSiegeBonus);
-            EnsureFolder(HumanFlying + "/Bonus");
-            EnsureFolder(HumanSuper + "/Bonus");
+            EnsureFolder(HumanFlyingBonus);
+            EnsureFolder(HumanSuperBonus);
             EnsureFolder(HumanMeleeAbilities);
             EnsureFolder(HumanRangedAbilities);
             EnsureFolder(HumanCasterBonusAbilities);
@@ -156,6 +172,7 @@ namespace Game.Editor
             EnsureFolder(HumanFlyingAbilities);
             EnsureFolder(HumanSuperAbilities);
             EnsureFolder(HumanCasterAbilities);
+            EnsureFolder(HumanTitan);
             EnsureFolder(HumanTitanAbilities);
         }
     }

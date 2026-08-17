@@ -551,7 +551,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void TryGetPrefab_HumanTitan_ReturnsCanonicalUnitsPath()
+        public void TryGetPrefab_HumanTitan_ReturnsCanonicalHeroesPath()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, out var prefab));
             Assert.IsNotNull(prefab);

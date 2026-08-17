@@ -132,6 +132,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-17 | Контент-раскладка: категории `Units` / `BonusUnits` / `Heroes`(+Titan); `BonusHeroes` зарезервирован; канон в `wiki/rules/content-assets.md` |
 | 2026-08-15 | PRE-005 VFX: Кара зданий/юнитов — `FxKind.SkyBeam` луч с неба; sync через SpellCasts (`AbilityIds` 100/101) |
 | 2026-08-15 | PRE-005: меню 2×3; Кара зданий (1200) / Кара юнитов (5000); гейт melee+ranged+armor≥7 + magic≥2; CD 180 / 200 mana; main mana 100×level; HP main/barracks по уровню; снапшот v18 |
 | 2026-08-15 | Порядок PRE: **PRE-005** = blessing abilities (доделать Divine Blessing) → **PRE-006** = 12 бонусов → **PRE-007** = tower ×9; следующий = PRE-005 |

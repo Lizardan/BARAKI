@@ -27,7 +27,7 @@ namespace Game.Editor
 
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitUnits);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitHeroes);
-            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonus);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusUnits);
             BakeRace(catalog, GameIds.Races.Human);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
@@ -81,7 +81,7 @@ namespace Game.Editor
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3Portrait",
                 $"{ContentAssetPaths.HumanPortraitHeroes}/Hero3.png");
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait",
-                $"{ContentAssetPaths.HumanPortraitUnits}/Titan.png");
+                $"{ContentAssetPaths.HumanPortraitHeroes}/Titan.png");
 
             BakeBonusPortraits(catalog, set, raceId);
 
@@ -121,7 +121,7 @@ namespace Game.Editor
                     continue;
                 }
 
-                var path = $"{ContentAssetPaths.HumanPortraitBonus}/{roles[i]}.png";
+                var path = $"{ContentAssetPaths.HumanPortraitBonusUnits}/{roles[i]}.png";
                 var texture = RenderPrefabThumbnail(prefab, path);
                 set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
             }

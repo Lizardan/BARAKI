@@ -27,29 +27,32 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanContent_IsGroupedByRoleAndBonus()
+        public void HumanContent_IsGroupedByCategory()
         {
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanMelee + "/UNIT_HUMAN_MELEE.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
-                ContentAssetPaths.HumanMelee + "/Bonus/UNIT_HUMAN_MELEE_BONUS.asset"));
+                ContentAssetPaths.HumanMeleeBonus + "/UNIT_HUMAN_MELEE_BONUS.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanCaster + "/UNIT_HUMAN_CASTER.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
-                ContentAssetPaths.HumanCaster + "/Bonus/UNIT_HUMAN_CASTER_BONUS.asset"));
+                ContentAssetPaths.HumanCasterBonus + "/UNIT_HUMAN_CASTER_BONUS.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanSiegeBonus + "/UNIT_HUMAN_SIEGE_BONUS.asset"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<HeroDefinition>(
                 ContentAssetPaths.HumanHero1 + "/HERO_HUMAN_1.asset"));
 
-            // Bonus defs must not sit flat next to base in Units/.
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE_BONUS.asset"));
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
                 ContentAssetPaths.HumanUnits + "/UNIT_HUMAN_MELEE.asset"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<UnitDefinition>(
+                ContentAssetPaths.HumanMelee + "/Bonus/UNIT_HUMAN_MELEE_BONUS.asset"));
 
-            Assert.AreEqual(12, AssetDatabase.FindAssets(
+            Assert.AreEqual(6, AssetDatabase.FindAssets(
                 "t:UnitDefinition", new[] { ContentAssetPaths.HumanUnits }).Length);
+            Assert.AreEqual(6, AssetDatabase.FindAssets(
+                "t:UnitDefinition", new[] { ContentAssetPaths.HumanBonusUnits }).Length);
             Assert.AreEqual(3, AssetDatabase.FindAssets(
                 "t:HeroDefinition", new[] { ContentAssetPaths.HumanHeroes }).Length);
             Assert.AreEqual(4, AssetDatabase.FindAssets(
@@ -80,13 +83,19 @@ namespace Game.Tests
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
                 ContentAssetPaths.HumanPortraitHeroes + "/Hero1.png"));
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
-                ContentAssetPaths.HumanPortraitBonus + "/Melee.png"));
+                ContentAssetPaths.HumanPortraitHeroes + "/Titan.png"));
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraitBonusUnits + "/Melee.png"));
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
                 ContentAssetPaths.PortraitRoot + "/Human_Melee.png"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraitUnits + "/Titan.png"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                ContentAssetPaths.HumanPortraits + "/Bonus/Melee.png"));
         }
 
         [Test]
-        public void HumanPrefabs_LiveInRoleFolders()
+        public void HumanPrefabs_LiveInCategoryFolders()
         {
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(
                 UnitVisualPrefabBuilder.HumanMeleePath));
@@ -101,6 +110,10 @@ namespace Game.Tests
                 UnitVisualPrefabBuilder.HumanPath + "/Human_Melee.prefab"));
             Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
                 UnitVisualPrefabBuilder.HumanHeroesPath + "/Human_Hero1.prefab"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanPath + "/Titan/Human_Titan.prefab"));
+            Assert.IsNull(AssetDatabase.LoadAssetAtPath<GameObject>(
+                UnitVisualPrefabBuilder.HumanPath + "/Melee/Bonus/Human_Melee_BONUS.prefab"));
         }
 
         [Test]
@@ -114,11 +127,17 @@ namespace Game.Tests
                          ContentAssetPaths.Humans + "/Buildings",
                          ContentAssetPaths.Humans + "/Passives",
                          ContentAssetPaths.Humans + "/Tech",
+                         ContentAssetPaths.HumanBonusHeroes,
                          ContentAssetPaths.HumanUnits + "/Base",
                          ContentAssetPaths.HumanUnits + "/Enhanced",
+                         ContentAssetPaths.HumanUnits + "/Titan",
+                         ContentAssetPaths.HumanUnits + "/Melee/Bonus",
                          ContentAssetPaths.HumanHeroes + "/Base",
                          ContentAssetPaths.HumanHeroes + "/Enhanced",
+                         ContentAssetPaths.HumanPortraits + "/Bonus",
                          UnitVisualPrefabBuilder.HumanPath + "/Controllers",
+                         UnitVisualPrefabBuilder.HumanPath + "/Titan",
+                         UnitVisualPrefabBuilder.HumanPath + "/Melee/Bonus",
                          UnitVisualPrefabBuilder.HumanHeroesPath + "/Controllers",
                      })
             {
@@ -155,6 +174,7 @@ namespace Game.Tests
             var prefabFolders = new[]
             {
                 UnitVisualPrefabBuilder.HumanPath,
+                UnitVisualPrefabBuilder.HumanBonusUnitsPath,
                 UnitVisualPrefabBuilder.HumanHeroesPath,
             };
 
