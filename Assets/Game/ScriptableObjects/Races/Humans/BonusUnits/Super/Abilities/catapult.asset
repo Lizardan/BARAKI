@@ -28,7 +28,8 @@ MonoBehaviour:
   _displayName: Catapult
   _description: "\u041F\u0430\u0440\u0430\u0431\u043E\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0439
     \u0441\u043D\u0430\u0440\u044F\u0434: splash 50% \u0443\u0440\u043E\u043D\u0430
-    \u0432 \u0440\u0430\u0434\u0438\u0443\u0441\u0435 3."
+    \u0432 \u0440\u0430\u0434\u0438\u0443\u0441\u0435 3 \u043E\u0442 \u0442\u043E\u0447\u043A\u0438
+    \u043F\u0440\u0438\u043B\u0451\u0442\u0430."
   _kind: 1
   _unlock: 0
   _unlockValue: 0
@@ -46,8 +47,6 @@ MonoBehaviour:
   _secondaryRadius: 0
   _secondaryHeal: 0
   _fx:
-    Kind: 4
     Color: {r: 1, g: 0.3, b: 0.2, a: 1}
-    DurationSeconds: 0.7
-    BurstHeight: 1.6
+    VfxPrefab: {fileID: 8194992990867289339, guid: 99bc28c0d45f51c4fbac01080b73edc7, type: 3}
   _behaviour: {fileID: -8069534655262341680}

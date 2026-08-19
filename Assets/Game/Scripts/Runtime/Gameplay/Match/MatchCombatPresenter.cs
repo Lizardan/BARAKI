@@ -7,6 +7,7 @@ using Game.Gameplay.Match;
 using Game.Gameplay.Match.Fog;
 using Game.Gameplay.Match.Selection;
 using Game.Gameplay.Networking;
+using Game.Gameplay.Vfx;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -41,6 +42,11 @@ namespace Game.Gameplay.Match
             public PassiveAuraFxKind AuraFxKind;
             public float AuraFxRadius;
             public int AuraFxAbilityId;
+            public GameObject AuraFxSourcePrefab;
+            public float AuraFxVisualScale;
+            public string AbilityAnimState;
+            public int AbilityAnimVariant;
+            public bool HasAbilityAnim;
             /// <summary>Loaded bolt/rock meshes on Super artillery (hidden while a swing is committed).</summary>
             public GameObject[] AmmoObjects;
         }
@@ -388,14 +394,47 @@ namespace Game.Gameplay.Match
                 && visual.LastBehaviorState != UnitBehaviorState.Cast;
             visual.LastBehaviorState = behaviorState;
 
+            if (behaviorState is not UnitBehaviorState.Attack and not UnitBehaviorState.Cast)
+            {
+                visual.HasAbilityAnim = false;
+                visual.AbilityAnimState = null;
+            }
+
+            RememberAbilityAnim(visual, unit, combat);
+
             var hybridMelee = TryResolveCasterBonusHybridMelee(unit, combat, visual);
 
             float? attackVariant = null;
-            if (HumanBonusUnitRules.IsCasterBonus(unit))
+            if (HumanBonusUnitRules.IsCasterBonus(unit) && !visual.HasAbilityAnim)
             {
                 attackVariant = hybridMelee
                     ? HumanCasterBonusWeaponVisuals.MaceAttackVariant
                     : HumanCasterBonusWeaponVisuals.StaffAttackVariant;
+            }
+
+            float? authoredAttack = null;
+            float? authoredCast = null;
+            string stateOverride = null;
+            if (visual.HasAbilityAnim)
+            {
+                stateOverride = visual.AbilityAnimState;
+                if (!string.IsNullOrEmpty(visual.AbilityAnimState))
+                {
+                    var kind = AbilityAnimRules.ResolveKindFromState(visual.AbilityAnimState);
+                    if (kind == AbilityAnimKind.Attack)
+                    {
+                        authoredAttack = visual.AbilityAnimVariant;
+                    }
+                    else if (kind == AbilityAnimKind.Cast)
+                    {
+                        authoredCast = visual.AbilityAnimVariant;
+                    }
+                }
+            }
+
+            if (authoredAttack.HasValue)
+            {
+                attackVariant = authoredAttack;
             }
 
             var attackInterval = combat.GetAttackIntervalSeconds(unit);
@@ -414,7 +453,9 @@ namespace Game.Gameplay.Match
                 attackInterval,
                 attackClipLength,
                 enteringCast,
-                attackVariant);
+                attackVariant,
+                authoredCast,
+                stateOverride);
 
             if (fireAttack
                 && (hybridMelee
@@ -422,6 +463,43 @@ namespace Game.Gameplay.Match
             {
                 visual.PendingImpactFxSeconds =
                     CombatAttackRules.ResolveSwingImpactDelay(attackInterval, unit.Role);
+            }
+        }
+
+        void RememberAbilityAnim(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
+        {
+            if (!string.IsNullOrEmpty(unit.CastLockAnimState))
+            {
+                visual.HasAbilityAnim = true;
+                visual.AbilityAnimState = unit.CastLockAnimState;
+                visual.AbilityAnimVariant = unit.CastLockAnimVariant;
+                return;
+            }
+
+            if (combat == null)
+            {
+                return;
+            }
+
+            var pending = combat.PendingPresenterCasts;
+            for (var i = 0; i < pending.Count; i++)
+            {
+                var cast = pending[i];
+                if (cast.CasterUnitId != unit.UnitId || cast.Def == null)
+                {
+                    continue;
+                }
+
+                var state = cast.Def.Fx.AnimState;
+                if (string.IsNullOrEmpty(state))
+                {
+                    continue;
+                }
+
+                visual.HasAbilityAnim = true;
+                visual.AbilityAnimState = state;
+                visual.AbilityAnimVariant = cast.Def.Fx.AnimVariant;
+                return;
             }
         }
 
@@ -711,25 +789,36 @@ namespace Game.Gameplay.Match
             }
 
             var kind = PassiveAuraFxRules.ResolveKind(abilityId);
+            var authored = ResolveAbilityFx(combat, abilityId);
+            var prefab = authored.VfxPrefab != null
+                ? authored.VfxPrefab
+                : _fxCatalog != null ? _fxCatalog.GetPassiveAuraPrefab(kind) : null;
+            var tint = authored.Color.a > 0.01f
+                ? authored.Color
+                : PassiveAuraFxRules.ResolveTint(abilityId);
+            var visualScale = AbilityFx.ResolveScale(authored.Scale);
+
             var needsRebuild = visual.AuraFx == null
                 || visual.AuraFxKind != kind
                 || visual.AuraFxAbilityId != abilityId
-                || !Mathf.Approximately(visual.AuraFxRadius, radius);
+                || visual.AuraFxSourcePrefab != prefab
+                || !Mathf.Approximately(visual.AuraFxRadius, radius)
+                || !Mathf.Approximately(visual.AuraFxVisualScale, visualScale);
 
             if (needsRebuild)
             {
                 ClearAuraFx(visual);
-                var prefab = _fxCatalog != null ? _fxCatalog.GetPassiveAuraPrefab(kind) : null;
                 if (prefab == null)
                 {
                     return;
                 }
 
-                var tint = PassiveAuraFxRules.ResolveTint(abilityId);
-                visual.AuraFx = AuraFxVisuals.Attach(visual.Root, prefab, kind, tint, radius);
+                visual.AuraFx = AuraFxVisuals.Attach(visual.Root, prefab, kind, tint, radius, visualScale);
                 visual.AuraFxKind = kind;
                 visual.AuraFxRadius = radius;
                 visual.AuraFxAbilityId = abilityId;
+                visual.AuraFxSourcePrefab = prefab;
+                visual.AuraFxVisualScale = visualScale;
             }
         }
 
@@ -743,6 +832,21 @@ namespace Game.Gameplay.Match
 
             visual.AuraFxRadius = 0f;
             visual.AuraFxAbilityId = 0;
+            visual.AuraFxSourcePrefab = null;
+            visual.AuraFxVisualScale = 0f;
+        }
+
+        AbilityFx ResolveAbilityFx(MatchCombatSystem combat, int abilityId)
+        {
+            var def = combat != null && combat.AbilityCatalog != null
+                ? combat.AbilityCatalog.Find(abilityId)
+                : null;
+            if (def == null)
+            {
+                MainExtraAbilityFxDefs.TryGet(abilityId, out def);
+            }
+
+            return def != null ? def.Fx : default;
         }
 
         const float AuraDiscFillAlpha = 0.16f;
@@ -924,11 +1028,6 @@ namespace Game.Gameplay.Match
                 {
                     var impactPosition = visual.position;
                     SpawnProjectileImpactFx(projectileId, impactPosition);
-                    if (_projectileSplashIds.Contains(projectileId))
-                    {
-                        SpawnCatapultSplashDisc(impactPosition);
-                    }
-
                     DestroyManaged(visual.gameObject);
                 }
 
@@ -1020,89 +1119,95 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            var fx = def.Fx;
-            var color = fx.Color;
+            var color = def.Fx.Color;
+
+            // Label always above caster
             if (TryGetUnitBarTop(cast.CasterUnitId, out var casterTop))
             {
                 SpellFxFactory.CreateLabel(_root, casterTop, def.DisplayName, color);
             }
 
-            var duration = fx.DurationSeconds > 0f ? fx.DurationSeconds : DefaultDuration(fx.Kind);
-            var center = cast.CenterPosition;
-            var radius = cast.Radius;
-            switch (fx.Kind)
+            // VFX prefab
+            if (def.Fx.VfxPrefab != null)
             {
-                case FxKind.Plus:
-                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var plusTop))
-                    {
-                        SpellFxFactory.CreatePlus(_root, plusTop, color, duration);
-                    }
-                    else
-                    {
-                        SpellFxFactory.CreatePlus(_root, center + Vector3.up * 0.6f, color, duration);
-                    }
-
-                    break;
-                case FxKind.Ring:
-                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
-                    break;
-                case FxKind.Burst:
-                    SpellFxFactory.CreateBurst(
-                        _root,
-                        center,
-                        color,
-                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 2.4f);
-                    break;
-                case FxKind.RingPlus:
-                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
-                    if (cast.TargetUnitId > 0 && TryGetUnitBarTop(cast.TargetUnitId, out var ringPlusTop))
-                    {
-                        SpellFxFactory.CreatePlus(_root, ringPlusTop, color, duration);
-                    }
-                    else
-                    {
-                        SpellFxFactory.CreatePlus(_root, center + Vector3.up * 0.6f, color, duration);
-                    }
-
-                    break;
-                case FxKind.RingBurst:
-                    SpellFxFactory.CreateRing(_root, center, radius, color, duration, fadeOutNormalized: 0.88f);
-                    SpellFxFactory.CreateBurst(
-                        _root,
-                        center,
-                        color,
-                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 2.8f);
-                    break;
-                case FxKind.SkyBeam:
-                    SpellFxFactory.CreateSkyBeam(
-                        _root,
-                        center,
-                        color,
-                        height: fx.BurstHeight > 0f ? fx.BurstHeight : 40f,
-                        duration: duration,
-                        impactRadius: radius > 0f ? radius : 1.8f);
-                    SpellFxFactory.CreateLabel(
-                        _root,
-                        center + Vector3.up * 3.2f,
-                        def.DisplayName,
-                        color);
-                    break;
+                SpawnVfx(def.Fx.VfxPrefab, cast, color, AbilityFx.ResolveScale(def.Fx.Scale));
             }
         }
 
-        static float DefaultDuration(FxKind kind)
+        void SpawnVfx(GameObject prefab, AbilityCastEvent cast, Color color, float visualScale)
         {
-            return kind switch
-            {
-                FxKind.Ring => 1.0f,
-                FxKind.RingBurst => 1.3f,
-                FxKind.Burst => 0.7f,
-                FxKind.SkyBeam => 1.15f,
-                _ => 1.1f,
-            };
+            var abilityId = cast.Def != null ? cast.Def.AbilityId : 0;
+            var authored = cast.Def != null ? cast.Def.Fx.Anchor : AbilityVfxAnchor.Unspecified;
+            var anchor = AbilityVfxKindRules.ResolveAnchor(abilityId, authored);
+            var position = ResolveVfxPosition(cast, anchor);
+
+            var instance = UnityEngine.Object.Instantiate(prefab, _root);
+            instance.transform.position = position;
+            instance.transform.localScale = AbilityVfxPlacement.ResolveOneShotLocalScale(prefab, visualScale);
+            AbilityVfxTint.Apply(instance, color);
+            var stun = cast.Def != null ? cast.Def.StunSeconds : 0f;
+            Destroy(instance, AbilityVfxPlacement.ResolveOneShotLifetimeSeconds(abilityId, stun));
         }
 
-        bool TryGetUnitBarTop(int unitId, out Vector3 position)
+        Vector3 ResolveVfxPosition(AbilityCastEvent cast, AbilityVfxAnchor anchor)
+        {
+            switch (anchor)
+            {
+                case AbilityVfxAnchor.Target:
+                    if (cast.TargetUnitId > 0 && TryGetUnitBody(cast.TargetUnitId, out var targetBody))
+                    {
+                        return targetBody;
+                    }
+
+                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
+
+                case AbilityVfxAnchor.Ground:
+                    if (TryGetUnitFeet(cast.CasterUnitId, out var casterFeet))
+                    {
+                        return AbilityVfxPlacement.SnapGroundY(casterFeet);
+                    }
+
+                    return AbilityVfxPlacement.SnapGroundY(cast.CenterPosition);
+
+                case AbilityVfxAnchor.Impact:
+                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
+
+                default:
+                    if (TryGetUnitFeet(cast.CasterUnitId, out var feet))
+                    {
+                        return feet;
+                    }
+
+                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
+            }
+        }
+
+        bool TryGetUnitBarTop(int unitId, out Vector3 position) => TryGetUnitPosition(unitId, out position);
+
+        bool TryGetUnitFeet(int unitId, out Vector3 position)
+        {
+            position = default;
+            if (!_visuals.TryGetValue(unitId, out var visual) || visual?.Root == null)
+            {
+                return false;
+            }
+
+            position = visual.Root.position;
+            return true;
+        }
+
+        bool TryGetUnitBody(int unitId, out Vector3 position)
+        {
+            if (!TryGetUnitFeet(unitId, out position))
+            {
+                return false;
+            }
+
+            position += Vector3.up * AbilityVfxPlacement.BodyHeight;
+            return true;
+        }
+
+        bool TryGetUnitPosition(int unitId, out Vector3 position)
         {
             position = default;
             if (!_visuals.TryGetValue(unitId, out var visual)

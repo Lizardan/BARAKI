@@ -7,11 +7,14 @@ namespace Game.Gameplay.Match
     [CreateAssetMenu(fileName = "MatchFxCatalog", menuName = "BARAKI/Match Fx Catalog")]
     public sealed class MatchFxCatalog : ScriptableObject
     {
+        [Header("Combat FX")]
         [SerializeField] private GameObject _blood;
         [SerializeField] private GameObject _machineDestroyed;
         [SerializeField] private GameObject _buildingDestroyed;
         [SerializeField] private GameObject _buildingBurning;
         [SerializeField] private GameObject _buildingImpact;
+
+        [Header("Aura FX")]
         [SerializeField] private GameObject _auraShinyLoop;
         [SerializeField] private GameObject _auraRunicLoop;
 

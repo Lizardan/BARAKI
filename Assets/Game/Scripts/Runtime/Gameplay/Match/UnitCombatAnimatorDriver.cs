@@ -142,11 +142,17 @@ namespace Game.Gameplay.Match
             UnitBehaviorState behaviorState,
             bool fireAttack,
             bool fireDeath,
-            bool isDead)
+            bool isDead,
+            string stateOverride = null)
         {
             if (fireDeath || isDead)
             {
                 return DeathState;
+            }
+
+            if (!string.IsNullOrEmpty(stateOverride))
+            {
+                return stateOverride;
             }
 
             if (behaviorState == UnitBehaviorState.Cast)
@@ -250,7 +256,9 @@ namespace Game.Gameplay.Match
             float attackIntervalSeconds = 1f,
             float attackClipLength = ReferenceAttackClipLength,
             bool enteringCast = false,
-            float? attackVariantOverride = null)
+            float? attackVariantOverride = null,
+            float? castVariantOverride = null,
+            string stateOverride = null)
         {
             if (animator == null)
             {
@@ -273,7 +281,8 @@ namespace Game.Gameplay.Match
                 behaviorState,
                 fireAttack,
                 fireDeath,
-                playback.IsDead);
+                playback.IsDead,
+                stateOverride);
 
             animator.speed = ResolveAnimatorPlaybackSpeed(
                 behaviorState,
@@ -284,13 +293,17 @@ namespace Game.Gameplay.Match
                 attackClipLength);
 
             // Death/cast must not inherit a slowed titan walk or haste attack rate.
-            if (desired is DeathState or CastState)
+            if (desired is DeathState or CastState or StandState)
             {
                 animator.speed = 1f;
             }
             else if (desired == AttackState)
             {
                 animator.speed = ResolveAttackPlaybackSpeed(attackIntervalSeconds, attackClipLength);
+            }
+            else if (!string.IsNullOrEmpty(stateOverride))
+            {
+                animator.speed = 1f;
             }
 
             if (fireAttack && HasParameter(animator, AttackVariantParam))
@@ -302,11 +315,15 @@ namespace Game.Gameplay.Match
 
             if (enteringCast && HasParameter(animator, CastVariantParam))
             {
-                animator.SetFloat(CastVariantParam, ResolveRandomVariant(2));
+                var variant = castVariantOverride
+                    ?? ResolveRandomVariant(2);
+                animator.SetFloat(CastVariantParam, variant);
             }
 
             var forceRestart = ShouldForceRestartAttack(fireAttack, desired)
-                || (enteringCast && desired == CastState);
+                || (enteringCast && desired == CastState)
+                || (!string.IsNullOrEmpty(stateOverride)
+                    && (fireAttack || enteringCast));
             CrossFade(
                 animator,
                 playback,

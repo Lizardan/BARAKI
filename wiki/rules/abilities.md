@@ -36,7 +36,10 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
     `DisplayName` (`mend.asset`, `holy-nova.asset`, `attack-aura.asset`); при совпадении имён
     добавляется суффикс `-{id}`. При смене DisplayName старый файл мигрируется по `AbilityId`
     (`AssetDatabase.MoveAsset` — GUID-ссылки из префабов/каталога сохраняются). Легаси-имена
-    `Ability{id}.asset` также мигрируются автоматически.
+    `Ability{id}.asset` также мигрируются автоматически. **`AbilityFx.Color` и `VfxPrefab` на
+    существующих ассетах сохраняются** (не затираются дефолтами).
+  - `BARAKI/Abilities/Ability FX Viewer` — список слева, превью: модель кита + мечник,
+    якорь и клипы Attack/Cast. Подробности: `ability-fx.md`.
   - `BARAKI/Units/Seed Unit Abilities` — записывает def-ссылки в `UnitCombatSettings` префабов
     (`UnitAbilitySeeder`).
 - **Runtime-фолбэк**: если в prefab settings нет ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
@@ -168,7 +171,8 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
   выделяет и пингует `UnitAbilityDef`-ассет.
 - **`UnitAbilityDefEditor`** на самом def-ассете показывает по умолчанию только **ненулевые** тюнинг-строки
   (ноль не мусорит — например, у не-хилящих нет поля «Heal»); toggle «Показать все» раскрывает нулевые.
-  Read-only-сводку см. выше; тюнинг всё равно пересобирается из дефолтов.
+  Read-only-сводку см. выше; тюнинг всё равно пересобирается из дефолтов. Цвет и VfxPrefab
+  **не** затираются при пересборке — их правит Ability FX Viewer.
 - Статы и способности на префабе не редактируются: баланс правится в definition-ассете и переносится
   через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
   `BARAKI/Units/Seed Unit Abilities`.
@@ -192,8 +196,8 @@ UX прицела: красный крестик (`MainExtraAbilityCursor`), к�
 hover (`MatchMainExtraTargetingRingPresenter`), tooltip имени у курсора (`TargetingTooltip` в MatchHud;
 позиция через `MatchSelectionUiPointer.ScreenToPanelPosition` — Input System Y снизу, UITK сверху).
 Отмена: RMB / Esc / клик в пустоту.
-VFX: `FxKind.SkyBeam` — луч с неба в точку удара; уходит в снапшот `SpellCasts`
-(`AbilityIds.MainBuildingSmite=100` / `MainUnitSmite=101`) — видят все клиенты.
+VFX: каст назначает `AbilityFx.VfxPrefab` в `UnitAbilityDef.Fx` (или `MainExtraAbilityFxCatalog`
+для ids 100/101); презентер спавнит префаб + label. Видят все клиенты.
 Мана main: `MainManaMax = 100 * MainLevel`, реген полный пул за 180 с.
 HP зданий растут с уровнем (main 2000/2500/3000, barracks 800/1100/1400/1600).
 Не путать с `UnitAbilityDef` юнитов (FX-defы — runtime `MainExtraAbilityFxDefs`).
@@ -210,12 +214,16 @@ HP зданий растут с уровнем (main 2000/2500/3000, barracks 80
 ## Как изменить тюнинг
 
 Править **только** дефолты (`AbilityKitDefaults` + правила), затем `Build Ability Defs` +
-`Seed Unit Abilities`. Прямые правки def-ассетов в инспекторе — временные, на пересборке затираются.
+`Seed Unit Abilities`. Прямые правки тюнинга def-ассетов в инспекторе — временные, на пересборке
+затираются. Визуал (`AbilityFx`) правится в Ability FX Viewer и сохраняется.
 
 ## Тесты
 
 - `AbilityKitDefaultsTests` — киты совпадают с ожидаемыми способностями; проверки засеянных префабов
   (`HumanHero3Prefab_HasPriestKitWhenSeeded`, `HumanTitanPrefab_HasTitanKitWhenSeeded`).
+- `AbilityVfxKindRulesTests`, `AbilityVfxPrefabIndexTests`, `AbilityFxPreserveTests` — палитры FX,
+  классификация паков, preserve `AbilityFx` при rebuild.
+- `HumanBonusCombatTests` — EmitCast на проках Cleave / Deadeye / Catapult / Last Call.
 - `HeroAbilityCombatTests`, `CasterSpellRulesTests`, `HeroLevelRulesTests` — логика каста/приоритета/unlock.
 - `HeroAbilityRulesTests` — display names покрывают паладинов и жрецов.
 - `MatchSnapshotCodecTests.RoundTrip_V16_PreservesSpellCasts` / `RoundTrip_V17_PreservesDivineBlessingFields` /

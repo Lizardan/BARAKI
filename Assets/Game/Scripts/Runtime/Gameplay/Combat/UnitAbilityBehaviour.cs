@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Gameplay.Data;
+using Game.Gameplay.Vfx;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
@@ -15,47 +16,46 @@ namespace Game.Gameplay.Combat
         HpRegen = 4,
     }
 
-    /// <summary>How a cast is presented (ring / burst / plus / combinations).</summary>
-    public enum FxKind
-    {
-        Plus = 0,
-        Ring = 1,
-        Burst = 2,
-        RingPlus = 3,
-        RingBurst = 4,
-        /// <summary>Vertical beam from sky into the impact point (main Divine Blessing smites).</summary>
-        SkyBeam = 5,
-    }
-
-    /// <summary>VFX hint for a cast; zero duration/height means "use the kind default".</summary>
+    /// <summary>
+    /// VFX definition for an ability cast: color for label/tint + optional prefab
+    /// (CFXR / Adjustable Slash / Hyper Casual). If <see cref="VfxPrefab"/> is null, only the spell
+    /// label is shown. Authored visuals on def assets survive <c>Build Ability Defs</c>.
+    /// </summary>
     [System.Serializable]
     public struct AbilityFx
     {
-        public FxKind Kind;
         public Color Color;
-        public float DurationSeconds;
-        public float BurstHeight;
+        public GameObject VfxPrefab;
+        public AbilityVfxAnchor Anchor;
+        public AbilityAnimKind AnimKind;
+        /// <summary>Animator state name (Attack / Cast / Stand / Death / …). Empty = <see cref="AbilityAnimRules.ResolveKind"/>.</summary>
+        public string AnimState;
+        /// <summary>BlendTree child index when <see cref="AnimState"/> is set. Ignored if state is empty.</summary>
+        public int AnimVariant;
+        /// <summary>Visual-only VFX multiplier. <c>0</c> = unset → 1× (combat radius unchanged).</summary>
+        public float Scale;
 
-        public static AbilityFx Ring(Color color) =>
-            new() { Kind = FxKind.Ring, Color = color };
+        /// <summary>
+        /// Keeps an already-authored color/prefab/anchor/anim when rebuilding defs from
+        /// <c>AbilityKitDefaults</c>. Empty authored fields fall back to <paramref name="defaults"/>.
+        /// </summary>
+        public AbilityFx WithPreservedAuthored(AbilityFx defaults)
+        {
+            var state = !string.IsNullOrEmpty(AnimState) ? AnimState : defaults.AnimState;
+            return new AbilityFx
+            {
+                Color = Color.a > 0.01f ? Color : defaults.Color,
+                VfxPrefab = VfxPrefab != null ? VfxPrefab : defaults.VfxPrefab,
+                Anchor = Anchor != AbilityVfxAnchor.Unspecified ? Anchor : defaults.Anchor,
+                AnimKind = AnimKind != AbilityAnimKind.Unspecified ? AnimKind : defaults.AnimKind,
+                AnimState = state,
+                AnimVariant = !string.IsNullOrEmpty(AnimState) ? AnimVariant : defaults.AnimVariant,
+                Scale = Scale > 0.001f ? Scale : defaults.Scale,
+            };
+        }
 
-        public static AbilityFx Ring(Color color, float duration) =>
-            new() { Kind = FxKind.Ring, Color = color, DurationSeconds = duration };
-
-        public static AbilityFx RingPlus(Color color, float duration = 0f) =>
-            new() { Kind = FxKind.RingPlus, Color = color, DurationSeconds = duration };
-
-        public static AbilityFx RingBurst(Color color, float ringDuration = 0f, float burstHeight = 0f) =>
-            new() { Kind = FxKind.RingBurst, Color = color, DurationSeconds = ringDuration, BurstHeight = burstHeight };
-
-        public static AbilityFx Burst(Color color) =>
-            new() { Kind = FxKind.Burst, Color = color };
-
-        public static AbilityFx Plus(Color color) =>
-            new() { Kind = FxKind.Plus, Color = color };
-
-        public static AbilityFx SkyBeam(Color color, float duration = 1.1f, float height = 36f) =>
-            new() { Kind = FxKind.SkyBeam, Color = color, DurationSeconds = duration, BurstHeight = height };
+        /// <summary>Authored visual scale, or 1 when unset.</summary>
+        public static float ResolveScale(float scale) => scale > 0.001f ? scale : 1f;
 
         /// <summary>Packs a color into a 32-bit RGBA int for snapshot transport.</summary>
         public static int ToRgbaInt(Color color)

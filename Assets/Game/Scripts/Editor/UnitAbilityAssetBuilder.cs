@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
+using Game.Gameplay.Vfx;
 using UnityEditor;
 using UnityEngine;
 
@@ -186,6 +187,10 @@ namespace Game.Editor
             }
 
             var def = existing;
+            var seededFx = defaults.Fx;
+            seededFx.Anchor = AbilityVfxKindRules.ResolveDefaultAnchor(defaults.AbilityId);
+            seededFx.AnimKind = AbilityAnimRules.ResolveKind(defaults.AbilityId);
+            var preservedFx = existing.Fx.WithPreservedAuthored(seededFx);
 
             var behaviour = defaults.Behaviour;
             if (existing.Behaviour != null
@@ -208,7 +213,7 @@ namespace Game.Editor
                 defaults.Unlock,
                 defaults.UnlockValue,
                 behaviour,
-                defaults.Fx,
+                preservedFx,
                 defaults.Damage,
                 defaults.Heal,
                 defaults.HealPerSecond,
@@ -222,6 +227,9 @@ namespace Game.Editor
                 defaults.FlatBonus,
                 defaults.SecondaryRadius,
                 defaults.SecondaryHeal);
+
+            ApplyVfxPrefab(def);
+
             EditorUtility.SetDirty(def);
             return def;
         }
@@ -256,6 +264,69 @@ namespace Game.Editor
             }
 
             return null;
+        }
+
+        static readonly Dictionary<int, string> VfxPrefabPaths = new()
+        {
+            // Caster
+            { AbilityIds.CasterHeal,    "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Light/CFXR3 Hit Light B (Air).prefab" },
+            { AbilityIds.Frost,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.Resurrect,     "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Eerie/CFXR2 Souls Escape.prefab" },
+
+            // King (Hero1)
+            { AbilityIds.Heal,          "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Light/CFXR3 LightGlow A (Loop).prefab" },
+            { AbilityIds.Ultimate,      "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR Explosion 1.prefab" },
+            { AbilityIds.Strike,        "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit D 3D (Yellow).prefab" },
+
+            // Paladin (Hero2)
+            { AbilityIds.Smite,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit A (Red).prefab" },
+            { AbilityIds.Shield,        "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.Consecration,  "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Fire/CFXR2 Firewall A.prefab" },
+
+            // Priest (Hero3)
+            { AbilityIds.HolyNova,      "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Impact Glowing HDR (Blue).prefab" },
+            { AbilityIds.GreaterHeal,   "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Misc/CFXR3 Ambient Glows.prefab" },
+            { AbilityIds.Revive,        "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR4 Falling Stars.prefab" },
+
+            // Titan
+            { AbilityIds.Slam,          "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR2 Ground Hit.prefab" },
+            { AbilityIds.Rally,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Electric/CFXR Electrified 3.prefab" },
+            { AbilityIds.Stomp,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR3 Fire Explosion B.prefab" },
+
+            // Bonus units
+            { AbilityIds.AuraDamagePercent, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.AuraAttackSpeedPercent, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.AuraArmorPercent, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.AuraMaxHpPercent, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.AuraHpRegen,   "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Light/CFXR3 LightGlow A (Loop).prefab" },
+            { AbilityIds.MeleeCleave,   "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit D 3D (Yellow).prefab" },
+            { AbilityIds.RangedCrit,    "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Fire/CFXR3 Hit Fire B (Air).prefab" },
+            { AbilityIds.CasterHybrid,  "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Electric/CFXR3 Hit Electric C (Air).prefab" },
+            { AbilityIds.FlyingSpawn,   "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR4 Falling Stars.prefab" },
+            { AbilityIds.SuperCatapult, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR3 Fire Explosion B.prefab" },
+        };
+
+        static void ApplyVfxPrefab(UnitAbilityDef def)
+        {
+            if (!VfxPrefabPaths.TryGetValue(def.AbilityId, out var path))
+            {
+                return;
+            }
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"UnitAbilityAssetBuilder: CFXR prefab not found: {path} (ability {def.AbilityId})");
+                return;
+            }
+
+            var so = new SerializedObject(def);
+            var fxProp = so.FindProperty("_fx").FindPropertyRelative("VfxPrefab");
+            if (fxProp != null && fxProp.objectReferenceValue == null)
+            {
+                fxProp.objectReferenceValue = prefab;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
     }
 }

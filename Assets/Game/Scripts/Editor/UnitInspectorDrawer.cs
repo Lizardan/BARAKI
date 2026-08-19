@@ -274,7 +274,9 @@ namespace Game.Editor
                 meta += $"  ·  {def.Behaviour.GetType().Name}";
             }
 
-            meta += $"  ·  FX: {def.Fx.Kind}";
+            meta += def.Fx.VfxPrefab != null
+                ? $"  ·  FX: {def.Fx.VfxPrefab.name}"
+                : $"  ·  FX: {(def.Fx.Color.a > 0f ? "color only" : "none")}";
             EditorGUILayout.LabelField(meta, MetaStyle());
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(4);

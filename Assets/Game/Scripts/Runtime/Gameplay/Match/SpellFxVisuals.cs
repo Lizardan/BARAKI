@@ -5,52 +5,26 @@ using UnityEngine.Rendering;
 
 namespace Game.Gameplay.Match
 {
-    /// <summary>Floating spell VFX: rises + fades out, then self-destructs.</summary>
+    /// <summary>Floating spell label VFX: rises + fades out, then self-destructs.</summary>
     public sealed class SpellFxRiseFade : MonoBehaviour
     {
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        Renderer[] _renderers;
-        Color[] _baseColors;
         TextMesh[] _labels;
         Color[] _labelColors;
         float _duration;
         float _riseSpeed;
         float _fadeOutStart;
         float _elapsed;
-        bool _billboard;
 
-        /// <summary>Static fade-out for cube/cylinder primitives (MaterialPropertyBlock colors).</summary>
-        public void Configure(
-            Renderer[] renderers,
-            Color color,
-            float duration,
-            float riseSpeed,
-            bool billboard,
-            float fadeOutNormalized = 0.55f)
-        {
-            _renderers = renderers;
-            _baseColors = new Color[renderers.Length];
-            for (var i = 0; i < renderers.Length; i++)
-            {
-                _baseColors[i] = color;
-            }
-
-            _duration = Mathf.Max(0.05f, duration);
-            _riseSpeed = riseSpeed;
-            _billboard = billboard;
-            _fadeOutStart = _duration * Mathf.Clamp01(fadeOutNormalized);
-        }
-
-        /// <summary>Fade-out for legacy TextMesh label stack (fill + outline), vertex colors.</summary>
+        /// <summary>Fade-out for TextMesh label stack (fill + outline), vertex colors.</summary>
         public void ConfigureLabel(TextMesh[] labels, Color[] colors, float duration, float riseSpeed)
         {
             _labels = labels;
             _labelColors = colors;
             _duration = Mathf.Max(0.05f, duration);
             _riseSpeed = riseSpeed;
-            _billboard = true;
             _fadeOutStart = _duration * 0.4f;
         }
 
@@ -77,18 +51,12 @@ namespace Game.Gameplay.Match
 
         void LateUpdate()
         {
-            if (!_billboard)
-            {
-                return;
-            }
-
             var camera = CameraCache.Main;
             if (camera == null)
             {
                 return;
             }
 
-            // Only tip on X; yaw locked to gameplay camera compass (same as HP bars).
             var yaw = GameplayCameraPanController.Current != null
                 ? GameplayCameraPanController.Current.YawDegrees
                 : 0f;
@@ -100,63 +68,36 @@ namespace Game.Gameplay.Match
 
         void ApplyAlpha(float alpha)
         {
-            if (_labels != null && _labelColors != null)
-            {
-                var count = Mathf.Min(_labels.Length, _labelColors.Length);
-                for (var i = 0; i < count; i++)
-                {
-                    var label = _labels[i];
-                    if (label == null)
-                    {
-                        continue;
-                    }
-
-                    var c = _labelColors[i];
-                    c.a = Mathf.Max(0f, c.a * alpha);
-                    label.color = c;
-                }
-
-                return;
-            }
-
-            if (_renderers == null)
+            if (_labels == null || _labelColors == null)
             {
                 return;
             }
 
-            for (var i = 0; i < _renderers.Length; i++)
+            var count = Mathf.Min(_labels.Length, _labelColors.Length);
+            for (var i = 0; i < count; i++)
             {
-                var renderer = _renderers[i];
-                if (renderer == null)
+                var label = _labels[i];
+                if (label == null)
                 {
                     continue;
                 }
 
-                var block = new MaterialPropertyBlock();
-                renderer.GetPropertyBlock(block);
-                var color = _baseColors[i];
-                color.a = Mathf.Max(0f, color.a * alpha);
-                block.SetColor(BaseColorId, color);
-                block.SetColor(ColorId, color);
-                renderer.SetPropertyBlock(block);
+                var c = _labelColors[i];
+                c.a = Mathf.Max(0f, c.a * alpha);
+                label.color = c;
             }
         }
     }
 
-    /// <summary>Builds spell FX from Unity primitives + legacy TextMesh (URP Unlit materials).</summary>
+    /// <summary>Builds spell name labels from legacy TextMesh (URP Unlit materials).</summary>
     public static class SpellFxFactory
     {
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        const float PlusArmLength = 0.55f;
-        const float PlusArmThickness = 0.14f;
-        const float RingSegmentSize = 0.55f;
-        const float RingThickness = 0.07f;
         const float LabelWorldScale = 0.38f;
         const int LabelFontSize = 30;
         const float LabelOutlineOffset = 0.055f;
-        /// <summary>Local −Z faces the camera; fill sits slightly closer than outline copies.</summary>
         const float LabelFillLocalZ = -0.01f;
         const float LabelOutlineLocalZ = 0.01f;
 
@@ -172,156 +113,9 @@ namespace Game.Gameplay.Match
             new(1f, 1f),
         };
 
-        static Material s_transparentMaterial;
         static Material s_textMaterial;
         static Font s_font;
         static bool s_fontResolved;
-
-        /// <summary>Green/yellow "+" above the target's HP bar, rises then fades.</summary>
-        public static GameObject CreatePlus(
-            Transform parent,
-            Vector3 position,
-            Color color,
-            float duration = 1.1f,
-            float riseSpeed = 0.9f)
-        {
-            var root = new GameObject("SpellPlus");
-            root.transform.SetParent(parent, false);
-            root.transform.position = position;
-
-            var armH = CreatePrimitiveCube(root.transform, "ArmH", new Vector3(PlusArmLength, PlusArmThickness, 0.04f), color);
-            var armV = CreatePrimitiveCube(root.transform, "ArmV", new Vector3(PlusArmThickness, PlusArmLength, 0.04f), color);
-            var component = root.AddComponent<SpellFxRiseFade>();
-            component.Configure(
-                new[] { armH.GetComponent<Renderer>(), armV.GetComponent<Renderer>() },
-                color,
-                duration,
-                riseSpeed,
-                billboard: true);
-            return root;
-        }
-
-        /// <summary>Blue AoE disc + octagonal rim laid on the ground (Frost), fades without rising.</summary>
-        public static GameObject CreateRing(
-            Transform parent,
-            Vector3 position,
-            float radius,
-            Color color,
-            float duration = 0.9f,
-            float fadeOutNormalized = 0.55f)
-        {
-            var root = new GameObject("FrostRing");
-            root.transform.SetParent(parent, false);
-            root.transform.position = position + Vector3.up * 0.02f;
-
-            var diskColor = color;
-            diskColor.a *= 0.28f;
-            var disk = CreatePrimitiveCylinder(root.transform, "Disk", radius * 2f, 0.08f, diskColor);
-
-            var rimColor = color;
-            rimColor.a *= 0.85f;
-            const int segmentCount = 8;
-            var renderers = new Renderer[segmentCount + 1];
-            renderers[0] = disk.GetComponent<Renderer>();
-            for (var i = 0; i < segmentCount; i++)
-            {
-                var angle = i * 360f / segmentCount * Mathf.Deg2Rad;
-                var segment = CreatePrimitiveCube(
-                    root.transform,
-                    "Rim",
-                    new Vector3(RingSegmentSize, RingThickness, RingSegmentSize),
-                    rimColor);
-                segment.localPosition = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
-                segment.localRotation = Quaternion.Euler(0f, i * 360f / segmentCount, 0f);
-                renderers[i + 1] = segment.GetComponent<Renderer>();
-            }
-
-            var component = root.AddComponent<SpellFxRiseFade>();
-            component.Configure(renderers, rimColor, duration, riseSpeed: 0f, billboard: false, fadeOutNormalized);
-            return root;
-        }
-
-        /// <summary>Vertical holy column at a point (Smite / Consecration), rises then fades.</summary>
-        public static GameObject CreateBurst(
-            Transform parent,
-            Vector3 position,
-            Color color,
-            float height = 2.4f,
-            float duration = 0.7f)
-        {
-            var root = new GameObject("SpellBurst");
-            root.transform.SetParent(parent, false);
-            root.transform.position = position;
-
-            var columnColor = color;
-            columnColor.a *= 0.85f;
-            var column = CreatePrimitiveCylinder(root.transform, "Column", 0.5f, height, columnColor);
-            column.localPosition = Vector3.up * (height * 0.5f);
-
-            var capColor = color;
-            capColor.a *= 0.55f;
-            var cap = CreatePrimitiveCylinder(root.transform, "Cap", 1.1f, 0.08f, capColor);
-            cap.localPosition = Vector3.up * 0.04f;
-
-            var component = root.AddComponent<SpellFxRiseFade>();
-            component.Configure(
-                new[] { column.GetComponent<Renderer>(), cap.GetComponent<Renderer>() },
-                columnColor,
-                duration,
-                riseSpeed: 1.4f,
-                billboard: false);
-            return root;
-        }
-
-        /// <summary>
-        /// Divine beam from the sky into the impact point — visible to all clients via snapshot SpellCasts.
-        /// </summary>
-        public static GameObject CreateSkyBeam(
-            Transform parent,
-            Vector3 impact,
-            Color color,
-            float height = 40f,
-            float duration = 1.15f,
-            float impactRadius = 1.8f)
-        {
-            var root = new GameObject("DivineSkyBeam");
-            root.transform.SetParent(parent, false);
-            root.transform.position = impact;
-
-            var beamColor = color;
-            beamColor.a = Mathf.Clamp01(color.a * 0.92f);
-            var beam = CreatePrimitiveCylinder(root.transform, "Beam", 0.85f, height, beamColor);
-            beam.localPosition = Vector3.up * (height * 0.5f);
-
-            var coreColor = Color.Lerp(color, Color.white, 0.55f);
-            coreColor.a = Mathf.Clamp01(color.a);
-            var core = CreatePrimitiveCylinder(root.transform, "Core", 0.28f, height * 0.98f, coreColor);
-            core.localPosition = Vector3.up * (height * 0.5f);
-
-            var diskColor = color;
-            diskColor.a *= 0.4f;
-            var disk = CreatePrimitiveCylinder(root.transform, "ImpactDisk", impactRadius * 2.4f, 0.1f, diskColor);
-            disk.localPosition = Vector3.up * 0.05f;
-
-            var ringColor = color;
-            ringColor.a *= 0.9f;
-            CreateRing(root.transform, impact, impactRadius, ringColor, duration, fadeOutNormalized: 0.8f);
-
-            var component = root.AddComponent<SpellFxRiseFade>();
-            component.Configure(
-                new[]
-                {
-                    beam.GetComponent<Renderer>(),
-                    core.GetComponent<Renderer>(),
-                    disk.GetComponent<Renderer>(),
-                },
-                beamColor,
-                duration,
-                riseSpeed: 0f,
-                billboard: false,
-                fadeOutNormalized: 0.72f);
-            return root;
-        }
 
         /// <summary>Spell name label above the caster's bars, rises then fades.</summary>
         public static GameObject CreateLabel(
@@ -394,8 +188,6 @@ namespace Game.Gameplay.Match
                 label.font = font;
             }
 
-            // Font atlas is black RGB + alpha. URP Unlit shows RGB → solid black glyphs.
-            // Font material uses alpha as the mask and multiplies TextMesh.color correctly.
             var renderer = label.GetComponent<Renderer>();
             if (font != null && font.material != null)
             {
@@ -417,87 +209,11 @@ namespace Game.Gameplay.Match
             return label;
         }
 
-        /// <summary>
-        /// Ability FX tint, brightened toward white so the fill stays readable over the black outline.
-        /// </summary>
         static Color MakeReadableFill(Color color)
         {
             var fill = Color.Lerp(color, Color.white, 0.35f);
             fill.a = 1f;
             return fill;
-        }
-
-        static Transform CreatePrimitiveCube(Transform parent, string name, Vector3 scale, Color color)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localScale = scale;
-            DestroyCollider(go);
-            ApplyColor(go.GetComponent<Renderer>(), color);
-            return go.transform;
-        }
-
-        static Transform CreatePrimitiveCylinder(Transform parent, string name, float diameter, float height, Color color)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localScale = new Vector3(diameter, height, diameter);
-            DestroyCollider(go);
-            ApplyColor(go.GetComponent<Renderer>(), color);
-            return go.transform;
-        }
-
-        static void ApplyColor(Renderer renderer, Color color)
-        {
-            var material = GetTransparentMaterial();
-            if (material == null)
-            {
-                renderer.enabled = false;
-                return;
-            }
-
-            renderer.sharedMaterial = material;
-            var block = new MaterialPropertyBlock();
-            block.SetColor(Shader.PropertyToID("_BaseColor"), color);
-            block.SetColor(Shader.PropertyToID("_Color"), color);
-            renderer.SetPropertyBlock(block);
-        }
-
-        static void DestroyCollider(GameObject target)
-        {
-            var collider = target.GetComponent<Collider>();
-            if (collider == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Object.Destroy(collider);
-            }
-            else
-            {
-                Object.DestroyImmediate(collider);
-            }
-        }
-
-        static Material GetTransparentMaterial()
-        {
-            if (s_transparentMaterial != null)
-            {
-                return s_transparentMaterial;
-            }
-
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null)
-            {
-                return null;
-            }
-
-            s_transparentMaterial = CreateTransparentUnlit(shader, "SpellFxPrimitives");
-            return s_transparentMaterial;
         }
 
         static Material GetTextMaterial()

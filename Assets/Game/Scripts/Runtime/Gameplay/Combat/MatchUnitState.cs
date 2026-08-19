@@ -111,6 +111,10 @@ namespace Game.Gameplay.Combat
         /// (strike abilities); false means Cast state.
         /// </summary>
         public bool CastLockUsesAttackAnim { get; set; }
+        /// <summary>Host-only: authored animator state for the current cast lock. Empty = Attack/Cast from kind.</summary>
+        public string CastLockAnimState { get; set; }
+        /// <summary>Host-only: authored BlendTree child for <see cref="CastLockAnimState"/>. Ignored when state is empty.</summary>
+        public int CastLockAnimVariant { get; set; }
         /// <summary>Incremented each time this unit starts an attack swing (anim re-trigger).</summary>
         public int AttackSwingSerial { get; set; }
         public UnitBehaviorState BehaviorState { get; set; }

@@ -14,27 +14,20 @@
 
 ## Ауры (визуал)
 
-Пассивные ауры — CFXR loop под носителем (не soft-диск):
+Пассивные ауры — loop-префаб под носителем (по умолчанию CFXR Runic, но можно сменить во вьювере):
 
-| Носитель | AbilityId | Prefab | Тинт |
-|----------|-----------|--------|------|
+| Носитель | AbilityId | Prefab (сид) | Тинт (сид) |
+|----------|-----------|--------------|------------|
 | King | 13 Damage | CFXR3 Magic Aura A (Runic) | crimson |
 | Paladin | 23 Haste | CFXR3 Magic Aura A (Runic) **без Rays** | green |
 | Priest | 33 Armor | CFXR3 Magic Aura A (Runic) | silver-blue |
 | Titan | 43 MaxHp | CFXR3 Magic Aura A (Runic) **без Rays** | warm orange |
-| Siege BONUS | 50 Regen | CFXR3 Magic Aura A (Runic) **без Rays** | **holy yellow** (свет паладина, не green heal) |
+| Siege BONUS | 50 Regen | CFXR3 Magic Aura A (Runic) **без Rays** | **holy yellow** |
 
-У всех пассивных аур child `Rays` снимается (`AuraFxVisuals.StripNamedChildren`).
-У Titan отдельно на **корне визуала** (не на scaled-модели) всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp) —
-это body-FX «мощное существо», не аура армии. Когда MaxHp-аура разлокнута (уровень 7),
-поверх добавляется обычное кольцо без Rays.
-
-Правила: `PassiveAuraFxRules` + `AuraFxVisuals`; префабы в `MatchFxCatalog` (`AuraShinyLoop` / `AuraRunicLoop`).
-Все пассивные ауры — **Runic** (Shiny в каталоге пока не используется).
-Масштаб ≈ `auraRadius / reference × 0.2` (визуал в 5× меньше механики; Runic ~1.1, Shiny ~1.4). Звук CFXR muted.
-Демо: `BARAKI/FX/Build Aura Demo Scene` → `Assets/Game/Scenes/AuraFxDemo.unity`.
-
-Soft glow-диск остаётся только у splash Catapult на прилёте (1 с).
+Источник истины визуала — `UnitAbilityDef.Fx` (Ability FX Viewer). Если `VfxPrefab` null —
+fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снимается.
+У Titan отдельно на **корне визуала** всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp).
+Подробности: `wiki/rules/ability-fx.md`.
 
 `TryGetAuraVisual` рисует ауру только для `AuraBehaviour` (например Siege Regen). Пассивы-трейты
 с `Radius` для AoE/splash (Cleave, Catapult) не показывают.

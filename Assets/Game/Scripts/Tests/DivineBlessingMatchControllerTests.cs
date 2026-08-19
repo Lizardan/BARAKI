@@ -78,7 +78,7 @@ namespace Game.Tests
             var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(AbilityIds.MainBuildingSmite, casts[0].Def.AbilityId);
-            Assert.AreEqual(FxKind.SkyBeam, casts[0].Def.Fx.Kind);
+            Assert.AreEqual(AbilityFxColors.DivineSmite, casts[0].Def.Fx.Color);
         }
 
         [Test]
@@ -100,7 +100,7 @@ namespace Game.Tests
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(AbilityIds.MainUnitSmite, casts[0].Def.AbilityId);
             Assert.AreEqual(enemy.UnitId, casts[0].TargetUnitId);
-            Assert.AreEqual(FxKind.SkyBeam, casts[0].Def.Fx.Kind);
+            Assert.AreEqual(AbilityFxColors.DivineSmite, casts[0].Def.Fx.Color);
         }
 
         [Test]

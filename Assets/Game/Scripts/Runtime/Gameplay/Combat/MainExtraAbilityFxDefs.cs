@@ -44,12 +44,7 @@ namespace Game.Gameplay.Combat
 
         static UnitAbilityDef BuildingSmite()
         {
-            if (s_buildingSmite != null)
-            {
-                return s_buildingSmite;
-            }
-
-            s_buildingSmite = UnitAbilityDef.Create(
+            s_buildingSmite ??= UnitAbilityDef.Create(
                 AbilityIds.MainBuildingSmite,
                 MainExtraAbilityRules.GetDisplayName(MainExtraAbilityRules.BuildingSmiteId),
                 MainExtraAbilityRules.GetEffectDescription(MainExtraAbilityRules.BuildingSmiteId),
@@ -57,22 +52,18 @@ namespace Game.Gameplay.Combat
                 AbilityUnlock.Always,
                 unlockValue: 1,
                 behaviour: null,
-                fx: AbilityFx.SkyBeam(AbilityFxColors.DivineSmite, duration: 1.15f, height: 40f),
+                fx: new AbilityFx { Color = AbilityFxColors.DivineSmite },
                 damage: MainExtraAbilityRules.BuildingSmiteDamage,
                 radius: 2.2f,
                 cooldownSeconds: MainExtraAbilityRules.CooldownSeconds,
                 manaCost: MainExtraAbilityRules.ManaCost);
+            ApplyCatalogFx(s_buildingSmite, AbilityIds.MainBuildingSmite);
             return s_buildingSmite;
         }
 
         static UnitAbilityDef UnitSmite()
         {
-            if (s_unitSmite != null)
-            {
-                return s_unitSmite;
-            }
-
-            s_unitSmite = UnitAbilityDef.Create(
+            s_unitSmite ??= UnitAbilityDef.Create(
                 AbilityIds.MainUnitSmite,
                 MainExtraAbilityRules.GetDisplayName(MainExtraAbilityRules.UnitSmiteId),
                 MainExtraAbilityRules.GetEffectDescription(MainExtraAbilityRules.UnitSmiteId),
@@ -80,12 +71,24 @@ namespace Game.Gameplay.Combat
                 AbilityUnlock.Always,
                 unlockValue: 1,
                 behaviour: null,
-                fx: AbilityFx.SkyBeam(AbilityFxColors.DivineSmite, duration: 1.15f, height: 40f),
+                fx: new AbilityFx { Color = AbilityFxColors.DivineSmite },
                 damage: MainExtraAbilityRules.UnitSmiteDamage,
                 radius: 1.6f,
                 cooldownSeconds: MainExtraAbilityRules.CooldownSeconds,
                 manaCost: MainExtraAbilityRules.ManaCost);
+            ApplyCatalogFx(s_unitSmite, AbilityIds.MainUnitSmite);
             return s_unitSmite;
+        }
+
+        static void ApplyCatalogFx(UnitAbilityDef def, int abilityId)
+        {
+            var catalog = MainExtraAbilityFxCatalog.Load();
+            if (catalog == null || def == null)
+            {
+                return;
+            }
+
+            def.ApplyFx(catalog.GetFx(abilityId));
         }
     }
 }

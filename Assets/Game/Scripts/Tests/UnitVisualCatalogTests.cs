@@ -814,6 +814,27 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ResolveDesiredState_StateOverrideWinsUnlessDead()
+        {
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.DeathState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Cast,
+                    fireAttack: false,
+                    fireDeath: false,
+                    isDead: false,
+                    stateOverride: UnitCombatAnimatorDriver.DeathState));
+            Assert.AreEqual(
+                UnitCombatAnimatorDriver.DeathState,
+                UnitCombatAnimatorDriver.ResolveDesiredState(
+                    UnitBehaviorState.Cast,
+                    fireAttack: false,
+                    fireDeath: true,
+                    isDead: false,
+                    stateOverride: UnitCombatAnimatorDriver.StandState));
+        }
+
+        [Test]
         public void ShouldForceRestartAttack_OnlyOnNewSwing()
         {
             Assert.IsTrue(UnitCombatAnimatorDriver.ShouldForceRestartAttack(

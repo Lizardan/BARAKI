@@ -78,6 +78,12 @@ namespace Game.Gameplay.Combat
         public void ClearNetworkAbilityCasts() => _networkAbilityCasts.Clear();
 
         /// <summary>
+        /// Casts waiting for presenter playback this tick. Peek before <see cref="ConsumePendingAbilityCasts"/>
+        /// so animator overrides can apply on the same frame as VFX.
+        /// </summary>
+        public IReadOnlyList<AbilityCastEvent> PendingPresenterCasts => _presenterAbilityCasts;
+
+        /// <summary>
         /// Casts pending presenter playback (host + clients). Consumers call this once per sync tick;
         /// the same serial never reappears thanks to snapshot v9 dedup on clients.
         /// </summary>
@@ -2349,6 +2355,12 @@ namespace Game.Gameplay.Combat
                         HumanBonusUnitRules.CatapultAoeRadius,
                         projectile.AttackerOwnerSlot,
                         excludeUnitId: -1);
+                    EmitTraitFx(
+                        attackerVsBuilding,
+                        AbilityIds.SuperCatapult,
+                        projectile.TargetPosition,
+                        targetUnitId: 0,
+                        HumanBonusUnitRules.CatapultAoeRadius);
                 }
 
                 return;
@@ -2356,17 +2368,28 @@ namespace Game.Gameplay.Combat
 
             var attacker = GetUnitById(projectile.AttackerUnitId);
             var rawDamage = projectile.RawDamage;
+            var rangedCrit = false;
             if (attacker != null
                 && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged)
                 && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
             {
                 rawDamage *= HumanBonusUnitRules.RangedCritMultiplier;
+                rangedCrit = true;
             }
 
             var target = GetUnitById(projectile.TargetUnitId);
             if (target != null && target.IsAlive)
             {
                 ApplyDamage(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
+            }
+
+            if (rangedCrit)
+            {
+                EmitTraitFx(
+                    attacker,
+                    AbilityIds.RangedCrit,
+                    projectile.TargetPosition,
+                    projectile.TargetUnitId);
             }
 
             if (projectile.AppliesSplashAoe)
@@ -2378,6 +2401,12 @@ namespace Game.Gameplay.Combat
                     HumanBonusUnitRules.CatapultAoeRadius,
                     projectile.AttackerOwnerSlot,
                     excludeUnitId: projectile.TargetUnitId);
+                EmitTraitFx(
+                    attacker,
+                    AbilityIds.SuperCatapult,
+                    projectile.TargetPosition,
+                    projectile.TargetUnitId,
+                    HumanBonusUnitRules.CatapultAoeRadius);
             }
         }
 
@@ -2400,6 +2429,15 @@ namespace Game.Gameplay.Combat
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
                 ApplyDamage(attacker, target, strike.RawDamage, killerSlot);
 
+                if (attacker != null && HumanBonusUnitRules.IsCasterBonus(attacker))
+                {
+                    EmitTraitFx(
+                        attacker,
+                        AbilityIds.CasterHybrid,
+                        target.WorldPosition,
+                        target.UnitId);
+                }
+
                 if (attacker != null
                     && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee)
                     && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
@@ -2411,6 +2449,12 @@ namespace Game.Gameplay.Combat
                         HumanBonusUnitRules.MeleeAoeRadius,
                         killerSlot,
                         excludeUnitId: target.UnitId);
+                    EmitTraitFx(
+                        attacker,
+                        AbilityIds.MeleeCleave,
+                        target.WorldPosition,
+                        target.UnitId,
+                        HumanBonusUnitRules.MeleeAoeRadius);
                 }
             }
         }
@@ -2552,6 +2596,7 @@ namespace Game.Gameplay.Combat
             AttachAbilities(spawned);
             _units.Add(spawned);
             _unitById[spawned.UnitId] = spawned;
+            EmitTraitFxUnbound(ownerSlot, AbilityIds.FlyingSpawn, worldPosition);
         }
 
         int GetUnitOwnerSlot(int unitId)
@@ -2707,7 +2752,7 @@ namespace Game.Gameplay.Combat
 
                 radius = def.Radius;
                 abilityId = def.AbilityId;
-                var color = def.Fx.Kind != FxKind.Plus && def.Fx.Color != default(Color)
+                var color = def.Fx.Color != default(Color)
                     ? def.Fx.Color
                     : PassiveAuraFxRules.ResolveTint(abilityId);
                 packedColor = AbilityFx.ToRgbaInt(color);
@@ -2898,14 +2943,20 @@ namespace Game.Gameplay.Combat
                 return false;
             }
 
-            ApplyAbilityAnimLock(unit, def.AbilityId);
+            ApplyAbilityAnimLock(unit, def);
             return true;
         }
 
-        void ApplyAbilityAnimLock(MatchUnitState unit, int abilityId)
+        void ApplyAbilityAnimLock(MatchUnitState unit, UnitAbilityDef def)
         {
-            var kind = AbilityAnimRules.ResolveKind(abilityId);
-            if (kind == AbilityAnimKind.None)
+            if (def == null)
+            {
+                return;
+            }
+
+            var state = def.Fx.AnimState;
+            var kind = AbilityAnimRules.ResolveAnim(def.AbilityId, def.Fx.AnimKind, state);
+            if (kind == AbilityAnimKind.None && string.IsNullOrEmpty(state))
             {
                 return;
             }
@@ -2913,9 +2964,16 @@ namespace Game.Gameplay.Combat
             var lockSeconds = AbilityAnimRules.ResolveLockSeconds(
                 kind,
                 GetUnitAttackInterval(unit),
-                abilityId);
+                def.AbilityId);
+            if (lockSeconds <= 0f && !string.IsNullOrEmpty(state))
+            {
+                lockSeconds = AbilityAnimRules.StaffCastClipSeconds;
+            }
+
             unit.CastLockRemainingSeconds = lockSeconds;
             unit.CastLockUsesAttackAnim = kind == AbilityAnimKind.Attack;
+            unit.CastLockAnimState = state;
+            unit.CastLockAnimVariant = string.IsNullOrEmpty(state) ? 0 : def.Fx.AnimVariant;
             unit.BehaviorState = unit.CastLockUsesAttackAnim
                 ? UnitBehaviorState.Attack
                 : UnitBehaviorState.Cast;
@@ -2931,6 +2989,95 @@ namespace Game.Gameplay.Combat
             _networkAbilityCasts.Add(cast.WithSerial(serial));
             _presenterAbilityCasts.Add(cast.WithSerial(serial));
             AbilityCast?.Invoke(cast.WithSerial(serial));
+        }
+
+        void EmitTraitFx(
+            MatchUnitState unit,
+            int abilityId,
+            Vector3 position,
+            int targetUnitId = 0,
+            float radius = 0f)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            var def = FindUnitAbility(unit, abilityId);
+            if (def == null)
+            {
+                return;
+            }
+
+            EmitCast(new AbilityCastEvent(
+                unit.UnitId,
+                unit.OwnerSlot,
+                def,
+                targetUnitId,
+                position,
+                radius > 0f ? radius : def.Radius));
+        }
+
+        void EmitTraitFxUnbound(int ownerSlot, int abilityId, Vector3 position)
+        {
+            var def = AbilityCatalog != null ? AbilityCatalog.Find(abilityId) : null;
+            if (def == null)
+            {
+                var kit = AbilityKitDefaults.CreateFlyingBonus();
+                def = kit is { Length: > 0 } ? kit[0] : null;
+            }
+
+            if (def == null)
+            {
+                return;
+            }
+
+            EmitCast(new AbilityCastEvent(0, ownerSlot, def, 0, position, def.Radius));
+        }
+
+        UnitAbilityDef FindUnitAbility(MatchUnitState unit, int abilityId)
+        {
+            if (unit?.Abilities != null)
+            {
+                for (var i = 0; i < unit.Abilities.Length; i++)
+                {
+                    var def = unit.Abilities[i];
+                    if (def != null && def.AbilityId == abilityId)
+                    {
+                        return def;
+                    }
+                }
+            }
+
+            if (AbilityCatalog != null)
+            {
+                var fromCatalog = AbilityCatalog.Find(abilityId);
+                if (fromCatalog != null)
+                {
+                    return fromCatalog;
+                }
+            }
+
+            if (unit == null)
+            {
+                return null;
+            }
+
+            var kit = AbilityKitDefaults.CreateForSpawn(unit.Role, unit.HeroSlot, unit.BonusSlot);
+            if (kit == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < kit.Length; i++)
+            {
+                if (kit[i] != null && kit[i].AbilityId == abilityId)
+                {
+                    return kit[i];
+                }
+            }
+
+            return null;
         }
 
         public MatchUnitState ResurrectUnit(CombatCorpseState corpse)

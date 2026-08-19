@@ -89,7 +89,8 @@ namespace Game.Editor
 
             EditorGUILayout.Space(6);
             EditorGUILayout.HelpBox(
-                "Тюнинг пересобирается из AbilityKitDefaults (Build Ability Defs) — ручные правки здесь перетираются.",
+                "Тюнинг пересобирается из AbilityKitDefaults (Build Ability Defs). " +
+                "Цвет, префаб, якорь, клип и масштаб сохраняются. Визуал правится в BARAKI/Ability FX Viewer.",
                 MessageType.Info);
 
             serializedObject.ApplyModifiedProperties();

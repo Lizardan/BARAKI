@@ -17,8 +17,9 @@ listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friend
 | Multiplayer | Netcode for GameObjects 2.13 + UGS Auth 3.7 / CloudSave 3.4 / Friends 1.2 / Multiplayer 2.2 |
 | Прочее | Clipper2Lib |
 
-**Не установлены** (не ссылаться в правилах и коде): VFX Graph, ProBuilder, glTFast,
-Addressables, DOTween, Roslyn. Единственный MCP-optional-dep — Cinemachine.
+**Не установлены** (не ссылаться в правилах и коде): ProBuilder, glTFast,
+Addressables, DOTween, Roslyn. VFX Graph **установлен** (17.5) — Adjustable Slash pack + тинт
+`AbilityVfxTint`. Единственный MCP-optional-dep — Cinemachine.
 
 ## Асинхронность
 
@@ -51,7 +52,7 @@ Addressables, DOTween, Roslyn. Единственный MCP-optional-dep — Cin
 | `Game.Tests` | `Scripts/Tests/` |
 
 `Game.Gameplay` ссылается: Game.Core, Game.Input, Unity.Cinemachine, Unity.InputSystem,
-Netcode, UGS, UniTask, UniRx, Clipper2Lib. Детали раскладки — `rules/code-organization.md`.
+Netcode, UGS, UniTask, UniRx, Clipper2Lib, Unity.VisualEffectGraph.Runtime. Детали раскладки — `rules/code-organization.md`.
 
 ## Cameras
 

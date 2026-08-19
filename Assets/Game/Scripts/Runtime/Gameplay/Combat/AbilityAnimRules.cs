@@ -6,11 +6,14 @@ namespace Game.Gameplay.Combat
     /// <summary>Which combat animator state an active ability should drive.</summary>
     public enum AbilityAnimKind
     {
-        None = 0,
-        /// <summary>Random clip from the Attack pool (strike / slam / smite).</summary>
-        Attack = 1,
-        /// <summary>Random clip from the Cast pool (heal / frost / rally).</summary>
-        Cast = 2,
+        /// <summary>Not authored yet; runtime/viewer take <see cref="AbilityAnimRules.ResolveKind"/>.</summary>
+        Unspecified = 0,
+        /// <summary>Stand — no attack/cast clip.</summary>
+        None = 1,
+        /// <summary>Attack animator state (optional authored BlendTree child via <c>AnimVariant</c>).</summary>
+        Attack = 2,
+        /// <summary>Cast animator state (optional authored BlendTree child via <c>AnimVariant</c>).</summary>
+        Cast = 3,
     }
 
     /// <summary>
@@ -42,7 +45,11 @@ namespace Game.Gameplay.Combat
                     or AbilityIds.Smite
                     or AbilityIds.Consecration
                     or AbilityIds.Slam
-                    or AbilityIds.Stomp => AbilityAnimKind.Attack,
+                    or AbilityIds.Stomp
+                    or AbilityIds.MeleeCleave
+                    or AbilityIds.RangedCrit
+                    or AbilityIds.CasterHybrid
+                    or AbilityIds.SuperCatapult => AbilityAnimKind.Attack,
 
                 AbilityIds.CasterHeal
                     or AbilityIds.Frost
@@ -55,6 +62,50 @@ namespace Game.Gameplay.Combat
                     or AbilityIds.Rally => AbilityAnimKind.Cast,
 
                 _ => AbilityAnimKind.None,
+            };
+
+        public static AbilityAnimKind ResolveKindFromState(string animState)
+        {
+            if (string.IsNullOrEmpty(animState))
+            {
+                return AbilityAnimKind.Unspecified;
+            }
+
+            if (animState == "Attack")
+            {
+                return AbilityAnimKind.Attack;
+            }
+
+            if (animState == "Cast")
+            {
+                return AbilityAnimKind.Cast;
+            }
+
+            return AbilityAnimKind.None;
+        }
+
+        public static AbilityAnimKind ResolveAnim(
+            int abilityId,
+            AbilityAnimKind authored,
+            string animState = null)
+        {
+            var fromState = ResolveKindFromState(animState);
+            if (fromState != AbilityAnimKind.Unspecified)
+            {
+                return fromState;
+            }
+
+            return authored != AbilityAnimKind.Unspecified
+                ? authored
+                : ResolveKind(abilityId);
+        }
+
+        public static string ResolveDefaultState(int abilityId) =>
+            ResolveKind(abilityId) switch
+            {
+                AbilityAnimKind.Attack => "Attack",
+                AbilityAnimKind.Cast => "Cast",
+                _ => string.Empty,
             };
 
         /// <summary>

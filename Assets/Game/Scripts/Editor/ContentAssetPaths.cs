@@ -18,6 +18,7 @@ namespace Game.Editor
         public const string RaceCatalog = Catalogs + "/RaceCatalog.asset";
         public const string UnitVisualCatalog = Catalogs + "/UnitVisualCatalog.asset";
         public const string UnitAbilityCatalog = Catalogs + "/UnitAbilityCatalog.asset";
+        public const string MainExtraAbilityFxCatalog = Game.Gameplay.Combat.MainExtraAbilityFxCatalog.AssetPath;
 
         public const string Races = Root + "/Races";
         public const string Humans = Races + "/Humans";

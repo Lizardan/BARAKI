@@ -15,6 +15,10 @@ namespace Game.Tests
             Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.Ultimate));
             Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.Stomp));
             Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.Consecration));
+            Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.MeleeCleave));
+            Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.RangedCrit));
+            Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.CasterHybrid));
+            Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKind(AbilityIds.SuperCatapult));
         }
 
         [Test]
@@ -29,10 +33,11 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ResolveKind_Passives_AreNone()
+        public void ResolveKind_PassivesAndLastCall_AreNone()
         {
             Assert.AreEqual(AbilityAnimKind.None, AbilityAnimRules.ResolveKind(AbilityIds.AuraDamagePercent));
             Assert.AreEqual(AbilityAnimKind.None, AbilityAnimRules.ResolveKind(AbilityIds.AuraAttackSpeedPercent));
+            Assert.AreEqual(AbilityAnimKind.None, AbilityAnimRules.ResolveKind(AbilityIds.FlyingSpawn));
         }
 
         [Test]
@@ -85,6 +90,47 @@ namespace Game.Tests
                 Game.Gameplay.Match.UnitCombatAnimatorDriver.ResolveAttackPlaybackSpeed(interval, clip),
                 0.001f);
             Assert.AreEqual(0.5f, CombatAttackRules.ResolveSwingImpactDelay(interval), 0.001f);
+        }
+
+        [Test]
+        public void ResolveAnim_Unspecified_UsesDefault_AuthoredWins()
+        {
+            Assert.AreEqual(
+                AbilityAnimKind.Attack,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Strike, AbilityAnimKind.Unspecified));
+            Assert.AreEqual(
+                AbilityAnimKind.Cast,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Strike, AbilityAnimKind.Cast));
+            Assert.AreEqual(
+                AbilityAnimKind.None,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Heal, AbilityAnimKind.None));
+        }
+
+        [Test]
+        public void ResolveAnim_StateWinsOverKindAndDefault()
+        {
+            Assert.AreEqual(
+                AbilityAnimKind.Attack,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Heal, AbilityAnimKind.Cast, "Attack"));
+            Assert.AreEqual(
+                AbilityAnimKind.Cast,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Strike, AbilityAnimKind.Attack, "Cast"));
+            Assert.AreEqual(
+                AbilityAnimKind.None,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Strike, AbilityAnimKind.Attack, "Stand"));
+            Assert.AreEqual(
+                AbilityAnimKind.Attack,
+                AbilityAnimRules.ResolveAnim(AbilityIds.Strike, AbilityAnimKind.Unspecified, null));
+        }
+
+        [Test]
+        public void ResolveKindFromState_EmptyIsUnspecified()
+        {
+            Assert.AreEqual(AbilityAnimKind.Unspecified, AbilityAnimRules.ResolveKindFromState(null));
+            Assert.AreEqual(AbilityAnimKind.Unspecified, AbilityAnimRules.ResolveKindFromState(""));
+            Assert.AreEqual(AbilityAnimKind.Attack, AbilityAnimRules.ResolveKindFromState("Attack"));
+            Assert.AreEqual(AbilityAnimKind.Cast, AbilityAnimRules.ResolveKindFromState("Cast"));
+            Assert.AreEqual(AbilityAnimKind.None, AbilityAnimRules.ResolveKindFromState("Death"));
         }
 
         [Test]

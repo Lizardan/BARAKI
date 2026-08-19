@@ -29,7 +29,7 @@ namespace Game.Gameplay.Data
         [SerializeField] private float _flatBonus;
         [SerializeField] private float _secondaryRadius;
         [SerializeField] private float _secondaryHeal;
-        [SerializeField] private AbilityFx _fx = new() { Kind = FxKind.Ring };
+        [SerializeField] private AbilityFx _fx;
         [SerializeField] private UnitAbilityBehaviour _behaviour;
 
         public int AbilityId => _abilityId;
@@ -53,6 +53,9 @@ namespace Game.Gameplay.Data
         public float SecondaryHeal => _secondaryHeal;
         public AbilityFx Fx => _fx;
         public UnitAbilityBehaviour Behaviour => _behaviour;
+
+        /// <summary>Writes visual FX without touching combat tuning (Ability FX Viewer / rebuild preserve).</summary>
+        public void ApplyFx(AbilityFx fx) => _fx = fx;
 
         public bool IsActive => _kind == AbilityKind.Active;
         public bool IsPassiveAura => _kind == AbilityKind.Passive;
@@ -90,9 +93,7 @@ namespace Game.Gameplay.Data
             _unlock = unlock;
             _unlockValue = unlockValue;
             _behaviour = behaviour;
-            _fx = fx.Kind == FxKind.Plus && fx.Color == default(Color)
-                ? new AbilityFx { Kind = FxKind.Ring }
-                : fx;
+            _fx = fx;
             _damage = damage;
             _heal = heal;
             _healPerSecond = healPerSecond;

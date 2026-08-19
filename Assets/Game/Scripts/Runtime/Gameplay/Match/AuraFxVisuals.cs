@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Gameplay.Combat;
+using Game.Gameplay.Vfx;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -14,7 +15,8 @@ namespace Game.Gameplay.Match
             GameObject prefab,
             PassiveAuraFxKind kind,
             Color tint,
-            float auraRadius)
+            float auraRadius,
+            float visualScale = 1f)
         {
             if (parent == null || prefab == null)
             {
@@ -25,7 +27,9 @@ namespace Game.Gameplay.Match
             fx.name = kind == PassiveAuraFxKind.Shiny ? "AuraFx_Shiny" : "AuraFx_Runic";
             fx.transform.localPosition = new Vector3(0f, 0.05f, 0f);
             fx.transform.localRotation = Quaternion.identity;
-            fx.transform.localScale = Vector3.one * PassiveAuraFxRules.ResolveScale(kind, auraRadius);
+            fx.transform.localScale = Vector3.one
+                * PassiveAuraFxRules.ResolveScale(kind, auraRadius)
+                * Mathf.Max(0.01f, visualScale);
             StripNamedChildren(fx, RaysChildName);
             ApplyTint(fx, tint);
             SoftenLoop(fx);
@@ -114,44 +118,7 @@ namespace Game.Gameplay.Match
             }
         }
 
-        public static void ApplyTint(GameObject fx, Color tint)
-        {
-            if (fx == null)
-            {
-                return;
-            }
-
-            var systems = fx.GetComponentsInChildren<ParticleSystem>(true);
-            for (var i = 0; i < systems.Length; i++)
-            {
-                var ps = systems[i];
-                if (ps == null)
-                {
-                    continue;
-                }
-
-                var main = ps.main;
-                main.startColor = RetintGradient(main.startColor, tint);
-
-                var colorOverLifetime = ps.colorOverLifetime;
-                if (colorOverLifetime.enabled)
-                {
-                    colorOverLifetime.color = RetintGradient(colorOverLifetime.color, tint);
-                }
-            }
-
-            var lights = fx.GetComponentsInChildren<Light>(true);
-            for (var i = 0; i < lights.Length; i++)
-            {
-                var light = lights[i];
-                if (light == null)
-                {
-                    continue;
-                }
-
-                light.color = Color.Lerp(light.color, tint, 0.85f);
-            }
-        }
+        public static void ApplyTint(GameObject fx, Color tint) => AbilityVfxTint.Apply(fx, tint);
 
         static void CollectNamed(Transform root, string childName, List<GameObject> into)
         {
@@ -228,59 +195,52 @@ namespace Game.Gameplay.Match
             }
         }
 
-        static ParticleSystem.MinMaxGradient RetintGradient(
-            ParticleSystem.MinMaxGradient gradient,
-            Color tint)
-        {
-            switch (gradient.mode)
-            {
-                case ParticleSystemGradientMode.Color:
-                    return new ParticleSystem.MinMaxGradient(Retint(gradient.color, tint));
-                case ParticleSystemGradientMode.TwoColors:
-                    return new ParticleSystem.MinMaxGradient(
-                        Retint(gradient.colorMin, tint),
-                        Retint(gradient.colorMax, tint));
-                case ParticleSystemGradientMode.Gradient:
-                    return new ParticleSystem.MinMaxGradient(RetintGradientKeys(gradient.gradient, tint));
-                case ParticleSystemGradientMode.TwoGradients:
-                    return new ParticleSystem.MinMaxGradient(
-                        RetintGradientKeys(gradient.gradientMin, tint),
-                        RetintGradientKeys(gradient.gradientMax, tint));
-                default:
-                    return gradient;
-            }
-        }
-
-        static Gradient RetintGradientKeys(Gradient source, Color tint)
-        {
-            if (source == null)
-            {
-                return source;
-            }
-
-            var colorKeys = source.colorKeys;
-            for (var i = 0; i < colorKeys.Length; i++)
-            {
-                colorKeys[i].color = Retint(colorKeys[i].color, tint);
-            }
-
-            var result = new Gradient();
-            result.SetKeys(colorKeys, source.alphaKeys);
-            return result;
-        }
-
         /// <summary>Keep value/alpha from the CFXR authoring; take hue/sat from the aura tint.</summary>
-        public static Color Retint(Color source, Color tint)
+        public static Color Retint(Color source, Color tint) => AbilityVfxTint.Retint(source, tint);
+
+        /// <summary>
+        /// Preview-scene safety: CFXR must not Destroy/Disable the instance, shake the editor
+        /// camera, or play audio. Lights are optionally softened like a match aura loop.
+        /// </summary>
+        public static void PrepareEditorPreview(GameObject fx, bool softenLights = true)
         {
-            Color.RGBToHSV(source, out _, out var sourceSat, out var sourceVal);
-            Color.RGBToHSV(tint, out var tintHue, out var tintSat, out _);
-            var sat = Mathf.Lerp(sourceSat, Mathf.Max(sourceSat, tintSat), 0.85f);
-            var result = Color.HSVToRGB(tintHue, sat, Mathf.Max(0.15f, sourceVal));
-            result.a = source.a;
-            return result;
+            if (fx == null)
+            {
+                return;
+            }
+
+            var behaviours = fx.GetComponentsInChildren<MonoBehaviour>(true);
+            for (var i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null || behaviour.GetType().Name != "CFXR_Effect")
+                {
+                    continue;
+                }
+
+                var type = behaviour.GetType();
+                type.GetField("clearBehavior")?.SetValue(behaviour, 0);
+                var shake = type.GetField("cameraShake")?.GetValue(behaviour);
+                if (shake != null)
+                {
+                    shake.GetType().GetField("enabled")?.SetValue(shake, false);
+                }
+            }
+
+            MuteAudio(fx);
+            if (softenLights)
+            {
+                SoftenLights(fx);
+            }
         }
 
         static void SoftenLoop(GameObject fx)
+        {
+            SoftenLights(fx);
+            MuteAudio(fx);
+        }
+
+        static void SoftenLights(GameObject fx)
         {
             var lights = fx.GetComponentsInChildren<Light>(true);
             for (var i = 0; i < lights.Length; i++)
@@ -290,7 +250,10 @@ namespace Game.Gameplay.Match
                     lights[i].intensity *= 0.55f;
                 }
             }
+        }
 
+        static void MuteAudio(GameObject fx)
+        {
             var audio = fx.GetComponentsInChildren<AudioSource>(true);
             for (var i = 0; i < audio.Length; i++)
             {

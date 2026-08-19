@@ -6,7 +6,7 @@
 Assets/Game/
 ├── Art/
 │   ├── Materials/      # URP Lit (level backdrop, props)
-│   └── …               (Animations, Models, Textures; VFX/ — резерв, пока не используется)
+│   └── …               (Animations, Models, Textures; VFX/ — резерв)
 ├── Audio/              (Music, SFX)
 ├── Prefabs/
 │   └── Cameras/        # Cinemachine rigs (GameCameraRig.prefab)

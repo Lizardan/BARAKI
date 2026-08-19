@@ -156,6 +156,9 @@ namespace Game.Tests
             Assert.IsNotNull(spawned);
             Assert.AreEqual(0, spawned.BonusSlot);
             Assert.AreEqual(UnitRole.Ranged, spawned.Role);
+            var casts = combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(AbilityIds.FlyingSpawn, casts[0].Def.AbilityId);
         }
 
         [Test]
@@ -237,6 +240,96 @@ namespace Game.Tests
             catapult.AbilityCooldownRemaining = new float[catapult.Abilities.Length];
 
             Assert.IsFalse(combat.TryGetAuraVisual(catapult, out _, out _));
+        }
+
+        [Test]
+        public void MeleeBonus_CleaveProc_EmitsAbilityFx()
+        {
+            var seed = FindSeedThatProcs(HumanBonusUnitRules.OnHitProcChance);
+            var combat = CreateCombat(seed);
+            var attacker = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 20f, bonusSlot: 1);
+            var target = combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 22f);
+            target.WorldPosition = attacker.WorldPosition + new Vector3(1.5f, 0f, 0f);
+
+            combat.ConsumePendingAbilityCasts();
+            combat.ResolveMeleeImpact(new CombatMeleeStrikeState(
+                attacker.UnitId,
+                target.UnitId,
+                rawDamage: 20f,
+                duration: 0.1f));
+
+            var casts = combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(AbilityIds.MeleeCleave, casts[0].Def.AbilityId);
+            Assert.AreEqual(target.UnitId, casts[0].TargetUnitId);
+        }
+
+        [Test]
+        public void RangedBonus_CritProc_EmitsAbilityFx()
+        {
+            var seed = FindSeedThatProcs(HumanBonusUnitRules.OnHitProcChance);
+            var combat = CreateCombat(seed);
+            var attacker = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Ranged, RangedStats(),
+                distanceAlongLane: 20f, bonusSlot: 2);
+            var target = combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            target.WorldPosition = attacker.WorldPosition + new Vector3(6f, 0f, 0f);
+
+            combat.ConsumePendingAbilityCasts();
+            combat.ResolveProjectileImpact(new CombatProjectileState(
+                1,
+                attacker.UnitId,
+                target.UnitId,
+                attacker.OwnerSlot,
+                UnitRole.Ranged,
+                GameIds.Races.Human,
+                rawDamage: 10f,
+                flightDuration: 0.01f,
+                attacker.WorldPosition,
+                target.WorldPosition,
+                isParabolic: true));
+
+            var casts = combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(AbilityIds.RangedCrit, casts[0].Def.AbilityId);
+        }
+
+        [Test]
+        public void SuperBonus_CatapultSplash_EmitsAbilityFx()
+        {
+            var combat = CreateCombat();
+            var attacker = combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Super, SuperStats(),
+                distanceAlongLane: 20f, bonusSlot: 6);
+            var primary = combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 28f);
+            primary.WorldPosition = attacker.WorldPosition + new Vector3(8f, 0f, 0f);
+
+            combat.ConsumePendingAbilityCasts();
+            combat.ResolveProjectileImpact(new CombatProjectileState(
+                1,
+                attacker.UnitId,
+                primary.UnitId,
+                attacker.OwnerSlot,
+                UnitRole.Super,
+                GameIds.Races.Human,
+                rawDamage: 40f,
+                flightDuration: 0.01f,
+                attacker.WorldPosition,
+                primary.WorldPosition,
+                isParabolic: true,
+                appliesSplashAoe: true));
+
+            var casts = combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(AbilityIds.SuperCatapult, casts[0].Def.AbilityId);
         }
 
         [Test]

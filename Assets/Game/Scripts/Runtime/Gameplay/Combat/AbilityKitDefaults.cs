@@ -45,7 +45,7 @@ namespace Game.Gameplay.Combat
                 "Лечение героя и союзников вокруг.",
                 4,
                 HealArea(),
-                AbilityFx.RingPlus(AbilityFxColors.Heal, 0.85f),
+                fx: new AbilityFx { Color = AbilityFxColors.Heal },
                 heal: HeroAbilityRules.HealAmount,
                 radius: HeroAbilityRules.HealRadius,
                 cooldownSeconds: HeroAbilityRules.HealCooldownSeconds),
@@ -55,7 +55,7 @@ namespace Game.Gameplay.Combat
                 "Большой удар вокруг героя и краткое усиление собственного урона.",
                 10,
                 GroundAoe(applyUltimateSelfBuff: true),
-                AbilityFx.RingPlus(AbilityFxColors.Ultimate, 1.2f),
+                fx: new AbilityFx { Color = AbilityFxColors.Ultimate },
                 damage: HeroAbilityRules.UltimateDamage,
                 radius: HeroAbilityRules.UltimateRadius,
                 cooldownSeconds: HeroAbilityRules.UltimateCooldownSeconds,
@@ -67,7 +67,7 @@ namespace Game.Gameplay.Combat
                 "Урон по всем врагам вокруг героя.",
                 1,
                 GroundAoe(),
-                AbilityFx.Ring(AbilityFxColors.Strike, 0.75f),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike },
                 damage: HeroAbilityRules.StrikeDamage,
                 radius: HeroAbilityRules.StrikeRadius,
                 cooldownSeconds: HeroAbilityRules.StrikeCooldownSeconds),
@@ -79,7 +79,7 @@ namespace Game.Gameplay.Combat
                 Aura(AuraStat.Damage),
                 percent: HeroAbilityRules.AuraDamageBonusPercent,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.AuraDamage)),
+                fx: new AbilityFx { Color = AbilityFxColors.AuraDamage }),
         };
 
         public static UnitAbilityDef[] CreatePaladin() => new[]
@@ -90,7 +90,7 @@ namespace Game.Gameplay.Combat
                 "Щит: броня герою и союзникам рядом на короткое время. Кастуется, если рядом есть враг.",
                 4,
                 ArmorShout(),
-                AbilityFx.Ring(AbilityFxColors.Paladin, 1.0f),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
                 radius: HeroAbilityRules.ShieldRadius,
                 cooldownSeconds: HeroAbilityRules.ShieldCooldownSeconds,
                 durationSeconds: HeroAbilityRules.ShieldDurationSeconds,
@@ -101,7 +101,7 @@ namespace Game.Gameplay.Combat
                 "Освящение: урон и краткое оглушение врагов вокруг.",
                 10,
                 GroundAoe(),
-                AbilityFx.RingBurst(AbilityFxColors.Paladin, ringDuration: 1.3f, burstHeight: 2.8f),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
                 damage: HeroAbilityRules.ConsecrationDamage,
                 radius: HeroAbilityRules.ConsecrationRadius,
                 cooldownSeconds: HeroAbilityRules.ConsecrationCooldownSeconds,
@@ -112,7 +112,7 @@ namespace Game.Gameplay.Combat
                 "Кара: высокий урон по ближайшему врагу.",
                 1,
                 DamageBurst(),
-                AbilityFx.Burst(AbilityFxColors.Paladin),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
                 damage: HeroAbilityRules.SmiteDamage,
                 radius: HeroAbilityRules.SmiteRadius,
                 cooldownSeconds: HeroAbilityRules.SmiteCooldownSeconds),
@@ -124,7 +124,7 @@ namespace Game.Gameplay.Combat
                 Aura(AuraStat.AttackSpeed),
                 percent: HeroAbilityRules.AuraAttackSpeedBonusPercent,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.AuraAttackSpeed)),
+                fx: new AbilityFx { Color = AbilityFxColors.AuraAttackSpeed }),
         };
 
         public static UnitAbilityDef[] CreatePriest() => new[]
@@ -135,7 +135,7 @@ namespace Game.Gameplay.Combat
                 "Создаёт большую зону, в которой союзники лечатся, пока стоят внутри.",
                 4,
                 GreaterHealZone(),
-                AbilityFx.RingPlus(AbilityFxColors.Priest, HeroAbilityRules.GreaterHealDurationSeconds),
+                fx: new AbilityFx { Color = AbilityFxColors.Priest },
                 healPerSecond: HeroAbilityRules.GreaterHealHealPerSecond,
                 radius: HeroAbilityRules.GreaterHealRadius,
                 cooldownSeconds: HeroAbilityRules.GreaterHealCooldownSeconds,
@@ -146,7 +146,7 @@ namespace Game.Gameplay.Combat
                 "Возрождает ближайший союзный труп и лечит союзников вокруг.",
                 10,
                 Revive(),
-                AbilityFx.RingPlus(AbilityFxColors.Priest, 1.1f),
+                fx: new AbilityFx { Color = AbilityFxColors.Priest },
                 heal: HeroAbilityRules.ReviveHealAmount,
                 radius: HeroAbilityRules.ReviveRadius,
                 cooldownSeconds: HeroAbilityRules.ReviveCooldownSeconds,
@@ -158,7 +158,7 @@ namespace Game.Gameplay.Combat
                 "Вспышка вокруг выбранного союзника: лечит своих и бьёт врагов рядом с ним.",
                 1,
                 Nova(),
-                AbilityFx.RingPlus(AbilityFxColors.Priest, 0.9f),
+                fx: new AbilityFx { Color = AbilityFxColors.Priest },
                 damage: HeroAbilityRules.NovaDamage,
                 heal: HeroAbilityRules.NovaHealAmount,
                 radius: HeroAbilityRules.NovaRadius,
@@ -172,7 +172,7 @@ namespace Game.Gameplay.Combat
                 Aura(AuraStat.Armor),
                 percent: HeroAbilityRules.AuraArmorBonusPercent,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.AuraArmor)),
+                fx: new AbilityFx { Color = AbilityFxColors.AuraArmor }),
         };
 
         public static UnitAbilityDef[] CreateTitan() => new[]
@@ -183,7 +183,7 @@ namespace Game.Gameplay.Combat
                 "Клич: герой и союзники рядом получают броню.",
                 4,
                 ArmorShout(),
-                AbilityFx.Ring(AbilityFxColors.Paladin, 1.0f),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
                 radius: HeroAbilityRules.RallyRadius,
                 cooldownSeconds: HeroAbilityRules.RallyCooldownSeconds,
                 durationSeconds: HeroAbilityRules.RallyDurationSeconds,
@@ -194,7 +194,7 @@ namespace Game.Gameplay.Combat
                 "Топот: урон и оглушение врагов вокруг.",
                 10,
                 GroundAoe(),
-                AbilityFx.RingBurst(AbilityFxColors.Paladin, ringDuration: 1.3f, burstHeight: 2.8f),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
                 damage: HeroAbilityRules.StompDamage,
                 radius: HeroAbilityRules.StompRadius,
                 cooldownSeconds: HeroAbilityRules.StompCooldownSeconds,
@@ -205,7 +205,7 @@ namespace Game.Gameplay.Combat
                 "Мощный удар по всем врагам вокруг.",
                 1,
                 GroundAoe(),
-                AbilityFx.Ring(AbilityFxColors.Strike, 0.75f),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike },
                 damage: HeroAbilityRules.SlamDamage,
                 radius: HeroAbilityRules.SlamRadius,
                 cooldownSeconds: HeroAbilityRules.SlamCooldownSeconds),
@@ -217,7 +217,7 @@ namespace Game.Gameplay.Combat
                 Aura(AuraStat.MaxHp),
                 percent: HeroAbilityRules.AuraMaxHpBonusPercent,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.AuraMaxHp)),
+                fx: new AbilityFx { Color = AbilityFxColors.AuraMaxHp }),
         };
 
         /// <summary>Siege unit bonus: passive HP regen aura (AbilityId 50).</summary>
@@ -232,7 +232,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 flatBonus: HumanBonusUnitRules.RegenAuraFlatBonus,
                 radius: HeroAbilityRules.AuraRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.AuraHpRegen)),
+                fx: new AbilityFx { Color = AbilityFxColors.AuraHpRegen }),
         };
 
         /// <summary>Melee unit bonus: on-hit cleave (AbilityId 51).</summary>
@@ -247,7 +247,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 percent: HumanBonusUnitRules.OnHitProcChance,
                 radius: HumanBonusUnitRules.MeleeAoeRadius,
-                fx: AbilityFx.Ring(AbilityFxColors.Strike, 0.55f)),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike }),
         };
 
         /// <summary>Ranged unit bonus: on-hit crit (AbilityId 52).</summary>
@@ -262,7 +262,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 percent: HumanBonusUnitRules.OnHitProcChance,
                 damage: HumanBonusUnitRules.RangedCritMultiplier,
-                fx: AbilityFx.Burst(AbilityFxColors.Strike)),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike }),
         };
 
         /// <summary>Caster unit bonus: spell kit + hybrid melee under 2 m (AbilityId 53).</summary>
@@ -278,7 +278,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 radius: HumanBonusUnitRules.HybridMeleeRange,
                 damage: HumanBonusUnitRules.HybridMeleeDamageMax,
-                fx: AbilityFx.Ring(AbilityFxColors.Paladin, 0.45f));
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin });
             var kit = new UnitAbilityDef[spells.Length + 1];
             System.Array.Copy(spells, kit, spells.Length);
             kit[spells.Length] = hybrid;
@@ -296,7 +296,7 @@ namespace Game.Gameplay.Combat
                 Trait(),
                 unlock: AbilityUnlock.Always,
                 percent: HumanBonusUnitRules.OnDeathSpawnChance,
-                fx: AbilityFx.Plus(AbilityFxColors.Resurrect)),
+                fx: new AbilityFx { Color = AbilityFxColors.Resurrect }),
         };
 
         /// <summary>Super unit bonus: catapult parabola + splash (AbilityId 55).</summary>
@@ -311,7 +311,7 @@ namespace Game.Gameplay.Combat
                 unlock: AbilityUnlock.Always,
                 percent: HumanBonusUnitRules.CatapultAoeDamagePercent,
                 radius: HumanBonusUnitRules.CatapultAoeRadius,
-                fx: AbilityFx.RingBurst(AbilityFxColors.Ultimate, ringDuration: 0.7f, burstHeight: 1.6f)),
+                fx: new AbilityFx { Color = AbilityFxColors.Ultimate }),
         };
 
         /// <summary>Bonus-unit kit for a role (slots 1–6). Empty for non-bonus roles.</summary>
@@ -346,7 +346,7 @@ namespace Game.Gameplay.Combat
                 "Лечит самого раненого союзника в радиусе каста.",
                 CasterSpellRules.HealRequiredMagicLevel,
                 HealSingle(),
-                AbilityFx.Plus(AbilityFxColors.Heal),
+                fx: new AbilityFx { Color = AbilityFxColors.Heal },
                 unlock: AbilityUnlock.MagicLevel,
                 heal: CasterSpellRules.HealAmount,
                 castRange: CasterSpellRules.CastRange,
@@ -358,7 +358,7 @@ namespace Game.Gameplay.Combat
                 "Ледяной взрыв по скоплению врагов: урон и краткая заморозка.",
                 CasterSpellRules.FrostRequiredMagicLevel,
                 GroundAoe(),
-                AbilityFx.Ring(AbilityFxColors.Frost, 0.9f),
+                fx: new AbilityFx { Color = AbilityFxColors.Frost },
                 unlock: AbilityUnlock.MagicLevel,
                 damage: CasterSpellRules.FrostDamage,
                 radius: CasterSpellRules.FrostRadius,
@@ -372,7 +372,7 @@ namespace Game.Gameplay.Combat
                 "Поднимает недавний союзный труп с полным здоровьем.",
                 CasterSpellRules.ResurrectRequiredMagicLevel,
                 ResurrectCorpse(),
-                AbilityFx.Plus(AbilityFxColors.Resurrect),
+                fx: new AbilityFx { Color = AbilityFxColors.Resurrect },
                 unlock: AbilityUnlock.MagicLevel,
                 castRange: CasterSpellRules.CastRange,
                 cooldownSeconds: CasterSpellRules.ResurrectCooldownSeconds,
