@@ -87,7 +87,7 @@ namespace Game.Editor
             SimulateParticles(dt);
             if (AbilityVfxPreviewPlayback.HasVisualEffect(_instance))
             {
-                if (_elapsed >= AbilityVfxPreviewPlayback.OneShotLoopSeconds)
+                if (_elapsed >= AbilityVfxPreviewPlayback.ThumbVfxLoopSeconds)
                 {
                     AbilityVfxPreviewPlayback.PlayVisualEffects(_instance);
                     _elapsed = 0f;
@@ -142,7 +142,10 @@ namespace Game.Editor
             AuraFxVisuals.PrepareEditorPreview(_instance, softenLights: false);
             PrepareThumbPlayback(_instance);
             AbilityVfxPreviewPlayback.PrepareInstance(_instance);
-            SimulateAt(ShowcaseSeconds);
+            var previewAt = AbilityVfxPreviewPlayback.HasVisualEffect(_instance)
+                ? AbilityVfxPreviewPlayback.ThumbVfxPeakSeconds
+                : ShowcaseSeconds;
+            SimulateAt(previewAt);
             if (!AbilityVfxPreviewPlayback.HasVisualEffect(_instance)
                 && AbilityVfxPreviewPlayback.CountAliveParticles(_instance) <= 0)
             {
@@ -150,7 +153,7 @@ namespace Game.Editor
             }
 
             FrameToEffect();
-            _elapsed = ShowcaseSeconds;
+            _elapsed = previewAt;
             _particlesNeedRestart = false;
             Render();
         }
@@ -185,13 +188,7 @@ namespace Game.Editor
 
             if (AbilityVfxPreviewPlayback.HasVisualEffect(_instance))
             {
-                _lookAt = Vector3.zero;
-                _cameraPosition = new Vector3(0.15f, 0.12f, -1.6f);
-                _near = 0.05f;
-                _far = 12f;
-                _orthoSize = AbilityVfxPreviewPlayback.SlashOrthoSize;
-                _preview.camera.orthographic = true;
-                _preview.camera.orthographicSize = _orthoSize;
+                FrameVisualEffect();
                 return;
             }
 
@@ -218,6 +215,32 @@ namespace Game.Editor
             _preview.camera.orthographic = true;
             _preview.camera.orthographicSize = extent * FramePadding;
             _orthoSize = _preview.camera.orthographicSize;
+        }
+
+        void FrameVisualEffect()
+        {
+            var look = Vector3.zero;
+            var ortho = AbilityVfxPreviewPlayback.SlashOrthoSize;
+            var bounds = new Bounds();
+            var hasBounds = false;
+            EncapsulateRenderers(_instance, ref bounds, ref hasBounds);
+            if (hasBounds)
+            {
+                var extent = Mathf.Max(bounds.extents.x, bounds.extents.y, bounds.extents.z);
+                if (extent > 0.04f && extent < 2.5f)
+                {
+                    look = bounds.center;
+                    ortho = Mathf.Clamp(extent * 1.15f, 0.16f, 0.42f);
+                }
+            }
+
+            _lookAt = look;
+            _cameraPosition = look + new Vector3(0f, 0.02f, -1.2f);
+            _near = 0.02f;
+            _far = 8f;
+            _orthoSize = ortho;
+            _preview.camera.orthographic = true;
+            _preview.camera.orthographicSize = _orthoSize;
         }
 
         static void EncapsulateRenderers(GameObject root, ref Bounds bounds, ref bool hasBounds)

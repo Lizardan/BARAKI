@@ -54,7 +54,7 @@ namespace Game.Gameplay.Data
         public AbilityFx Fx => _fx;
         public UnitAbilityBehaviour Behaviour => _behaviour;
 
-        /// <summary>Writes visual FX without touching combat tuning (Ability FX Viewer / rebuild preserve).</summary>
+        /// <summary>Writes visual FX without touching combat tuning (BARAKI Studio / rebuild preserve).</summary>
         public void ApplyFx(AbilityFx fx) => _fx = fx;
 
         public bool IsActive => _kind == AbilityKind.Active;

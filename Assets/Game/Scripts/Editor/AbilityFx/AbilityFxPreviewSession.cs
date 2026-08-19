@@ -49,6 +49,7 @@ namespace Game.Editor
         string _animState;
         int _animVariant;
         float _visualScale = 1f;
+        Vector3 _euler;
         int _abilityId = int.MinValue;
         float _gameplayRadius;
         float _stunSeconds;
@@ -106,6 +107,23 @@ namespace Game.Editor
             _targetRoot != null
                 ? _targetRoot.transform.position + Vector3.up * 2.35f
                 : Vector3.zero;
+
+        public Vector3 AnchorMarkerWorld(AbilityVfxAnchor anchor)
+        {
+            var caster = _casterRoot != null
+                ? _casterRoot.transform.position
+                : new Vector3(CasterX, N4PerimeterLaneGeometry.LaneHeight, 0f);
+            var target = _targetRoot != null
+                ? _targetRoot.transform.position
+                : new Vector3(TargetX, N4PerimeterLaneGeometry.LaneHeight, 0f);
+            return anchor switch
+            {
+                AbilityVfxAnchor.Ground => AbilityVfxPlacement.SnapGroundY(caster),
+                AbilityVfxAnchor.Target => target + Vector3.up * AbilityVfxPlacement.BodyHeight,
+                AbilityVfxAnchor.Impact => AbilityVfxPlacement.SnapGroundY(target),
+                _ => caster + Vector3.up * AbilityVfxPlacement.BodyHeight,
+            };
+        }
 
         public void SetCaster(GameObject prefab, UnitRole role, int heroSlot, int bonusSlot, bool isBuilding)
         {
@@ -172,7 +190,8 @@ namespace Game.Editor
             float stunSeconds = 0f,
             string animState = null,
             int animVariant = 0,
-            float visualScale = 0f)
+            float visualScale = 0f,
+            Vector3 euler = default)
         {
             if (_disposed)
             {
@@ -189,6 +208,7 @@ namespace Game.Editor
                 && _animState == animState
                 && _animVariant == animVariant
                 && Mathf.Abs(_visualScale - scale) < 0.001f
+                && (_euler - euler).sqrMagnitude < 0.0001f
                 && Mathf.Abs(_gameplayRadius - gameplayRadius) < 0.001f
                 && Mathf.Abs(_stunSeconds - stunSeconds) < 0.001f
                 && _instance != null;
@@ -205,6 +225,7 @@ namespace Game.Editor
             _animState = animState;
             _animVariant = animVariant;
             _visualScale = scale;
+            _euler = euler;
             _gameplayRadius = gameplayRadius;
             _stunSeconds = stunSeconds;
             _oneShotLifetime = AbilityVfxPlacement.ResolveOneShotLifetimeSeconds(abilityId, stunSeconds);
@@ -402,18 +423,6 @@ namespace Game.Editor
             _instance = Object.Instantiate(prefab);
             _instance.name = prefab.name + " (preview)";
             _preview.AddSingleGO(_instance);
-            _instance.transform.position = ResolveAnchorWorld();
-            _instance.transform.rotation = prefab.transform.rotation;
-            _instance.transform.localScale =
-                AbilityVfxPlacement.ResolveOneShotLocalScale(prefab, _visualScale);
-
-            AuraFxVisuals.PrepareEditorPreview(_instance, softenLights: false);
-            AbilityVfxPreviewPlayback.PrepareInstance(_instance, tint);
-            AbilityVfxTint.Apply(_instance, tint);
-        }
-
-        Vector3 ResolveAnchorWorld()
-        {
             var caster = _casterRoot != null
                 ? _casterRoot.transform.position
                 : new Vector3(CasterX, N4PerimeterLaneGeometry.LaneHeight, 0f);
@@ -421,7 +430,20 @@ namespace Game.Editor
                 ? _targetRoot.transform.position
                 : new Vector3(TargetX, N4PerimeterLaneGeometry.LaneHeight, 0f);
             var impact = AbilityVfxPlacement.ResolvePreviewImpact(_abilityId, caster, target);
-            return AbilityVfxPlacement.ResolveWorld(_anchor, caster, target, impact);
+            AbilityVfxPlacement.ApplyOneShotTransform(
+                _instance.transform,
+                _anchor,
+                _casterRoot != null ? _casterRoot.transform : null,
+                _targetRoot != null ? _targetRoot.transform : null,
+                impact,
+                _euler,
+                prefab.transform.rotation);
+            _instance.transform.localScale =
+                AbilityVfxPlacement.ResolveOneShotLocalScale(prefab, _visualScale);
+
+            AuraFxVisuals.PrepareEditorPreview(_instance, softenLights: false);
+            AbilityVfxPreviewPlayback.PrepareInstance(_instance, tint);
+            AbilityVfxTint.Apply(_instance, tint);
         }
 
         GameObject ResolveSpawnPrefab()

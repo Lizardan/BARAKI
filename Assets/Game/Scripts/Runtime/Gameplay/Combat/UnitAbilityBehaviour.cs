@@ -34,6 +34,8 @@ namespace Game.Gameplay.Combat
         public int AnimVariant;
         /// <summary>Visual-only VFX multiplier. <c>0</c> = unset → 1× (combat radius unchanged).</summary>
         public float Scale;
+        /// <summary>Local euler degrees on spawn. <c>(0,0,0)</c> = unset → prefab rotation.</summary>
+        public Vector3 Euler;
 
         /// <summary>
         /// Keeps an already-authored color/prefab/anchor/anim when rebuilding defs from
@@ -51,6 +53,7 @@ namespace Game.Gameplay.Combat
                 AnimState = state,
                 AnimVariant = !string.IsNullOrEmpty(AnimState) ? AnimVariant : defaults.AnimVariant,
                 Scale = Scale > 0.001f ? Scale : defaults.Scale,
+                Euler = Euler.sqrMagnitude > 0.0001f ? Euler : defaults.Euler,
             };
         }
 

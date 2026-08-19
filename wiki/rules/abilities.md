@@ -38,8 +38,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
     (`AssetDatabase.MoveAsset` — GUID-ссылки из префабов/каталога сохраняются). Легаси-имена
     `Ability{id}.asset` также мигрируются автоматически. **`AbilityFx.Color` и `VfxPrefab` на
     существующих ассетах сохраняются** (не затираются дефолтами).
-  - `BARAKI/Abilities/Ability FX Viewer` — список слева, превью: модель кита + мечник,
-    якорь и клипы Attack/Cast. Подробности: `ability-fx.md`.
+  - `BARAKI/Abilities/BARAKI Studio` — список, превью, встроенная палитра.
+    Якоря и клипы Attack/Cast. Подробности: `ability-fx.md`.
   - `BARAKI/Units/Seed Unit Abilities` — записывает def-ссылки в `UnitCombatSettings` префабов
     (`UnitAbilitySeeder`).
 - **Runtime-фолбэк**: если в prefab settings нет ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
@@ -172,7 +172,7 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
 - **`UnitAbilityDefEditor`** на самом def-ассете показывает по умолчанию только **ненулевые** тюнинг-строки
   (ноль не мусорит — например, у не-хилящих нет поля «Heal»); toggle «Показать все» раскрывает нулевые.
   Read-only-сводку см. выше; тюнинг всё равно пересобирается из дефолтов. Цвет и VfxPrefab
-  **не** затираются при пересборке — их правит Ability FX Viewer.
+  **не** затираются при пересборке — их правит BARAKI Studio.
 - Статы и способности на префабе не редактируются: баланс правится в definition-ассете и переносится
   через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
   `BARAKI/Units/Seed Unit Abilities`.
@@ -215,7 +215,7 @@ HP зданий растут с уровнем (main 2000/2500/3000, barracks 80
 
 Править **только** дефолты (`AbilityKitDefaults` + правила), затем `Build Ability Defs` +
 `Seed Unit Abilities`. Прямые правки тюнинга def-ассетов в инспекторе — временные, на пересборке
-затираются. Визуал (`AbilityFx`) правится в Ability FX Viewer и сохраняется.
+затираются. Визуал (`AbilityFx`) правится в BARAKI Studio и сохраняется.
 
 ## Тесты
 

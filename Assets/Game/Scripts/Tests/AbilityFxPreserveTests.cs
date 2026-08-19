@@ -137,6 +137,38 @@ namespace Game.Tests
         }
 
         [Test]
+        public void WithPreservedAuthored_KeepsEuler()
+        {
+            var authored = new AbilityFx
+            {
+                Color = Color.white,
+                Euler = new Vector3(0f, 0f, 90f),
+            };
+            var defaults = new AbilityFx
+            {
+                Color = Color.red,
+                Euler = new Vector3(90f, 0f, 0f),
+            };
+
+            var merged = authored.WithPreservedAuthored(defaults);
+            Assert.AreEqual(new Vector3(0f, 0f, 90f), merged.Euler);
+        }
+
+        [Test]
+        public void WithPreservedAuthored_ZeroEuler_TakesDefault()
+        {
+            var authored = new AbilityFx { Color = Color.white };
+            var defaults = new AbilityFx
+            {
+                Color = Color.red,
+                Euler = new Vector3(90f, 0f, 0f),
+            };
+
+            var merged = authored.WithPreservedAuthored(defaults);
+            Assert.AreEqual(new Vector3(90f, 0f, 0f), merged.Euler);
+        }
+
+        [Test]
         public void WithPreservedAuthored_EmptyAnimStateAndScale_TakesDefaults()
         {
             var authored = new AbilityFx { Color = Color.white };

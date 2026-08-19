@@ -1,28 +1,28 @@
-# Ability FX Viewer
+# BARAKI Studio
 
 Визуалы способностей настраиваются в редакторе, пишутся в `AbilityFx`
-(`Color` + `VfxPrefab` + `Anchor` + `AnimKind` + `AnimState` + `AnimVariant` + `Scale`)
+(`Color` + `VfxPrefab` + `Anchor` + `AnimKind` + `AnimState` + `AnimVariant` + `Scale` + `Euler`)
 и играют в матче тем же пайплайном, что касты (`ShowAbilityFx` / пассивные ауры).
-Что видно во вьюере — то играет в бою.
+Что видно в Studio — то играет в бою.
 
 ## Окно
 
-Меню: **`BARAKI/Ability FX Viewer`** (также `BARAKI/Abilities/Ability FX Viewer`).
-Кнопка **Ability FX** на верхней панели Unity — static factory
-`[MainToolbarElement]` на методе (не наследование sealed `MainToolbarButton`).
+Меню: **`BARAKI/Abilities/BARAKI Studio`**. Быстрый доступ: кнопка **BARAKI Studio**
+на верхней панели Unity и **Ctrl+Shift+F**.
+`[MainToolbarElement("BARAKI Studio")]` — `AbilityFxStudioToolbarButton`.
 
-Раскладка **master-detail**:
+Одно окно, три колонки и две ручки-сплиттера (ширины и свёрнутость палитры в `SessionState`):
 
-- **Слева:** поиск и список, сгруппированный по киту (`AbilityVfxKindRules.KitLabel`).
-  Строка = цветовой свач + имя. Клик выбирает одну способность.
-- **Справа:** одно живое превью (`AbilityFxPreviewSession`):
-  слева **реальная модель** владельца кита (`UnitVisualCatalog` /
-  `AbilityFxPreviewCasterRules`), справа **мечник** (Human Melee) или
-  **главное здание** для Кара зданий. Подписи поверх RT. ЛКМ — орбита, колёсико — зум.
-- Настройки: RGB, **сетка живых превью** префаба (`AbilityVfxPrefabPickerWindow`),
-  слайдер **Масштаб** (0.25–8, `0` на ассете = 1×), **Кастер / Цель / Земля / Удар**,
-  dropdown **клипа из AnimatorController этого юнита**, Replay.
-  У аур якорь скрыт («всегда на носителе»). Здание без аниматора — «нет клипов».
+- **Слева:** поиск и список по киту (`AbilityVfxKindRules.KitLabel`). Строка = свач + имя.
+- **Центр:** живое превью (`AbilityFxPreviewSession`): слева модель владельца кита,
+  справа мечник / главное здание. Под превью полоса: цвет, масштаб, якоря 2×2, поворот,
+  кубики клипов, Replay / Ping.
+- **Справа:** палитра живых thumbs (`AbilityVfxPrefabPalette`). Не отдельное окно.
+  Клик сразу пишет `VfxPrefab` в текущую способность. Ручка сворачивает палитру —
+  превью на всю ширину визуала.
+
+**Сверху палитры** (не над превью): поиск, чипы Все / Cast / Hit / Aura, ObjectField, счётчик.
+Тулбар Studio — обновление индекса и toggle «Палитра». Сетка thumbs с одинаковым отступом слева и справа.
 
 Divine Blessing спавнит главное здание из `BuildingVisualCatalog` как кастер.
 Кара зданий — цель тоже Main.
@@ -38,16 +38,19 @@ Divine Blessing спавнит главное здание из `BuildingVisualC
 кадрировать `camera.Render` как ParticleSystem. Не ставить `cameraType = Game` и не звать
 `PreviewRenderUtility.Render(true)` из сетки превью — preview-сцена без LightmapSettings,
 URP падает с `GetManagerFromContext ... LightmapSettings is NULL`.
-На время сессии culling asset-а `CullNone` (без сохранения на диск). One-shot Graph крутится ~0.9 с.
-Пикер кадрирует Slash ortho ~0.48 (не perspective с дистанции 6 м — дуга схлопывалась в точку).
-После каждого `Reinit` снова тинт / lift чёрного `FirstColor`.
+На время сессии culling asset-а `CullNone` (без сохранения на диск). One-shot Graph в большом
+превью крутится ~0.9 с; в пикере дуга переигрывается ~0.38 с и кадрируется на пике (~0.1 с),
+ortho ~0.26, после `VFXManager.PrepareCamera` проекция камеры возвращается в ortho.
+После каждого `Reinit` снова тинт / lift чёрного `FirstColor`. Чипы Все / Cast / Hit / Aura
+в шапке палитры не сбрасываются при смене способности.
 
 Animator: `enabled = false`, только `Update(dt)`, иначе `camera.Render` удваивает клип.
 Свет как у портретов: `lights[0]` key, `lights[1]` fill, плюс Directional Light в preview-сцене (URP Lit/Toon иначе чёрные).
 
-Удар/каст спавнится в точке якоря теми же формулами, что матч (`AbilityVfxPlacement`):
-кастер = ноги (`Root.position`), цель = ноги + `BodyHeight` 0.9, земля = абсолютный `GroundY` 0.1,
-Impact = `Elevate(CenterPosition)` (порог y 0.05 → 0.6).
+Удар/каст ставится через `AbilityVfxPlacement.ApplyOneShotTransform` — те же формулы, что матч:
+**На себе / На цели** parent к корню юнита (едет с моделью); **Под собой / Под целью** мир
+на земле / `CenterPosition` (не едет). На себе и на цели = центр тела (`BodyHeight` 0.9 от ног),
+земля = абсолютный `GroundY` 0.1, Impact = `Elevate(CenterPosition)` (порог y 0.05 → 0.6).
 Корни юнитов в превью стоят на `N4PerimeterLaneGeometry.LaneHeight` (0.15), пол превью на **y = 0**,
 чтобы кольца GroundY 0.1 были видны.
 Летающие получают `GetModelLocalOffset` (+4 hover), герой +0.15 — как презентер.
@@ -64,7 +67,7 @@ CFXR в превью глушится (`AuraFxVisuals.PrepareEditorPreview`: `cl
 ### Анимации
 
 Список клипов строится с контроллера модели кита (`AbilityAnimClipIndex`: layer 0, BlendTree → строка на child).
-Вьюер пишет `AbilityFx.AnimState` (имя стейта) и `AnimVariant` (индекс child). Пустой `AnimState` →
+Studio пишет `AbilityFx.AnimState` (имя стейта) и `AnimVariant` (индекс child). Пустой `AnimState` →
 старое поведение: `AbilityAnimRules.ResolveAnim` по `AnimKind` / `ResolveKind`, случайный A/B.
 
 `AnimKind` выводится из стейта (Attack / Cast / None) для длительности `CastLock`.
@@ -74,15 +77,12 @@ CFXR в превью глушится (`AuraFxVisuals.PrepareEditorPreview`: `cl
 
 Replay / смена способности заново CrossFade с начала клипа. `applyRootMotion = false`.
 
-### Пикер префаба
+### Палитра префабов
 
-Кнопка «Эффект» открывает `AbilityVfxPrefabPickerWindow`: сетка крупных квадратов (макс. 5 колонок),
-над каждым имя, внутри живой `AbilityVfxThumbSession`. One-shot в пикере **зацикливается**
-(`ParticleSystem.loop` + local space; VFX Graph — `Play` каждые ~0.9 с). `Slash_*` кадрируются
-отдельным ortho ~0.48 спереди, чтобы дуга заполняла клетку. Это **разные пресеты** (~8 графов,
-свои текстуры/цвета/параметры), не дубликаты: в пикере остаются все, кроме mesh-only `SlashMesh`.
-Поиск по имени, чипы Cast / Hit / Aura / Все. Виртуализация: пул ~20 сессий на видимые ячейки.
-Первая ячейка — «нет». `ObjectField` остаётся запасным путём. Палитра (фильтр, не поле на SO):
+Встроена в Studio (`AbilityVfxPrefabPalette`), не `EditorWindow`. Первая ячейка — «нет».
+ObjectField и чипы Cast / Hit / Aura / Все — в шапке самой палитры.
+One-shot в палитре зацикливается; `Slash_*` кадрируются ortho ~0.48. Это разные пресеты (~8 графов),
+кроме mesh-only `SlashMesh`. Виртуализация: пул сессий на видимые ячейки.
 
 | Kind | Способности | Префабы |
 |------|-------------|---------|
@@ -96,45 +96,54 @@ Replay / смена способности заново CrossFade с начал�
 
 ## Якорь спавна (`AbilityVfxAnchor`)
 
-Где играет эффект, а не эвристика `TargetUnitId > 0`.
+Где играет эффект и **следует ли он за моделью**. Внутри те же 4 enum-значения (без миграции ассетов).
+Studio показывает сетку 2×2 и точки в превью (клик = тот же выбор).
 
-| Значение | Где | Примеры сида |
-|----------|-----|----------------|
-| `Unspecified` (0) | ещё не задан; runtime/viewer берут `ResolveDefaultAnchor` | существующие ассеты до первой записи |
-| `Caster` | у ног / вокруг кастера | ауры, Strike, Slam, Stomp, Ultimate, Cleave |
-| `Target` | на цели | Smite, Mend, Deadeye, Кара юнитов |
-| `Ground` | кольцо на земле у кастера | Frost, Consecration |
-| `Impact` | `cast.CenterPosition` (splash / спавн / здание) | Catapult, Last Call, Кара зданий |
+| Значение | UI | Поведение | Примеры сида |
+|----------|-----|-----------|----------------|
+| `Unspecified` (0) | — | ещё не задан; runtime/Studio берут `ResolveDefaultAnchor` | существующие ассеты до первой записи |
+| `Caster` | **На себе** | Parent к корню кастера, центр тела. Едет с моделью. | ауры, Strike, Slam, Stomp, Ultimate, Cleave |
+| `Target` | **На цели** | Parent к цели, центр тела. Едет с целью. | Smite, Mend, Deadeye, Кара юнитов |
+| `Ground` | **Под собой** | Мир, `GroundY` у ног кастера в кадр каста. Не едет. | Frost, Consecration |
+| `Impact` | **Под целью** | Мир, `cast.CenterPosition` (splash / спавн / здание). Не едет. | Catapult, Last Call, Кара зданий |
 
 `Unspecified` нужен потому что `Caster` не может быть 0: иначе нельзя отличить
 «пользователь выбрал кастера» от «поле ещё пустое». Сид не затирает уже сохранённый якорь
-(`AbilityFx.WithPreservedAuthored`). Ауры в матче по-прежнему parent к юниту (`AuraFxVisuals.Attach`).
+(`AbilityFx.WithPreservedAuthored`). Ауры в матче по-прежнему parent к юниту (`AuraFxVisuals.Attach`);
+кнопки якоря в Studio у аур скрыты.
 
 Превью Impact: Last Call → ноги кастера (root, не hover); Catapult / Кара зданий → ноги цели.
+
+## Поворот (`AbilityFx.Euler`)
+
+Градусы local euler. `(0,0,0)` = как в префабе. `WithPreservedAuthored` сохраняет ненулевой euler
+(как Scale: ноль = не задан). Спавн: `localRotation = Quaternion.Euler(Euler) * prefab.rotation`.
+Пресеты Studio: Горизонталь `(0,0,0)`, Вертикаль `(0,0,90)`, В пол `(90,0,0)`.
 
 ## Данные
 
 - Активки и пассивы юнитов: `UnitAbilityDef.Fx`. **Build Ability Defs сохраняет** уже назначенные
-  `Color` / `VfxPrefab` / `Anchor` / `AnimKind` / `AnimState` / `AnimVariant` / `Scale`
+  `Color` / `VfxPrefab` / `Anchor` / `AnimKind` / `AnimState` / `AnimVariant` / `Scale` / `Euler`
   (`AbilityFx.WithPreservedAuthored`). Хардкод CFXR в билдере — только сид, если префаб null.
   Якорь и `AnimKind` сидятся через `ResolveDefaultAnchor` / `ResolveKind`, если ещё `Unspecified`.
-  Пустой `AnimState` и `Scale == 0` не затирают уже заданные значения, но и не сидятся сами.
+  Пустой `AnimState`, `Scale == 0` и `Euler == 0` не затирают уже заданные значения, но и не сидятся сами.
   Геройские ауры 13/23/33/43 сидятся тем же Runic, что `MatchFxCatalog._auraRunicLoop`.
 - Divine Blessing 100/101: `MainExtraAbilityFxCatalog` (`Assets/Game/Resources/Fx/MainExtraAbilityFxCatalog.asset`,
   `Resources.Load("Fx/MainExtraAbilityFxCatalog")`). `MainExtraAbilityFxDefs` подмешивает FX при `Get`.
-  Сид: Кара зданий = CFXR3 Fire Explosion B, Кара юнитов = CFXR Hit A (Red). Пустой префаб досиживается при открытии вьюера.
+  Сид: Кара зданий = CFXR3 Fire Explosion B, Кара юнитов = CFXR Hit A (Red). Пустой префаб досиживается при открытии Studio.
 - Тинт: `Game.Gameplay.Vfx.AbilityVfxTint` — ParticleSystem (HSV-retint) + Visual Effect Graph
-  (`FirstColor` / `SecondColor` / `ThirdColor`). Во вьюере one-shot: `Apply` после `Play`/`Reinit`
+  (`FirstColor` / `SecondColor` / `ThirdColor`). В Studio one-shot: `Apply` после `Play`/`Reinit`
   (Graph сбрасывает exposed colors; частицы красятся один раз на спавне, не каждый тик).
 
-Building destroyed / кровь / Titan body rays живут в `MatchFxCatalog`, не в этом вьюере.
+Building destroyed / кровь / Titan body rays живут в `MatchFxCatalog`, не в этом окне.
 
 ## Рантайм
 
-- Каст: `MatchCombatPresenter.ShowAbilityFx` → instantiate `VfxPrefab` в точке `AbilityVfxPlacement.ResolveWorld`,
+- Каст: `MatchCombatPresenter.ShowAbilityFx` → instantiate `VfxPrefab`,
+  `AbilityVfxPlacement.ApplyOneShotTransform` (parent Caster/Target, мир Ground/Impact),
   `AbilityVfxTint.Apply`, `localScale = prefabScale × AbilityFx.ResolveScale` (в т.ч. Frost — без × radius).
   One-shot живёт 3 с; Frost — `StunSeconds` (1.5). Ground-якорь = `GroundY` 0.1.
-  Viewer использует те же константы/формулы. Impact в презентере = `Elevate(cast.CenterPosition)`.
+  Studio использует те же константы/формулы. Impact в презентере = `Elevate(cast.CenterPosition)`.
 - Пассивные ауры: префаб и цвет с `AbilityCatalog.Find(abilityId).Fx`, fallback на `MatchFxCatalog` Runic +
   `PassiveAuraFxRules`. Всегда на носителе.
 - Трейты эмитят `EmitCast` в тот же `SpellCasts` снапшот: Cleave (прок), Deadeye (крит), Battlemace

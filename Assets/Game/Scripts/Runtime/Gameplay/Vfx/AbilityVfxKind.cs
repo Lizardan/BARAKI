@@ -1,6 +1,6 @@
 namespace Game.Gameplay.Vfx
 {
-    /// <summary>Prefab palette used by the Ability FX Viewer (not serialized on the def).</summary>
+    /// <summary>Prefab palette used by BARAKI Studio (not serialized on the def).</summary>
     public enum AbilityVfxKind
     {
         Aura = 0,

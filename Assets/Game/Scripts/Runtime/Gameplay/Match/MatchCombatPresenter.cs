@@ -1130,80 +1130,55 @@ namespace Game.Gameplay.Match
             // VFX prefab
             if (def.Fx.VfxPrefab != null)
             {
-                SpawnVfx(def.Fx.VfxPrefab, cast, color, AbilityFx.ResolveScale(def.Fx.Scale));
+                SpawnVfx(
+                    def.Fx.VfxPrefab,
+                    cast,
+                    color,
+                    AbilityFx.ResolveScale(def.Fx.Scale),
+                    def.Fx.Euler);
             }
         }
 
-        void SpawnVfx(GameObject prefab, AbilityCastEvent cast, Color color, float visualScale)
+        void SpawnVfx(
+            GameObject prefab,
+            AbilityCastEvent cast,
+            Color color,
+            float visualScale,
+            Vector3 euler)
         {
             var abilityId = cast.Def != null ? cast.Def.AbilityId : 0;
             var authored = cast.Def != null ? cast.Def.Fx.Anchor : AbilityVfxAnchor.Unspecified;
             var anchor = AbilityVfxKindRules.ResolveAnchor(abilityId, authored);
-            var position = ResolveVfxPosition(cast, anchor);
+            var casterRoot = TryGetUnitRoot(cast.CasterUnitId, out var caster) ? caster : null;
+            var targetRoot = TryGetUnitRoot(cast.TargetUnitId, out var target) ? target : null;
 
             var instance = UnityEngine.Object.Instantiate(prefab, _root);
-            instance.transform.position = position;
+            AbilityVfxPlacement.ApplyOneShotTransform(
+                instance.transform,
+                anchor,
+                casterRoot,
+                targetRoot,
+                cast.CenterPosition,
+                euler,
+                prefab.transform.rotation,
+                _root);
             instance.transform.localScale = AbilityVfxPlacement.ResolveOneShotLocalScale(prefab, visualScale);
             AbilityVfxTint.Apply(instance, color);
             var stun = cast.Def != null ? cast.Def.StunSeconds : 0f;
             Destroy(instance, AbilityVfxPlacement.ResolveOneShotLifetimeSeconds(abilityId, stun));
         }
 
-        Vector3 ResolveVfxPosition(AbilityCastEvent cast, AbilityVfxAnchor anchor)
-        {
-            switch (anchor)
-            {
-                case AbilityVfxAnchor.Target:
-                    if (cast.TargetUnitId > 0 && TryGetUnitBody(cast.TargetUnitId, out var targetBody))
-                    {
-                        return targetBody;
-                    }
-
-                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
-
-                case AbilityVfxAnchor.Ground:
-                    if (TryGetUnitFeet(cast.CasterUnitId, out var casterFeet))
-                    {
-                        return AbilityVfxPlacement.SnapGroundY(casterFeet);
-                    }
-
-                    return AbilityVfxPlacement.SnapGroundY(cast.CenterPosition);
-
-                case AbilityVfxAnchor.Impact:
-                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
-
-                default:
-                    if (TryGetUnitFeet(cast.CasterUnitId, out var feet))
-                    {
-                        return feet;
-                    }
-
-                    return AbilityVfxPlacement.Elevate(cast.CenterPosition);
-            }
-        }
-
         bool TryGetUnitBarTop(int unitId, out Vector3 position) => TryGetUnitPosition(unitId, out position);
 
-        bool TryGetUnitFeet(int unitId, out Vector3 position)
+        bool TryGetUnitRoot(int unitId, out Transform root)
         {
-            position = default;
-            if (!_visuals.TryGetValue(unitId, out var visual) || visual?.Root == null)
+            root = null;
+            if (unitId <= 0 || !_visuals.TryGetValue(unitId, out var visual) || visual?.Root == null)
             {
                 return false;
             }
 
-            position = visual.Root.position;
-            return true;
-        }
-
-        bool TryGetUnitBody(int unitId, out Vector3 position)
-        {
-            if (!TryGetUnitFeet(unitId, out position))
-            {
-                return false;
-            }
-
-            position += Vector3.up * AbilityVfxPlacement.BodyHeight;
+            root = visual.Root;
             return true;
         }
 

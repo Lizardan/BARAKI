@@ -15,8 +15,12 @@ namespace Game.Editor
     public static class AbilityVfxPreviewPlayback
     {
         public const float OneShotLoopSeconds = 0.9f;
-        /// <summary>Tight ortho so a ~1 unit slash arc fills the picker cell.</summary>
-        public const float SlashOrthoSize = 0.48f;
+        /// <summary>Restart slash thumbs often so the cell shows the arc, not leftover sparks.</summary>
+        public const float ThumbVfxLoopSeconds = 0.38f;
+        /// <summary>Peak of a typical Adjustable Slash arc (SlashSpeed ~1.8, length ~0.4).</summary>
+        public const float ThumbVfxPeakSeconds = 0.1f;
+        /// <summary>Tight ortho so a ~0.4 unit slash arc fills the picker cell.</summary>
+        public const float SlashOrthoSize = 0.26f;
 
         const int CullNone = 0;
         const string CullingProperty = "m_Infos.m_CullingFlags";
@@ -55,8 +59,24 @@ namespace Game.Editor
             }
 
             preview.camera.targetTexture = target;
-            VFXManager.PrepareCamera(preview.camera);
-            preview.camera.Render();
+            var camera = preview.camera;
+            var wasOrtho = camera.orthographic;
+            var orthoSize = camera.orthographicSize;
+            var position = camera.transform.position;
+            var rotation = camera.transform.rotation;
+            var near = camera.nearClipPlane;
+            var far = camera.farClipPlane;
+            VFXManager.PrepareCamera(camera);
+            if (wasOrtho)
+            {
+                camera.orthographic = true;
+                camera.orthographicSize = orthoSize;
+                camera.transform.SetPositionAndRotation(position, rotation);
+                camera.nearClipPlane = near;
+                camera.farClipPlane = far;
+            }
+
+            camera.Render();
         }
 
         public static void PauseParticlesKeepVfxPlaying(GameObject root)

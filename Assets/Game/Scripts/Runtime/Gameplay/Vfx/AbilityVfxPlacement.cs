@@ -5,11 +5,11 @@ namespace Game.Gameplay.Vfx
 {
     /// <summary>
     /// Shared spawn height / scale / lifetime for ability VFX.
-    /// Match presenter and Ability FX Viewer both call these so preview matches combat.
+    /// Match presenter and BARAKI Studio both call these so preview matches combat.
     /// </summary>
     public static class AbilityVfxPlacement
     {
-        /// <summary>World lift from unit feet to the body hit point (Target anchor).</summary>
+        /// <summary>World lift from unit feet to the body center (Caster and Target follow anchors).</summary>
         public const float BodyHeight = 0.9f;
 
         /// <summary>Absolute world Y for Ground rings (Frost / Consecration).</summary>
@@ -31,8 +31,62 @@ namespace Game.Gameplay.Vfx
                 AbilityVfxAnchor.Target => targetFeet + Vector3.up * BodyHeight,
                 AbilityVfxAnchor.Ground => SnapGroundY(casterFeet),
                 AbilityVfxAnchor.Impact => Elevate(impactPosition),
-                _ => casterFeet,
+                _ => casterFeet + Vector3.up * BodyHeight,
             };
+
+        /// <summary>
+        /// Caster / Target parent to the unit and travel with it.
+        /// Ground / Impact stay in the world at the cast-time point.
+        /// </summary>
+        public static bool FollowsHost(AbilityVfxAnchor anchor) =>
+            anchor == AbilityVfxAnchor.Caster || anchor == AbilityVfxAnchor.Target;
+
+        public static Vector3 ResolveFollowLocalPosition(AbilityVfxAnchor anchor) =>
+            FollowsHost(anchor) ? Vector3.up * BodyHeight : Vector3.zero;
+
+        public static Quaternion ResolveAuthoredRotation(Vector3 euler, Quaternion prefabRotation) =>
+            Quaternion.Euler(euler) * prefabRotation;
+
+        /// <summary>
+        /// Parents a one-shot to the caster/target root, or leaves it in the world (optional match root).
+        /// </summary>
+        public static void ApplyOneShotTransform(
+            Transform instance,
+            AbilityVfxAnchor anchor,
+            Transform casterRoot,
+            Transform targetRoot,
+            Vector3 impactWorld,
+            Vector3 euler,
+            Quaternion prefabRotation,
+            Transform worldParent = null)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            var rotation = ResolveAuthoredRotation(euler, prefabRotation);
+            var host = FollowsHost(anchor)
+                ? (anchor == AbilityVfxAnchor.Target ? targetRoot : casterRoot)
+                : null;
+            if (host != null)
+            {
+                instance.SetParent(host, false);
+                instance.localPosition = ResolveFollowLocalPosition(anchor);
+                instance.localRotation = rotation;
+                return;
+            }
+
+            if (worldParent != null)
+            {
+                instance.SetParent(worldParent, true);
+            }
+
+            var casterFeet = casterRoot != null ? casterRoot.position : impactWorld;
+            var targetFeet = targetRoot != null ? targetRoot.position : impactWorld;
+            instance.position = ResolveWorld(anchor, casterFeet, targetFeet, impactWorld);
+            instance.rotation = rotation;
+        }
 
         public static Vector3 SnapGroundY(Vector3 position) =>
             new(position.x, GroundY, position.z);

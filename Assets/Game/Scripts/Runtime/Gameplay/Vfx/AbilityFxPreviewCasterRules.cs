@@ -3,7 +3,7 @@ using Game.Gameplay.Data;
 
 namespace Game.Gameplay.Vfx
 {
-    /// <summary>Which unit/hero (or main building) the Ability FX Viewer should spawn as caster.</summary>
+    /// <summary>Which unit/hero (or main building) BARAKI Studio should spawn as caster.</summary>
     public readonly struct AbilityFxPreviewCaster
     {
         public AbilityFxPreviewCaster(

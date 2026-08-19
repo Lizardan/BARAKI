@@ -14,7 +14,7 @@
 
 ## Ауры (визуал)
 
-Пассивные ауры — loop-префаб под носителем (по умолчанию CFXR Runic, но можно сменить во вьювере):
+Пассивные ауры — loop-префаб под носителем (по умолчанию CFXR Runic, но можно сменить в Studio):
 
 | Носитель | AbilityId | Prefab (сид) | Тинт (сид) |
 |----------|-----------|--------------|------------|
@@ -24,7 +24,7 @@
 | Titan | 43 MaxHp | CFXR3 Magic Aura A (Runic) **без Rays** | warm orange |
 | Siege BONUS | 50 Regen | CFXR3 Magic Aura A (Runic) **без Rays** | **holy yellow** |
 
-Источник истины визуала — `UnitAbilityDef.Fx` (Ability FX Viewer). Если `VfxPrefab` null —
+Источник истины визуала — `UnitAbilityDef.Fx` (BARAKI Studio). Если `VfxPrefab` null —
 fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снимается.
 У Titan отдельно на **корне визуала** всегда `TitanBodyRays` (только Rays из Runic, тинт MaxHp).
 Подробности: `wiki/rules/ability-fx.md`.
