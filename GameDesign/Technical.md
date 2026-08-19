@@ -20,7 +20,7 @@ provides: [unity_architecture, assemblies, scenes, networking, data_pipeline, ag
 | **Session / NAT** | Unity Lobby + Unity Relay (UGS) |
 | **Social / profile** | UGS Friends + Cloud Save |
 | **Distribution** | GitHub Actions → GitHub Releases → in-game force update |
-| Input | Input System 1.19 |
+| Input | Input System 1.20 |
 
 > Platform spec: **`Platform.md`**
 

@@ -7,14 +7,14 @@ listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friend
 
 | Слой | Стек |
 |------|------|
-| Unity | 6000.5.5f1 (`F:\Unity\Editor\6000.5.5f1`), C# 12 |
+| Unity | 6000.5.9f1 (`F:\Unity\Editor\6000.5.9f1`), C# 12 |
 | Rendering | URP 17.5 — `Settings/Rendering/RPAsset.asset`, `Renderer.asset`, `DefaultVolumeProfile.asset` |
-| Cameras | Cinemachine 3.1 — `Gameplay/Cameras/` |
+| Cameras | Cinemachine 3.1.7 — `Gameplay/Cameras/` |
 | UI | UI Toolkit only (UXML/USS/UIDocument) — **без** `com.unity.ugui` |
 | Reactive | UniRx (vendored, trimmed — `Assets/Plugins/UniRx/`) |
 | Async | UniTask (git, pinned); bootstrap `Game.Core` — `Awaitable` |
-| Input | Input System 1.19 — `Settings/Input/GameInputActions.inputactions` |
-| Multiplayer | Netcode for GameObjects 2.13 + UGS Auth 3.7 / CloudSave 3.4 / Friends 1.2 / Multiplayer 2.2 |
+| Input | Input System 1.20 — `Settings/Input/GameInputActions.inputactions` |
+| Multiplayer | Netcode for GameObjects 2.13 + UGS Auth 3.7.4 / CloudSave 3.4 / Friends 1.2 / Multiplayer 2.3 |
 | Прочее | Clipper2Lib |
 
 **Не установлены** (не ссылаться в правилах и коде): ProBuilder, glTFast,

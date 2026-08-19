@@ -10,10 +10,10 @@
 
 ## Технологии
 
-- Unity 6000.5.5f1, C# 12, URP 17.5
+- Unity 6000.5.9f1, C# 12, URP 17.5
 - Netcode for GameObjects (listen-host) + Unity Lobby/Relay
 - UI Toolkit, UniRx + UniTask
-- Cinemachine 3, Input System 1.19
+- Cinemachine 3, Input System 1.20
 
 ## Разработка
 
