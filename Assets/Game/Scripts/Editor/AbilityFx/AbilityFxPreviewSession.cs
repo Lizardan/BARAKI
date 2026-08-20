@@ -5,6 +5,7 @@ using Game.Gameplay.Match;
 using Game.Gameplay.Vfx;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 namespace Game.Editor
@@ -19,6 +20,10 @@ namespace Game.Editor
         const float CasterX = -1.45f;
         const float TargetX = 1.45f;
         const float CameraFocusY = 1.05f;
+        const float MinCameraDistance = 6.5f;
+        const float MaxCameraDistance = 52f;
+        const float DefaultCameraDistance = 7.4f;
+        const float UnityPlaneSize = 10f;
 
         readonly PreviewRenderUtility _preview;
         readonly GameObject _ground;
@@ -27,6 +32,11 @@ namespace Game.Editor
         readonly GameObject _keyLight;
         readonly GameObject _fillLight;
         readonly Material _groundMat;
+        readonly GameObject _mechanicRoot;
+        readonly LineRenderer _mechanicLine;
+        readonly Transform _mechanicDisc;
+        readonly Material _mechanicLineMat;
+        readonly Material _mechanicFillMat;
         readonly UnitCombatAnimatorPlayback _casterPlayback = new();
         readonly UnitCombatAnimatorPlayback _targetPlayback = new();
         RenderTexture _targetRt;
@@ -56,8 +66,10 @@ namespace Game.Editor
         float _oneShotLifetime = AbilityVfxPlacement.CastLifetimeSeconds;
         float _elapsed;
         float _yaw = 38f;
-        float _pitch = 26f;
-        float _distance = 7.4f;
+        float _pitch = 32f;
+        float _distance = DefaultCameraDistance;
+        int _framedAbilityId = int.MinValue;
+        float _framedRadius = -1f;
         bool _loop;
         bool _particlesNeedRestart;
         bool _disposed;
@@ -67,7 +79,7 @@ namespace Game.Editor
             _preview = new PreviewRenderUtility();
             _preview.camera.fieldOfView = 32f;
             _preview.camera.nearClipPlane = 0.05f;
-            _preview.camera.farClipPlane = 80f;
+            _preview.camera.farClipPlane = 140f;
             _preview.camera.clearFlags = CameraClearFlags.SolidColor;
             _preview.camera.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 1f);
             _preview.camera.allowHDR = true;
@@ -86,6 +98,7 @@ namespace Game.Editor
             _ground = CreateGround(_groundMat);
             _casterRoot = CreateRoot("FxPreviewCasterRoot", CasterX);
             _targetRoot = CreateRoot("FxPreviewTargetRoot", TargetX);
+            CreateMechanicGizmo(out _mechanicRoot, out _mechanicLine, out _mechanicDisc, out _mechanicLineMat, out _mechanicFillMat);
             _keyLight = CreateDirectionalLight(
                 "FxPreviewKeyLight",
                 1.25f,
@@ -214,6 +227,7 @@ namespace Game.Editor
                 && _instance != null;
             if (sameVisual && Approximately(tint, _tint))
             {
+                UpdateMechanicRing();
                 return;
             }
 
@@ -233,11 +247,13 @@ namespace Game.Editor
             {
                 _tint = tint;
                 AbilityVfxTint.Apply(_instance, PreviewTint);
+                UpdateMechanicRing();
                 return;
             }
 
             _tint = tint;
             Rebuild();
+            UpdateMechanicRing();
         }
 
         public void Replay() => Rebuild();
@@ -250,7 +266,7 @@ namespace Game.Editor
 
         public void Zoom(float scrollDelta)
         {
-            _distance = Mathf.Clamp(_distance - scrollDelta * 0.35f, 3.2f, 16f);
+            _distance = Mathf.Clamp(_distance - scrollDelta * 0.35f, MinCameraDistance, MaxCameraDistance);
         }
 
         public void EnsureSize(int width, int height)
@@ -365,9 +381,12 @@ namespace Game.Editor
             DestroyGo(_casterRoot);
             DestroyGo(_targetRoot);
             DestroyGo(_ground);
+            DestroyGo(_mechanicRoot);
             DestroyGo(_keyLight);
             DestroyGo(_fillLight);
             DestroyMat(_groundMat);
+            DestroyMat(_mechanicLineMat);
+            DestroyMat(_mechanicFillMat);
 
             if (_targetRt != null)
             {
@@ -388,6 +407,123 @@ namespace Game.Editor
             SpawnVfx();
             FireAnim();
             RenderToTarget();
+        }
+
+        void UpdateMechanicRing()
+        {
+            if (_disposed || _mechanicRoot == null)
+            {
+                return;
+            }
+
+            var mechanic = AbilityFxMechanicRules.Resolve(_abilityId, _gameplayRadius);
+            var show = mechanic.ShowRing && mechanic.Radius > 0.01f;
+            _mechanicRoot.SetActive(show);
+            if (!show)
+            {
+                FitGround(0f);
+                FrameCameraToMechanic(mechanic, 0f);
+                return;
+            }
+
+            var previewR = AbilityFxMechanicRules.PreviewRingRadius(mechanic.Radius);
+            FitGround(previewR);
+            FrameCameraToMechanic(mechanic, previewR);
+            var host = mechanic.RingHost == AbilityVfxAnchor.Target
+                || mechanic.RingHost == AbilityVfxAnchor.Impact
+                    ? _targetRoot
+                    : _casterRoot;
+            if (host == null)
+            {
+                _mechanicRoot.SetActive(false);
+                return;
+            }
+
+            var localY = mechanic.FlatOnGround
+                ? AbilityVfxPlacement.GroundY - host.transform.position.y
+                : mechanic.FollowsHost
+                    ? 0.07f
+                    : 0.04f;
+            _mechanicRoot.transform.SetParent(host.transform, false);
+            _mechanicRoot.transform.localPosition = new Vector3(0f, localY, 0f);
+            _mechanicRoot.transform.localRotation = Quaternion.identity;
+            _mechanicRoot.transform.localScale = Vector3.one;
+
+            var tint = mechanic.ChipColor;
+            if (_tint.a > 0.01f)
+            {
+                tint = Color.Lerp(tint, _tint, 0.4f);
+            }
+
+            tint.a = 1f;
+            if (_mechanicLine != null)
+            {
+                const int points = 48;
+                _mechanicLine.positionCount = points;
+                for (var i = 0; i < points; i++)
+                {
+                    var a = i / (float)points * Mathf.PI * 2f;
+                    _mechanicLine.SetPosition(
+                        i,
+                        new Vector3(Mathf.Cos(a) * previewR, 0f, Mathf.Sin(a) * previewR));
+                }
+
+                _mechanicLine.startColor = tint;
+                _mechanicLine.endColor = tint;
+                _mechanicLine.widthMultiplier = Mathf.Clamp(previewR * 0.016f, 0.06f, 0.18f);
+            }
+
+            if (_mechanicLineMat != null)
+            {
+                ApplyColor(_mechanicLineMat, tint);
+            }
+
+            if (_mechanicDisc != null)
+            {
+                _mechanicDisc.localScale = new Vector3(previewR * 2f, 0.02f, previewR * 2f);
+                var fill = tint;
+                fill.a = mechanic.FlatOnGround ? 0.28f : mechanic.FollowsHost ? 0.14f : 0.20f;
+                ApplyColor(_mechanicFillMat, fill);
+            }
+        }
+
+        void FitGround(float radius)
+        {
+            if (_ground == null)
+            {
+                return;
+            }
+
+            var world = radius > 0.01f
+                ? Mathf.Max(14f, radius * 2f + 8f)
+                : 8f;
+            _ground.transform.localScale = Vector3.one * (world / UnityPlaneSize);
+        }
+
+        void FrameCameraToMechanic(AbilityFxMechanic mechanic, float radius)
+        {
+            if (_abilityId == _framedAbilityId && Mathf.Abs(_framedRadius - radius) < 0.01f)
+            {
+                return;
+            }
+
+            _framedAbilityId = _abilityId;
+            _framedRadius = radius;
+            if (radius <= 0.01f)
+            {
+                _distance = DefaultCameraDistance;
+                return;
+            }
+
+            var hostX = mechanic.RingHost == AbilityVfxAnchor.Target
+                || mechanic.RingHost == AbilityVfxAnchor.Impact
+                    ? TargetX
+                    : CasterX;
+            var extent = Mathf.Max(Mathf.Abs(CasterX), Mathf.Abs(TargetX), Mathf.Abs(hostX) + radius);
+            var padding = 2.2f;
+            var halfFov = _preview.camera.fieldOfView * 0.5f * Mathf.Deg2Rad;
+            var needed = (extent + padding) / Mathf.Tan(halfFov) * 1.2f;
+            _distance = Mathf.Clamp(needed, MinCameraDistance, MaxCameraDistance);
         }
 
         void SpawnVfx()
@@ -685,6 +821,86 @@ namespace Game.Editor
             }
 
             return material;
+        }
+
+        void CreateMechanicGizmo(
+            out GameObject root,
+            out LineRenderer line,
+            out Transform disc,
+            out Material lineMat,
+            out Material fillMat)
+        {
+            root = new GameObject("FxPreviewMechanicRing");
+            _preview.AddSingleGO(root);
+
+            lineMat = CreateUnlitMaterial(Color.white);
+            MakeTransparent(lineMat);
+            var lineGo = new GameObject("RingLine");
+            _preview.AddSingleGO(lineGo);
+            lineGo.transform.SetParent(root.transform, false);
+            line = lineGo.AddComponent<LineRenderer>();
+            line.loop = true;
+            line.useWorldSpace = false;
+            line.widthMultiplier = 0.045f;
+            line.positionCount = 48;
+            line.shadowCastingMode = ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.sharedMaterial = lineMat;
+            line.alignment = LineAlignment.View;
+            line.textureMode = LineTextureMode.Stretch;
+
+            fillMat = CreateUnlitMaterial(new Color(1f, 1f, 1f, 0.22f));
+            MakeTransparent(fillMat);
+            var discGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            discGo.name = "RingFill";
+            Object.DestroyImmediate(discGo.GetComponent<Collider>());
+            _preview.AddSingleGO(discGo);
+            discGo.transform.SetParent(root.transform, false);
+            discGo.transform.localScale = new Vector3(2f, 0.012f, 2f);
+            var renderer = discGo.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = fillMat;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            disc = discGo.transform;
+            root.SetActive(false);
+        }
+
+        static void MakeTransparent(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat("_Surface", 1f);
+            }
+
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.renderQueue = 3000;
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+
+        static void ApplyColor(Material material, Color color)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            material.color = color;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
         }
 
         GameObject CreateDirectionalLight(string name, float intensity, Quaternion rotation)

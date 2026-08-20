@@ -271,7 +271,7 @@ namespace Game.Editor
             var caster = AbilityFxPreviewCasterRules.Resolve(selected.AbilityId);
             DrawPreview(previewRect, selected, caster);
             EditorGUILayout.LabelField(
-                $"Слева: {caster.DisplayName}  ·  Справа: мечник  ·  ЛКМ — орбита, колёсико — зум, точки — якорь",
+                $"Слева: {caster.DisplayName}  ·  Справа: мечник  ·  кольцо = боевой радиус 1:1  ·  ЛКМ орбита, колёсико зум",
                 EditorStyles.miniLabel);
             DrawSettings(selected);
             EditorGUILayout.EndVertical();
@@ -518,6 +518,7 @@ namespace Game.Editor
                 previewRect,
                 _preview.DummyLabelWorld,
                 selected.AbilityId == AbilityIds.MainBuildingSmite ? "Здание" : "Цель");
+            DrawMechanicOverlay(previewRect, ResolveMechanic(selected));
 
             if (selected.VfxKind != AbilityVfxKind.Aura)
             {
@@ -564,6 +565,54 @@ namespace Game.Editor
             var rect = new Rect(gui.x - size.x * 0.5f - 5f, gui.y - 11f, size.x + 10f, 20f);
             EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.55f));
             GUI.Label(rect, content, _overlayLabel);
+        }
+
+        void DrawMechanicOverlay(Rect previewRect, AbilityFxMechanic mechanic)
+        {
+            var text = $"{mechanic.Title}  ·  {mechanic.RadiusLabel}  ·  {mechanic.Motion}";
+            var content = new GUIContent(text);
+            _overlayLabel ??= new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white },
+            };
+            var size = _overlayLabel.CalcSize(content);
+            var rect = new Rect(
+                previewRect.x + 8f,
+                previewRect.yMax - 28f,
+                size.x + 16f,
+                20f);
+            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.62f));
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 3f, rect.height), mechanic.ChipColor);
+            GUI.Label(rect, content, _overlayLabel);
+        }
+
+        static AbilityFxMechanic ResolveMechanic(Row row)
+        {
+            var def = row.Def != null ? row.Def : MainExtraAbilityFxDefs.Get(row.AbilityId);
+            return AbilityFxMechanicRules.Resolve(
+                row.AbilityId,
+                def != null ? def.Radius : 0f,
+                def != null ? def.SecondaryRadius : 0f,
+                def != null ? def.CastRange : 0f);
+        }
+
+        static string ResolveDescription(Row row)
+        {
+            var def = row.Def != null ? row.Def : MainExtraAbilityFxDefs.Get(row.AbilityId);
+            if (def == null)
+            {
+                return string.Empty;
+            }
+
+            var desc = def.Description != null ? def.Description.Trim() : string.Empty;
+            if (desc.Length > 0)
+            {
+                return desc;
+            }
+
+            var extra = def.DescribeParams();
+            return extra != null ? extra.Trim() : string.Empty;
         }
 
         GameObject LoadCasterPrefab(AbilityFxPreviewCaster caster)
@@ -622,7 +671,12 @@ namespace Game.Editor
 
         void DrawSettings(Row row)
         {
+            var mechanic = ResolveMechanic(row);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            AbilityFxStudioMechanicUi.DrawSchematic(mechanic);
+            GUILayout.Space(8f);
+            EditorGUILayout.BeginVertical();
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(row.DisplayName, EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
@@ -641,32 +695,42 @@ namespace Game.Editor
             }
 
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField(
+            AbilityFxStudioMechanicUi.DrawBody(
                 $"{AbilityVfxKindRules.KitLabel(row.AbilityId)}  ·  {row.Kind}  ·  {row.VfxKind}  ·  id {row.AbilityId}",
-                EditorStyles.miniLabel);
+                ResolveDescription(row),
+                mechanic);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
 
-            EditorGUI.BeginChangeCheck();
-
+            EditorGUILayout.Space(6f);
             EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginChangeCheck();
             DrawColorAndScale(row, out var color, out var scale);
-            GUILayout.Space(8f);
+            GUILayout.Space(10f);
             var anchor = AbilityVfxKindRules.ResolveAnchor(row.AbilityId, row.Fx.Anchor);
             DrawAnchorBlock(row, ref anchor);
-            GUILayout.Space(8f);
+            GUILayout.Space(10f);
             var euler = row.Fx.Euler;
             if (row.VfxKind != AbilityVfxKind.Aura)
             {
                 DrawEulerBlock(ref euler);
+                GUILayout.Space(10f);
             }
+
+            var fxVisualChanged = EditorGUI.EndChangeCheck();
+            EditorGUI.BeginChangeCheck();
+            DrawRangeBlock(row, mechanic, out var rangeValue, out var rangeKind);
+            var rangeChanged = EditorGUI.EndChangeCheck();
             EditorGUILayout.EndHorizontal();
 
             var prefab = row.Fx.VfxPrefab;
             var animState = row.Fx.AnimState;
             var animVariant = row.Fx.AnimVariant;
             var animKind = AbilityAnimRules.ResolveAnim(row.AbilityId, row.Fx.AnimKind, animState);
+            EditorGUI.BeginChangeCheck();
             DrawAnimBlock(row, ref animState, ref animVariant, ref animKind);
-
-            if (EditorGUI.EndChangeCheck())
+            var fxChanged = fxVisualChanged || EditorGUI.EndChangeCheck();
+            if (fxChanged || rangeChanged)
             {
                 var fx = new AbilityFx
                 {
@@ -679,7 +743,16 @@ namespace Game.Editor
                     Scale = scale,
                     Euler = euler,
                 };
-                SaveFx(row, fx);
+                if (fxChanged)
+                {
+                    SaveFx(row, fx);
+                }
+
+                if (rangeChanged)
+                {
+                    SaveRange(row, rangeKind, rangeValue);
+                }
+
                 PushEffect(row, fx);
             }
 
@@ -688,17 +761,17 @@ namespace Game.Editor
 
         void DrawColorAndScale(Row row, out Color color, out float scale)
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(220f));
+            EditorGUILayout.BeginVertical(GUILayout.MinWidth(168f), GUILayout.MaxWidth(240f), GUILayout.ExpandWidth(true));
             EditorGUILayout.LabelField("Вид", EditorStyles.miniBoldLabel);
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Цвет", GUILayout.Width(36f));
+            EditorGUILayout.LabelField("Цвет", GUILayout.Width(44f));
             color = EditorGUILayout.ColorField(
                 GUIContent.none,
                 row.Fx.Color,
                 showEyedropper: true,
                 showAlpha: false,
                 hdr: false,
-                GUILayout.Width(52f));
+                GUILayout.Height(18f));
             color.a = 1f;
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.BeginHorizontal();
@@ -710,7 +783,7 @@ namespace Game.Editor
 
         void DrawAnchorBlock(Row row, ref AbilityVfxAnchor anchor)
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(248f));
+            EditorGUILayout.BeginVertical(GUILayout.MinWidth(220f), GUILayout.ExpandWidth(true));
             EditorGUILayout.LabelField("Где", EditorStyles.miniBoldLabel);
             if (row.VfxKind == AbilityVfxKind.Aura)
             {
@@ -767,7 +840,7 @@ namespace Game.Editor
                 GUI.backgroundColor = new Color(0.45f, 0.72f, 1f, 1f);
             }
 
-            var rect = GUILayoutUtility.GetRect(110f, 36f, GUILayout.ExpandWidth(true));
+            var rect = GUILayoutUtility.GetRect(96f, 36f, GUILayout.MinWidth(96f), GUILayout.ExpandWidth(true));
             var clicked = GUI.Button(rect, GUIContent.none);
             GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, 16f), title, _anchorTitleStyle);
             GUI.Label(new Rect(rect.x + 2f, rect.y + 17f, rect.width - 4f, 16f), caption, _anchorCaptionStyle);
@@ -782,7 +855,7 @@ namespace Game.Editor
 
         void DrawEulerBlock(ref Vector3 euler)
         {
-            EditorGUILayout.BeginVertical(GUILayout.MinWidth(220f));
+            EditorGUILayout.BeginVertical(GUILayout.MinWidth(188f), GUILayout.MaxWidth(280f), GUILayout.ExpandWidth(true));
             EditorGUILayout.LabelField("Поворот", EditorStyles.miniBoldLabel);
             EditorGUILayout.BeginHorizontal();
             if (DrawPresetButton("Горизонталь", Approximately(euler, EulerHorizontal)))
@@ -803,6 +876,104 @@ namespace Game.Editor
             EditorGUILayout.EndHorizontal();
             euler = EditorGUILayout.Vector3Field(GUIContent.none, euler);
             EditorGUILayout.EndVertical();
+        }
+
+        void DrawRangeBlock(Row row, AbilityFxMechanic mechanic, out float value, out RangeField kind)
+        {
+            kind = ResolveRangeField(row, mechanic);
+            value = ReadRangeValue(row, mechanic, kind);
+            EditorGUILayout.BeginVertical(GUILayout.MinWidth(200f), GUILayout.ExpandWidth(true));
+            var title = kind == RangeField.CastRange ? "Досягаемость" : "Радиус";
+            EditorGUILayout.LabelField(title, EditorStyles.miniBoldLabel);
+            using (new EditorGUI.DisabledScope(kind == RangeField.None || row.Def == null))
+            {
+                if (kind == RangeField.None)
+                {
+                    EditorGUILayout.LabelField("без круга — точка на юните", EditorStyles.miniLabel);
+                    value = 0f;
+                }
+                else
+                {
+                    value = EditorGUILayout.Slider(value, 0.5f, 16f);
+                    var caption = kind == RangeField.CastRange
+                        ? "метры поиска цели, не AoE"
+                        : "боевые метры · круг в превью 1:1";
+                    EditorGUILayout.LabelField($"{caption}  ·  {value:0.#} м", EditorStyles.miniLabel);
+                }
+            }
+
+            if (row.Def == null && kind != RangeField.None)
+            {
+                EditorGUILayout.LabelField("Divine Blessing: радиус не в этом ассете", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        enum RangeField
+        {
+            None = 0,
+            Radius = 1,
+            CastRange = 2,
+        }
+
+        static RangeField ResolveRangeField(Row row, AbilityFxMechanic mechanic)
+        {
+            if (mechanic.ShowRing)
+            {
+                return RangeField.Radius;
+            }
+
+            if (row.AbilityId is AbilityIds.CasterHeal or AbilityIds.Resurrect)
+            {
+                return RangeField.CastRange;
+            }
+
+            if (mechanic.Reach > 0.01f)
+            {
+                return RangeField.Radius;
+            }
+
+            return RangeField.None;
+        }
+
+        static float ReadRangeValue(Row row, AbilityFxMechanic mechanic, RangeField kind)
+        {
+            if (kind == RangeField.CastRange)
+            {
+                var authored = row.Def != null ? row.Def.CastRange : 0f;
+                return authored > 0.01f ? authored : mechanic.Reach;
+            }
+
+            if (kind == RangeField.Radius)
+            {
+                var authored = row.Def != null ? row.Def.Radius : 0f;
+                var fallback = mechanic.ShowRing ? mechanic.Radius : mechanic.Reach;
+                return authored > 0.01f ? authored : fallback;
+            }
+
+            return 0f;
+        }
+
+        static void SaveRange(Row row, RangeField kind, float value)
+        {
+            if (row.Def == null || kind == RangeField.None)
+            {
+                return;
+            }
+
+            if (kind == RangeField.CastRange)
+            {
+                Undo.RecordObject(row.Def, "Ability Cast Range");
+                row.Def.ApplyCastRange(value);
+            }
+            else
+            {
+                Undo.RecordObject(row.Def, "Ability Radius");
+                row.Def.ApplyRadius(value);
+            }
+
+            EditorUtility.SetDirty(row.Def);
         }
 
         static bool DrawPresetButton(string label, bool active)
@@ -850,7 +1021,7 @@ namespace Game.Editor
                 }
             }
 
-            const int columns = 4;
+            var columns = clips.Count <= 8 ? Mathf.Max(1, clips.Count) : 6;
             for (var i = 0; i < clips.Count; i++)
             {
                 if (i % columns == 0)

@@ -191,6 +191,11 @@ namespace Game.Editor
             seededFx.Anchor = AbilityVfxKindRules.ResolveDefaultAnchor(defaults.AbilityId);
             seededFx.AnimKind = AbilityAnimRules.ResolveKind(defaults.AbilityId);
             var preservedFx = existing.Fx.WithPreservedAuthored(seededFx);
+            var preservedRadius = existing.Radius > 0f ? existing.Radius : defaults.Radius;
+            var preservedCastRange = existing.CastRange > 0f ? existing.CastRange : defaults.CastRange;
+            var preservedSecondaryRadius = existing.SecondaryRadius > 0f
+                ? existing.SecondaryRadius
+                : defaults.SecondaryRadius;
 
             var behaviour = defaults.Behaviour;
             if (existing.Behaviour != null
@@ -217,15 +222,15 @@ namespace Game.Editor
                 defaults.Damage,
                 defaults.Heal,
                 defaults.HealPerSecond,
-                defaults.Radius,
-                defaults.CastRange,
+                preservedRadius,
+                preservedCastRange,
                 defaults.CooldownSeconds,
                 defaults.DurationSeconds,
                 defaults.Percent,
                 defaults.ManaCost,
                 defaults.StunSeconds,
                 defaults.FlatBonus,
-                defaults.SecondaryRadius,
+                preservedSecondaryRadius,
                 defaults.SecondaryHeal);
 
             ApplyVfxPrefab(def);

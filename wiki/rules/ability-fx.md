@@ -15,8 +15,10 @@
 
 - **Слева:** поиск и список по киту (`AbilityVfxKindRules.KitLabel`). Строка = свач + имя.
 - **Центр:** живое превью (`AbilityFxPreviewSession`): слева модель владельца кита,
-  справа мечник / главное здание. Под превью полоса: цвет, масштаб, якоря 2×2, поворот,
-  кубики клипов, Replay / Ping.
+  справа мечник / главное здание. Кольцо в превью — **боевой радиус 1:1**
+  (те же метры, что `def.Radius` и презентер юнита). Камера отъезжает, чтобы круг
+  влез. Под превью: схема механики + описание, чип «аура / земля / вспышка / точка»,
+  цвет, масштаб, якоря 2×2, поворот, **редактируемый радиус**, кубики клипов, Replay / Ping.
 - **Справа:** палитра живых thumbs (`AbilityVfxPrefabPalette`). Не отдельное окно.
   Клик сразу пишет `VfxPrefab` в текущую способность. Ручка сворачивает палитру —
   превью на всю ширину визуала.
@@ -94,6 +96,28 @@ One-shot в палитре зацикливается; `Slash_*` кадриру�
 `Lana Studio/Hyper Casual FX/Prefabs`. ObjectField биндится к фактическому префабу и не затирает
 ссылку вне трёх папок.
 
+## Механика способности (не якорь)
+
+`AbilityFxMechanicRules` говорит, **как бьёт способность**, чтобы выбрать эффект.
+Это не `AbilityVfxAnchor` (куда спавнится префаб), а боевая форма:
+
+| Shape | UI | Что значит | Примеры |
+|-------|----|------------|---------|
+| `AuraAroundSelf` | Аура вокруг себя · едет с носителем | Пассивное кольцо на герое | ауры 13/23/33/43/50 |
+| `AreaOnGround` | Область на земле · остаётся | Круг штампуется в кадр каста | Greater Heal, Consecration; Frost — у скопления врагов |
+| `BurstAroundSelf` | Вспышка вокруг себя | Разовый круг у кастера | Strike, Slam, Stomp, Group Heal, Shield, Cleave |
+| `BurstAroundTarget` | Область у цели | Разовый круг у якоря | Holy Nova |
+| `BurstAtImpact` | Вспышка в точке удара | Splash там, куда прилетело | Catapult, Кара зданий |
+| `PointOnTarget` / `PointOnSelf` | без круга | Один юнит; радиус поиска — не AoE | Smite, Mend, Deadeye |
+
+Превью рисует диск+обод в **боевых метрах** (`PreviewRingRadius` = `Radius`).
+Модели — тот же `ResolveAnimatedPresenterScale`, что в матче. Frost r=5 вокруг
+цели накрывает ~5 м от её ног; камера/пол подгоняются под круг.
+Слайдер **Радиус** в Studio пишет `UnitAbilityDef.Radius` (Undo + dirty). Mend/Resurrect
+правят `CastRange` («Досягаемость»). `Radius = 0` по-прежнему фолбэк на кит.
+**Build Ability Defs сохраняет** ненулевой `Radius` / `CastRange` / `SecondaryRadius`.
+Smite и Mend **не** показывают круг: их `Radius`/`CastRange` — досягаемость, не AoE.
+
 ## Якорь спавна (`AbilityVfxAnchor`)
 
 Где играет эффект и **следует ли он за моделью**. Внутри те же 4 enum-значения (без миграции ассетов).
@@ -124,7 +148,8 @@ Studio показывает сетку 2×2 и точки в превью (кл�
 
 - Активки и пассивы юнитов: `UnitAbilityDef.Fx`. **Build Ability Defs сохраняет** уже назначенные
   `Color` / `VfxPrefab` / `Anchor` / `AnimKind` / `AnimState` / `AnimVariant` / `Scale` / `Euler`
-  (`AbilityFx.WithPreservedAuthored`). Хардкод CFXR в билдере — только сид, если префаб null.
+  (`AbilityFx.WithPreservedAuthored`). Ненулевые `Radius` / `CastRange` / `SecondaryRadius`
+  тоже сохраняются (слайдер Studio). Хардкод CFXR в билдере — только сид, если префаб null.
   Якорь и `AnimKind` сидятся через `ResolveDefaultAnchor` / `ResolveKind`, если ещё `Unspecified`.
   Пустой `AnimState`, `Scale == 0` и `Euler == 0` не затирают уже заданные значения, но и не сидятся сами.
   Геройские ауры 13/23/33/43 сидятся тем же Runic, что `MatchFxCatalog._auraRunicLoop`.

@@ -27,7 +27,9 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 ## Хранение и генерация данных
 
 - **Источник истины** — `AbilityKitDefaults.cs` (константы берутся из `HeroAbilityRules` /
-  `CasterSpellRules`). Ручные правки готовых def-ассетов **затираются** при пересборке.
+  `CasterSpellRules`). Ручные правки готовых def-ассетов **затираются** при пересборке,
+  кроме `AbilityFx` и ненулевых `Radius` / `CastRange` / `SecondaryRadius` (их пишет
+  BARAKI Studio).
 - **Меню-инструменты** (Game.Editor):
   - `BARAKI/Abilities/Build Ability Defs` — собирает уникальные способности из дефолтов, создаёт
     по одному `UnitAbilityDef.asset` на способность + каталог. Файлы кладутся в папку владельца

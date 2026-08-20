@@ -7,7 +7,7 @@ namespace Game.Editor
     /// <summary>
     /// Readable inspector for <see cref="UnitAbilityDef"/>. By default only non-zero tuning rows are
     /// shown (zero values are hidden to reduce clutter); "Показать все" reveals them.
-    /// Tuning is regenerated from <c>AbilityKitDefaults</c> on Build Ability Defs.
+    /// Radius / cast range authored in BARAKI Studio survive Build Ability Defs.
     /// </summary>
     [CustomEditor(typeof(UnitAbilityDef))]
     public sealed class UnitAbilityDefEditor : UnityEditor.Editor

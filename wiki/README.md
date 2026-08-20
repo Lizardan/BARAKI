@@ -15,7 +15,7 @@
 | `rules/unity-ui.md` | UI Toolkit, UIBindingScope, USS-стили |
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
-| `rules/ability-fx.md` | BARAKI Studio: одно окно, якоря следует/не следует, Euler, палитра |
+| `rules/ability-fx.md` | BARAKI Studio: механика AoE, якоря, Euler, палитра |
 | `rules/fog.md` | Fog of War: симуляция, Divine Blessing, оверлей на миникарте |
 | `rules/match-network.md` | Старт матча, снапшоты, бонус-оверлей, host drop / split-brain |
 | `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |

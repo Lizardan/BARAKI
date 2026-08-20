@@ -57,6 +57,12 @@ namespace Game.Gameplay.Data
         /// <summary>Writes visual FX without touching combat tuning (BARAKI Studio / rebuild preserve).</summary>
         public void ApplyFx(AbilityFx fx) => _fx = fx;
 
+        /// <summary>Writes combat radius without touching FX (BARAKI Studio).</summary>
+        public void ApplyRadius(float radius) => _radius = Mathf.Max(0f, radius);
+
+        /// <summary>Writes cast/search range without touching FX (BARAKI Studio).</summary>
+        public void ApplyCastRange(float castRange) => _castRange = Mathf.Max(0f, castRange);
+
         public bool IsActive => _kind == AbilityKind.Active;
         public bool IsPassiveAura => _kind == AbilityKind.Passive;
 
