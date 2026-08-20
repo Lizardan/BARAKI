@@ -11,8 +11,8 @@ namespace Game.Editor
     {
         const int PoolSize = 8;
         const int PoolCap = 48;
-        const int MaxColumns = 5;
-        const float MinCellWidth = 148f;
+        const int MaxColumns = 8;
+        const float MinCellWidth = 132f;
         const float LabelHeight = 20f;
         const float CellPad = 8f;
         const float SidePad = 8f;

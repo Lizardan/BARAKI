@@ -40,8 +40,8 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
     (`AssetDatabase.MoveAsset` — GUID-ссылки из префабов/каталога сохраняются). Легаси-имена
     `Ability{id}.asset` также мигрируются автоматически. **`AbilityFx.Color` и `VfxPrefab` на
     существующих ассетах сохраняются** (не затираются дефолтами).
-  - `BARAKI/Abilities/BARAKI Studio` — список, превью, встроенная палитра.
-    Якоря и клипы Attack/Cast. Подробности: `ability-fx.md`.
+  - `BARAKI/Abilities/BARAKI Studio` — одно окно: список, живое превью 1:1, палитра VFX,
+    якоря, клипы, слайдер боевого радиуса. Канон: `wiki/rules/ability-fx.md`.
   - `BARAKI/Units/Seed Unit Abilities` — записывает def-ссылки в `UnitCombatSettings` префабов
     (`UnitAbilitySeeder`).
 - **Runtime-фолбэк**: если в prefab settings нет ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
@@ -173,8 +173,8 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
   выделяет и пингует `UnitAbilityDef`-ассет.
 - **`UnitAbilityDefEditor`** на самом def-ассете показывает по умолчанию только **ненулевые** тюнинг-строки
   (ноль не мусорит — например, у не-хилящих нет поля «Heal»); toggle «Показать все» раскрывает нулевые.
-  Read-only-сводку см. выше; тюнинг всё равно пересобирается из дефолтов. Цвет и VfxPrefab
-  **не** затираются при пересборке — их правит BARAKI Studio.
+  Read-only-сводку см. выше; урон/хил/CD пересобираются из дефолтов. `AbilityFx` и ненулевые
+  `Radius` / `CastRange` **не** затираются — их правит BARAKI Studio (`ability-fx.md`).
 - Статы и способности на префабе не редактируются: баланс правится в definition-ассете и переносится
   через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
   `BARAKI/Units/Seed Unit Abilities`.
@@ -211,20 +211,23 @@ HP зданий растут с уровнем (main 2000/2500/3000, barracks 80
 3. Вставить def в нужный кит `AbilityKitDefaults.CreateXxx()` (позиция в массиве = приоритет каста).
 4. Если нужна новая механика — добавить `UnitAbilityBehaviour` в `Combat/Abilities/`.
 5. Меню: `Build Ability Defs` → `Seed Unit Abilities`.
-6. Прогнать тесты `AbilityKitDefaultsTests` и затронутые (см. ниже).
+6. Открыть BARAKI Studio и назначить VFX + радиус (`ability-fx.md`).
+7. Прогнать тесты `AbilityKitDefaultsTests` и затронутые (см. ниже).
 
 ## Как изменить тюнинг
 
 Править **только** дефолты (`AbilityKitDefaults` + правила), затем `Build Ability Defs` +
 `Seed Unit Abilities`. Прямые правки тюнинга def-ассетов в инспекторе — временные, на пересборке
-затираются. Визуал (`AbilityFx`) правится в BARAKI Studio и сохраняется.
+затираются. Визуал (`AbilityFx`) и ненулевой `Radius` / `CastRange` правятся в BARAKI Studio
+и сохраняются (`ability-fx.md`).
 
 ## Тесты
 
 - `AbilityKitDefaultsTests` — киты совпадают с ожидаемыми способностями; проверки засеянных префабов
   (`HumanHero3Prefab_HasPriestKitWhenSeeded`, `HumanTitanPrefab_HasTitanKitWhenSeeded`).
-- `AbilityVfxKindRulesTests`, `AbilityVfxPrefabIndexTests`, `AbilityFxPreserveTests` — палитры FX,
-  классификация паков, preserve `AbilityFx` при rebuild.
+- `AbilityVfxKindRulesTests`, `AbilityVfxPrefabIndexTests`, `AbilityFxPreserveTests`,
+  `AbilityFxMechanicRulesTests`, `UnitAbilityDefApplyTests` — Studio: палитры, якоря, механика AoE,
+  preserve Fx/радиуса при rebuild.
 - `HumanBonusCombatTests` — EmitCast на проках Cleave / Deadeye / Catapult / Last Call.
 - `HeroAbilityCombatTests`, `CasterSpellRulesTests`, `HeroLevelRulesTests` — логика каста/приоритета/unlock.
 - `HeroAbilityRulesTests` — display names покрывают паладинов и жрецов.

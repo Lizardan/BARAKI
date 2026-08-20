@@ -1,176 +1,284 @@
 # BARAKI Studio
 
-Визуалы способностей настраиваются в редакторе, пишутся в `AbilityFx`
-(`Color` + `VfxPrefab` + `Anchor` + `AnimKind` + `AnimState` + `AnimVariant` + `Scale` + `Euler`)
-и играют в матче тем же пайплайном, что касты (`ShowAbilityFx` / пассивные ауры).
-Что видно в Studio — то играет в бою.
+Единственное editor-окно для **настройки визуала и боевого радиуса** способностей.
+Что видно в превью — то играет в матче тем же пайплайном (`ShowAbilityFx` / пассивные ауры).
 
-## Окно
+Это **не** отдельный игровой UI и не второе окно палитры. Старые имена Ability FX Viewer /
+Ability FX Studio / FX Studio — то же окно; кнопка тулбара: **`BARAKI Studio`**.
 
-Меню: **`BARAKI/Abilities/BARAKI Studio`**. Быстрый доступ: кнопка **BARAKI Studio**
-на верхней панели Unity и **Ctrl+Shift+F**.
-`[MainToolbarElement("BARAKI Studio")]` — `AbilityFxStudioToolbarButton`.
+Связанные правила: `abilities.md` (def-ы, каст, rebuild), `content-assets.md` (киты и префабы).
 
-Одно окно, три колонки и две ручки-сплиттера (ширины и свёрнутость палитры в `SessionState`):
+## Как открыть
 
-- **Слева:** поиск и список по киту (`AbilityVfxKindRules.KitLabel`). Строка = свач + имя.
-- **Центр:** живое превью (`AbilityFxPreviewSession`): слева модель владельца кита,
-  справа мечник / главное здание. Кольцо в превью — **боевой радиус 1:1**
-  (те же метры, что `def.Radius` и презентер юнита). Камера отъезжает, чтобы круг
-  влез. Под превью: схема механики + описание, чип «аура / земля / вспышка / точка»,
-  цвет, масштаб, якоря 2×2, поворот, **редактируемый радиус**, кубики клипов, Replay / Ping.
-- **Справа:** палитра живых thumbs (`AbilityVfxPrefabPalette`). Не отдельное окно.
-  Клик сразу пишет `VfxPrefab` в текущую способность. Ручка сворачивает палитру —
-  превью на всю ширину визуала.
+| Путь | Детали |
+|------|--------|
+| Меню | `BARAKI/Abilities/BARAKI Studio` |
+| Хоткей | **Ctrl+Shift+F** (`%#f`) |
+| Тулбар Unity | кнопка **BARAKI Studio** по центру (`AbilityFxStudioToolbarButton`, `[MainToolbarElement("BARAKI Studio")]`) |
 
-**Сверху палитры** (не над превью): поиск, чипы Все / Cast / Hit / Aura, ObjectField, счётчик.
-Тулбар Studio — обновление индекса и toggle «Палитра». Сетка thumbs с одинаковым отступом слева и справа.
+Класс окна: `Game.Editor.AbilityFxStudioWindow` (`Assets/Game/Scripts/Editor/AbilityFx/`).
+IMGUI `EditorWindow` (не UI Toolkit — игровой UI Toolkit на editor tools не распространяется).
 
-Divine Blessing спавнит главное здание из `BuildingVisualCatalog` как кастер.
-Кара зданий — цель тоже Main.
+## Зачем окно существует
 
-Аура вешается через `AuraFxVisuals.Attach` на **unscaled** корень кастера
-(как в матче: `local (0, 0.05, 0)` + `PassiveAuraFxRules.ResolveScale`).
-Если на SO нет префаба — тот же фолбэк `MatchFxCatalog` Runic, что `SyncAuraDisc`.
-В `PreviewRenderUtility` нет `Update`, поэтому частицы крутятся вручную:
-`Pause` + `Simulate(dt * simulationSpeed, withChildren: false, restart: false)` (первый кадр — restart).
-Каждый ParticleSystem тикается один раз (не `withChildren: true` по всему дереву — иначе дети бегут быстрее матча).
-`dt <= 0` пропускается, сверху clamp ~0.05 с — без пола 0.001 (иначе editor-update накручивает время).
-**VFX Graph** (Adjustable Slash `Slash_*`): не паузить (`pause = false`), `Reinit` + `Play`,
-кадрировать `camera.Render` как ParticleSystem. Не ставить `cameraType = Game` и не звать
-`PreviewRenderUtility.Render(true)` из сетки превью — preview-сцена без LightmapSettings,
-URP падает с `GetManagerFromContext ... LightmapSettings is NULL`.
-На время сессии culling asset-а `CullNone` (без сохранения на диск). One-shot Graph в большом
-превью крутится ~0.9 с; в пикере дуга переигрывается ~0.38 с и кадрируется на пике (~0.1 с),
-ortho ~0.26, после `VFXManager.PrepareCamera` проекция камеры возвращается в ortho.
-После каждого `Reinit` снова тинт / lift чёрного `FirstColor`. Чипы Все / Cast / Hit / Aura
-в шапке палитры не сбрасываются при смене способности.
+Автор VFX должен понять **как бьёт способность** (аура на себе / круг на земле / вспышка / точка),
+поставить префаб в правильную точку (едет с моделью или остаётся) и увидеть **реальный боевой радиус**
+относительно юнитов того же масштаба, что в матче.
 
-Animator: `enabled = false`, только `Update(dt)`, иначе `camera.Render` удваивает клип.
-Свет как у портретов: `lights[0]` key, `lights[1]` fill, плюс Directional Light в preview-сцене (URP Lit/Toon иначе чёрные).
+Пишет в ассет:
 
-Удар/каст ставится через `AbilityVfxPlacement.ApplyOneShotTransform` — те же формулы, что матч:
-**На себе / На цели** parent к корню юнита (едет с моделью); **Под собой / Под целью** мир
-на земле / `CenterPosition` (не едет). На себе и на цели = центр тела (`BodyHeight` 0.9 от ног),
-земля = абсолютный `GroundY` 0.1, Impact = `Elevate(CenterPosition)` (порог y 0.05 → 0.6).
-Корни юнитов в превью стоят на `N4PerimeterLaneGeometry.LaneHeight` (0.15), пол превью на **y = 0**,
-чтобы кольца GroundY 0.1 были видны.
-Летающие получают `GetModelLocalOffset` (+4 hover), герой +0.15 — как презентер.
-One-shot (Frost, Resurrect, Consecration, удары…): `localScale = prefabScale × AbilityFx.Scale`
-(`AbilityVfxPlacement.ResolveOneShotLocalScale`). Боевой радиус **не** множит визуал —
-один префаб и один Scale выглядят одинаково на любом заклинании.
-Frost: только lifetime = stun (1.5 с) и якорь Ground (`GroundY` 0.1). Стрип `Runes` убран.
-Аура: `AuraFxVisuals.Attach` + `PassiveAuraFxRules.ResolveScale(radius)` × `AbilityFx.Scale`
-(подгонка под halo, не one-shot). У текущих аур радиус общий, поэтому Scale+префаб совпадают между собой.
-One-shot переигрывается через 3 с (`Destroy` safety-net); Frost — через stun, даже если префаб loop.
-CFXR в превью глушится (`AuraFxVisuals.PrepareEditorPreview`: `clearBehavior = None`,
-без shake, mute audio). Яркость огней one-shot не режется (в матче SoftenLoop только у аур).
+| Поле | Куда | UI в Studio |
+|------|------|-------------|
+| `AbilityFx` (цвет, префаб, якорь, клип, Scale, Euler) | `UnitAbilityDef.Fx` | вид / где / поворот / палитра / анимация |
+| `Radius` | `UnitAbilityDef.Radius` | слайдер **Радиус** (AoE) |
+| `CastRange` | `UnitAbilityDef.CastRange` | слайдер **Досягаемость** (Mend / Resurrect) |
 
-### Анимации
+Divine Blessing 100/101 живут не в ките юнита, а в `MainExtraAbilityFxCatalog`
+(`Assets/Game/Resources/Fx/MainExtraAbilityFxCatalog.asset`). Радиус этих двух **не** крутится
+в слайдере Studio.
 
-Список клипов строится с контроллера модели кита (`AbilityAnimClipIndex`: layer 0, BlendTree → строка на child).
-Studio пишет `AbilityFx.AnimState` (имя стейта) и `AnimVariant` (индекс child). Пустой `AnimState` →
-старое поведение: `AbilityAnimRules.ResolveAnim` по `AnimKind` / `ResolveKind`, случайный A/B.
+## Три разных «где» — не путать
 
-`AnimKind` выводится из стейта (Attack / Cast / None) для длительности `CastLock`.
-Матч: `ApplyAbilityAnimLock` + `UnitCombatAnimatorDriver.Tick(..., stateOverride, variantOverride)` —
-без random, если клип задан. Презентер читает pending casts / `CastLockAnimState` в тот же кадр, что VFX.
-Трейты по-прежнему не лочат юнита в бою (прок на ударе); превью клип всё равно играет.
+| Понятие | Класс | Вопрос | Пример Frost |
+|---------|-------|--------|--------------|
+| **Механика** | `AbilityFxMechanicRules` | Как бьёт бой? Круг едет / штампуется / точка? | область на земле **у скопления врагов**, r из def |
+| **Якорь VFX** | `AbilityVfxAnchor` + `AbilityVfxKindRules` | Куда спавнить префаб и едет ли он? | сид **Под собой** (земля у кастера) — можно сменить |
+| **Палитра** | `AbilityVfxKind` | Какой набор thumbs предложить? | Cast (лёд / хилы), не Hit-слэши |
 
-Replay / смена способности заново CrossFade с начала клипа. `applyRootMotion = false`.
+Механика **не** перезаписывает якорь. Якорь **не** меняет боевой радиус.
+Боевой радиус **не** масштабирует one-shot префаб (`ResolveOneShotLocalScale` = prefab × `AbilityFx.Scale`).
 
-### Палитра префабов
+## Окно (три колонки)
 
-Встроена в Studio (`AbilityVfxPrefabPalette`), не `EditorWindow`. Первая ячейка — «нет».
-ObjectField и чипы Cast / Hit / Aura / Все — в шапке самой палитры.
-One-shot в палитре зацикливается; `Slash_*` кадрируются ortho ~0.48. Это разные пресеты (~8 графов),
-кроме mesh-only `SlashMesh`. Виртуализация: пул сессий на видимые ячейки.
+Ширины и свёрнутость палитры — `SessionState`
+(`BARAKI.AbilityFxStudio.ListWidth` / `PaletteWidth` / `PaletteCollapsed` / `SelectedId`).
+`PaletteWidth` клампится в `[220, min(1100, окно − список − запас)]` — палитру
+можно раздвинуть, сетка до 8 колонок (`MinCellWidth` 132). Центральная колонка
+(`DrawPreviewColumn`) — всегда `GUILayout.ExpandWidth(true)`; ряд анимаций и
+карточки настроек тоже `ExpandWidth`, без `MinWidth` на всю длину клипа — иначе
+центр вылезает на сплиттер и палитру не схватить.
+Две ручки-сплиттера: ширина от **абсолютного** `mousePosition.x` относительно
+захвата (`_dragStartMouseX` / `_dragStartWidth`), не `evt.delta` и не
+`SetWantsMouseJumping` — иначе при Repaint орбиты/тиков панель скачет.
 
-| Kind | Способности | Префабы |
-|------|-------------|---------|
-| Aura | пассивные ауры 13/23/33/43/50 | Hyper Casual `Area/*`, `Shine/*`; CFXR Magic Aura / LightGlow Loop / Shiny Item |
-| Hit | Strike, Ultimate, Smite, Consecration, Slam, Stomp, Cleave, Deadeye, Battlemace, Catapult | Adjustable Slash `Slash_*`; CFXR Impacts / Hit / Sword Trails / Explosions / Firewall; Hyper Casual `Flash/*` |
-| Cast | хилы, баффы, резы, Frost, Last Call, Divine Blessing | остальные CFXR + Sparkle/Confetti/Water/Dust |
+```
+[ список китов ] | [ превью + панель настроек ] | [ палитра thumbs ]
+```
 
-Скан папок: `Adjustable Slash VFX Pack/Prefabs`, `JMO Assets/Cartoon FX Remaster/CFXR Prefabs`,
-`Lana Studio/Hyper Casual FX/Prefabs`. ObjectField биндится к фактическому префабу и не затирает
-ссылку вне трёх папок.
+- **Слева:** поиск, группы `AbilityVfxKindRules.KitLabel` (King / Paladin / Caster / BONUS / …).
+  Строка = свач цвета + `DisplayName`.
+- **Центр:** `AbilityFxPreviewSession` — слева кастер кита (`AbilityFxPreviewCasterRules`),
+  справа мечник или главное здание (Кара зданий). ЛКМ орбита, колёсико зум, точки в сцене = якорь.
+- **Справа:** встроенная `AbilityVfxPrefabPalette` (не `EditorWindow`). Сворачивается шевроном.
+  Фильтры (поиск, Все / Cast / Hit / Aura, ObjectField) живут **в шапке палитры**, не над превью.
+  Чипы фильтра **не** сбрасываются при смене способности.
 
-## Механика способности (не якорь)
+Под превью — **транспорт** (`DrawTransportBar`) и полоса настроек (`DrawSettings` + `AbilityFxStudioMechanicUi`):
 
-`AbilityFxMechanicRules` говорит, **как бьёт способность**, чтобы выбрать эффект.
-Это не `AbilityVfxAnchor` (куда спавнится префаб), а боевая форма:
+0. Транспорт: «Ещё раз» / «Пауза» (заморозка кадра — орбита и зум продолжают работать) /
+   «Стоп» (убрать FX-инстанс, кольцо радиуса остаётся) / «Кадр» (сброс орбиты + авто-кадр по радиусу).
+   Прогресс-бар `elapsed / duration` (для аур — «∞ аура»), справа статус: имя префаба /
+   «нет префаба — выбери в палитре» / «эффект убран». После «Стоп» `SetEffect` не респавнит
+   эффект, пока не изменится визуальный параметр (флаг `_stopped`); правка радиуса при «Стоп»
+   обновляет только кольцо. Состояние живёт в `AbilityFxPreviewSession`
+   (`_paused` / `_stopped` / `PlaybackDuration`).
+Панель настроек = **две строки** (`DrawSettings`):
 
-| Shape | UI | Что значит | Примеры |
-|-------|----|------------|---------|
-| `AuraAroundSelf` | Аура вокруг себя · едет с носителем | Пассивное кольцо на герое | ауры 13/23/33/43/50 |
-| `AreaOnGround` | Область на земле · остаётся | Круг штампуется в кадр каста | Greater Heal, Consecration; Frost — у скопления врагов |
+1. **Четыре рамки одной высоты** (`OpenCard`: Width + Height/Min/Max 228,
+   без `BeginArea` — на Layout у GetRect ширина ~0 и карточки пропадали).
+   Ширина каждой = `(окно − список − палитра − зазоры) / 4` **в этом кадре**
+   (не ширина превью с прошлого Repaint — тот `MinWidth` блокировал сплиттер).
+   `Width+MaxWidth`, `MinWidth(0)`. Ряд тянется с палитрой. Внутри кнопок
+   тоже `MinWidth(0)`.
+   низ — `DrawFillHint`. **Инфо** схема 148. **Вид и размер** / **Где** / **Поворот**
+   как раньше. Анимация: **одна строка**, кнопка 42 pt / две строки —
+   `StateName` (Cast/Attack) и имя клипа (`*_cast_A`), ширина по длинной подписи.
+   Радиус в «Вид и размер» с отдельным триггером сохранения.
+2. **Анимация** — постоянная полоса на всю ширину (helpBox + ярлык «Анимация» слева),
+   **без foldout**; все клипы в один ряд, кнопка не уже текста.
+
+Схема — мини-арена ¾, не вид сверху: эллипс пола с мягкой заливкой сторон
+(кастер / цель), силуэты (голова + тело, смотрят друг на друга), пилюли «я»/«цель»
+под полом. AoE — приплюснутое кольцо на земле у хозяина (как кольцо в превью),
+точка — искра на груди, удар — ещё тик «полёта». Подпись снизу = `Motion`
+(едет / остаётся / вспышка). Пунктир кастер→цель не рисуем — шумит.
+**Не ставить `FontStyle.Bold` кириллическим `GUI.Label`** на базе `EditorStyles.miniLabel` —
+bold-вариант динамического шрифта теряет кириллицу (текст просто не рисуется);
+размер крутить только через `fontSize`.
+
+У аур карточки якоря и поворота **не** прячутся (лейаут не прыгает) — показывают хинты
+«всегда на носителе» / «у аур не применяется».
+
+## Превью радиуса 1:1
+
+Кольцо в сцене = **боевые метры**, не схема. `AbilityFxMechanicRules.PreviewRingRadius(r) == r`.
+Модели — `UnitGreyboxVisuals.ResolveAnimatedPresenterScale`, как презентер матча.
+Frost `r = 5` вокруг цели — круг диаметром 10 м; кастер в превью стоит ~3 м левее и часто
+попадает **внутрь** круга — это физически верно на такой дистанции.
+
+Камера и пол подгоняются под круг (`FitGround` / `FrameCameraToMechanic`); зум пользователя
+не сбрасывается, пока не сменится способность или радиус.
+Слайдер Радиус (0.5–16) пишет `ApplyRadius` + Undo; превью читает `def.Radius` каждый кадр
+(менять поле в инспекторе SO при открытом Studio тоже обновляет круг).
+
+`Radius == 0` в бою и в Studio = фолбэк кита (Frost снова 5). Smite / Mend **не** рисуют круг:
+их число — досягаемость поиска, не AoE.
+
+## Карта файлов
+
+### Editor (`Game.Editor`, папка `Scripts/Editor/AbilityFx/`)
+
+| Файл | Роль |
+|------|------|
+| `AbilityFxStudioWindow.cs` | Окно, список, сплиттеры, настройки, запись Fx/радиуса |
+| `AbilityFxStudioToolbarButton.cs` | Кнопка main toolbar |
+| `AbilityFxStudioMechanicUi.cs` | Схема + чип + описание |
+| `AbilityFxPreviewSession.cs` | PreviewRenderUtility: модели, VFX, кольцо AoE, камера, транспорт (пауза/стоп/прогресс/фокус) |
+| `AbilityVfxPrefabPalette.cs` | Сетка живых thumbs |
+| `AbilityVfxThumbSession.cs` | Одна ячейка палитры |
+| `AbilityVfxPreviewPlayback.cs` | Particle / VFX Graph тик в preview-сцене |
+| `AbilityVfxPrefabIndex.cs` | Скан трёх папок префабов |
+| `AbilityAnimClipIndex.cs` | Клипы с Animator кита |
+
+Билдер: `UnitAbilityAssetBuilder` — preserve Fx + ненулевых Radius/CastRange/SecondaryRadius.
+
+### Runtime (`Game.Gameplay`)
+
+| Файл | Роль |
+|------|------|
+| `Gameplay/Vfx/AbilityFxMechanicRules.cs` | Shape, радиус, русские подписи, 1:1 preview radius |
+| `Gameplay/Vfx/AbilityVfxKindRules.cs` | Палитра Cast/Hit/Aura, `KitLabel`, `ResolveDefaultAnchor` |
+| `Gameplay/Vfx/AbilityVfxAnchor.cs` | Caster / Target / Ground / Impact / Unspecified |
+| `Gameplay/Vfx/AbilityVfxPlacement.cs` | Общие формулы спавна (матч = Studio) |
+| `Gameplay/Vfx/AbilityVfxTint.cs` | Particle HSV + VFX Graph First/Second/ThirdColor |
+| `Gameplay/Vfx/AbilityFxPreviewCasterRules.cs` | Какая модель слева |
+| `Gameplay/Data/UnitAbilityDef.cs` | `ApplyFx` / `ApplyRadius` / `ApplyCastRange` |
+| `Gameplay/Combat/MainExtraAbilityFxCatalog.cs` | Fx Кары 100/101 |
+| `Match/MatchCombatPresenter.cs` | `ShowAbilityFx` в бою |
+| `Match/AuraFxVisuals.cs` | Пассивные ауры на носителе |
+
+`AbilityFx` — структура на def (Color, VfxPrefab, Anchor, AnimKind, AnimState, AnimVariant, Scale, Euler).
+
+## Механика (`AbilityFxMechanicShape`)
+
+| Shape | UI | Смысл | Примеры |
+|-------|----|--------|---------|
+| `AuraAroundSelf` | Аура вокруг себя · едет | Пассивное кольцо на носителе | ауры 13/23/33/43/50 |
+| `AreaOnGround` | Область на земле · остаётся | Штамп в кадр каста | Greater Heal, Consecration; Frost — у врагов |
 | `BurstAroundSelf` | Вспышка вокруг себя | Разовый круг у кастера | Strike, Slam, Stomp, Group Heal, Shield, Cleave |
 | `BurstAroundTarget` | Область у цели | Разовый круг у якоря | Holy Nova |
-| `BurstAtImpact` | Вспышка в точке удара | Splash там, куда прилетело | Catapult, Кара зданий |
-| `PointOnTarget` / `PointOnSelf` | без круга | Один юнит; радиус поиска — не AoE | Smite, Mend, Deadeye |
-
-Превью рисует диск+обод в **боевых метрах** (`PreviewRingRadius` = `Radius`).
-Модели — тот же `ResolveAnimatedPresenterScale`, что в матче. Frost r=5 вокруг
-цели накрывает ~5 м от её ног; камера/пол подгоняются под круг.
-Слайдер **Радиус** в Studio пишет `UnitAbilityDef.Radius` (Undo + dirty). Mend/Resurrect
-правят `CastRange` («Досягаемость»). `Radius = 0` по-прежнему фолбэк на кит.
-**Build Ability Defs сохраняет** ненулевой `Radius` / `CastRange` / `SecondaryRadius`.
-Smite и Mend **не** показывают круг: их `Radius`/`CastRange` — досягаемость, не AoE.
+| `BurstAtImpact` | Вспышка в точке удара | Splash прилёта | Catapult, Кара зданий |
+| `PointOnTarget` / `PointOnSelf` | без круга | Один юнит | Smite, Mend, Deadeye, Last Call |
 
 ## Якорь спавна (`AbilityVfxAnchor`)
 
-Где играет эффект и **следует ли он за моделью**. Внутри те же 4 enum-значения (без миграции ассетов).
-Studio показывает сетку 2×2 и точки в превью (клик = тот же выбор).
+Caster не может быть 0 — `Unspecified = 0` значит «ещё не задан», сид `ResolveDefaultAnchor`.
+Уже записанный якорь rebuild не затирает (`AbilityFx.WithPreservedAuthored`).
 
-| Значение | UI | Поведение | Примеры сида |
-|----------|-----|-----------|----------------|
-| `Unspecified` (0) | — | ещё не задан; runtime/Studio берут `ResolveDefaultAnchor` | существующие ассеты до первой записи |
-| `Caster` | **На себе** | Parent к корню кастера, центр тела. Едет с моделью. | ауры, Strike, Slam, Stomp, Ultimate, Cleave |
-| `Target` | **На цели** | Parent к цели, центр тела. Едет с целью. | Smite, Mend, Deadeye, Кара юнитов |
-| `Ground` | **Под собой** | Мир, `GroundY` у ног кастера в кадр каста. Не едет. | Frost, Consecration |
-| `Impact` | **Под целью** | Мир, `cast.CenterPosition` (splash / спавн / здание). Не едет. | Catapult, Last Call, Кара зданий |
+| Enum | UI | Поведение |
+|------|----|-----------|
+| `Unspecified` | — | взять сид по ability id |
+| `Caster` | На себе | Parent к кастеру, центр тела (`BodyHeight` 0.9). Едет |
+| `Target` | На цели | Parent к цели, центр тела. Едет |
+| `Ground` | Под собой | Мир, `GroundY` 0.1 у ног кастера. Не едет |
+| `Impact` | Под целью | Мир, `cast.CenterPosition` / preview impact. Не едет |
 
-`Unspecified` нужен потому что `Caster` не может быть 0: иначе нельзя отличить
-«пользователь выбрал кастера» от «поле ещё пустое». Сид не затирает уже сохранённый якорь
-(`AbilityFx.WithPreservedAuthored`). Ауры в матче по-прежнему parent к юниту (`AuraFxVisuals.Attach`);
-кнопки якоря в Studio у аур скрыты.
+Превью Impact: Last Call → ноги кастера (root, не hover +4); Catapult / Кара зданий → ноги цели.
+Ауры в матче всегда `AuraFxVisuals.Attach` на носителе, независимо от кнопок якоря.
 
-Превью Impact: Last Call → ноги кастера (root, не hover); Catapult / Кара зданий → ноги цели.
+## Поворот и масштаб визуала
 
-## Поворот (`AbilityFx.Euler`)
+- `Euler` — local градусы. `(0,0,0)` = как в префабе (не задан). Пресеты: Горизонталь / Вертикаль / В пол.
+- `Scale` — множитель префаба. `0` = не задан, runtime берёт 1.
+- Боевой `Radius` **не** входит в size one-shot. Аура: `PassiveAuraFxRules.ResolveScale(radius)` × `AbilityFx.Scale`.
 
-Градусы local euler. `(0,0,0)` = как в префабе. `WithPreservedAuthored` сохраняет ненулевой euler
-(как Scale: ноль = не задан). Спавн: `localRotation = Quaternion.Euler(Euler) * prefab.rotation`.
-Пресеты Studio: Горизонталь `(0,0,0)`, Вертикаль `(0,0,90)`, В пол `(90,0,0)`.
+## Палитра префабов
 
-## Данные
+Скан: `Adjustable Slash VFX Pack/Prefabs`, `JMO Assets/Cartoon FX Remaster/CFXR Prefabs`,
+`Lana Studio/Hyper Casual FX/Prefabs`. Первая ячейка — «нет». ObjectField не затирает префаб вне этих папок.
 
-- Активки и пассивы юнитов: `UnitAbilityDef.Fx`. **Build Ability Defs сохраняет** уже назначенные
-  `Color` / `VfxPrefab` / `Anchor` / `AnimKind` / `AnimState` / `AnimVariant` / `Scale` / `Euler`
-  (`AbilityFx.WithPreservedAuthored`). Ненулевые `Radius` / `CastRange` / `SecondaryRadius`
-  тоже сохраняются (слайдер Studio). Хардкод CFXR в билдере — только сид, если префаб null.
-  Якорь и `AnimKind` сидятся через `ResolveDefaultAnchor` / `ResolveKind`, если ещё `Unspecified`.
-  Пустой `AnimState`, `Scale == 0` и `Euler == 0` не затирают уже заданные значения, но и не сидятся сами.
-  Геройские ауры 13/23/33/43 сидятся тем же Runic, что `MatchFxCatalog._auraRunicLoop`.
-- Divine Blessing 100/101: `MainExtraAbilityFxCatalog` (`Assets/Game/Resources/Fx/MainExtraAbilityFxCatalog.asset`,
-  `Resources.Load("Fx/MainExtraAbilityFxCatalog")`). `MainExtraAbilityFxDefs` подмешивает FX при `Get`.
-  Сид: Кара зданий = CFXR3 Fire Explosion B, Кара юнитов = CFXR Hit A (Red). Пустой префаб досиживается при открытии Studio.
-- Тинт: `Game.Gameplay.Vfx.AbilityVfxTint` — ParticleSystem (HSV-retint) + Visual Effect Graph
-  (`FirstColor` / `SecondColor` / `ThirdColor`). В Studio one-shot: `Apply` после `Play`/`Reinit`
-  (Graph сбрасывает exposed colors; частицы красятся один раз на спавне, не каждый тик).
+| Kind | Способности | Типичные префабы |
+|------|-------------|------------------|
+| Aura | пассивные 13/23/33/43/50 | Hyper Casual Area/Shine; CFXR Magic Aura / LightGlow Loop |
+| Hit | Strike, Ultimate, Smite, Consecration, Slam, Stomp, Cleave, Deadeye, Battlemace, Catapult | Slash_*; CFXR Impacts / Explosions; Hyper Casual Flash |
+| Cast | хилы, баффы, резы, Frost, Last Call, Divine Blessing | остальные CFXR + Sparkle/Confetti/Water |
 
-Building destroyed / кровь / Titan body rays живут в `MatchFxCatalog`, не в этом окне.
+Не удалять пак Slash_* и не схлопывать Slash_1–30 в один пресет.
+
+## Анимации
+
+Клипы с Animator модели кита (`AbilityAnimClipIndex`: layer 0, BlendTree → child).
+Пишет `AnimState` + `AnimVariant`. Пустой стейт → `AbilityAnimRules` (старый random A/B).
+Матч: `ApplyAbilityAnimLock` + `Tick(..., stateOverride, variantOverride)` без random, если клип задан.
+Трейты в бою клип не лочат (прок на ударе); в Studio клип всё равно играет. `applyRootMotion = false`.
+
+## Сид и rebuild
+
+`BARAKI/Abilities/Build Ability Defs` (`UnitAbilityAssetBuilder`):
+
+- **Сохраняет:** весь `AbilityFx` через `WithPreservedAuthored`; ненулевые `Radius` / `CastRange` / `SecondaryRadius`.
+- **Сидит заново:** имена, описания, урон/хил/CD и прочий тюнинг из `AbilityKitDefaults`.
+- Пустой префаб / `Unspecified` якорь / нулевой Scale·Euler — досиживаются дефолтом, уже заданное не трогают.
+- Геройские ауры 13/23/33/43 сидятся тем же Runic, что `MatchFxCatalog._auraRunicLoop`.
+- Кара: здания = CFXR3 Fire Explosion B, юниты = CFXR Hit A (Red); пустой префаб досиживается при открытии Studio.
+
+Новый ассет (радиус 0) берёт кит. После правки слайдера значение живёт на SO.
+
+Кара 100/101: `Resources.Load("Fx/MainExtraAbilityFxCatalog")`. Не путать с pick id 1/2 в Divine Blessing UI.
+
+Вне Studio: building destroyed, кровь, Titan body rays — только `MatchFxCatalog`.
 
 ## Рантайм
 
-- Каст: `MatchCombatPresenter.ShowAbilityFx` → instantiate `VfxPrefab`,
-  `AbilityVfxPlacement.ApplyOneShotTransform` (parent Caster/Target, мир Ground/Impact),
-  `AbilityVfxTint.Apply`, `localScale = prefabScale × AbilityFx.ResolveScale` (в т.ч. Frost — без × radius).
-  One-shot живёт 3 с; Frost — `StunSeconds` (1.5). Ground-якорь = `GroundY` 0.1.
-  Studio использует те же константы/формулы. Impact в презентере = `Elevate(cast.CenterPosition)`.
-- Пассивные ауры: префаб и цвет с `AbilityCatalog.Find(abilityId).Fx`, fallback на `MatchFxCatalog` Runic +
-  `PassiveAuraFxRules`. Всегда на носителе.
-- Трейты эмитят `EmitCast` в тот же `SpellCasts` снапшот: Cleave (прок), Deadeye (крит), Battlemace
-  (hybrid melee hit), Last Call (спавн после смерти), Catapult (splash на прилёте). Примитивный splash-диск
-  катапульты больше не рисуется — играет префаб способности.
+- Каст: `MatchCombatPresenter.ShowAbilityFx` → instantiate `VfxPrefab` →
+  `AbilityVfxPlacement.ApplyOneShotTransform` → `AbilityVfxTint.Apply` → scale prefab × `AbilityFx.Scale`.
+  Lifetime 3 с; Frost — `StunSeconds`. Ground = `GroundY` 0.1. Impact = `Elevate(cast.CenterPosition)`.
+- Ауры: Fx с каталога, fallback Runic. Parent к unscaled корню носителя, `local (0, 0.05, 0)`.
+- Трейты эмитят `EmitCast` в `SpellCasts`: Cleave, Deadeye, Battlemace, Last Call, Catapult.
+  Примитивный splash-диск катапульты больше не рисуется.
+
+Константы высоты/земли общие: `AbilityVfxPlacement` (Studio и матч).
+
+## Превью: что нельзя ломать
+
+`PreviewRenderUtility` без обычного `Update` и без LightmapSettings игровой сцены.
+
+- Частицы: `Pause` + `Simulate(dt * simulationSpeed, withChildren: false)`. Не `withChildren: true` по дереву.
+- `dt <= 0` пропускать, clamp сверху ~0.05 с, **без** пола 0.001.
+- VFX Graph (`Slash_*`): `pause = false`, `Reinit` + `Play`. **Не** `cameraType = Game`, **не**
+  `PreviewRenderUtility.Render(true)` — URP падает (`LightmapSettings is NULL`).
+- После `VFXManager.PrepareCamera` вернуть ortho. После `Reinit` снова тинт / lift чёрного `FirstColor`.
+- Animator: `enabled = false`, только `Update(dt)` — иначе `camera.Render` удваивает клип.
+- Свет: `lights[0]` key, `lights[1]` fill + Directional в preview-сцене (URP Lit/Toon иначе чёрные).
+- Корни юнитов на `LaneHeight` 0.15, пол превью на **y = 0**, чтобы GroundY 0.1 был виден.
+- CFXR в превью: `PrepareEditorPreview` (`clearBehavior = None`, без shake, mute audio).
+- Сплиттер: `TickActiveSplitterDrag` в начале `OnGUI`; ширина от абсолютной мыши,
+  не `delta` (иначе скачет из‑за Repaint орбиты).
+
+## Тесты (`Game.Tests`)
+
+| Тест | Что закрывает |
+|------|----------------|
+| `AbilityFxMechanicRulesTests` | shape, follows vs ground, Frost у врагов, Smite без круга, 1:1 radius |
+| `AbilityVfxKindRulesTests` | палитра Cast/Hit/Aura, сид якоря |
+| `AbilityVfxPlacementTests` | BodyHeight, GroundY, Impact, preview impact, scale без × radius |
+| `AbilityFxPreserveTests` | `WithPreservedAuthored` |
+| `UnitAbilityDefApplyTests` | `ApplyRadius` / `ApplyCastRange` |
+| `AbilityFxPreviewCasterRulesTests` | какая модель слева |
+| `AbilityVfxPrefabIndexTests` | классификация папок |
+
+После правки Studio: `read_console` на compile, затем эти EditMode-тесты.
+
+## Как добавить способность в Studio
+
+После шагов из `abilities.md` (id, кит, `Build Ability Defs`, seed):
+
+1. Добавить id в `AbilityFxMechanicRules.ResolveShape` / `ResolveRadius` (иначе будет «точка на цели»).
+2. При необходимости — `AbilityVfxKindRules` (палитра + сид якоря) и `AbilityFxPreviewCasterRules`.
+3. Открыть Studio, выбрать умение, поставить префаб и радиус.
+4. Тесты на shape/якорь.
+
+## Вне скоупа окна
+
+Боевая логика (`UnitAbilityBehaviour`), статы юнита (`Sync Balance to Prefabs`), FoW,
+building destroyed / кровь / Titan rays, Canvas/uGUI.

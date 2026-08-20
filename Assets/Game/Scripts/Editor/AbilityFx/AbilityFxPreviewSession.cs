@@ -23,6 +23,8 @@ namespace Game.Editor
         const float MinCameraDistance = 6.5f;
         const float MaxCameraDistance = 52f;
         const float DefaultCameraDistance = 7.4f;
+        const float DefaultYaw = 38f;
+        const float DefaultPitch = 32f;
         const float UnityPlaneSize = 10f;
 
         readonly PreviewRenderUtility _preview;
@@ -65,12 +67,15 @@ namespace Game.Editor
         float _stunSeconds;
         float _oneShotLifetime = AbilityVfxPlacement.CastLifetimeSeconds;
         float _elapsed;
-        float _yaw = 38f;
-        float _pitch = 32f;
+        float _yaw = DefaultYaw;
+        float _pitch = DefaultPitch;
         float _distance = DefaultCameraDistance;
         int _framedAbilityId = int.MinValue;
         float _framedRadius = -1f;
         bool _loop;
+        bool _paused;
+        bool _stopped;
+        bool _hasVfxGraph;
         bool _particlesNeedRestart;
         bool _disposed;
 
@@ -120,6 +125,15 @@ namespace Game.Editor
             _targetRoot != null
                 ? _targetRoot.transform.position + Vector3.up * 2.35f
                 : Vector3.zero;
+
+        public bool IsPaused => _paused;
+        public bool IsStopped => _stopped;
+        public bool HasEffect => _instance != null;
+        public bool IsLooping => _loop;
+        public float PlaybackDuration { get; private set; } = AbilityVfxPreviewPlayback.OneShotLoopSeconds;
+        public float PlaybackElapsed => _elapsed;
+        public float PlaybackProgress01 =>
+            PlaybackDuration > 0.001f ? Mathf.Clamp01(_elapsed / PlaybackDuration) : 0f;
 
         public Vector3 AnchorMarkerWorld(AbilityVfxAnchor anchor)
         {
@@ -212,7 +226,7 @@ namespace Game.Editor
             }
 
             var scale = AbilityFx.ResolveScale(visualScale);
-            var sameVisual =
+            var sameParams =
                 _vfxPrefab == prefab
                 && _kind == kind
                 && _anchor == anchor
@@ -223,8 +237,34 @@ namespace Game.Editor
                 && Mathf.Abs(_visualScale - scale) < 0.001f
                 && (_euler - euler).sqrMagnitude < 0.0001f
                 && Mathf.Abs(_gameplayRadius - gameplayRadius) < 0.001f
-                && Mathf.Abs(_stunSeconds - stunSeconds) < 0.001f
-                && _instance != null;
+                && Mathf.Abs(_stunSeconds - stunSeconds) < 0.001f;
+            if (_stopped)
+            {
+                // Radius/stun touch the ring and lifetime, not the FX instance: while stopped,
+                // keep the effect hidden and just refresh the ring.
+                var sameFx =
+                    _vfxPrefab == prefab
+                    && _kind == kind
+                    && _anchor == anchor
+                    && _abilityId == abilityId
+                    && _animKind == animKind
+                    && _animState == animState
+                    && _animVariant == animVariant
+                    && Mathf.Abs(_visualScale - scale) < 0.001f
+                    && (_euler - euler).sqrMagnitude < 0.0001f;
+                if (sameFx)
+                {
+                    _tint = tint;
+                    _gameplayRadius = gameplayRadius;
+                    _stunSeconds = stunSeconds;
+                    UpdateMechanicRing();
+                    return;
+                }
+
+                _stopped = false;
+            }
+
+            var sameVisual = sameParams && _instance != null;
             if (sameVisual && Approximately(tint, _tint))
             {
                 UpdateMechanicRing();
@@ -256,7 +296,35 @@ namespace Game.Editor
             UpdateMechanicRing();
         }
 
-        public void Replay() => Rebuild();
+        public void Replay()
+        {
+            _stopped = false;
+            _paused = false;
+            Rebuild();
+        }
+
+        /// <summary>Freeze frame: animators, particles and VFX Graph stop ticking, orbit/zoom stay live.</summary>
+        public void SetPaused(bool paused) => _paused = paused;
+
+        /// <summary>Remove the effect instance; the mechanic ring stays for radius tuning.
+        /// SetEffect does not respawn until any authored parameter changes.</summary>
+        public void StopEffect()
+        {
+            _stopped = true;
+            _paused = false;
+            _elapsed = 0f;
+            ClearInstance();
+        }
+
+        /// <summary>Reset orbit and let UpdateMechanicRing re-frame distance from the AoE radius.</summary>
+        public void FocusCamera()
+        {
+            _yaw = DefaultYaw;
+            _pitch = DefaultPitch;
+            _distance = DefaultCameraDistance;
+            _framedAbilityId = int.MinValue;
+            _framedRadius = -1f;
+        }
 
         public void Orbit(float deltaYaw, float deltaPitch)
         {
@@ -321,6 +389,12 @@ namespace Game.Editor
                 return;
             }
 
+            if (_paused)
+            {
+                RenderToTarget();
+                return;
+            }
+
             var dt = Mathf.Min(deltaTime, MaxDeltaSeconds);
             if (_casterAnimator != null)
             {
@@ -336,7 +410,7 @@ namespace Game.Editor
             {
                 _elapsed += dt;
                 SimulateParticles(dt);
-                if (!_loop && AbilityVfxPreviewPlayback.HasVisualEffect(_instance))
+                if (!_loop && _hasVfxGraph)
                 {
                     if (_elapsed >= AbilityVfxPreviewPlayback.OneShotLoopSeconds)
                     {
@@ -405,6 +479,10 @@ namespace Game.Editor
             _loop = _kind == AbilityVfxKind.Aura;
             _particlesNeedRestart = true;
             SpawnVfx();
+            _hasVfxGraph = _instance != null && AbilityVfxPreviewPlayback.HasVisualEffect(_instance);
+            PlaybackDuration = !_loop && _hasVfxGraph
+                ? AbilityVfxPreviewPlayback.OneShotLoopSeconds
+                : Mathf.Max(0.05f, _oneShotLifetime);
             FireAnim();
             RenderToTarget();
         }

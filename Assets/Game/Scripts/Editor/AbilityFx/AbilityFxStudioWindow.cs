@@ -20,9 +20,9 @@ namespace Game.Editor
         const float MaxListWidth = 420f;
         const float DefaultPaletteWidth = 340f;
         const float MinPaletteWidth = 220f;
-        const float MaxPaletteWidth = 560f;
+        const float MaxPaletteWidth = 1100f;
         const float SplitterWidth = 6f;
-        const float SplitterHitPad = 4f;
+        const float SplitterHitPad = 8f;
         static readonly int SplitterHint = "BARAKI.FxStudio.Splitter".GetHashCode();
         const float MarkerHitPx = 12f;
         const string SelectedIdKey = "BARAKI.AbilityFxStudio.SelectedId";
@@ -54,7 +54,8 @@ namespace Game.Editor
         float _paletteWidth = DefaultPaletteWidth;
         bool _paletteCollapsed;
         int _dragSplitter;
-        bool _dragInvert;
+        float _dragStartMouseX;
+        float _dragStartWidth;
         int _splitterControlId;
         AbilityVfxAnchor _markerArmedAnchor;
         bool _markerArmed;
@@ -68,6 +69,23 @@ namespace Game.Editor
         GUIStyle _overlayLabel;
         GUIStyle _anchorTitleStyle;
         GUIStyle _anchorCaptionStyle;
+        GUIStyle _barLabelStyle;
+        GUIStyle _barStatusStyle;
+        GUIStyle _nameHeaderStyle;
+        GUIStyle _cardTitleStyle;
+        GUIStyle _kitStyle;
+        GUIStyle _fieldLabelStyle;
+        GUIStyle _hintStyle;
+        GUIStyle _sectionTitleStyle;
+        GUIStyle _sectionHintStyle;
+        GUIStyle _presetButtonStyle;
+        GUIStyle _fillHintStyle;
+        GUIStyle _cardBoxStyle;
+        GUIStyle _presetCaptionStyle;
+        GUIStyle _animHeaderStyle;
+        GUIStyle _animClipButtonStyle;
+        GUIStyle _animClipTitleStyle;
+        GUIStyle _animClipCaptionStyle;
         GameObject _clipSource;
         List<AbilityAnimClipIndex.Entry> _clips;
 
@@ -90,7 +108,10 @@ namespace Game.Editor
                 SelectedIdKey,
                 SessionState.GetInt(SelectedIdLegacyKey, AbilityIds.Strike));
             _listWidth = SessionState.GetFloat(ListWidthKey, DefaultListWidth);
-            _paletteWidth = SessionState.GetFloat(PaletteWidthKey, DefaultPaletteWidth);
+            _paletteWidth = Mathf.Clamp(
+                SessionState.GetFloat(PaletteWidthKey, DefaultPaletteWidth),
+                MinPaletteWidth,
+                MaxPaletteWidth);
             _paletteCollapsed = SessionState.GetBool(PaletteCollapsedKey, false);
             _lastTick = EditorApplication.timeSinceStartup;
             _preview ??= new AbilityFxPreviewSession();
@@ -151,7 +172,7 @@ namespace Game.Editor
 
             EditorGUILayout.BeginHorizontal();
             DrawList(rows);
-            DrawSplitter(1, invert: false);
+            DrawSplitter(1);
             DrawVisual(selected);
             EditorGUILayout.EndHorizontal();
         }
@@ -249,7 +270,10 @@ namespace Game.Editor
             DrawPaletteSplitter();
             if (!_paletteCollapsed)
             {
-                EditorGUILayout.BeginVertical(GUILayout.Width(_paletteWidth));
+                EditorGUILayout.BeginVertical(
+                    GUILayout.Width(_paletteWidth),
+                    GUILayout.MinWidth(_paletteWidth),
+                    GUILayout.MaxWidth(_paletteWidth));
                 _palette?.DrawFilters();
                 _palette?.DrawGrid();
                 EditorGUILayout.EndVertical();
@@ -260,7 +284,7 @@ namespace Game.Editor
 
         void DrawPreviewColumn(Row selected)
         {
-            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             var previewRect = GUILayoutUtility.GetRect(
                 16f,
                 16f,
@@ -270,11 +294,180 @@ namespace Game.Editor
             HandlePreviewInput(previewRect, selected);
             var caster = AbilityFxPreviewCasterRules.Resolve(selected.AbilityId);
             DrawPreview(previewRect, selected, caster);
+            DrawTransportBar(selected);
+            var prevCaption = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.5f);
             EditorGUILayout.LabelField(
                 $"Слева: {caster.DisplayName}  ·  Справа: мечник  ·  кольцо = боевой радиус 1:1  ·  ЛКМ орбита, колёсико зум",
                 EditorStyles.miniLabel);
+            GUI.color = prevCaption;
             DrawSettings(selected);
             EditorGUILayout.EndVertical();
+        }
+
+        void DrawTransportBar(Row selected)
+        {
+            const float height = 28f;
+            var rect = GUILayoutUtility.GetRect(
+                10f, height, GUILayout.ExpandWidth(true), GUILayout.Height(height));
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(rect, new Color(0.14f, 0.14f, 0.16f, 1f));
+                EditorGUI.DrawRect(
+                    new Rect(rect.x, rect.yMax - 1f, rect.width, 1f),
+                    new Color(1f, 1f, 1f, 0.07f));
+            }
+
+            var y = rect.y + 4f;
+            var innerH = height - 8f;
+            var x = rect.x + 6f;
+
+            if (TransportButton(
+                    new Rect(x, y, 88f, innerH),
+                    "Ещё раз",
+                    "PlayButton",
+                    "Проиграть эффект заново"))
+            {
+                _preview?.Replay();
+            }
+
+            x += 92f;
+            var hasEffect = _preview != null && _preview.HasEffect;
+            using (new EditorGUI.DisabledScope(!hasEffect))
+            {
+                var paused = _preview != null && _preview.IsPaused;
+                if (TransportButton(
+                        new Rect(x, y, 80f, innerH),
+                        paused ? "Дальше" : "Пауза",
+                        paused ? "PlayButton" : "PauseButton",
+                        paused ? "Продолжить воспроизведение" : "Заморозить кадр, орбита и зум работают"))
+                {
+                    _preview?.SetPaused(!paused);
+                }
+
+                x += 84f;
+                if (TransportButton(
+                        new Rect(x, y, 68f, innerH),
+                        "Стоп",
+                        "PreMatQuad",
+                        "Убрать эффект из сцены — кольцо радиуса останется; смена визуала или «Ещё раз» вернут эффект"))
+                {
+                    _preview?.StopEffect();
+                }
+
+                x += 72f;
+            }
+
+            if (TransportButton(
+                    new Rect(x, y, 68f, innerH),
+                    "Кадр",
+                    "SceneViewCamera",
+                    "Вернуть камеру к авто-кадрированию по радиусу"))
+            {
+                _preview?.FocusCamera();
+            }
+
+            x += 72f;
+            DrawTransportProgress(rect, x, y, innerH, selected);
+        }
+
+        void DrawTransportProgress(Rect bar, float x, float y, float height, Row selected)
+        {
+            const float statusWidth = 210f;
+            var right = bar.xMax - 6f;
+            var statusRect = new Rect(right - statusWidth, y, statusWidth, height);
+            var progressRect = new Rect(
+                x,
+                y + 4f,
+                Mathf.Max(48f, statusRect.x - 10f - x),
+                height - 8f);
+
+            var preview = _preview;
+            var looping = preview != null && preview.IsLooping;
+            var stopped = preview == null || preview.IsStopped;
+            var noEffect = preview == null || !preview.HasEffect;
+            var paused = preview != null && preview.IsPaused;
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(progressRect, new Color(0f, 0f, 0f, 0.35f));
+                var p = stopped || noEffect ? 0f : looping ? 1f : preview.PlaybackProgress01;
+                if (p > 0.001f)
+                {
+                    var fill = progressRect;
+                    fill.width = Mathf.Max(progressRect.width * p, 2f);
+                    var color = paused
+                        ? new Color(0.95f, 0.75f, 0.3f, 0.9f)
+                        : looping
+                            ? new Color(0.45f, 0.72f, 1f, 0.4f)
+                            : new Color(0.45f, 0.72f, 1f, 0.9f);
+                    EditorGUI.DrawRect(fill, color);
+                }
+            }
+
+            _barLabelStyle ??= new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 10,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.85f) },
+            };
+            var timeText = stopped
+                ? "остановлено"
+                : noEffect
+                    ? "нет эффекта"
+                    : looping
+                        ? "∞ аура"
+                        : paused
+                            ? $"{preview.PlaybackElapsed:0.00} / {preview.PlaybackDuration:0.00} с · пауза"
+                            : $"{preview.PlaybackElapsed:0.00} / {preview.PlaybackDuration:0.00} с";
+            GUI.Label(progressRect, timeText, _barLabelStyle);
+
+            _barStatusStyle ??= new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleRight,
+                fontSize = 10,
+                clipping = TextClipping.Clip,
+            };
+            string status;
+            Color statusColor;
+            if (selected.Fx.VfxPrefab == null && selected.VfxKind != AbilityVfxKind.Aura)
+            {
+                status = "нет префаба — выбери в палитре →";
+                statusColor = new Color(1f, 0.62f, 0.45f, 1f);
+            }
+            else if (stopped)
+            {
+                status = "эффект убран · «Ещё раз» вернёт";
+                statusColor = new Color(1f, 1f, 1f, 0.55f);
+            }
+            else if (selected.Fx.VfxPrefab != null)
+            {
+                status = selected.Fx.VfxPrefab.name;
+                statusColor = new Color(0.6f, 0.85f, 0.6f, 1f);
+            }
+            else
+            {
+                status = "аура из MatchFxCatalog";
+                statusColor = new Color(1f, 1f, 1f, 0.55f);
+            }
+
+            var prev = GUI.color;
+            GUI.color = statusColor;
+            GUI.Label(statusRect, new GUIContent(status, status), _barStatusStyle);
+            GUI.color = prev;
+        }
+
+        static bool TransportButton(Rect rect, string label, string icon, string tooltip)
+        {
+            var content = new GUIContent(label, tooltip);
+            var iconName = EditorGUIUtility.isProSkin ? "d_" + icon : icon;
+            var iconContent = EditorGUIUtility.IconContent(iconName);
+            if (iconContent != null && iconContent.image != null)
+            {
+                content = new GUIContent(" " + label, iconContent.image, tooltip);
+            }
+
+            return GUI.Button(rect, content, EditorStyles.miniButton);
         }
 
         void DrawPaletteSplitter()
@@ -300,10 +493,10 @@ namespace Game.Editor
 
             var hit = InflateSplitterHit(rect);
             EditorGUIUtility.AddCursorRect(hit, MouseCursor.ResizeHorizontal);
-            HandleSplitterMouseDown(hit, 2, invert: true);
+            HandleSplitterMouseDown(hit, 2);
         }
 
-        void DrawSplitter(int id, bool invert)
+        void DrawSplitter(int id)
         {
             var rect = GUILayoutUtility.GetRect(
                 SplitterWidth,
@@ -313,13 +506,13 @@ namespace Game.Editor
             EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.14f, 1f));
             var hit = InflateSplitterHit(rect);
             EditorGUIUtility.AddCursorRect(hit, MouseCursor.ResizeHorizontal);
-            HandleSplitterMouseDown(hit, id, invert);
+            HandleSplitterMouseDown(hit, id);
         }
 
         static Rect InflateSplitterHit(Rect rect) =>
             new(rect.x - SplitterHitPad, rect.y, rect.width + SplitterHitPad * 2f, rect.height);
 
-        void HandleSplitterMouseDown(Rect hit, int id, bool invert)
+        void HandleSplitterMouseDown(Rect hit, int id)
         {
             var evt = Event.current;
             if (evt.type != EventType.MouseDown || evt.button != 0 || !hit.Contains(evt.mousePosition))
@@ -328,9 +521,9 @@ namespace Game.Editor
             }
 
             _dragSplitter = id;
-            _dragInvert = invert;
+            _dragStartMouseX = evt.mousePosition.x;
+            _dragStartWidth = id == 1 ? _listWidth : _paletteWidth;
             GUIUtility.hotControl = _splitterControlId;
-            EditorGUIUtility.SetWantsMouseJumping(1);
             evt.Use();
         }
 
@@ -342,27 +535,43 @@ namespace Game.Editor
             }
 
             var evt = Event.current;
-            if (evt.type == EventType.MouseDrag)
-            {
-                var delta = _dragInvert ? -evt.delta.x : evt.delta.x;
-                if (_dragSplitter == 1)
-                {
-                    _listWidth = Mathf.Clamp(_listWidth + delta, MinListWidth, MaxListWidth);
-                }
-                else
-                {
-                    _paletteWidth = Mathf.Clamp(_paletteWidth + delta, MinPaletteWidth, MaxPaletteWidth);
-                }
-
-                GUIUtility.hotControl = _splitterControlId;
-                evt.Use();
-            }
-            else if (evt.rawType == EventType.MouseUp)
+            if (evt.rawType is EventType.MouseUp or EventType.Ignore)
             {
                 EndSplitterDrag();
-                evt.Use();
+                if (evt.rawType == EventType.MouseUp)
+                {
+                    evt.Use();
+                }
+
+                return;
             }
+
+            if (evt.type != EventType.MouseDrag)
+            {
+                return;
+            }
+
+            ApplySplitterFromMouse(evt.mousePosition.x);
+            GUIUtility.hotControl = _splitterControlId;
+            evt.Use();
         }
+
+        void ApplySplitterFromMouse(float mouseX)
+        {
+            var dx = mouseX - _dragStartMouseX;
+            if (_dragSplitter == 1)
+            {
+                _listWidth = Mathf.Clamp(_dragStartWidth + dx, MinListWidth, MaxListWidth);
+                return;
+            }
+
+            _paletteWidth = Mathf.Clamp(_dragStartWidth - dx, MinPaletteWidth, PaletteDragMax());
+        }
+
+        float PaletteDragMax() =>
+            Mathf.Min(
+                MaxPaletteWidth,
+                Mathf.Max(MinPaletteWidth, position.width - _listWidth - MinListWidth - 48f));
 
         void EndSplitterDrag()
         {
@@ -377,7 +586,6 @@ namespace Game.Editor
                 GUIUtility.hotControl = 0;
             }
 
-            EditorGUIUtility.SetWantsMouseJumping(0);
             SessionState.SetFloat(ListWidthKey, _listWidth);
             SessionState.SetFloat(PaletteWidthKey, _paletteWidth);
         }
@@ -672,64 +880,35 @@ namespace Game.Editor
         void DrawSettings(Row row)
         {
             var mechanic = ResolveMechanic(row);
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.BeginHorizontal();
-            AbilityFxStudioMechanicUi.DrawSchematic(mechanic);
-            GUILayout.Space(8f);
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(row.DisplayName, EditorStyles.boldLabel);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Replay", GUILayout.Width(64f)))
-            {
-                _preview?.Replay();
-            }
-
-            using (new EditorGUI.DisabledScope(row.PingTarget == null))
-            {
-                if (GUILayout.Button("Ping", GUILayout.Width(44f)))
-                {
-                    EditorGUIUtility.PingObject(row.PingTarget);
-                    Selection.activeObject = row.PingTarget;
-                }
-            }
-
-            EditorGUILayout.EndHorizontal();
-            AbilityFxStudioMechanicUi.DrawBody(
-                $"{AbilityVfxKindRules.KitLabel(row.AbilityId)}  ·  {row.Kind}  ·  {row.VfxKind}  ·  id {row.AbilityId}",
-                ResolveDescription(row),
-                mechanic);
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(6f);
-            EditorGUILayout.BeginHorizontal();
-            EditorGUI.BeginChangeCheck();
-            DrawColorAndScale(row, out var color, out var scale);
-            GUILayout.Space(10f);
             var anchor = AbilityVfxKindRules.ResolveAnchor(row.AbilityId, row.Fx.Anchor);
-            DrawAnchorBlock(row, ref anchor);
-            GUILayout.Space(10f);
             var euler = row.Fx.Euler;
-            if (row.VfxKind != AbilityVfxKind.Aura)
-            {
-                DrawEulerBlock(ref euler);
-                GUILayout.Space(10f);
-            }
+            var cardW = ResolveSettingsCardWidth();
 
-            var fxVisualChanged = EditorGUI.EndChangeCheck();
             EditorGUI.BeginChangeCheck();
-            DrawRangeBlock(row, mechanic, out var rangeValue, out var rangeKind);
-            var rangeChanged = EditorGUI.EndChangeCheck();
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(SettingsCardHeight), GUILayout.ExpandWidth(true));
+            DrawInfoCard(row, mechanic, cardW);
+            GUILayout.Space(SettingsCardGap);
+            DrawVisualCard(
+                row,
+                mechanic,
+                cardW,
+                out var color,
+                out var scale,
+                out var rangeValue,
+                out var rangeKind,
+                out var rangeChanged);
+            GUILayout.Space(SettingsCardGap);
+            DrawAnchorCard(row, ref anchor, cardW);
+            GUILayout.Space(SettingsCardGap);
+            DrawEulerCard(row, ref euler, cardW);
             EditorGUILayout.EndHorizontal();
 
             var prefab = row.Fx.VfxPrefab;
             var animState = row.Fx.AnimState;
             var animVariant = row.Fx.AnimVariant;
             var animKind = AbilityAnimRules.ResolveAnim(row.AbilityId, row.Fx.AnimKind, animState);
-            EditorGUI.BeginChangeCheck();
             DrawAnimBlock(row, ref animState, ref animVariant, ref animKind);
-            var fxChanged = fxVisualChanged || EditorGUI.EndChangeCheck();
+            var fxChanged = EditorGUI.EndChangeCheck();
             if (fxChanged || rangeChanged)
             {
                 var fx = new AbilityFx
@@ -755,83 +934,354 @@ namespace Game.Editor
 
                 PushEffect(row, fx);
             }
-
-            EditorGUILayout.EndVertical();
         }
 
-        void DrawColorAndScale(Row row, out Color color, out float scale)
+        const float SettingsCardHeight = 228f;
+        const float SettingsCardGap = 6f;
+        const float FieldLabelWidth = 96f;
+        const float AnchorCellHeight = 46f;
+        const float PresetButtonHeight = 26f;
+        const float AnimCellHeight = 42f;
+
+        float ResolveSettingsCardWidth()
         {
-            EditorGUILayout.BeginVertical(GUILayout.MinWidth(168f), GUILayout.MaxWidth(240f), GUILayout.ExpandWidth(true));
-            EditorGUILayout.LabelField("Вид", EditorStyles.miniBoldLabel);
+            var paletteSplitter = _paletteCollapsed ? 18f : SplitterWidth;
+            var palette = _paletteCollapsed ? 0f : _paletteWidth;
+            var row = position.width - _listWidth - SplitterWidth - paletteSplitter - palette - 8f;
+            return Mathf.Max(1f, (row - SettingsCardGap * 3f) / 4f);
+        }
+
+        void OpenCard(float width)
+        {
+            EnsureCardStyles();
+            EditorGUILayout.BeginVertical(
+                _cardBoxStyle,
+                GUILayout.Width(width),
+                GUILayout.MaxWidth(width),
+                GUILayout.MinWidth(0f),
+                GUILayout.Height(SettingsCardHeight),
+                GUILayout.MinHeight(SettingsCardHeight),
+                GUILayout.MaxHeight(SettingsCardHeight),
+                GUILayout.ExpandWidth(false),
+                GUILayout.ExpandHeight(false));
+        }
+
+        static void CloseCard() => EditorGUILayout.EndVertical();
+
+        void DrawInfoCard(Row row, AbilityFxMechanic mechanic, float width)
+        {
+            OpenCard(width);
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Цвет", GUILayout.Width(44f));
+            var schematicH = 148f;
+            var schematicW = Mathf.Clamp(width * 0.42f, 96f, 148f);
+            AbilityFxStudioMechanicUi.DrawSchematic(mechanic, schematicH, schematicW);
+            GUILayout.Space(8f);
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(row.DisplayName, _nameHeaderStyle);
+            GUILayout.FlexibleSpace();
+            using (new EditorGUI.DisabledScope(row.PingTarget == null))
+            {
+                if (GUILayout.Button("Ping", GUILayout.Width(56f), GUILayout.Height(22f)))
+                {
+                    EditorGUIUtility.PingObject(row.PingTarget);
+                    Selection.activeObject = row.PingTarget;
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            var kit = AbilityVfxKindRules.KitLabel(row.AbilityId);
+            if (!string.IsNullOrEmpty(kit))
+            {
+                EditorGUILayout.LabelField(kit, _kitStyle);
+            }
+
+            EditorGUILayout.Space(4f);
+            AbilityFxStudioMechanicUi.DrawMechanicLine(mechanic);
+            EditorGUILayout.Space(4f);
+            AbilityFxStudioMechanicUi.DrawDescription(ResolveDescription(row));
+            DrawFillHint(mechanic.FxHint);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+            CloseCard();
+        }
+
+        void BeginCard(string title, float width)
+        {
+            OpenCard(width);
+            EditorGUILayout.LabelField(title, _cardTitleStyle, GUILayout.MinWidth(0f));
+        }
+
+        void EnsureCardStyles()
+        {
+            _nameHeaderStyle ??= new GUIStyle(EditorStyles.boldLabel) { fontSize = 16 };
+            _cardTitleStyle ??= new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                clipping = TextClipping.Clip,
+            };
+            _kitStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                clipping = TextClipping.Clip,
+            };
+            _fieldLabelStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleLeft,
+            };
+            _hintStyle ??= new GUIStyle(EditorStyles.wordWrappedMiniLabel)
+            {
+                fontSize = 12,
+                wordWrap = true,
+            };
+            _sectionTitleStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleLeft,
+            };
+            _sectionHintStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 11,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.55f) },
+            };
+            _presetButtonStyle ??= new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true,
+                clipping = TextClipping.Clip,
+            };
+            _presetCaptionStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 11,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.55f) },
+            };
+            _fillHintStyle ??= new GUIStyle(EditorStyles.wordWrappedLabel)
+            {
+                fontSize = 12,
+                wordWrap = true,
+                alignment = TextAnchor.UpperLeft,
+            };
+            _cardBoxStyle ??= new GUIStyle(EditorStyles.helpBox)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+            };
+        }
+
+        void DrawSectionLine(string title, string hint)
+        {
+            var rect = GUILayoutUtility.GetRect(
+                10f, 18f, GUILayout.ExpandWidth(true), GUILayout.Height(18f));
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            var titleW = Mathf.Min(_sectionTitleStyle.CalcSize(new GUIContent(title)).x + 8f, rect.width * 0.38f);
+            GUI.Label(new Rect(rect.x, rect.y, titleW, rect.height), title, _sectionTitleStyle);
+            GUI.Label(
+                new Rect(rect.x + titleW, rect.y, rect.width - titleW, rect.height),
+                hint,
+                _sectionHintStyle);
+        }
+
+        void DrawFillHint(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                GUILayout.FlexibleSpace();
+                return;
+            }
+
+            var rect = GUILayoutUtility.GetRect(
+                10f,
+                24f,
+                GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true),
+                GUILayout.MinHeight(24f));
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.16f));
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 3f, rect.height), new Color(1f, 1f, 1f, 0.12f));
+            GUI.Label(
+                new Rect(rect.x + 8f, rect.y + 4f, rect.width - 12f, rect.height - 8f),
+                text,
+                _fillHintStyle);
+        }
+
+        void DrawVisualCard(
+            Row row,
+            AbilityFxMechanic mechanic,
+            float width,
+            out Color color,
+            out float scale,
+            out float rangeValue,
+            out RangeField rangeKind,
+            out bool rangeChanged)
+        {
+            BeginCard("Вид и размер", width);
+            rangeKind = ResolveRangeField(row, mechanic);
+            rangeValue = ReadRangeValue(row, mechanic, rangeKind);
+            var prevRange = rangeValue;
+            var changedBeforeRange = GUI.changed;
+
+            DrawSectionLine("Вид", "цвет и префаб");
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));
+            EditorGUILayout.LabelField("Цвет", _fieldLabelStyle, GUILayout.Width(FieldLabelWidth));
             color = EditorGUILayout.ColorField(
                 GUIContent.none,
                 row.Fx.Color,
                 showEyedropper: true,
                 showAlpha: false,
                 hdr: false,
-                GUILayout.Height(18f));
+                GUILayout.Height(22f));
             color.a = 1f;
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Масштаб", GUILayout.Width(58f));
-            scale = EditorGUILayout.Slider(AbilityFx.ResolveScale(row.Fx.Scale), 0.25f, 8f);
+            EditorGUILayout.LabelField(
+                row.Fx.VfxPrefab != null
+                    ? $"Префаб: {row.Fx.VfxPrefab.name}"
+                    : row.VfxKind == AbilityVfxKind.Aura
+                        ? "Префаб: дефолт ауры из MatchFxCatalog"
+                        : "Префаб не задан — выбор в палитре →",
+                _hintStyle);
+
+            EditorGUILayout.Space(4f);
+            DrawSectionLine("Размер", "масштаб картинки и метры боя");
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(18f));
+            EditorGUILayout.LabelField("Масштаб", _fieldLabelStyle, GUILayout.Width(FieldLabelWidth));
+            scale = EditorGUILayout.Slider(
+                GUIContent.none,
+                AbilityFx.ResolveScale(row.Fx.Scale),
+                0.25f,
+                8f);
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(18f));
+            using (new EditorGUI.DisabledScope(rangeKind == RangeField.None || row.Def == null))
+            {
+                if (rangeKind == RangeField.None)
+                {
+                    EditorGUILayout.LabelField("Радиус", _fieldLabelStyle, GUILayout.Width(FieldLabelWidth));
+                    EditorGUILayout.LabelField("без круга — точка на юните", _hintStyle);
+                    rangeValue = 0f;
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(
+                        rangeKind == RangeField.CastRange ? "Досягаемость" : "Радиус",
+                        _fieldLabelStyle,
+                        GUILayout.Width(FieldLabelWidth));
+                    rangeValue = EditorGUILayout.Slider(GUIContent.none, rangeValue, 0.5f, 16f);
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            rangeChanged = !Mathf.Approximately(prevRange, rangeValue);
+            if (rangeChanged)
+            {
+                GUI.changed = changedBeforeRange;
+            }
+
+            DrawFillHint(VisualFooter(row, rangeKind));
+            CloseCard();
         }
 
-        void DrawAnchorBlock(Row row, ref AbilityVfxAnchor anchor)
+        static string VisualFooter(Row row, RangeField rangeKind)
         {
-            EditorGUILayout.BeginVertical(GUILayout.MinWidth(220f), GUILayout.ExpandWidth(true));
-            EditorGUILayout.LabelField("Где", EditorStyles.miniBoldLabel);
+            if (row.Def == null && rangeKind != RangeField.None)
+            {
+                return "Divine Blessing: радиус не в этом ассете — правь его на герое.";
+            }
+
+            return rangeKind switch
+            {
+                RangeField.CastRange =>
+                    "Цвет тинтует партиклы. Масштаб — только картинка, не урон. Досягаемость — как далеко ищет цель, круга AoE нет.",
+                RangeField.None =>
+                    "Цвет тинтует партиклы. Масштаб — только картинка. Это точечный эффект: боевого круга нет.",
+                _ =>
+                    "Цвет тинтует партиклы. Масштаб — только картинка, не урон. Радиус — боевые метры, кольцо в превью 1:1.",
+            };
+        }
+
+        void DrawAnchorCard(Row row, ref AbilityVfxAnchor anchor, float width)
+        {
+            BeginCard("Где — якорь спавна", width);
             if (row.VfxKind == AbilityVfxKind.Aura)
             {
-                EditorGUILayout.LabelField("всегда на носителе", EditorStyles.miniLabel);
+                DrawFillHint(
+                    "Аура всегда на носителе и едет с ним. Якорь не выбирается — карточка остаётся, чтобы ряд не прыгал.");
+                anchor = AbilityVfxAnchor.Caster;
+                CloseCard();
+                return;
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (DrawChoiceCell("На себе", "едет с моделью", anchor == AbilityVfxAnchor.Caster, AnchorCellHeight))
+            {
                 anchor = AbilityVfxAnchor.Caster;
             }
-            else
+
+            if (DrawChoiceCell("На цели", "едет с моделью", anchor == AbilityVfxAnchor.Target, AnchorCellHeight))
             {
-                EditorGUILayout.BeginHorizontal();
-                if (DrawChoiceCell("На себе", "едет с моделью", anchor == AbilityVfxAnchor.Caster))
-                {
-                    anchor = AbilityVfxAnchor.Caster;
-                }
-
-                if (DrawChoiceCell("На цели", "едет с моделью", anchor == AbilityVfxAnchor.Target))
-                {
-                    anchor = AbilityVfxAnchor.Target;
-                }
-
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.BeginHorizontal();
-                if (DrawChoiceCell("Под собой", "остаётся на земле", anchor == AbilityVfxAnchor.Ground))
-                {
-                    anchor = AbilityVfxAnchor.Ground;
-                }
-
-                if (DrawChoiceCell("Под целью", "остаётся на земле", anchor == AbilityVfxAnchor.Impact))
-                {
-                    anchor = AbilityVfxAnchor.Impact;
-                }
-
-                EditorGUILayout.EndHorizontal();
+                anchor = AbilityVfxAnchor.Target;
             }
 
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+            GUILayout.Space(4f);
+            EditorGUILayout.BeginHorizontal();
+            if (DrawChoiceCell("Под собой", "на земле", anchor == AbilityVfxAnchor.Ground, AnchorCellHeight))
+            {
+                anchor = AbilityVfxAnchor.Ground;
+            }
+
+            if (DrawChoiceCell("Под целью", "на земле", anchor == AbilityVfxAnchor.Impact, AnchorCellHeight))
+            {
+                anchor = AbilityVfxAnchor.Impact;
+            }
+
+            EditorGUILayout.EndHorizontal();
+            DrawFillHint(AnchorFooter(anchor));
+            CloseCard();
         }
 
-        bool DrawChoiceCell(string title, string caption, bool active)
+        static string AnchorFooter(AbilityVfxAnchor anchor) => anchor switch
         {
-            _anchorTitleStyle ??= new GUIStyle(EditorStyles.miniBoldLabel)
+            AbilityVfxAnchor.Caster =>
+                "На теле кастера. Следует за анимацией и поворотом модели — удар, щит, вспышка у себя.",
+            AbilityVfxAnchor.Target =>
+                "На теле цели. Едет вместе с врагом или союзником, пока живёт эффект.",
+            AbilityVfxAnchor.Ground =>
+                "Точка на земле у кастера. Не следует: лужа, consecration, круг остаются где поставлены.",
+            AbilityVfxAnchor.Impact =>
+                "Точка на земле у цели — куда прилетело. Сплэш и взрыв остаются на месте.",
+            _ => "Выбери, к чему привязан спавн: тело едет с моделью, земля остаётся.",
+        };
+
+        bool DrawChoiceCell(string title, string caption, bool active) =>
+            DrawChoiceCell(title, caption, active, 36f);
+
+        bool DrawChoiceCell(string title, string caption, bool active, float height)
+        {
+            _anchorTitleStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 12,
+            };
+            _anchorCaptionStyle ??= new GUIStyle(EditorStyles.label)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontSize = 11,
-            };
-            _anchorCaptionStyle ??= new GUIStyle(EditorStyles.centeredGreyMiniLabel)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 9,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.58f) },
             };
 
             var prev = GUI.backgroundColor;
@@ -840,10 +1290,21 @@ namespace Game.Editor
                 GUI.backgroundColor = new Color(0.45f, 0.72f, 1f, 1f);
             }
 
-            var rect = GUILayoutUtility.GetRect(96f, 36f, GUILayout.MinWidth(96f), GUILayout.ExpandWidth(true));
+            var rect = GUILayoutUtility.GetRect(
+                48f,
+                height,
+                GUILayout.MinWidth(48f),
+                GUILayout.Height(height),
+                GUILayout.ExpandWidth(true));
             var clicked = GUI.Button(rect, GUIContent.none);
-            GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, 16f), title, _anchorTitleStyle);
-            GUI.Label(new Rect(rect.x + 2f, rect.y + 17f, rect.width - 4f, 16f), caption, _anchorCaptionStyle);
+            GUI.Label(
+                new Rect(rect.x + 3f, rect.y + 4f, rect.width - 6f, 18f),
+                title,
+                _anchorTitleStyle);
+            GUI.Label(
+                new Rect(rect.x + 3f, rect.y + 22f, rect.width - 6f, 18f),
+                caption,
+                _anchorCaptionStyle);
             GUI.backgroundColor = prev;
             if (clicked)
             {
@@ -853,61 +1314,71 @@ namespace Game.Editor
             return clicked;
         }
 
-        void DrawEulerBlock(ref Vector3 euler)
+        void DrawEulerCard(Row row, ref Vector3 euler, float width)
         {
-            EditorGUILayout.BeginVertical(GUILayout.MinWidth(188f), GUILayout.MaxWidth(280f), GUILayout.ExpandWidth(true));
-            EditorGUILayout.LabelField("Поворот", EditorStyles.miniBoldLabel);
+            BeginCard("Поворот", width);
+            if (row.VfxKind == AbilityVfxKind.Aura)
+            {
+                DrawFillHint(
+                    "У аур поворот не применяется: кольцо стоит как у префаба и едет с носителем.");
+                CloseCard();
+                return;
+            }
+
             EditorGUILayout.BeginHorizontal();
-            if (DrawPresetButton("Горизонталь", Approximately(euler, EulerHorizontal)))
+            if (DrawPresetCell("Горизонталь", "как в префабе", Approximately(euler, EulerHorizontal)))
             {
                 euler = EulerHorizontal;
             }
 
-            if (DrawPresetButton("Вертикаль", Approximately(euler, EulerVertical)))
+            if (DrawPresetCell("Вертикаль", "столбом", Approximately(euler, EulerVertical)))
             {
                 euler = EulerVertical;
             }
 
-            if (DrawPresetButton("В пол", Approximately(euler, EulerFloor)))
+            if (DrawPresetCell("В пол", "плашмя", Approximately(euler, EulerFloor)))
             {
                 euler = EulerFloor;
             }
 
             EditorGUILayout.EndHorizontal();
-            euler = EditorGUILayout.Vector3Field(GUIContent.none, euler);
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.BeginHorizontal();
+            euler.x = DrawAxisField("X", euler.x);
+            euler.y = DrawAxisField("Y", euler.y);
+            euler.z = DrawAxisField("Z", euler.z);
+            EditorGUILayout.EndHorizontal();
+            DrawFillHint(EulerFooter(euler));
+            CloseCard();
         }
 
-        void DrawRangeBlock(Row row, AbilityFxMechanic mechanic, out float value, out RangeField kind)
+        static string EulerFooter(Vector3 euler)
         {
-            kind = ResolveRangeField(row, mechanic);
-            value = ReadRangeValue(row, mechanic, kind);
-            EditorGUILayout.BeginVertical(GUILayout.MinWidth(200f), GUILayout.ExpandWidth(true));
-            var title = kind == RangeField.CastRange ? "Досягаемость" : "Радиус";
-            EditorGUILayout.LabelField(title, EditorStyles.miniBoldLabel);
-            using (new EditorGUI.DisabledScope(kind == RangeField.None || row.Def == null))
+            if (Approximately(euler, EulerVertical))
             {
-                if (kind == RangeField.None)
-                {
-                    EditorGUILayout.LabelField("без круга — точка на юните", EditorStyles.miniLabel);
-                    value = 0f;
-                }
-                else
-                {
-                    value = EditorGUILayout.Slider(value, 0.5f, 16f);
-                    var caption = kind == RangeField.CastRange
-                        ? "метры поиска цели, не AoE"
-                        : "боевые метры · круг в превью 1:1";
-                    EditorGUILayout.LabelField($"{caption}  ·  {value:0.#} м", EditorStyles.miniLabel);
-                }
+                return "Столб: Z 90°. Луч, колонна, фонтан вверх. Крутится только VFX, не юнит.";
             }
 
-            if (row.Def == null && kind != RangeField.None)
+            if (Approximately(euler, EulerFloor))
             {
-                EditorGUILayout.LabelField("Divine Blessing: радиус не в этом ассете", EditorStyles.miniLabel);
+                return "Плашмя: X 90°. Круг и декаль лежат на земле. 0/0/0 — ориентация как в префабе.";
             }
 
-            EditorGUILayout.EndVertical();
+            if (Approximately(euler, EulerHorizontal))
+            {
+                return "Горизонталь: 0/0/0, как заложено в префабе. Крутится только эффект, не персонаж.";
+            }
+
+            return "Свои градусы. 0/0/0 — как в префабе. Крутится только VFX, не юнит.";
+        }
+
+        float DrawAxisField(string axis, float value)
+        {
+            EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
+            EditorGUILayout.LabelField(axis, _fieldLabelStyle, GUILayout.Width(14f));
+            var next = EditorGUILayout.FloatField(GUIContent.none, value, GUILayout.MinWidth(36f));
+            EditorGUILayout.EndHorizontal();
+            return next;
         }
 
         enum RangeField
@@ -976,15 +1447,90 @@ namespace Game.Editor
             EditorUtility.SetDirty(row.Def);
         }
 
-        static bool DrawPresetButton(string label, bool active)
+        bool DrawPresetCell(string title, string caption, bool active)
         {
+            EnsureCardStyles();
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.MinWidth(0f));
             var prev = GUI.backgroundColor;
             if (active)
             {
                 GUI.backgroundColor = new Color(0.45f, 0.72f, 1f, 1f);
             }
 
-            var clicked = GUILayout.Button(label, EditorStyles.miniButton);
+            var clicked = GUILayout.Button(
+                title,
+                _presetButtonStyle,
+                GUILayout.Height(PresetButtonHeight),
+                GUILayout.MinWidth(0f),
+                GUILayout.ExpandWidth(true));
+            GUI.backgroundColor = prev;
+            EditorGUILayout.LabelField(
+                caption,
+                _presetCaptionStyle,
+                GUILayout.Height(16f),
+                GUILayout.MinWidth(0f));
+            EditorGUILayout.EndVertical();
+            if (clicked)
+            {
+                GUI.changed = true;
+            }
+
+            return clicked;
+        }
+
+        bool DrawAnimClipCell(string title, string caption, string tooltip, bool active)
+        {
+            _animClipButtonStyle ??= new GUIStyle(GUI.skin.button)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(8, 8, 4, 4),
+            };
+            _animClipTitleStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = false,
+                clipping = TextClipping.Clip,
+            };
+            _animClipCaptionStyle ??= new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 10,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = false,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.62f) },
+            };
+
+            var hasCaption = !string.IsNullOrEmpty(caption) && caption != title;
+            var prev = GUI.backgroundColor;
+            if (active)
+            {
+                GUI.backgroundColor = new Color(0.45f, 0.72f, 1f, 1f);
+            }
+
+            var rect = GUILayoutUtility.GetRect(
+                80f,
+                AnimCellHeight,
+                GUILayout.MinWidth(56f),
+                GUILayout.Height(AnimCellHeight),
+                GUILayout.ExpandWidth(true));
+            var clicked = GUI.Button(rect, new GUIContent(string.Empty, tooltip), _animClipButtonStyle);
+            if (hasCaption)
+            {
+                GUI.Label(
+                    new Rect(rect.x + 6f, rect.y + 3f, rect.width - 12f, 18f),
+                    title,
+                    _animClipTitleStyle);
+                GUI.Label(
+                    new Rect(rect.x + 6f, rect.y + 20f, rect.width - 12f, 16f),
+                    caption,
+                    _animClipCaptionStyle);
+            }
+            else
+            {
+                GUI.Label(rect, title, _animClipTitleStyle);
+            }
+
             GUI.backgroundColor = prev;
             if (clicked)
             {
@@ -1001,10 +1547,24 @@ namespace Game.Editor
             var caster = AbilityFxPreviewCasterRules.Resolve(row.AbilityId);
             var clips = ClipsFor(LoadCasterPrefab(caster));
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Анимация", EditorStyles.miniBoldLabel);
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            _animHeaderStyle ??= new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = 13,
+            };
+            EditorGUILayout.LabelField(
+                "Анимация",
+                _animHeaderStyle,
+                GUILayout.Width(92f),
+                GUILayout.Height(AnimCellHeight));
             if (clips.Count == 0)
             {
-                EditorGUILayout.LabelField("нет клипов", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(
+                    "нет клипов",
+                    EditorStyles.centeredGreyMiniLabel,
+                    GUILayout.Height(AnimCellHeight));
+                EditorGUILayout.EndHorizontal();
                 return;
             }
 
@@ -1021,19 +1581,11 @@ namespace Game.Editor
                 }
             }
 
-            var columns = clips.Count <= 8 ? Mathf.Max(1, clips.Count) : 6;
             for (var i = 0; i < clips.Count; i++)
             {
-                if (i % columns == 0)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                }
-
                 var clip = clips[i];
-                var caption = !string.IsNullOrEmpty(clip.ClipName) && clip.ClipName != clip.StateName
-                    ? clip.ClipName
-                    : clip.Variant >= 0 ? $"вариант {clip.Variant + 1}" : "клип";
-                if (DrawChoiceCell(clip.StateName, caption, i == displayClip))
+                var tooltip = string.IsNullOrEmpty(clip.DisplayName) ? clip.StateName : clip.DisplayName;
+                if (DrawAnimClipCell(clip.StateName, clip.ClipName, tooltip, i == displayClip))
                 {
                     animState = clip.StateName;
                     animVariant = clip.Variant < 0 ? 0 : clip.Variant;
@@ -1043,12 +1595,9 @@ namespace Game.Editor
                         animKind = AbilityAnimKind.None;
                     }
                 }
-
-                if (i % columns == columns - 1 || i == clips.Count - 1)
-                {
-                    EditorGUILayout.EndHorizontal();
-                }
             }
+
+            EditorGUILayout.EndHorizontal();
         }
 
         void ApplyAnchor(Row row, AbilityVfxAnchor anchor)

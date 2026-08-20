@@ -4,99 +4,166 @@ using UnityEngine;
 
 namespace Game.Editor
 {
-    /// <summary>Mechanic card + top-down schematic in BARAKI Studio settings.</summary>
+    /// <summary>Mechanic card + 3/4-view schematic in BARAKI Studio settings.</summary>
     static class AbilityFxStudioMechanicUi
     {
-        public const float SchematicWidth = 128f;
-        public const float SchematicHeight = 100f;
+        public const float SchematicWidth = 168f;
+        public const float SchematicHeight = 192f;
+        const float CaptionHeight = 24f;
+
+        static readonly Color CasterColor = new(0.45f, 0.82f, 1f, 1f);
+        static readonly Color TargetColor = new(1f, 0.55f, 0.36f, 1f);
 
         static GUIStyle s_chipTitle;
-        static GUIStyle s_chipMotion;
         static GUIStyle s_desc;
-        static GUIStyle s_hint;
         static GUIStyle s_mapLabel;
+        static GUIStyle s_caption;
         static Texture2D s_disc;
         static Texture2D s_ring;
 
-        public static void DrawSchematic(AbilityFxMechanic mechanic)
+        public static void DrawSchematic(AbilityFxMechanic mechanic) =>
+            DrawSchematic(mechanic, SchematicHeight, SchematicWidth);
+
+        public static void DrawSchematic(AbilityFxMechanic mechanic, float height, float width = 0f)
         {
-            var rect = GUILayoutUtility.GetRect(
-                SchematicWidth,
-                SchematicHeight,
-                GUILayout.Width(SchematicWidth),
-                GUILayout.Height(SchematicHeight));
+            var rect = width > 0f
+                ? GUILayoutUtility.GetRect(width, height, GUILayout.Width(width), GUILayout.Height(height))
+                : GUILayoutUtility.GetRect(10f, height, GUILayout.ExpandWidth(true), GUILayout.Height(height));
             if (Event.current.type != EventType.Repaint)
             {
                 return;
             }
 
             EnsureTextures();
-            EditorGUI.DrawRect(rect, new Color(0.09f, 0.10f, 0.12f, 1f));
-            DrawBorder(rect, new Color(1f, 1f, 1f, 0.08f));
-
-            var floorY = rect.y + rect.height * 0.70f;
-            EditorGUI.DrawRect(
-                new Rect(rect.x + 10f, floorY, rect.width - 20f, 1f),
-                new Color(1f, 1f, 1f, 0.16f));
-
-            var caster = new Vector2(rect.x + rect.width * 0.32f, floorY - 16f);
-            var target = new Vector2(rect.x + rect.width * 0.70f, floorY - 16f);
-            var aoeColor = mechanic.ChipColor;
-
-            DrawAoe(mechanic, caster, target, floorY, aoeColor);
-            DrawUnit(caster, new Color(0.45f, 0.78f, 1f, 1f), 8f);
-            DrawUnit(target, new Color(1f, 0.58f, 0.38f, 1f), 8f);
-
-            s_mapLabel ??= new GUIStyle(EditorStyles.miniLabel)
-            {
-                alignment = TextAnchor.UpperCenter,
-                fontSize = 9,
-                normal = { textColor = new Color(1f, 1f, 1f, 0.55f) },
-            };
-            GUI.Label(new Rect(caster.x - 16f, floorY + 4f, 32f, 16f), "я", s_mapLabel);
-            GUI.Label(new Rect(target.x - 20f, floorY + 4f, 40f, 16f), "цель", s_mapLabel);
+            EnsureStyles();
+            var arena = new Rect(rect.x, rect.y, rect.width, rect.height - CaptionHeight);
+            var caption = new Rect(rect.x, arena.yMax, rect.width, CaptionHeight);
+            DrawArena(arena, mechanic);
+            DrawCaption(caption, mechanic);
         }
 
-        public static void DrawBody(string kitLine, string description, AbilityFxMechanic mechanic)
+        public static void DrawMechanicLine(AbilityFxMechanic mechanic)
         {
             EnsureStyles();
-            EditorGUILayout.BeginHorizontal();
-            DrawChip(mechanic);
-            GUILayout.Space(8f);
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField(kitLine, EditorStyles.miniLabel);
-            if (!string.IsNullOrEmpty(description))
-            {
-                EditorGUILayout.LabelField(description, s_desc);
-            }
-
-            var prev = GUI.color;
-            GUI.color = Color.Lerp(mechanic.ChipColor, Color.white, 0.35f);
-            EditorGUILayout.LabelField(mechanic.FxHint, s_hint);
-            GUI.color = prev;
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.EndHorizontal();
-        }
-
-        static void DrawChip(AbilityFxMechanic mechanic)
-        {
-            var title = mechanic.Title ?? "";
-            var motion = mechanic.Motion ?? "";
-            var width = Mathf.Clamp(
-                Mathf.Max(s_chipTitle.CalcSize(new GUIContent(title)).x,
-                    s_chipMotion.CalcSize(new GUIContent(motion)).x) + 16f,
-                148f,
-                240f);
-            var rect = GUILayoutUtility.GetRect(width, 32f, GUILayout.Width(width), GUILayout.Height(32f));
+            var text = mechanic.ShowRing
+                ? $"{mechanic.Title}  ·  {mechanic.RadiusLabel}"
+                : $"{mechanic.Title}  ·  {mechanic.RadiusLabel}";
+            var rect = GUILayoutUtility.GetRect(10f, 26f, GUILayout.ExpandWidth(true), GUILayout.Height(26f));
             if (Event.current.type != EventType.Repaint)
             {
                 return;
             }
 
-            EditorGUI.DrawRect(rect, Color.Lerp(mechanic.ChipColor, new Color(0.12f, 0.12f, 0.14f), 0.62f));
-            DrawBorder(rect, mechanic.ChipColor * 0.85f);
-            GUI.Label(new Rect(rect.x + 8f, rect.y + 1f, rect.width - 12f, 16f), title, s_chipTitle);
-            GUI.Label(new Rect(rect.x + 8f, rect.y + 15f, rect.width - 12f, 15f), motion, s_chipMotion);
+            EditorGUI.DrawRect(rect, Color.Lerp(mechanic.ChipColor, new Color(0.12f, 0.12f, 0.14f), 0.72f));
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 3f, rect.height), mechanic.ChipColor);
+            GUI.Label(
+                new Rect(rect.x + 8f, rect.y, rect.width - 10f, rect.height),
+                text,
+                s_chipTitle);
+        }
+
+        public static void DrawDescription(string description)
+        {
+            EnsureStyles();
+            if (string.IsNullOrEmpty(description))
+            {
+                return;
+            }
+
+            EditorGUILayout.LabelField(description, s_desc);
+        }
+
+        static void DrawArena(Rect rect, AbilityFxMechanic mechanic)
+        {
+            EditorGUI.DrawRect(rect, new Color(0.08f, 0.09f, 0.11f, 1f));
+            EditorGUI.DrawRect(
+                new Rect(rect.x, rect.y, rect.width, rect.height * 0.42f),
+                new Color(0.11f, 0.12f, 0.15f, 1f));
+
+            var ground = new Rect(
+                rect.x + 7f,
+                rect.y + rect.height * 0.48f,
+                rect.width - 14f,
+                rect.height * 0.32f);
+            DrawSprite(ground, s_disc, new Color(0.16f, 0.17f, 0.21f, 1f));
+            DrawSprite(
+                new Rect(ground.x - 2f, ground.y + 3f, ground.width * 0.58f, ground.height - 4f),
+                s_disc,
+                new Color(CasterColor.r, CasterColor.g, CasterColor.b, 0.14f));
+            DrawSprite(
+                new Rect(ground.xMax - ground.width * 0.58f + 2f, ground.y + 3f, ground.width * 0.58f, ground.height - 4f),
+                s_disc,
+                new Color(TargetColor.r, TargetColor.g, TargetColor.b, 0.14f));
+            DrawSprite(
+                new Rect(ground.x + 8f, ground.y + 5f, ground.width - 16f, ground.height - 12f),
+                s_disc,
+                new Color(0.12f, 0.13f, 0.16f, 0.85f));
+
+            var floorY = ground.y + ground.height * 0.42f;
+            var k = Mathf.Clamp(rect.height / 118f, 0.85f, 1.45f);
+            var caster = new Vector2(rect.x + rect.width * 0.30f, floorY);
+            var target = new Vector2(rect.x + rect.width * 0.70f, floorY);
+            var aoe = Color.Lerp(mechanic.ChipColor, Color.white, 0.08f);
+
+            DrawAoe(mechanic, caster, target, floorY, aoe, k);
+            if (mechanic.Shape == AbilityFxMechanicShape.BurstAtImpact)
+            {
+                DrawFlightTick(caster, target, aoe, k);
+            }
+
+            DrawPawn(caster, CasterColor, k, 1f);
+            DrawPawn(target, TargetColor, k, -1f);
+            DrawNamePill(new Vector2(caster.x, ground.yMax + 2f), "я", CasterColor);
+            DrawNamePill(new Vector2(target.x, ground.yMax + 2f), "цель", TargetColor);
+            DrawBorder(rect, new Color(1f, 1f, 1f, 0.12f));
+        }
+
+        static void DrawCaption(Rect rect, AbilityFxMechanic mechanic)
+        {
+            EditorGUI.DrawRect(rect, Color.Lerp(mechanic.ChipColor, new Color(0.10f, 0.10f, 0.12f), 0.78f));
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1f), new Color(1f, 1f, 1f, 0.08f));
+            GUI.Label(
+                new Rect(rect.x + 6f, rect.y, rect.width - 12f, rect.height),
+                mechanic.Motion,
+                s_caption);
+        }
+
+        static void DrawPawn(Vector2 feet, Color color, float k, float face)
+        {
+            var r = 6.6f * k;
+            var body = new Vector2(feet.x, feet.y - r * 1.15f);
+            var head = new Vector2(feet.x, feet.y - r * 2.42f);
+            DrawSprite(
+                new Rect(feet.x - r * 1.55f, feet.y - r * 0.18f, r * 3.1f, r * 0.55f),
+                s_disc,
+                new Color(0f, 0f, 0f, 0.5f));
+            DrawSprite(
+                new Rect(body.x - r * 0.62f, body.y - r * 1.05f, r * 1.24f, r * 2.15f),
+                s_disc,
+                color);
+            DrawSprite(
+                new Rect(body.x - r * 0.38f, body.y - r * 0.55f, r * 0.76f, r * 0.9f),
+                s_disc,
+                Color.Lerp(color, Color.black, 0.22f));
+            DrawSprite(DiscRect(head, r * 0.58f), s_disc, Color.Lerp(color, Color.white, 0.2f));
+            DrawSprite(
+                DiscRect(head + new Vector2(-r * 0.16f, -r * 0.18f), r * 0.18f),
+                s_disc,
+                new Color(1f, 1f, 1f, 0.4f));
+            var eye = head + new Vector2(face * r * 0.22f, r * 0.04f);
+            DrawSprite(DiscRect(eye, r * 0.11f), s_disc, new Color(0.08f, 0.08f, 0.1f, 0.85f));
+        }
+
+        static void DrawNamePill(Vector2 center, string text, Color tint)
+        {
+            var size = s_mapLabel.CalcSize(new GUIContent(text));
+            var rect = new Rect(center.x - size.x * 0.5f - 6f, center.y, size.x + 12f, 16f);
+            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.58f));
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, 2f, rect.height), tint);
+            var prev = GUI.color;
+            GUI.color = Color.Lerp(tint, Color.white, 0.28f);
+            GUI.Label(rect, text, s_mapLabel);
+            GUI.color = prev;
         }
 
         static void DrawAoe(
@@ -104,80 +171,62 @@ namespace Game.Editor
             Vector2 caster,
             Vector2 target,
             float floorY,
-            Color color)
+            Color color,
+            float k)
         {
             switch (mechanic.Shape)
             {
                 case AbilityFxMechanicShape.AuraAroundSelf:
-                    DrawRing(caster, 28f, color, fill: 0.16f);
-                    DrawRing(caster, 22f, color, fill: 0f);
-                    DrawFollowMarks(caster + new Vector2(22f, -10f), color);
+                    DrawGroundRing(new Vector2(caster.x, floorY), 30f * k, 11f * k, color, 0.28f);
                     break;
                 case AbilityFxMechanicShape.AreaOnGround:
                 {
-                    var center = mechanic.RingHost == AbilityVfxAnchor.Target ? target : caster;
-                    DrawGroundBlob(new Vector2(center.x, floorY - 4f), 34f, 12f, color);
+                    var host = mechanic.RingHost == AbilityVfxAnchor.Target ? target : caster;
+                    DrawGroundRing(new Vector2(host.x, floorY), 36f * k, 13f * k, color, 0.4f);
                     break;
                 }
                 case AbilityFxMechanicShape.BurstAroundSelf:
-                    DrawRing(caster, 26f, color, fill: 0.28f);
+                    DrawGroundRing(new Vector2(caster.x, floorY), 28f * k, 10f * k, color, 0.48f);
                     break;
                 case AbilityFxMechanicShape.BurstAroundTarget:
-                    DrawRing(target, 26f, color, fill: 0.28f);
+                    DrawGroundRing(new Vector2(target.x, floorY), 28f * k, 10f * k, color, 0.48f);
                     break;
                 case AbilityFxMechanicShape.BurstAtImpact:
-                    DrawGroundBlob(new Vector2(target.x, floorY - 4f), 30f, 11f, color);
+                    DrawGroundRing(new Vector2(target.x, floorY), 32f * k, 11f * k, color, 0.42f);
                     break;
                 case AbilityFxMechanicShape.PointOnSelf:
-                    DrawPoint(caster, color);
+                    DrawPoint(caster + new Vector2(0f, -16f * k), color, k);
                     break;
                 default:
-                    DrawPoint(target, color);
+                    DrawPoint(target + new Vector2(0f, -16f * k), color, k);
                     break;
             }
         }
 
-        static void DrawUnit(Vector2 center, Color color, float radius)
+        static void DrawFlightTick(Vector2 caster, Vector2 target, Color color, float k)
         {
-            DrawSprite(DiscRect(center, radius + 1.5f), s_disc, new Color(0f, 0f, 0f, 0.45f));
-            DrawSprite(DiscRect(center, radius), s_disc, color);
+            var mid = Vector2.Lerp(caster, target, 0.48f) + new Vector2(0f, -18f * k);
+            DrawSprite(DiscRect(mid, 3.2f * k), s_disc, color);
+            DrawSprite(DiscRect(Vector2.Lerp(caster, mid, 0.55f) + new Vector2(0f, -8f * k), 2f * k), s_disc, color);
         }
 
-        static void DrawRing(Vector2 center, float radius, Color color, float fill)
+        static void DrawGroundRing(Vector2 center, float rx, float ry, Color color, float fill)
         {
+            var rect = new Rect(center.x - rx, center.y - ry, rx * 2f, ry * 2f);
             if (fill > 0.01f)
             {
                 var fillColor = color;
                 fillColor.a = fill;
-                DrawSprite(DiscRect(center, radius), s_disc, fillColor);
+                DrawSprite(rect, s_disc, fillColor);
             }
 
-            DrawSprite(DiscRect(center, radius), s_ring, color);
-        }
-
-        static void DrawGroundBlob(Vector2 center, float width, float height, Color color)
-        {
-            var fill = color;
-            fill.a = 0.32f;
-            var rect = new Rect(center.x - width * 0.5f, center.y - height * 0.5f, width, height);
-            DrawSprite(rect, s_disc, fill);
             DrawSprite(rect, s_ring, color);
         }
 
-        static void DrawPoint(Vector2 center, Color color)
+        static void DrawPoint(Vector2 center, Color color, float k)
         {
-            DrawSprite(DiscRect(center, 5f), s_disc, color);
-            DrawSprite(DiscRect(center, 11f), s_ring, color);
-        }
-
-        static void DrawFollowMarks(Vector2 origin, Color color)
-        {
-            for (var i = 0; i < 3; i++)
-            {
-                var x = origin.x + i * 6f;
-                var rect = new Rect(x, origin.y, 4f, 2f);
-                EditorGUI.DrawRect(rect, color);
-            }
+            DrawSprite(DiscRect(center, 9f * k), s_ring, color);
+            DrawSprite(DiscRect(center, 3.6f * k), s_disc, color);
         }
 
         static Rect DiscRect(Vector2 center, float radius) =>
@@ -201,29 +250,28 @@ namespace Game.Editor
 
         static void EnsureStyles()
         {
-            s_chipTitle ??= new GUIStyle(EditorStyles.miniBoldLabel)
+            s_chipTitle ??= new GUIStyle(EditorStyles.label)
             {
-                fontSize = 11,
+                fontSize = 13,
                 alignment = TextAnchor.MiddleLeft,
                 clipping = TextClipping.Clip,
             };
-            s_chipMotion ??= new GUIStyle(EditorStyles.miniLabel)
+            s_desc ??= new GUIStyle(EditorStyles.wordWrappedLabel)
             {
-                fontSize = 9,
+                fontSize = 13,
+                wordWrap = true,
+            };
+            s_mapLabel ??= new GUIStyle(EditorStyles.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 12,
+            };
+            s_caption ??= new GUIStyle(EditorStyles.label)
+            {
                 alignment = TextAnchor.MiddleLeft,
+                fontSize = 12,
                 clipping = TextClipping.Clip,
-                normal = { textColor = new Color(1f, 1f, 1f, 0.72f) },
-            };
-            s_desc ??= new GUIStyle(EditorStyles.wordWrappedMiniLabel)
-            {
-                fontSize = 11,
-                wordWrap = true,
-            };
-            s_hint ??= new GUIStyle(EditorStyles.miniLabel)
-            {
-                fontSize = 10,
-                wordWrap = true,
-                fontStyle = FontStyle.Italic,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.92f) },
             };
         }
 
