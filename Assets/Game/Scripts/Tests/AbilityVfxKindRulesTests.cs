@@ -50,6 +50,9 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.CasterHeal));
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.RangedCrit));
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.MainUnitSmite));
+            Assert.AreEqual(
+                AbilityVfxAnchor.Target,
+                AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.MainBuildingSmite));
         }
 
         [Test]
@@ -60,11 +63,10 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ResolveDefaultAnchor_CatapultLastCallBuildingSmite_AreImpact()
+        public void ResolveDefaultAnchor_CatapultLastCall_AreImpact()
         {
             Assert.AreEqual(AbilityVfxAnchor.Impact, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.SuperCatapult));
             Assert.AreEqual(AbilityVfxAnchor.Impact, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.FlyingSpawn));
-            Assert.AreEqual(AbilityVfxAnchor.Impact, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.MainBuildingSmite));
         }
 
         [Test]

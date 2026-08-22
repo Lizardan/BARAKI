@@ -38,6 +38,8 @@ Engage-радиус боя по-прежнему из `MatchPickFootprint.GetBui
 
 Убийство здания юнитами и карой main — один путь: HP → 0 → `IsRuins` →
 `MatchBuildingFxPresenter` (взрыв + burning FX) + `BuildingRuinsVisual.ApplyRuins`.
+В BARAKI Studio Кара зданий крутит тот же визуал на бараке: collapse + горение 2 с, затем цикл
+(`RestoreIntact`).
 
 Визуал: скрыть `Model` (полное здание), показать `Foundation` — TT construction mesh
 `*_0` (TownHall_0 / Barracks_0 / Tower_A_0), тот же каменный цоколь что у целого здания.

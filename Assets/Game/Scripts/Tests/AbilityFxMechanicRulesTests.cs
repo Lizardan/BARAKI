@@ -97,6 +97,20 @@ namespace Game.Tests
         }
 
         [Test]
+        public void DivineBlessingSmites_ArePointOnTarget_NoRing()
+        {
+            var building = AbilityFxMechanicRules.Resolve(AbilityIds.MainBuildingSmite, defRadius: 2.2f);
+            Assert.AreEqual(AbilityFxMechanicShape.PointOnTarget, building.Shape);
+            Assert.IsFalse(building.ShowRing);
+            Assert.AreEqual(0f, building.Reach);
+            StringAssert.Contains("без круга", building.RadiusLabel);
+
+            var unit = AbilityFxMechanicRules.Resolve(AbilityIds.MainUnitSmite);
+            Assert.AreEqual(AbilityFxMechanicShape.PointOnTarget, unit.Shape);
+            Assert.IsFalse(unit.ShowRing);
+        }
+
+        [Test]
         public void AuthoredRadius_WinsOverFallback()
         {
             var frost = AbilityFxMechanicRules.Resolve(AbilityIds.Frost, defRadius: 9f);

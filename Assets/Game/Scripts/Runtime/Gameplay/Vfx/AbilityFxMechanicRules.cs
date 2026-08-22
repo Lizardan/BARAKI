@@ -144,8 +144,7 @@ namespace Game.Gameplay.Vfx
 
             AbilityIds.HolyNova => AbilityFxMechanicShape.BurstAroundTarget,
 
-            AbilityIds.SuperCatapult
-                or AbilityIds.MainBuildingSmite => AbilityFxMechanicShape.BurstAtImpact,
+            AbilityIds.SuperCatapult => AbilityFxMechanicShape.BurstAtImpact,
 
             AbilityIds.FlyingSpawn => AbilityFxMechanicShape.PointOnSelf,
 
@@ -210,6 +209,7 @@ namespace Game.Gameplay.Vfx
                     AbilityIds.CasterHeal or AbilityIds.Resurrect =>
                         CasterSpellRules.CastRange,
                     AbilityIds.HolyNova => HeroAbilityRules.NovaCastRange,
+                    AbilityIds.MainBuildingSmite or AbilityIds.MainUnitSmite => 0f,
                     _ => radius,
                 };
             }

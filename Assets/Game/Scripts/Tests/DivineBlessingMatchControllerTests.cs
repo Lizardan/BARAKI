@@ -57,6 +57,21 @@ namespace Game.Tests
         }
 
         [Test]
+        public void FxDefs_ExposeRussianDisplayNamesForStudio()
+        {
+            Assert.AreEqual(
+                MainExtraAbilityRules.BuildingSmiteId,
+                MainExtraAbilityFxDefs.ToPickAbilityId(AbilityIds.MainBuildingSmite));
+            Assert.AreEqual(
+                MainExtraAbilityRules.UnitSmiteId,
+                MainExtraAbilityFxDefs.ToPickAbilityId(AbilityIds.MainUnitSmite));
+            Assert.AreEqual("Кара зданий", MainExtraAbilityFxDefs.GetDisplayName(AbilityIds.MainBuildingSmite));
+            Assert.AreEqual("Кара юнитов", MainExtraAbilityFxDefs.GetDisplayName(AbilityIds.MainUnitSmite));
+            Assert.AreEqual("Кара зданий", MainExtraAbilityFxDefs.Get(AbilityIds.MainBuildingSmite).DisplayName);
+            Assert.AreEqual("Кара юнитов", MainExtraAbilityFxDefs.Get(AbilityIds.MainUnitSmite).DisplayName);
+        }
+
+        [Test]
         public void TryCastMainExtraAbility_BuildingSmiteDamagesEnemyBuilding()
         {
             var controller = CreateEarlyMatch();

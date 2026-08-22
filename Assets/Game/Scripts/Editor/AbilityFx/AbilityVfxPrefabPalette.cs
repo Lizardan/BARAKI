@@ -36,6 +36,7 @@ namespace Game.Editor
             Cast = 1,
             Hit = 2,
             Aura = 3,
+            Custom = 4,
         }
 
         public int FilteredCount => _filtered.Count;
@@ -86,6 +87,7 @@ namespace Game.Editor
             DrawKindChip("Cast", KindFilter.Cast);
             DrawKindChip("Hit", KindFilter.Hit);
             DrawKindChip("Aura", KindFilter.Aura);
+            DrawKindChip("Кастом", KindFilter.Custom);
             EditorGUILayout.EndHorizontal();
 
             EditorGUI.BeginChangeCheck();
@@ -291,6 +293,7 @@ namespace Game.Editor
                 KindFilter.Cast => kind == AbilityVfxKind.Cast,
                 KindFilter.Hit => kind == AbilityVfxKind.Hit,
                 KindFilter.Aura => kind == AbilityVfxKind.Aura,
+                KindFilter.Custom => kind == AbilityVfxKind.Custom,
                 _ => true,
             };
 

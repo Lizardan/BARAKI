@@ -27,6 +27,11 @@ namespace Game.Tests
                 Assert.IsTrue(foundation.activeSelf);
                 Assert.IsFalse(model.activeSelf);
                 Assert.IsTrue(root.activeSelf);
+
+                BuildingRuinsVisual.RestoreIntact(root.transform);
+                Assert.IsFalse(foundation.activeSelf);
+                Assert.IsTrue(model.activeSelf);
+                Assert.IsTrue(root.activeSelf);
             }
             finally
             {

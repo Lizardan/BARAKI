@@ -52,6 +52,14 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Classify_CustomFolder_IsCustom()
+        {
+            Assert.AreEqual(
+                AbilityVfxKind.Custom,
+                AbilityVfxPrefabIndex.Classify(AbilityVfxPrefabIndex.CustomPrefabs + "/SkyBeam.prefab"));
+        }
+
+        [Test]
         public void Scan_FindsPackPrefabsWhenImported()
         {
             var entries = AbilityVfxPrefabIndex.Scan();
@@ -68,6 +76,11 @@ namespace Game.Tests
             {
                 Assert.IsTrue(entries.Exists(e => e.DisplayName == "Slash_1"));
                 Assert.IsFalse(entries.Exists(e => e.DisplayName == "SlashMesh"));
+            }
+
+            if (AssetDatabase.IsValidFolder(AbilityVfxPrefabIndex.CustomPrefabs))
+            {
+                Assert.IsTrue(entries.Exists(e => e.Kind == AbilityVfxKind.Custom && e.Prefab != null));
             }
         }
     }

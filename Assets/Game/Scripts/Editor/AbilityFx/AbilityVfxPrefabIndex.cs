@@ -6,12 +6,13 @@ using UnityEngine;
 
 namespace Game.Editor
 {
-    /// <summary>Scans Slash / CFXR / Hyper Casual prefab packs and classifies them for the FX viewer.</summary>
+    /// <summary>Scans Slash / CFXR / Hyper Casual / Custom prefab folders for BARAKI Studio.</summary>
     public static class AbilityVfxPrefabIndex
     {
         public const string SlashPrefabs = "Assets/Adjustable Slash VFX Pack/Prefabs";
         public const string CfxrPrefabs = "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs";
         public const string HyperCasualPrefabs = "Assets/Lana Studio/Hyper Casual FX/Prefabs";
+        public const string CustomPrefabs = "Assets/Game/Prefabs/Fx/Custom";
 
         public readonly struct Entry
         {
@@ -35,6 +36,7 @@ namespace Game.Editor
             CollectFolder(SlashPrefabs, list);
             CollectFolder(CfxrPrefabs, list);
             CollectFolder(HyperCasualPrefabs, list);
+            CollectFolder(CustomPrefabs, list);
             list.Sort((a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
             return list;
         }
@@ -48,6 +50,12 @@ namespace Game.Editor
 
             var path = assetPath.Replace('\\', '/');
             var file = System.IO.Path.GetFileNameWithoutExtension(path);
+
+            if (path.IndexOf("/Prefabs/Fx/Custom", StringComparison.OrdinalIgnoreCase) >= 0
+                || path.IndexOf(CustomPrefabs, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return AbilityVfxKind.Custom;
+            }
 
             if (path.IndexOf("Adjustable Slash VFX Pack", StringComparison.OrdinalIgnoreCase) >= 0)
             {

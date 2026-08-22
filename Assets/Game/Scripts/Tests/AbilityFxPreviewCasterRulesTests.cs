@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Vfx;
@@ -55,15 +56,37 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Resolve_DivineBlessing_IsMainBuilding()
+        public void Resolve_DivineBlessing_HidesCaster()
         {
             var building = AbilityFxPreviewCasterRules.Resolve(AbilityIds.MainBuildingSmite);
-            Assert.IsTrue(building.IsBuilding);
-            Assert.AreEqual("Главное здание", building.DisplayName);
+            Assert.IsTrue(building.Hidden);
+            Assert.IsFalse(building.IsBuilding);
 
             var unit = AbilityFxPreviewCasterRules.Resolve(AbilityIds.MainUnitSmite);
-            Assert.IsTrue(unit.IsBuilding);
-            Assert.AreEqual("Главное здание", unit.DisplayName);
+            Assert.IsTrue(unit.Hidden);
+            Assert.IsFalse(unit.IsBuilding);
+        }
+
+        [Test]
+        public void ResolveTarget_BuildingSmite_IsBarracks_Solo()
+        {
+            var target = AbilityFxPreviewTargetRules.Resolve(AbilityIds.MainBuildingSmite);
+            Assert.IsTrue(target.IsBuilding);
+            Assert.AreEqual(GameIds.Buildings.Barracks, target.BuildingId);
+            Assert.AreEqual("Барак", target.DisplayName);
+            Assert.IsTrue(AbilityFxPreviewTargetRules.UsesSoloTarget(AbilityIds.MainBuildingSmite));
+            Assert.IsTrue(AbilityFxPreviewTargetRules.PreviewBuildingCollapse(AbilityIds.MainBuildingSmite));
+            Assert.AreEqual(2f, AbilityFxPreviewTargetRules.BuildingSmiteRuinsHoldSeconds);
+        }
+
+        [Test]
+        public void ResolveTarget_UnitSmite_IsSingleMelee_NoBuilding()
+        {
+            var target = AbilityFxPreviewTargetRules.Resolve(AbilityIds.MainUnitSmite);
+            Assert.IsFalse(target.IsBuilding);
+            Assert.AreEqual("Мечник", target.DisplayName);
+            Assert.IsTrue(AbilityFxPreviewTargetRules.UsesSoloTarget(AbilityIds.MainUnitSmite));
+            Assert.IsFalse(AbilityFxPreviewTargetRules.PreviewBuildingCollapse(AbilityIds.MainUnitSmite));
         }
     }
 }

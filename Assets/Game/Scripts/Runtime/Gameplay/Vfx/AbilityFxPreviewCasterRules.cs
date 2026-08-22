@@ -11,13 +11,15 @@ namespace Game.Gameplay.Vfx
             int heroSlot,
             int bonusSlot,
             string displayName,
-            bool isBuilding = false)
+            bool isBuilding = false,
+            bool hidden = false)
         {
             Role = role;
             HeroSlot = heroSlot;
             BonusSlot = bonusSlot;
             DisplayName = displayName;
             IsBuilding = isBuilding;
+            Hidden = hidden;
         }
 
         public UnitRole Role { get; }
@@ -25,6 +27,8 @@ namespace Game.Gameplay.Vfx
         public int BonusSlot { get; }
         public string DisplayName { get; }
         public bool IsBuilding { get; }
+        /// <summary>No caster model — preview shows only the target (Divine Blessing).</summary>
+        public bool Hidden { get; }
     }
 
     /// <summary>Maps ability ids to the kit owner spawned in the FX viewer preview.</summary>
@@ -59,7 +63,7 @@ namespace Game.Gameplay.Vfx
             AbilityIds.SuperCatapult => Bonus(UnitRole.Super, "Супер BONUS"),
 
             AbilityIds.MainBuildingSmite or AbilityIds.MainUnitSmite =>
-                new AbilityFxPreviewCaster(UnitRole.Hero, 0, 0, "Главное здание", isBuilding: true),
+                new AbilityFxPreviewCaster(UnitRole.Hero, 0, 0, "", hidden: true),
 
             _ => new AbilityFxPreviewCaster(UnitRole.Caster, 0, 0, "Кастер"),
         };

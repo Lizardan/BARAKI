@@ -30,10 +30,9 @@ namespace Game.Editor
         const string ListWidthKey = "BARAKI.AbilityFxStudio.ListWidth";
         const string PaletteWidthKey = "BARAKI.AbilityFxStudio.PaletteWidth";
         const string PaletteCollapsedKey = "BARAKI.AbilityFxStudio.PaletteCollapsed";
-        const string DivineBuildingSmitePrefabPath =
-            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR3 Fire Explosion B.prefab";
-        const string DivineUnitSmitePrefabPath =
-            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit A (Red).prefab";
+        const string DivineSkyBeamPrefabPath = ContentAssetPaths.SkyBeamPrefab;
+        const string LegacyDivineBuildingSmitePrefabName = "CFXR3 Fire Explosion B";
+        const string LegacyDivineUnitSmitePrefabName = "CFXR Hit A (Red)";
 
         static readonly AbilityVfxAnchor[] MarkerOrder =
         {
@@ -705,14 +704,15 @@ namespace Game.Editor
             {
                 _preview.EnsureSize(Mathf.RoundToInt(previewRect.width), Mathf.RoundToInt(previewRect.height));
                 _preview.SetCaster(
-                    LoadCasterPrefab(caster),
+                    caster.Hidden ? null : LoadCasterPrefab(caster),
                     caster.Role,
                     caster.HeroSlot,
                     caster.BonusSlot,
-                    caster.IsBuilding);
+                    caster.IsBuilding,
+                    hideCaster: caster.Hidden);
                 _preview.SetTarget(
                     LoadTargetPrefab(selected.AbilityId),
-                    isBuilding: selected.AbilityId == AbilityIds.MainBuildingSmite);
+                    AbilityFxPreviewTargetRules.Resolve(selected.AbilityId).IsBuilding);
                 PushEffect(selected, selected.Fx);
                 var tex = _preview.Target;
                 if (tex != null)
@@ -721,11 +721,14 @@ namespace Game.Editor
                 }
             }
 
-            DrawOverlayLabel(previewRect, _preview.CasterLabelWorld, caster.DisplayName);
+            if (!caster.Hidden)
+            {
+                DrawOverlayLabel(previewRect, _preview.CasterLabelWorld, caster.DisplayName);
+            }
             DrawOverlayLabel(
                 previewRect,
                 _preview.DummyLabelWorld,
-                selected.AbilityId == AbilityIds.MainBuildingSmite ? "Здание" : "Цель");
+                AbilityFxPreviewTargetRules.Resolve(selected.AbilityId).DisplayName);
             DrawMechanicOverlay(previewRect, ResolveMechanic(selected));
 
             if (selected.VfxKind != AbilityVfxKind.Aura)
@@ -733,6 +736,11 @@ namespace Game.Editor
                 var current = AbilityVfxKindRules.ResolveAnchor(selected.AbilityId, selected.Fx.Anchor);
                 for (var i = 0; i < MarkerOrder.Length; i++)
                 {
+                    if (caster.Hidden && MarkerOrder[i] == AbilityVfxAnchor.Caster)
+                    {
+                        continue;
+                    }
+
                     DrawAnchorMarker(previewRect, MarkerOrder[i], MarkerOrder[i] == current);
                 }
             }
@@ -758,13 +766,19 @@ namespace Game.Editor
 
         void DrawOverlayLabel(Rect previewRect, Vector3 world, string text)
         {
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
             if (_preview == null || !_preview.TryWorldToGui(world, previewRect, out var gui))
             {
                 return;
             }
 
-            _overlayLabel ??= new GUIStyle(EditorStyles.boldLabel)
+            _overlayLabel ??= new GUIStyle(EditorStyles.label)
             {
+                fontSize = 12,
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = Color.white },
             };
@@ -779,8 +793,9 @@ namespace Game.Editor
         {
             var text = $"{mechanic.Title}  ·  {mechanic.RadiusLabel}  ·  {mechanic.Motion}";
             var content = new GUIContent(text);
-            _overlayLabel ??= new GUIStyle(EditorStyles.boldLabel)
+            _overlayLabel ??= new GUIStyle(EditorStyles.label)
             {
+                fontSize = 12,
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = Color.white },
             };
@@ -807,6 +822,15 @@ namespace Game.Editor
 
         static string ResolveDescription(Row row)
         {
+            if (row.Def == null)
+            {
+                var blessing = MainExtraAbilityFxDefs.GetEffectDescription(row.AbilityId);
+                if (!string.IsNullOrEmpty(blessing))
+                {
+                    return blessing;
+                }
+            }
+
             var def = row.Def != null ? row.Def : MainExtraAbilityFxDefs.Get(row.AbilityId);
             if (def == null)
             {
@@ -852,10 +876,11 @@ namespace Game.Editor
 
         GameObject LoadTargetPrefab(int abilityId)
         {
-            if (abilityId == AbilityIds.MainBuildingSmite)
+            var target = AbilityFxPreviewTargetRules.Resolve(abilityId);
+            if (target.IsBuilding)
             {
                 if (_buildingCatalog != null
-                    && _buildingCatalog.TryGetPrefab(GameIds.Buildings.Main, out var building))
+                    && _buildingCatalog.TryGetPrefab(target.BuildingId, out var building))
                 {
                     return building;
                 }
@@ -1014,7 +1039,7 @@ namespace Game.Editor
 
         void EnsureCardStyles()
         {
-            _nameHeaderStyle ??= new GUIStyle(EditorStyles.boldLabel) { fontSize = 16 };
+            _nameHeaderStyle ??= new GUIStyle(EditorStyles.label) { fontSize = 16 };
             _cardTitleStyle ??= new GUIStyle(EditorStyles.boldLabel)
             {
                 fontSize = 13,
@@ -1746,15 +1771,15 @@ namespace Game.Editor
                 new AbilityFx
                 {
                     Color = AbilityFxColors.DivineSmite,
-                    VfxPrefab = LoadSeedPrefab(DivineBuildingSmitePrefabPath),
-                    Anchor = AbilityVfxAnchor.Impact,
+                    VfxPrefab = LoadSeedPrefab(DivineSkyBeamPrefabPath),
+                    Anchor = AbilityVfxAnchor.Target,
                 });
             catalog.EditorSetFx(
                 AbilityIds.MainUnitSmite,
                 new AbilityFx
                 {
                     Color = AbilityFxColors.DivineSmite,
-                    VfxPrefab = LoadSeedPrefab(DivineUnitSmitePrefabPath),
+                    VfxPrefab = LoadSeedPrefab(DivineSkyBeamPrefabPath),
                     Anchor = AbilityVfxAnchor.Target,
                 });
             AssetDatabase.CreateAsset(catalog, MainExtraAbilityFxCatalog.AssetPath);
@@ -1770,30 +1795,31 @@ namespace Game.Editor
 
             var dirty = false;
             var building = catalog.GetFx(AbilityIds.MainBuildingSmite);
-            if (building.VfxPrefab == null)
+            if (ShouldRestoreDivineSkyBeam(building.VfxPrefab, LegacyDivineBuildingSmitePrefabName)
+                || building.Anchor == AbilityVfxAnchor.Impact)
             {
                 catalog.EditorSetFx(
                     AbilityIds.MainBuildingSmite,
                     new AbilityFx
                     {
                         Color = building.Color.a > 0.01f ? building.Color : AbilityFxColors.DivineSmite,
-                        VfxPrefab = LoadSeedPrefab(DivineBuildingSmitePrefabPath),
-                        Anchor = building.Anchor != AbilityVfxAnchor.Unspecified
-                            ? building.Anchor
-                            : AbilityVfxAnchor.Impact,
+                        VfxPrefab = building.VfxPrefab != null
+                            ? building.VfxPrefab
+                            : LoadSeedPrefab(DivineSkyBeamPrefabPath),
+                        Anchor = AbilityVfxAnchor.Target,
                     });
                 dirty = true;
             }
 
             var unit = catalog.GetFx(AbilityIds.MainUnitSmite);
-            if (unit.VfxPrefab == null)
+            if (ShouldRestoreDivineSkyBeam(unit.VfxPrefab, LegacyDivineUnitSmitePrefabName))
             {
                 catalog.EditorSetFx(
                     AbilityIds.MainUnitSmite,
                     new AbilityFx
                     {
                         Color = unit.Color.a > 0.01f ? unit.Color : AbilityFxColors.DivineSmite,
-                        VfxPrefab = LoadSeedPrefab(DivineUnitSmitePrefabPath),
+                        VfxPrefab = LoadSeedPrefab(DivineSkyBeamPrefabPath),
                         Anchor = unit.Anchor != AbilityVfxAnchor.Unspecified
                             ? unit.Anchor
                             : AbilityVfxAnchor.Target,
@@ -1807,8 +1833,28 @@ namespace Game.Editor
             }
         }
 
-        static GameObject LoadSeedPrefab(string path) =>
-            AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        static GameObject LoadSeedPrefab(string path)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null && path == DivineSkyBeamPrefabPath)
+            {
+                prefab = CustomAbilityFxPrefabBuilder.EnsureSkyBeam();
+            }
+
+            return prefab;
+        }
+
+        static bool ShouldRestoreDivineSkyBeam(GameObject current, string legacyPrefabName)
+        {
+            if (current == null)
+            {
+                return true;
+            }
+
+            var path = AssetDatabase.GetAssetPath(current);
+            return !string.IsNullOrEmpty(path)
+                && path.IndexOf(legacyPrefabName, System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
 
         readonly struct Row
         {
@@ -1852,9 +1898,15 @@ namespace Game.Editor
                 var def = MainExtraAbilityFxDefs.Get(abilityId);
                 var catalog = LoadOrCreateMainExtraCatalog();
                 var fx = catalog != null ? catalog.GetFx(abilityId) : def != null ? def.Fx : default;
+                var displayName = MainExtraAbilityFxDefs.GetDisplayName(abilityId);
+                if (string.IsNullOrEmpty(displayName) && def != null)
+                {
+                    displayName = def.DisplayName;
+                }
+
                 return new Row(
                     abilityId,
-                    def != null ? def.DisplayName : $"Main extra {abilityId}",
+                    !string.IsNullOrEmpty(displayName) ? displayName : $"Main extra {abilityId}",
                     AbilityKind.Active,
                     AbilityVfxKindRules.Resolve(abilityId),
                     fx,

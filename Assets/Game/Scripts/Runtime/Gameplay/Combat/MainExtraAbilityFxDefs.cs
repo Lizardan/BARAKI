@@ -20,6 +20,19 @@ namespace Game.Gameplay.Combat
             _ => 0,
         };
 
+        public static int ToPickAbilityId(int spellAbilityId) => spellAbilityId switch
+        {
+            AbilityIds.MainBuildingSmite => MainExtraAbilityRules.BuildingSmiteId,
+            AbilityIds.MainUnitSmite => MainExtraAbilityRules.UnitSmiteId,
+            _ => 0,
+        };
+
+        public static string GetDisplayName(int spellAbilityId) =>
+            MainExtraAbilityRules.GetDisplayName(ToPickAbilityId(spellAbilityId));
+
+        public static string GetEffectDescription(int spellAbilityId) =>
+            MainExtraAbilityRules.GetEffectDescription(ToPickAbilityId(spellAbilityId));
+
         public static UnitAbilityDef GetForPick(int pickAbilityId)
         {
             var spellId = ToSpellAbilityId(pickAbilityId);
@@ -44,40 +57,51 @@ namespace Game.Gameplay.Combat
 
         static UnitAbilityDef BuildingSmite()
         {
-            s_buildingSmite ??= UnitAbilityDef.Create(
-                AbilityIds.MainBuildingSmite,
-                MainExtraAbilityRules.GetDisplayName(MainExtraAbilityRules.BuildingSmiteId),
-                MainExtraAbilityRules.GetEffectDescription(MainExtraAbilityRules.BuildingSmiteId),
-                AbilityKind.Active,
-                AbilityUnlock.Always,
-                unlockValue: 1,
-                behaviour: null,
-                fx: new AbilityFx { Color = AbilityFxColors.DivineSmite },
-                damage: MainExtraAbilityRules.BuildingSmiteDamage,
-                radius: 2.2f,
-                cooldownSeconds: MainExtraAbilityRules.CooldownSeconds,
-                manaCost: MainExtraAbilityRules.ManaCost);
+            if (s_buildingSmite == null)
+            {
+                s_buildingSmite = CreateRuntimeDef(
+                    AbilityIds.MainBuildingSmite,
+                    MainExtraAbilityRules.BuildingSmiteId,
+                    MainExtraAbilityRules.BuildingSmiteDamage,
+                    radius: 2.2f);
+            }
+
             ApplyCatalogFx(s_buildingSmite, AbilityIds.MainBuildingSmite);
             return s_buildingSmite;
         }
 
         static UnitAbilityDef UnitSmite()
         {
-            s_unitSmite ??= UnitAbilityDef.Create(
-                AbilityIds.MainUnitSmite,
-                MainExtraAbilityRules.GetDisplayName(MainExtraAbilityRules.UnitSmiteId),
-                MainExtraAbilityRules.GetEffectDescription(MainExtraAbilityRules.UnitSmiteId),
+            if (s_unitSmite == null)
+            {
+                s_unitSmite = CreateRuntimeDef(
+                    AbilityIds.MainUnitSmite,
+                    MainExtraAbilityRules.UnitSmiteId,
+                    MainExtraAbilityRules.UnitSmiteDamage,
+                    radius: 1.6f);
+            }
+
+            ApplyCatalogFx(s_unitSmite, AbilityIds.MainUnitSmite);
+            return s_unitSmite;
+        }
+
+        static UnitAbilityDef CreateRuntimeDef(int spellAbilityId, int pickAbilityId, float damage, float radius)
+        {
+            var def = UnitAbilityDef.Create(
+                spellAbilityId,
+                MainExtraAbilityRules.GetDisplayName(pickAbilityId),
+                MainExtraAbilityRules.GetEffectDescription(pickAbilityId),
                 AbilityKind.Active,
                 AbilityUnlock.Always,
                 unlockValue: 1,
                 behaviour: null,
                 fx: new AbilityFx { Color = AbilityFxColors.DivineSmite },
-                damage: MainExtraAbilityRules.UnitSmiteDamage,
-                radius: 1.6f,
+                damage: damage,
+                radius: radius,
                 cooldownSeconds: MainExtraAbilityRules.CooldownSeconds,
                 manaCost: MainExtraAbilityRules.ManaCost);
-            ApplyCatalogFx(s_unitSmite, AbilityIds.MainUnitSmite);
-            return s_unitSmite;
+            def.hideFlags = HideFlags.HideAndDontSave;
+            return def;
         }
 
         static void ApplyCatalogFx(UnitAbilityDef def, int abilityId)

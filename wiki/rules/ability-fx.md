@@ -35,7 +35,8 @@ IMGUI `EditorWindow` (не UI Toolkit — игровой UI Toolkit на editor 
 
 Divine Blessing 100/101 живут не в ките юнита, а в `MainExtraAbilityFxCatalog`
 (`Assets/Game/Resources/Fx/MainExtraAbilityFxCatalog.asset`). Радиус этих двух **не** крутится
-в слайдере Studio.
+в слайдере Studio. Имена в списке Studio — `MainExtraAbilityFxDefs.GetDisplayName`
+(«Кара зданий» / «Кара юнитов»), не поле runtime-SO.
 
 ## Три разных «где» — не путать
 
@@ -68,9 +69,13 @@ Divine Blessing 100/101 живут не в ките юнита, а в `MainExtra
 - **Слева:** поиск, группы `AbilityVfxKindRules.KitLabel` (King / Paladin / Caster / BONUS / …).
   Строка = свач цвета + `DisplayName`.
 - **Центр:** `AbilityFxPreviewSession` — слева кастер кита (`AbilityFxPreviewCasterRules`),
-  справа мечник или главное здание (Кара зданий). ЛКМ орбита, колёсико зум, точки в сцене = якорь.
+  справа dummy (`AbilityFxPreviewTargetRules`). Кара 100/101 — **без кастера**, одна цель
+  в центре: Кара зданий = барак (через 0.25 с рушится как в матче: `BuildingRuinsVisual` +
+  взрыв/`BuildingBurning` из `MatchFxCatalog`, горящие руины **2 с**, затем цикл),
+  Кара юнитов = один мечник, без зданий. Остальные способности — мечник справа.
+  ЛКМ орбита, колёсико зум, точки в сцене = якорь.
 - **Справа:** встроенная `AbilityVfxPrefabPalette` (не `EditorWindow`). Сворачивается шевроном.
-  Фильтры (поиск, Все / Cast / Hit / Aura, ObjectField) живут **в шапке палитры**, не над превью.
+  Фильтры (поиск, Все / Cast / Hit / Aura / Кастом, ObjectField) живут **в шапке палитры**, не над превью.
   Чипы фильтра **не** сбрасываются при смене способности.
 
 Под превью — **транспорт** (`DrawTransportBar`) и полоса настроек (`DrawSettings` + `AbilityFxStudioMechanicUi`):
@@ -102,8 +107,9 @@ Divine Blessing 100/101 живут не в ките юнита, а в `MainExtra
 под полом. AoE — приплюснутое кольцо на земле у хозяина (как кольцо в превью),
 точка — искра на груди, удар — ещё тик «полёта». Подпись снизу = `Motion`
 (едет / остаётся / вспышка). Пунктир кастер→цель не рисуем — шумит.
-**Не ставить `FontStyle.Bold` кириллическим `GUI.Label`** на базе `EditorStyles.miniLabel` —
-bold-вариант динамического шрифта теряет кириллицу (текст просто не рисуется);
+**Не ставить `FontStyle.Bold` / `EditorStyles.boldLabel` кириллическим `GUI.Label`**
+(в т.ч. заголовок имени в карточке — `_nameHeaderStyle` = `EditorStyles.label` + fontSize).
+Bold-вариант динамического шрифта теряет кириллицу (текст просто не рисуется);
 размер крутить только через `fontSize`.
 
 У аур карточки якоря и поворота **не** прячутся (лейаут не прыгает) — показывают хинты
@@ -137,7 +143,8 @@ Frost `r = 5` вокруг цели — круг диаметром 10 м; ка�
 | `AbilityVfxPrefabPalette.cs` | Сетка живых thumbs |
 | `AbilityVfxThumbSession.cs` | Одна ячейка палитры |
 | `AbilityVfxPreviewPlayback.cs` | Particle / VFX Graph тик в preview-сцене |
-| `AbilityVfxPrefabIndex.cs` | Скан трёх папок префабов |
+| `AbilityVfxPrefabIndex.cs` | Скан Slash / CFXR / Hyper Casual / Custom |
+| `CustomAbilityFxPrefabBuilder.cs` | Сборка `Prefabs/Fx/Custom` (`SkyBeam`) |
 | `AbilityAnimClipIndex.cs` | Клипы с Animator кита |
 
 Билдер: `UnitAbilityAssetBuilder` — preserve Fx + ненулевых Radius/CastRange/SecondaryRadius.
@@ -151,7 +158,8 @@ Frost `r = 5` вокруг цели — круг диаметром 10 м; ка�
 | `Gameplay/Vfx/AbilityVfxAnchor.cs` | Caster / Target / Ground / Impact / Unspecified |
 | `Gameplay/Vfx/AbilityVfxPlacement.cs` | Общие формулы спавна (матч = Studio) |
 | `Gameplay/Vfx/AbilityVfxTint.cs` | Particle HSV + VFX Graph First/Second/ThirdColor |
-| `Gameplay/Vfx/AbilityFxPreviewCasterRules.cs` | Какая модель слева |
+| `Gameplay/Vfx/AbilityFxPreviewCasterRules.cs` | Какая модель слева; Кара — кастер скрыт |
+| `Gameplay/Vfx/AbilityFxPreviewTargetRules.cs` | Dummy: барак / мечник; соло-цель; collapse 2 с |
 | `Gameplay/Data/UnitAbilityDef.cs` | `ApplyFx` / `ApplyRadius` / `ApplyCastRange` |
 | `Gameplay/Combat/MainExtraAbilityFxCatalog.cs` | Fx Кары 100/101 |
 | `Match/MatchCombatPresenter.cs` | `ShowAbilityFx` в бою |
@@ -167,8 +175,8 @@ Frost `r = 5` вокруг цели — круг диаметром 10 м; ка�
 | `AreaOnGround` | Область на земле · остаётся | Штамп в кадр каста | Greater Heal, Consecration; Frost — у врагов |
 | `BurstAroundSelf` | Вспышка вокруг себя | Разовый круг у кастера | Strike, Slam, Stomp, Group Heal, Shield, Cleave |
 | `BurstAroundTarget` | Область у цели | Разовый круг у якоря | Holy Nova |
-| `BurstAtImpact` | Вспышка в точке удара | Splash прилёта | Catapult, Кара зданий |
-| `PointOnTarget` / `PointOnSelf` | без круга | Один юнит | Smite, Mend, Deadeye, Last Call |
+| `BurstAtImpact` | Вспышка в точке удара | Splash прилёта | Catapult |
+| `PointOnTarget` / `PointOnSelf` | без круга | Один юнит / здание | Smite, Mend, Deadeye, Last Call, Кара зданий, Кара юнитов |
 
 ## Якорь спавна (`AbilityVfxAnchor`)
 
@@ -183,7 +191,9 @@ Caster не может быть 0 — `Unspecified = 0` значит «ещё н
 | `Ground` | Под собой | Мир, `GroundY` 0.1 у ног кастера. Не едет |
 | `Impact` | Под целью | Мир, `cast.CenterPosition` / preview impact. Не едет |
 
-Превью Impact: Last Call → ноги кастера (root, не hover +4); Catapult / Кара зданий → ноги цели.
+Превью Impact: Last Call → ноги кастера (root, не hover +4); Catapult → ноги цели.
+Кара 100/101 — якорь **На цели** (луч на бараке / мечнике), не Impact.
+В превью кастера нет: Кара зданий — только барак, Кара юнитов — только мечник.
 Ауры в матче всегда `AuraFxVisuals.Attach` на носителе, независимо от кнопок якоря.
 
 ## Поворот и масштаб визуала
@@ -195,14 +205,17 @@ Caster не может быть 0 — `Unspecified = 0` значит «ещё н
 ## Палитра префабов
 
 Скан: `Adjustable Slash VFX Pack/Prefabs`, `JMO Assets/Cartoon FX Remaster/CFXR Prefabs`,
-`Lana Studio/Hyper Casual FX/Prefabs`. Первая ячейка — «нет». ObjectField не затирает префаб вне этих папок.
+`Lana Studio/Hyper Casual FX/Prefabs`, **`Assets/Game/Prefabs/Fx/Custom`**. Первая ячейка — «нет».
+ObjectField не затирает префаб вне этих папок.
 
 | Kind | Способности | Типичные префабы |
 |------|-------------|------------------|
 | Aura | пассивные 13/23/33/43/50 | Hyper Casual Area/Shine; CFXR Magic Aura / LightGlow Loop |
 | Hit | Strike, Ultimate, Smite, Consecration, Slam, Stomp, Cleave, Deadeye, Battlemace, Catapult | Slash_*; CFXR Impacts / Explosions; Hyper Casual Flash |
 | Cast | хилы, баффы, резы, Frost, Last Call, Divine Blessing | остальные CFXR + Sparkle/Confetti/Water |
+| Custom | любой пикер; чип **Кастом** | проектные префабы (`SkyBeam` — луч сверху для Кары 100/101) |
 
+Кастомные эффекты собирает `CustomAbilityFxPrefabBuilder` (`BARAKI/Abilities/Rebuild Custom FX Prefabs`).
 Не удалять пак Slash_* и не схлопывать Slash_1–30 в один пресет.
 
 ## Анимации
@@ -220,7 +233,8 @@ Caster не может быть 0 — `Unspecified = 0` значит «ещё н
 - **Сидит заново:** имена, описания, урон/хил/CD и прочий тюнинг из `AbilityKitDefaults`.
 - Пустой префаб / `Unspecified` якорь / нулевой Scale·Euler — досиживаются дефолтом, уже заданное не трогают.
 - Геройские ауры 13/23/33/43 сидятся тем же Runic, что `MatchFxCatalog._auraRunicLoop`.
-- Кара: здания = CFXR3 Fire Explosion B, юниты = CFXR Hit A (Red); пустой префаб досиживается при открытии Studio.
+- Кара 100/101: сид `SkyBeam` (кастомный луч сверху). Пустой префаб или старый CFXR
+  Explosion B / Hit A (Red) досиживается при открытии Studio; другой выбранный префаб не трогают.
 
 Новый ассет (радиус 0) берёт кит. После правки слайдера значение живёт на SO.
 
@@ -264,8 +278,8 @@ Caster не может быть 0 — `Unspecified = 0` значит «ещё н
 | `AbilityVfxPlacementTests` | BodyHeight, GroundY, Impact, preview impact, scale без × radius |
 | `AbilityFxPreserveTests` | `WithPreservedAuthored` |
 | `UnitAbilityDefApplyTests` | `ApplyRadius` / `ApplyCastRange` |
-| `AbilityFxPreviewCasterRulesTests` | какая модель слева |
-| `AbilityVfxPrefabIndexTests` | классификация папок |
+| `AbilityFxPreviewCasterRulesTests` | кастер скрыт у Кары; dummy = барак / один мечник |
+| `AbilityVfxPrefabIndexTests` | классификация папок (в т.ч. Custom / SkyBeam) |
 
 После правки Studio: `read_console` на compile, затем эти EditMode-тесты.
 

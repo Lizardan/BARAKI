@@ -19,6 +19,8 @@ namespace Game.Editor
         public const string UnitVisualCatalog = Catalogs + "/UnitVisualCatalog.asset";
         public const string UnitAbilityCatalog = Catalogs + "/UnitAbilityCatalog.asset";
         public const string MainExtraAbilityFxCatalog = Game.Gameplay.Combat.MainExtraAbilityFxCatalog.AssetPath;
+        public const string CustomAbilityFxPrefabs = "Assets/Game/Prefabs/Fx/Custom";
+        public const string SkyBeamPrefab = CustomAbilityFxPrefabs + "/SkyBeam.prefab";
 
         public const string Races = Root + "/Races";
         public const string Humans = Races + "/Humans";

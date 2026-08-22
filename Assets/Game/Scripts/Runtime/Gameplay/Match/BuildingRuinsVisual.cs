@@ -42,6 +42,44 @@ namespace Game.Gameplay.Match
         }
 
         /// <summary>
+        /// Inverse of <see cref="ApplyRuins"/>: show the upper Model, hide Foundation.
+        /// Used by BARAKI Studio to loop the building-smite preview.
+        /// </summary>
+        public static void RestoreIntact(Transform buildingRoot)
+        {
+            if (buildingRoot == null)
+            {
+                return;
+            }
+
+            var model = buildingRoot.Find(ModelName);
+            if (model != null)
+            {
+                model.gameObject.SetActive(true);
+            }
+
+            var foundation = buildingRoot.Find(FoundationName);
+            if (foundation != null)
+            {
+                foundation.gameObject.SetActive(false);
+            }
+
+            if (model != null)
+            {
+                return;
+            }
+
+            var renderers = buildingRoot.GetComponentsInChildren<Renderer>(true);
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    renderers[i].enabled = true;
+                }
+            }
+        }
+
+        /// <summary>
         /// Hides the upper structure, shows the mesh foundation. Root stays active for FX.
         /// Destroys leftover procedural cylinder pads named Foundation (legacy).
         /// </summary>

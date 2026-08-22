@@ -46,6 +46,9 @@ Prefabs/Races/Humans/
 ├── Heroes/{HeroN|Titan}/Human_{HeroN|Titan}.prefab
 └── Buildings/
 
+Prefabs/Fx/Custom/                             # BARAKI Studio, чип «Кастом»
+└── SkyBeam.prefab                             # луч сверху (Divine Blessing / Кара)
+
 Art/UI/UnitPortraits/Humans/
 ├── Units/{Melee|Ranged|Caster|Siege|Flying|Super}.png
 ├── BonusUnits/{Melee|…|Super}.png

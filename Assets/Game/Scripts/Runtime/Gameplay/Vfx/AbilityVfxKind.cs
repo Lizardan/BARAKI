@@ -6,5 +6,7 @@ namespace Game.Gameplay.Vfx
         Aura = 0,
         Hit = 1,
         Cast = 2,
+        /// <summary>Project-authored prefabs in <c>Assets/Game/Prefabs/Fx/Custom</c>.</summary>
+        Custom = 3,
     }
 }

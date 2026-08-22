@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
@@ -47,6 +48,10 @@ namespace Game.Editor
         GameObject _targetModel;
         GameObject _targetPrefab;
         bool _targetIsBuilding;
+        bool _soloTarget;
+        bool _ruinsApplied;
+        bool _ruinFxNeedRestart;
+        readonly List<GameObject> _ruinFx = new();
         GameObject _instance;
         GameObject _vfxPrefab;
         Animator _casterAnimator;
@@ -152,7 +157,13 @@ namespace Game.Editor
             };
         }
 
-        public void SetCaster(GameObject prefab, UnitRole role, int heroSlot, int bonusSlot, bool isBuilding)
+        public void SetCaster(
+            GameObject prefab,
+            UnitRole role,
+            int heroSlot,
+            int bonusSlot,
+            bool isBuilding,
+            bool hideCaster = false)
         {
             if (_disposed)
             {
@@ -162,6 +173,22 @@ namespace Game.Editor
             _casterRole = role;
             _casterHeroSlot = heroSlot;
             _casterBonusSlot = bonusSlot;
+            ApplySoloLayout(hideCaster);
+            if (hideCaster)
+            {
+                if (_casterModel != null)
+                {
+                    DestroyGo(_casterModel);
+                    _casterModel = null;
+                    _casterPrefab = null;
+                    _casterAnimator = null;
+                    _casterPlayback.CurrentStateName = null;
+                    _casterPlayback.IsDead = false;
+                }
+
+                return;
+            }
+
             if (_casterPrefab == prefab && _casterModel != null)
             {
                 return;
@@ -190,6 +217,8 @@ namespace Game.Editor
                 return;
             }
 
+            ClearRuinFx();
+            _ruinsApplied = false;
             _targetPrefab = prefab;
             _targetIsBuilding = isBuilding;
             DestroyGo(_targetModel);
@@ -313,6 +342,9 @@ namespace Game.Editor
             _stopped = true;
             _paused = false;
             _elapsed = 0f;
+            ClearRuinFx();
+            RestoreTargetIntact();
+            _ruinsApplied = false;
             ClearInstance();
         }
 
@@ -409,8 +441,12 @@ namespace Game.Editor
             if (_instance != null)
             {
                 _elapsed += dt;
-                SimulateParticles(dt);
-                if (!_loop && _hasVfxGraph)
+                SimulateParticles(_instance, dt, _particlesNeedRestart, PreviewTint);
+                _particlesNeedRestart = false;
+                TickBuildingCollapse(dt);
+                if (!_loop
+                    && _hasVfxGraph
+                    && !AbilityFxPreviewTargetRules.PreviewBuildingCollapse(_abilityId))
                 {
                     if (_elapsed >= AbilityVfxPreviewPlayback.OneShotLoopSeconds)
                     {
@@ -418,7 +454,7 @@ namespace Game.Editor
                         _elapsed = 0f;
                     }
                 }
-                else if (!_loop && _elapsed >= _oneShotLifetime)
+                else if (!_loop && _elapsed >= LoopAfterSeconds)
                 {
                     Rebuild();
                 }
@@ -449,6 +485,7 @@ namespace Game.Editor
 
             _disposed = true;
             AbilityVfxPreviewPlayback.ReleaseCullingScope();
+            ClearRuinFx();
             ClearInstance();
             DestroyGo(_casterModel);
             DestroyGo(_targetModel);
@@ -472,17 +509,28 @@ namespace Game.Editor
             _preview.Cleanup();
         }
 
+        float LoopAfterSeconds =>
+            AbilityFxPreviewTargetRules.PreviewBuildingCollapse(_abilityId)
+                ? AbilityFxPreviewTargetRules.BuildingSmiteRuinDelaySeconds
+                    + AbilityFxPreviewTargetRules.BuildingSmiteRuinsHoldSeconds
+                : _oneShotLifetime;
+
         void Rebuild()
         {
+            ClearRuinFx();
+            RestoreTargetIntact();
+            _ruinsApplied = false;
             ClearInstance();
             _elapsed = 0f;
             _loop = _kind == AbilityVfxKind.Aura;
             _particlesNeedRestart = true;
             SpawnVfx();
             _hasVfxGraph = _instance != null && AbilityVfxPreviewPlayback.HasVisualEffect(_instance);
-            PlaybackDuration = !_loop && _hasVfxGraph
-                ? AbilityVfxPreviewPlayback.OneShotLoopSeconds
-                : Mathf.Max(0.05f, _oneShotLifetime);
+            PlaybackDuration = AbilityFxPreviewTargetRules.PreviewBuildingCollapse(_abilityId)
+                ? LoopAfterSeconds
+                : !_loop && _hasVfxGraph
+                    ? AbilityVfxPreviewPlayback.OneShotLoopSeconds
+                    : Mathf.Max(0.05f, _oneShotLifetime);
             FireAnim();
             RenderToTarget();
         }
@@ -757,16 +805,121 @@ namespace Game.Editor
             _casterAnimator.Update(0f);
         }
 
-        void SimulateParticles(float dt)
+        void TickBuildingCollapse(float dt)
         {
-            if (_instance == null)
+            if (!AbilityFxPreviewTargetRules.PreviewBuildingCollapse(_abilityId))
             {
                 return;
             }
 
-            var restart = _particlesNeedRestart;
-            _particlesNeedRestart = false;
-            var systems = _instance.GetComponentsInChildren<ParticleSystem>(true);
+            if (!_ruinsApplied
+                && _elapsed >= AbilityFxPreviewTargetRules.BuildingSmiteRuinDelaySeconds)
+            {
+                ApplyPreviewBuildingDestroyed();
+            }
+
+            var restart = _ruinFxNeedRestart;
+            _ruinFxNeedRestart = false;
+            for (var i = 0; i < _ruinFx.Count; i++)
+            {
+                SimulateParticles(_ruinFx[i], dt, restart, Color.white);
+            }
+        }
+
+        void ApplyPreviewBuildingDestroyed()
+        {
+            if (_ruinsApplied || _targetModel == null)
+            {
+                return;
+            }
+
+            _ruinsApplied = true;
+            var buildingId = AbilityFxPreviewTargetRules.Resolve(_abilityId).BuildingId;
+            BuildingRuinsVisual.ApplyRuins(_targetModel.transform, buildingId);
+
+            var catalog = Resources.Load<MatchFxCatalog>("Fx/MatchFxCatalog");
+            if (catalog == null)
+            {
+                return;
+            }
+
+            SpawnRuinFx(catalog.BuildingDestroyed);
+            SpawnRuinFx(catalog.BuildingBurning);
+            _ruinFxNeedRestart = true;
+        }
+
+        void SpawnRuinFx(GameObject prefab)
+        {
+            if (prefab == null || _targetRoot == null)
+            {
+                return;
+            }
+
+            var instance = Object.Instantiate(prefab);
+            instance.name = prefab.name + " (preview-ruins)";
+            _preview.AddSingleGO(instance);
+            instance.transform.position = _targetRoot.transform.position;
+            instance.transform.rotation = prefab.transform.rotation;
+            AuraFxVisuals.PrepareEditorPreview(instance, softenLights: false);
+            AbilityVfxPreviewPlayback.PrepareInstance(instance, Color.white);
+            _ruinFx.Add(instance);
+        }
+
+        void RestoreTargetIntact()
+        {
+            if (_targetModel != null && _targetIsBuilding)
+            {
+                BuildingRuinsVisual.RestoreIntact(_targetModel.transform);
+            }
+        }
+
+        void ClearRuinFx()
+        {
+            for (var i = 0; i < _ruinFx.Count; i++)
+            {
+                DestroyGo(_ruinFx[i]);
+            }
+
+            _ruinFx.Clear();
+            _ruinFxNeedRestart = false;
+        }
+
+        void ApplySoloLayout(bool solo)
+        {
+            if (_soloTarget == solo)
+            {
+                return;
+            }
+
+            _soloTarget = solo;
+            if (_casterRoot != null)
+            {
+                _casterRoot.SetActive(!solo);
+            }
+
+            if (_targetRoot != null)
+            {
+                var x = solo ? 0f : TargetX;
+                _targetRoot.transform.position = new Vector3(
+                    x,
+                    N4PerimeterLaneGeometry.LaneHeight,
+                    0f);
+            }
+
+            if (!solo)
+            {
+                FaceEachOther();
+            }
+        }
+
+        void SimulateParticles(GameObject root, float dt, bool restart, Color tint)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            var systems = root.GetComponentsInChildren<ParticleSystem>(true);
             for (var i = 0; i < systems.Length; i++)
             {
                 var ps = systems[i];
@@ -779,12 +932,12 @@ namespace Game.Editor
                 ps.Pause(true);
             }
 
-            AbilityVfxPreviewPlayback.SimulateVisualEffects(_instance, dt, restart, PreviewTint);
+            AbilityVfxPreviewPlayback.SimulateVisualEffects(root, dt, restart, tint);
         }
 
         void FaceEachOther()
         {
-            if (_casterRoot == null || _targetRoot == null)
+            if (_soloTarget || _casterRoot == null || _targetRoot == null)
             {
                 return;
             }

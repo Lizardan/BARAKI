@@ -51,7 +51,7 @@ namespace Game.Gameplay.Vfx
         /// <summary>
         /// Seed used when <see cref="AbilityFx.Anchor"/> is still <see cref="AbilityVfxAnchor.Unspecified"/>.
         /// Auras / self-AoE → caster; heals and point damage → target; ground rings → ground;
-        /// splash / spawn / building hit → impact.
+        /// splash / spawn → impact.
         /// </summary>
         public static AbilityVfxAnchor ResolveDefaultAnchor(int abilityId) => abilityId switch
         {
@@ -72,8 +72,7 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.Consecration => AbilityVfxAnchor.Ground,
 
             AbilityIds.SuperCatapult
-                or AbilityIds.FlyingSpawn
-                or AbilityIds.MainBuildingSmite => AbilityVfxAnchor.Impact,
+                or AbilityIds.FlyingSpawn => AbilityVfxAnchor.Impact,
 
             _ => AbilityVfxAnchor.Target,
         };

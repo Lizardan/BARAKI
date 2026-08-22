@@ -13,8 +13,20 @@ MonoBehaviour:
   m_Name: MainExtraAbilityFxCatalog
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.MainExtraAbilityFxCatalog
   _buildingSmite:
-    Color: {r: 1, g: 0.92, b: 0.45, a: 1}
-    VfxPrefab: {fileID: 8194992990867289339, guid: 99bc28c0d45f51c4fbac01080b73edc7, type: 3}
+    Color: {r: 0.8018868, g: 0.71813184, b: 0.21560162, a: 1}
+    VfxPrefab: {fileID: 833140721864136613, guid: f7e45b315cf5ddb478db814b95fce1f7, type: 3}
+    Anchor: 2
+    AnimKind: 1
+    AnimState: 
+    AnimVariant: 0
+    Scale: 1
+    Euler: {x: 0, y: 0, z: 0}
   _unitSmite:
     Color: {r: 1, g: 0.92, b: 0.45, a: 1}
-    VfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
+    VfxPrefab: {fileID: 833140721864136613, guid: f7e45b315cf5ddb478db814b95fce1f7, type: 3}
+    Anchor: 2
+    AnimKind: 1
+    AnimState: 
+    AnimVariant: 0
+    Scale: 0.25
+    Euler: {x: 0, y: 0, z: 0}

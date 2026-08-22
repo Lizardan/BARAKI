@@ -18,8 +18,8 @@ namespace Game.Gameplay.Combat
 
     /// <summary>
     /// VFX definition for an ability cast: color for label/tint + optional prefab
-    /// (CFXR / Adjustable Slash / Hyper Casual). If <see cref="VfxPrefab"/> is null, only the spell
-    /// label is shown. Authored visuals on def assets survive <c>Build Ability Defs</c>.
+    /// (CFXR / Adjustable Slash / Hyper Casual / Custom). If <see cref="VfxPrefab"/> is null, only
+    /// the spell label is shown. Authored visuals on def assets survive <c>Build Ability Defs</c>.
     /// </summary>
     [System.Serializable]
     public struct AbilityFx
