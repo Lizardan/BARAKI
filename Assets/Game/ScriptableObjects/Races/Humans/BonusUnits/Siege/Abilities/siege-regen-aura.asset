@@ -24,7 +24,7 @@ MonoBehaviour:
   _damage: 0
   _heal: 0
   _healPerSecond: 0
-  _radius: 8
+  _radius: 6
   _castRange: 0
   _cooldownSeconds: 0
   _durationSeconds: 0
@@ -36,7 +36,13 @@ MonoBehaviour:
   _secondaryHeal: 0
   _fx:
     Color: {r: 1, g: 0.88, b: 0.35, a: 1}
-    VfxPrefab: {fileID: 1590415177872986601, guid: acdb90624a404aa438447006f1026065, type: 3}
+    VfxPrefab: {fileID: 6331275906715107345, guid: 690951f4781b19649bc5c7892414ff37, type: 3}
+    Anchor: 1
+    AnimKind: 1
+    AnimState: 
+    AnimVariant: 0
+    Scale: 0.25
+    Euler: {x: 0, y: 0, z: 0}
   _behaviour: {fileID: 1794150893476104653}
 --- !u!114 &1794150893476104653
 MonoBehaviour:
