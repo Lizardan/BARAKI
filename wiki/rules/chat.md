@@ -31,8 +31,8 @@ npx wrangler secret put CHAT_API_KEY   # опционально
 
 Клиент:
 
-- `GameChatRules.DefaultApiBaseUrl` = `https://baraki-chat.lizard268.workers.dev` (можно перебить PlayerPrefs `baraki.chat.apiBase`)
-- Ключ: PlayerPrefs `baraki.chat.apiKey` = значение GitHub secret `CHAT_API_KEY` (в исходники не коммитим). Без ключа Worker отвечает 401.
+- `GameChatRules.DefaultApiBaseUrl` = `https://baraki-chat.lizard268.workers.dev`
+- `GameChatRules.DefaultApiKey` = тот же ключ, что GitHub/Worker secret `CHAT_API_KEY` (вшит в клиент для playtest; PlayerPrefs `baraki.chat.apiBase` / `apiKey` перебивают дефолты)
 
 Деплой: workflow [`.github/workflows/deploy-chat.yml`](../../.github/workflows/deploy-chat.yml) (`workflow_dispatch` или push в `Tooling/cloudflare/baraki-chat/`). Нужны секреты `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CHAT_API_KEY`.
 

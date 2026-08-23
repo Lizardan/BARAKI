@@ -13,17 +13,17 @@ namespace Game.Core
         public const string DefaultApiBaseUrl = "https://baraki-chat.lizard268.workers.dev";
 
         /// <summary>Optional shared key (must match Worker secret CHAT_API_KEY). PlayerPrefs baraki.chat.apiKey.</summary>
-        public const string DefaultApiKey = "";
+        public const string DefaultApiKey = "b95b8df8bb6d03634ee88c6feffda2523ad1f1e3fb5a38c2b145c6670bf64ae7";
 
         public const string GlobalChannelName = "baraki-global";
         public const string FriendsFeedChannelPrefix = "friends-feed-";
         public const int MaxMessageLength = 280;
         public const float MatchMessageVisibleSeconds = 3.5f;
         public const float MatchMessageFadeSeconds = 1.25f;
-        public const string GlobalTabLabel = "ОБЩИЙ";
-        public const string FriendsFeedTabLabel = "СРЕДИ ДРУЗЕЙ";
-        public const string WarmingStatusLabel = "Чат";
-        public const string ChatUnavailableHint = "Чат недоступен. Проверьте соединение.";
+        public const string GlobalTabLabel = "РћР‘Р©РР™";
+        public const string FriendsFeedTabLabel = "РЎР Р•Р”Р Р”Р РЈР—Р•Р™";
+        public const string WarmingStatusLabel = "Р§Р°С‚";
+        public const string ChatUnavailableHint = "Р§Р°С‚ РЅРµРґРѕСЃС‚СѓРїРµРЅ. РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ.";
 
         public static string FriendsFeedChannelName(string playerId)
         {
@@ -73,7 +73,7 @@ namespace Game.Core
         {
             if (string.IsNullOrWhiteSpace(nick))
             {
-                return "Игрок";
+                return "РРіСЂРѕРє";
             }
 
             var trimmed = nick.Trim();
