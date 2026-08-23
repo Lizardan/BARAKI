@@ -11,246 +11,157 @@
   <title>BARAKI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700;900&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #080908;
-      --shell: #101211;
-      --panel: #151716;
-      --text: #dedbd2;
-      --title: #d0b276;
-      --gold: #b99a62;
-      --muted: #62665f;
-      --line: #343832;
-      --btn: #403623;
-      --btn-hover: #504228;
-      --btn-border: #b99a62;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      min-height: 100%;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
-      color: var(--text);
-      background: var(--bg);
-    }
-
-    .ambient,
-    .shade {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .ambient--left {
-      width: 42%;
-      left: -4%;
-      right: auto;
-      background: rgba(185, 154, 98, 0.07);
-    }
-
-    .ambient--right {
-      width: 42%;
-      right: -6%;
-      left: auto;
-      background: rgba(133, 137, 128, 0.05);
-    }
-
-    .shade {
-      background: rgba(8, 9, 8, 0.18);
-    }
-
-    main {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      min-height: 100vh;
-      place-items: center;
-      padding: 2.5rem 1.25rem;
-    }
-
-    .shell {
-      position: relative;
-      width: min(100%, 52rem);
-      overflow: hidden;
-      background: var(--shell);
-      border: 1px solid var(--line);
-    }
-
-    .corner {
-      position: absolute;
-      width: 22px;
-      height: 22px;
-      border-color: var(--gold);
-      pointer-events: none;
-    }
-
-    .corner--tl {
-      top: 0;
-      left: 0;
-      border-top: 2px solid var(--gold);
-      border-left: 2px solid var(--gold);
-    }
-
-    .corner--br {
-      right: 0;
-      bottom: 0;
-      border-right: 2px solid var(--gold);
-      border-bottom: 2px solid var(--gold);
-    }
-
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      min-height: 5.5rem;
-      padding: 1.25rem 2rem;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .brand {
-      margin: 0;
-      color: var(--title);
-      font-size: clamp(1.6rem, 4vw, 2.05rem);
-      font-weight: 700;
-      letter-spacing: 0.38em;
-      line-height: 1;
-    }
-
-    .version {
-      color: var(--muted);
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-    }
-
-    .body {
-      padding: clamp(2rem, 5vw, 3.4rem) clamp(1.4rem, 4vw, 2.6rem) 2.4rem;
-      text-align: center;
-      background: var(--panel);
-    }
-
-    .eyebrow {
-      margin: 0 0 1rem;
-      color: var(--gold);
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-    }
-
-    .subtitle {
-      max-width: 38rem;
-      margin: 0 auto;
-      color: var(--text);
-      font-size: clamp(1.02rem, 2.2vw, 1.18rem);
-      line-height: 1.7;
-    }
-
-    .download {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: min(100%, 16.5rem);
-      margin-top: 2.2rem;
-      padding: 1.05rem 1.7rem;
-      border: 1px solid var(--btn-border);
-      color: var(--title);
-      background: var(--btn);
-      font-size: 1.05rem;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-decoration: none;
-      text-transform: uppercase;
-      transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
-    }
-
-    .download:hover,
-    .download:focus-visible {
-      color: var(--text);
-      background: var(--btn-hover);
-      border-color: var(--title);
-    }
-
-    .meta {
-      margin: 0.95rem 0 0;
-      color: var(--muted);
-      font-size: 0.92rem;
-      letter-spacing: 0.04em;
-    }
-
-    .links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.1rem;
-      justify-content: center;
-      margin-top: 2rem;
-      padding-top: 1.3rem;
-      border-top: 1px solid var(--line);
-      font-size: 0.92rem;
-    }
-
-    .links a {
-      color: var(--muted);
-      text-decoration: none;
-    }
-
-    .links a:hover,
-    .links a:focus-visible {
-      color: var(--title);
-    }
-
-    @media (max-width: 640px) {
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-        min-height: 0;
-        padding: 1.15rem 1.2rem;
-      }
-
-      .brand {
-        letter-spacing: 0.28em;
-      }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="site.css" />
 </head>
 <body>
-  <div class="ambient ambient--left" aria-hidden="true"></div>
-  <div class="ambient ambient--right" aria-hidden="true"></div>
-  <div class="shade" aria-hidden="true"></div>
-  <main>
-    <section class="shell" aria-labelledby="title">
-      <span class="corner corner--tl" aria-hidden="true"></span>
-      <span class="corner corner--br" aria-hidden="true"></span>
-      <header class="header">
-        <h1 id="title" class="brand">BARAKI</h1>
-        <p class="version" id="version">Windows x64</p>
-      </header>
-      <div class="body">
-        <p class="eyebrow">Мультиплеерная FFA-стратегия</p>
-        <p class="subtitle">
-          Строй базу, держи экономику и оборону, а армии сами идут в бой.
-          Установщик ставит обновляющий клиент, который подтянет последнюю полноценную версию игры.
-        </p>
-        <a class="download" href="/download">Скачать</a>
-        <p class="meta">BARAKI-Setup.exe · Windows x64</p>
-        <nav class="links" aria-label="Ссылки">
-          <a href="https://lizardan.github.io/BARAKI/privacy.html">Privacy Policy</a>
-          <a href="https://lizardan.github.io/BARAKI/terms.html">Terms of Service</a>
-        </nav>
+  <main class="page">
+    <header class="mast">
+      <h1 class="mast__brand">BARAKI</h1>
+      <div class="mast__side">
+        <p class="tag">дневник разработки</p>
+        <p class="mast__lede">Мультиплеерная FFA-стратегия: строй базу, держи экономику и оборону. Армии идут в бой сами.</p>
+        <div class="facts">
+          <span class="fact">Windows x64</span>
+          <span class="fact">2–5 игроков</span>
+          <span class="fact">без ботов</span>
+        </div>
       </div>
-    </section>
+    </header>
+
+    <div class="board">
+      <section class="feed" aria-label="Дневник разработки">
+        <header class="feed-head">
+          <h2>Лента</h2>
+          <p id="feed-updated"></p>
+        </header>
+        <div id="feed"></div>
+      </section>
+
+      <aside class="rail">
+        <div class="rail-block rail-download">
+          <p class="rail-kicker">клиент</p>
+          <a class="download rail-cta" href="/download">Скачать BARAKI</a>
+          <p class="rail-note">Setup.exe ставит тонкий клиент и подтягивает последний полный билд.</p>
+        </div>
+
+        <div class="rail-block">
+          <h2>Расы</h2>
+          <div class="rail-races">
+            <div class="race-card is-on"><b>Люди</b><small>в игре</small></div>
+            <div class="race-card is-soon"><b>—</b><small>скоро</small></div>
+            <div class="race-card is-soon"><b>—</b><small>скоро</small></div>
+          </div>
+        </div>
+
+        <div class="rail-block">
+          <div class="rail-row">
+            <h2>Люди</h2>
+            <div class="seg">
+              <button class="chip is-on" type="button" data-bonus="0">Обычные</button>
+              <button class="chip" type="button" data-bonus="1">Усиленные</button>
+            </div>
+          </div>
+          <p class="rail-hook" id="hook"></p>
+          <div class="passives" id="passives"></div>
+          <div class="rail-units" id="units"></div>
+        </div>
+
+        <div class="rail-block">
+          <h2>Чемпионы</h2>
+          <div class="rail-heroes" id="heroes"></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="site-foot">
+      <span>BARAKI · Unio Games</span>
+      <nav>
+        <a href="https://lizardan.github.io/BARAKI/privacy.html">Privacy</a>
+        ·
+        <a href="https://lizardan.github.io/BARAKI/terms.html">Terms</a>
+      </nav>
+    </footer>
   </main>
+
+  <script src="roster.js"></script>
+  <script>
+    var race = BARAKI.race;
+    var bonus = false;
+    var openIndex = 0;
+
+    document.getElementById("hook").textContent = race.hook;
+    document.getElementById("passives").innerHTML = race.passives.map(function (p) {
+      return '<span class="passive">' + p + "</span>";
+    }).join("");
+    document.getElementById("feed-updated").textContent = BARAKI.news[0].date;
+
+    function coverSrc(cover) {
+      if (!cover) return "";
+      return portrait(cover.kind, cover.id, cover.bonus);
+    }
+
+    function renderFeed() {
+      document.getElementById("feed").innerHTML = BARAKI.news.map(function (item, i) {
+        var open = i === openIndex;
+        var art = item.cover
+          ? '<figure class="feed-card__art"><img src="' + coverSrc(item.cover) + '" alt=""></figure>'
+          : "";
+        var body = item.body.map(function (p) { return "<p>" + p + "</p>"; }).join("");
+        return (
+          '<article class="feed-card' + (i === 0 ? " is-lead" : "") + (open ? " is-open" : "") + '" data-post="' + i + '">' +
+            '<div class="feed-card__meta"><span class="kind">' + item.kind + "</span><time>" + item.date + "</time></div>" +
+            '<div class="feed-card__top">' +
+              "<div>" +
+                "<h3>" + item.title + "</h3>" +
+                '<p class="feed-card__excerpt">' + item.excerpt + "</p>" +
+              "</div>" +
+              art +
+            "</div>" +
+            '<div class="feed-card__body">' + body + "</div>" +
+            '<button class="feed-more" type="button">' + (open ? "Свернуть" : "Читать") + "</button>" +
+          "</article>"
+        );
+      }).join("");
+    }
+
+    document.getElementById("feed").addEventListener("click", function (e) {
+      var more = e.target.closest(".feed-more");
+      var card = e.target.closest("[data-post]");
+      if (!card) return;
+      var index = Number(card.getAttribute("data-post"));
+      if (more) {
+        openIndex = openIndex === index ? -1 : index;
+        renderFeed();
+        return;
+      }
+      if (e.target.closest("a")) return;
+      openIndex = index;
+      renderFeed();
+    });
+
+    function renderUnits() {
+      document.getElementById("units").innerHTML = race.units.map(function (u) {
+        var title = bonus ? u.name + " · усиленный" : u.name;
+        var text = bonus ? u.bonus : u.blurb;
+        return '<figure title="' + text + '"><img src="' + portrait("unit", u.id, bonus) + '" alt="' + title + '"><figcaption>' + u.name + "</figcaption></figure>";
+      }).join("");
+    }
+
+    document.getElementById("heroes").innerHTML = race.heroes.map(function (h) {
+      return '<figure title="' + h.blurb + '"><img src="' + portrait("hero", h.id) + '" alt="' + h.name + '"><figcaption>' + h.name + "</figcaption></figure>";
+    }).join("");
+
+    document.querySelectorAll("[data-bonus]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        bonus = btn.getAttribute("data-bonus") === "1";
+        document.querySelectorAll("[data-bonus]").forEach(function (b) { b.classList.toggle("is-on", b === btn); });
+        renderUnits();
+      });
+    });
+
+    renderFeed();
+    renderUnits();
+  </script>
 </body>
 </html>

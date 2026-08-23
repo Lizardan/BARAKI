@@ -26,9 +26,13 @@ Unity-клиент: сцена Bootstrap + define `BARAKI_UPDATER_ONLY`. Вер�
 
 ## Деплой лендинга
 
-Каталог: `Tooling/cloudflare/baraki-landing/`. Job `cloudflare` в updater-workflow
-переписывает `functions/download.js` на свежий `updater-v*` и делает
-`wrangler pages deploy`. Нужны секреты GitHub:
+Каталог: `Tooling/cloudflare/baraki-landing/`.
+Страница — дневник (лента карточек) + правая колонка: скачать, расы, состав Людей.
+Портреты: `public/art/races/humans/{Units|BonusUnits|Heroes}/`.
+Кнопка «Скачать» ведёт на `/download` (Pages Function).
+
+Job `cloudflare` в updater-workflow переписывает `functions/download.js` на свежий
+`updater-v*` и делает `wrangler pages deploy`. Нужны секреты GitHub:
 
 - `CLOUDFLARE_API_TOKEN` (Cloudflare Pages:Edit)
 - `CLOUDFLARE_ACCOUNT_ID`
