@@ -35,6 +35,14 @@ jobs:
           set -euo pipefail
           npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" \
             --production-branch=main || true
+          # Existing project may still have production_branch=production.
+          # --branch=main then lands on main.baraki.pages.dev, not baraki.pages.dev.
+          curl -sS -X PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"production_branch":"main"}' \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('production_branch=', (d.get('result') or {}).get('production_branch'), 'success=', d.get('success'), d.get('errors'))"
           npx wrangler pages deploy ./public \
             --project-name="$CLOUDFLARE_PAGES_PROJECT" \
             --branch=main

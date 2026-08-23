@@ -215,6 +215,11 @@ jobs:
           set -euo pipefail
           npx wrangler pages project create "$CLOUDFLARE_PAGES_PROJECT" \
             --production-branch=main || true
+          curl -sS -X PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PAGES_PROJECT}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"production_branch":"main"}' >/dev/null || true
           npx wrangler pages deploy ./public \
             --project-name="$CLOUDFLARE_PAGES_PROJECT" \
             --branch=main
