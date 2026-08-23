@@ -28,6 +28,14 @@
         </ui:VisualElement>
         <ui:VisualElement name="BarracksTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
         <ui:VisualElement name="PassiveGoldTimerLayer" class="match-hud__barracks-layer" picking-mode="Ignore" />
+
+        <ui:VisualElement name="MatchChatLayer" class="match-chat" picking-mode="Ignore">
+            <ui:VisualElement name="MatchChatMessages" class="match-chat__messages" picking-mode="Ignore" />
+            <ui:VisualElement name="MatchChatComposer" class="match-chat__composer match-chat__composer--hidden" picking-mode="Position">
+                <ui:TextField name="MatchChatInput" class="match-chat__input" max-length="280" />
+                <ui:Button name="MatchChatSendButton" text="ОТПРАВИТЬ" class="ui-btn match-chat__send" />
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement name="DebugHudPanel" class="match-hud__debug match-hud__debug--hidden" picking-mode="Position">
             <ui:Label text="DEBUG" class="match-hud__debug-title" picking-mode="Ignore" />
             <ui:Button name="DebugAddGoldButton" text="+1000 Gold" class="ui-btn match-hud__debug-btn" />

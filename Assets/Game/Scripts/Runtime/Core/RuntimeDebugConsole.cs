@@ -87,10 +87,10 @@ namespace Game.Core
                 return;
             }
 
-            // Backspace only opens: while open it must edit the command line, not toggle.
+            // Tilde/backquote only opens: while open Esc closes; do not toggle with the same key.
             if (!_isOpen)
             {
-                if (keyboard.backspaceKey.wasPressedThisFrame)
+                if (keyboard.backquoteKey.wasPressedThisFrame)
                 {
                     Open();
                 }

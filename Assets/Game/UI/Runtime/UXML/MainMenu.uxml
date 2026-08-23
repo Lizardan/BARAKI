@@ -40,8 +40,16 @@
 
                         <ui:VisualElement name="LeftTabHost" class="mm__left-host">
                             <ui:VisualElement name="ChatTabContent" class="mm__left-pane mm__left-pane--chat">
-                                <ui:ScrollView name="ChatScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
-                                    <ui:VisualElement name="ChatMessages" class="mm-chat-messages" picking-mode="Ignore" />
+                                <ui:VisualElement name="ChatChannelTabs" class="mm__chat-channel-tabs" picking-mode="Position">
+                                    <ui:Button name="ChatGlobalTabButton" text="ОБЩИЙ" class="mm__chat-channel-tab mm__chat-channel-tab--active" />
+                                    <ui:Button name="ChatFriendsTabButton" text="СРЕДИ ДРУЗЕЙ" class="mm__chat-channel-tab" />
+                                </ui:VisualElement>
+                                <ui:Label name="ChatSubtitle" text="Общий канал" class="mm__chat-subtitle" picking-mode="Ignore" />
+                                <ui:ScrollView name="ChatGlobalScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="ChatGlobalMessages" class="mm-chat-messages" picking-mode="Ignore" />
+                                </ui:ScrollView>
+                                <ui:ScrollView name="ChatFriendsScroll" class="mm-chat-scroll mm-chat-scroll--hidden" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="ChatFriendsMessages" class="mm-chat-messages" picking-mode="Ignore" />
                                 </ui:ScrollView>
                                 <ui:VisualElement name="ChatComposer" class="mm-chat-composer" picking-mode="Position">
                                     <ui:TextField name="ChatInput" class="mm-chat-input" max-length="280" />

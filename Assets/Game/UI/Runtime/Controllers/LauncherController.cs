@@ -23,6 +23,7 @@ namespace Game.UI.Controllers
         private const float ShinePeriodSeconds = 1.6f;
         private const float UgsInitTimeoutSeconds = 8f;
         private const float FriendsInitTimeoutSeconds = 8f;
+        private const float ChatInitTimeoutSeconds = 10f;
 #if BARAKI_UPDATER_ONLY
         private const bool IsUpdaterOnlyBuild = true;
 #else
@@ -52,11 +53,8 @@ namespace Game.UI.Controllers
         private Button _playButton;
         private Button _returnToMatchButton;
         private Button _heroReadMoreButton;
-        private Button _chatSendButton;
         private Button _closeButton;
-        private TextField _chatInput;
         private VisualElement _newsList;
-        private VisualElement _chatMessages;
         private Label _clientVersionLabel;
         private Label _progressStatusLabel;
         private Label _progressPercentLabel;
@@ -64,6 +62,7 @@ namespace Game.UI.Controllers
         private VisualElement _progressFill;
         private VisualElement _progressShine;
         private Label _progressErrorLabel;
+        private MenuChatPanel _menuChat;
         private readonly LauncherWindowChromeDriver _windowChrome = new();
         private LauncherProgressPhase _phase = LauncherProgressPhase.Ready;
         private IVisualElementScheduledItem _shineSchedule;
@@ -152,6 +151,7 @@ namespace Game.UI.Controllers
 
         private void OnDestroy()
         {
+            _menuChat?.Dispose();
             _windowChrome.Dispose();
         }
 
@@ -247,11 +247,8 @@ namespace Game.UI.Controllers
             _playButton = _root.Q<Button>("PlayButton");
             _returnToMatchButton = _root.Q<Button>("ReturnToMatchButton");
             _heroReadMoreButton = _root.Q<Button>("HeroReadMoreButton");
-            _chatSendButton = _root.Q<Button>("ChatSendButton");
             _closeButton = _root.Q<Button>("CloseButton");
-            _chatInput = _root.Q<TextField>("ChatInput");
             _newsList = _root.Q<VisualElement>("NewsList");
-            _chatMessages = _root.Q<VisualElement>("ChatMessages");
             _clientVersionLabel = _root.Q<Label>("ClientVersionLabel");
             _progressStatusLabel = _root.Q<Label>("ProgressStatusLabel");
             _progressPercentLabel = _root.Q<Label>("ProgressPercentLabel");
@@ -260,10 +257,22 @@ namespace Game.UI.Controllers
             _progressShine = _root.Q<VisualElement>("ProgressShine");
             _progressErrorLabel = _root.Q<Label>("ProgressErrorLabel");
 
-            if (_chatInput != null && _chatInput.textEdition != null)
+            _menuChat?.Dispose();
+            _menuChat = new MenuChatPanel(
+                _root,
+                messageRowClass: "ln-chat-message",
+                messageMetaClass: "ln-chat-message__meta",
+                messageNickClass: "ln-chat-message__nick",
+                messageTimeClass: "ln-chat-message__time",
+                messageTextClass: "ln-chat-message__text",
+                tabActiveClass: "ln-chat-tab--active");
+            _menuChat.Bind();
+
+            var chatInput = _root.Q<TextField>("ChatInput");
+            if (chatInput != null && chatInput.textEdition != null)
             {
-                _chatInput.value = string.Empty;
-                _chatInput.textEdition.placeholder = "Написать в чат…";
+                chatInput.value = string.Empty;
+                chatInput.textEdition.placeholder = "Написать в чат…";
             }
 
             BindWindowChrome();
@@ -295,7 +304,6 @@ namespace Game.UI.Controllers
             }
 
             BindNewsCards();
-            BindChatMessages();
         }
 
         /// <summary>
@@ -477,6 +485,25 @@ namespace Game.UI.Controllers
                     catch (Exception friendsEx)
                     {
                         Debug.LogWarning($"Launcher friends init skipped: {friendsEx.Message}");
+                    }
+                }
+
+                SetWarming(GameChatRules.WarmingStatusLabel);
+                if (UnityServicesBootstrap.IsReady)
+                {
+                    try
+                    {
+                        if (!await TryAwaitWithTimeout(
+                                GameChatService.EnsureInitializedAsync(),
+                                ChatInitTimeoutSeconds))
+                        {
+                            Debug.LogWarning(
+                                $"Launcher: Chat init timed out after {ChatInitTimeoutSeconds:0}s.");
+                        }
+                    }
+                    catch (Exception chatEx)
+                    {
+                        Debug.LogWarning($"Launcher chat init skipped: {chatEx.Message}");
                     }
                 }
             }
@@ -908,55 +935,6 @@ namespace Game.UI.Controllers
             return card;
         }
 
-        private void BindChatMessages()
-        {
-            if (_chatMessages == null)
-            {
-                return;
-            }
-
-            _chatMessages.Clear();
-        }
-
-        private static VisualElement CreateChatMessage(string nick, string time, string text)
-        {
-            var row = new VisualElement { pickingMode = PickingMode.Ignore };
-            row.AddToClassList("ln-chat-message");
-
-            var avatar = new VisualElement { pickingMode = PickingMode.Ignore };
-            avatar.AddToClassList("ln-chat-message__avatar");
-            var avatarLabel = new Label(string.IsNullOrEmpty(nick) ? "?" : nick.Substring(0, 1).ToUpperInvariant())
-            {
-                pickingMode = PickingMode.Ignore,
-            };
-            avatarLabel.AddToClassList("ln-chat-message__avatar-text");
-            avatar.Add(avatarLabel);
-            row.Add(avatar);
-
-            var content = new VisualElement { pickingMode = PickingMode.Ignore };
-            content.AddToClassList("ln-chat-message__content");
-
-            var meta = new VisualElement { pickingMode = PickingMode.Ignore };
-            meta.AddToClassList("ln-chat-message__meta");
-
-            var nickLabel = new Label(nick) { pickingMode = PickingMode.Ignore };
-            nickLabel.AddToClassList("ln-chat-message__nick");
-            meta.Add(nickLabel);
-
-            var timeLabel = new Label(time) { pickingMode = PickingMode.Ignore };
-            timeLabel.AddToClassList("ln-chat-message__time");
-            meta.Add(timeLabel);
-
-            content.Add(meta);
-
-            var textLabel = new Label(text) { pickingMode = PickingMode.Ignore };
-            textLabel.AddToClassList("ln-chat-message__text");
-            content.Add(textLabel);
-
-            row.Add(content);
-            return row;
-        }
-
         private void RegisterCallbacks(bool register)
         {
             if (register)
@@ -964,16 +942,14 @@ namespace Game.UI.Controllers
                 if (_playButton != null) _playButton.clicked += OnPrimaryCtaClicked;
                 if (_returnToMatchButton != null) _returnToMatchButton.clicked += OnReturnToMatchClicked;
                 if (_heroReadMoreButton != null) _heroReadMoreButton.clicked += OnReadMoreClicked;
-                if (_chatSendButton != null) _chatSendButton.clicked += OnChatSendClicked;
-                if (_chatInput != null) _chatInput.RegisterCallback<KeyDownEvent>(OnChatInputKeyDown);
+                _menuChat?.RegisterCallbacks(true);
             }
             else
             {
                 if (_playButton != null) _playButton.clicked -= OnPrimaryCtaClicked;
                 if (_returnToMatchButton != null) _returnToMatchButton.clicked -= OnReturnToMatchClicked;
                 if (_heroReadMoreButton != null) _heroReadMoreButton.clicked -= OnReadMoreClicked;
-                if (_chatSendButton != null) _chatSendButton.clicked -= OnChatSendClicked;
-                if (_chatInput != null) _chatInput.UnregisterCallback<KeyDownEvent>(OnChatInputKeyDown);
+                _menuChat?.RegisterCallbacks(false);
             }
         }
 
@@ -1069,37 +1045,5 @@ namespace Game.UI.Controllers
         }
 
         private void OnReadMoreClicked() => PlaytestLog.Info("Launcher", "ReadMorePlaceholder");
-
-        private void OnChatSendClicked() => TrySendChatMessage();
-
-        private void OnChatInputKeyDown(KeyDownEvent evt)
-        {
-            if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
-            {
-                TrySendChatMessage();
-                evt.StopPropagation();
-            }
-        }
-
-        private void TrySendChatMessage()
-        {
-            if (_chatInput == null || _chatMessages == null)
-            {
-                return;
-            }
-
-            var text = _chatInput.value?.Trim();
-            if (string.IsNullOrEmpty(text))
-            {
-                return;
-            }
-
-            var time = DateTime.Now.ToString("HH:mm");
-            _chatMessages.Add(CreateChatMessage("Вы", time, text));
-            _chatInput.value = string.Empty;
-
-            var scroll = _root?.Q<ScrollView>("ChatScroll");
-            scroll?.ScrollTo(_chatMessages[_chatMessages.childCount - 1]);
-        }
     }
 }

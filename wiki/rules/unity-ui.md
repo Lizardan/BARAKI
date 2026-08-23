@@ -65,6 +65,9 @@ private void OnDisable()
 }
 ```
 
+`Esc` при фокусе в `TextField` часто не всплывает (bubble-up). Для отмены режима ввода регистрировать
+`KeyDownEvent` с `TrickleDown.TrickleDown` (как в `MainMenuController` для join-кода).
+
 ## uGUI → UI Toolkit map
 
 | Legacy uGUI (удалено) | UI Toolkit (использовать) |

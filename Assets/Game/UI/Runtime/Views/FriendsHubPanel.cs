@@ -35,6 +35,7 @@ namespace Game.UI.Views
         bool _subscribed;
 
         public event Action<string> JoinLobbyRequested;
+        public event Action<string, string> OpenDirectChatRequested;
 
         public FriendsHubTab ActiveTab => _activeTab;
 
@@ -366,6 +367,18 @@ namespace Game.UI.Views
                 inviteButton.AddToClassList("mm__friend-row__btn--invite");
                 inviteButton.clicked += () => InviteFriendAsync(friend.PlayerId).Forget();
                 actions.Add(inviteButton);
+            }
+
+            if (_mode == FriendsHubPanelMode.Full)
+            {
+                var dmButton = new Button { text = "ЛС" };
+                dmButton.AddToClassList("mm__friend-row__btn");
+                dmButton.AddToClassList("mm__friend-row__btn--invite");
+                dmButton.tooltip = "Личные сообщения";
+                var playerId = friend.PlayerId;
+                var playerName = friend.Name;
+                dmButton.clicked += () => OpenDirectChatRequested?.Invoke(playerId, playerName);
+                actions.Add(dmButton);
             }
 
             if (actions.childCount > 0)

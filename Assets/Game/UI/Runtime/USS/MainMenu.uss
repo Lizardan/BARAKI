@@ -376,6 +376,49 @@
     padding-right: 27px;
 }
 
+.mm__chat-channel-tabs {
+    flex-shrink: 0;
+    flex-direction: row;
+    gap: 0;
+    margin: 0 27px 8px 27px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(52, 56, 50);
+}
+
+.mm__chat-channel-tab {
+    flex-grow: 1;
+    height: 36px;
+    margin: 0;
+    padding: 0 8px;
+    border-width: 0;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(133, 137, 128);
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+.mm__chat-channel-tab:hover {
+    color: rgb(222, 219, 210);
+}
+
+.mm__chat-channel-tab--active {
+    color: rgb(185, 154, 98);
+    border-bottom-width: 2px;
+    border-bottom-color: rgb(185, 154, 98);
+}
+
+.mm__chat-subtitle {
+    margin: 0 27px 8px 27px;
+    font-size: 14px;
+    color: rgb(98, 102, 95);
+}
+
+.mm-chat-scroll--hidden {
+    display: none;
+}
+
 .mm__left-pane-title {
     font-size: 21px;
     -unity-font-style: bold;
@@ -1259,6 +1302,57 @@
 
 .mm__friend-row__btn--join:hover {
     background-color: rgb(127, 167, 119);
+}
+
+.mm__friend-row__btn--invite {
+    min-width: 110px;
+    color: rgb(222, 219, 210);
+    background-color: rgba(185, 154, 98, 0.35);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
+    border-radius: 0;
+}
+
+.mm__friend-row__btn--invite:hover {
+    background-color: rgba(185, 154, 98, 0.55);
+}
+
+.mm__dm-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(8, 9, 8, 0.82);
+    z-index: 40;
+}
+
+.mm__dm-panel {
+    width: 520px;
+    max-width: 90%;
+    height: 520px;
+    max-height: 80%;
+    flex-direction: column;
+}
+
+.mm__dm-body {
+    flex-grow: 1;
+    min-height: 0;
+    flex-direction: column;
+    padding-top: 0;
+}
+
+.mm__dm-scroll {
+    flex-grow: 1;
+    min-height: 0;
+    margin-bottom: 8px;
+}
+
+.mm__dm-composer {
+    flex-shrink: 0;
+    margin-top: 0;
 }
 
 .mm__friend-row__full {

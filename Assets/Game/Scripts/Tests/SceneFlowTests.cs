@@ -203,7 +203,8 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<VisualElement>("ProgressFill"), "Launcher.uxml should include ProgressFill.");
             Assert.IsNotNull(root.Q<Label>("ProgressErrorLabel"), "Launcher.uxml should include ProgressErrorLabel.");
             Assert.IsNotNull(root.Q<VisualElement>("NewsList"), "Launcher.uxml should include NewsList.");
-            Assert.IsNotNull(root.Q<VisualElement>("ChatMessages"), "Launcher.uxml should include ChatMessages.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatGlobalMessages"), "Launcher.uxml should include ChatGlobalMessages.");
+            Assert.IsNotNull(root.Q<Button>("ChatGlobalTabButton"), "Launcher.uxml should include ChatGlobalTabButton.");
         }
 
         [Test]

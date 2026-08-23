@@ -499,6 +499,7 @@ GameObject:
   - component: {fileID: 411625588}
   - component: {fileID: 411625589}
   - component: {fileID: 411625590}
+  - component: {fileID: 411625591}
   m_Layer: 0
   m_Name: MatchHud
   m_TagString: Untagged
@@ -650,6 +651,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 359b8c18b86691545bad2c6e93bc65fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchPauseMenuController
+  _uiDocument: {fileID: 0}
+--- !u!114 &411625591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 411625580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b32745ba706c014489fbaba90779bbbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.MatchChatController
   _uiDocument: {fileID: 0}
 --- !u!1 &659531375
 GameObject:

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2734037812946963558}
   - component: {fileID: 8859397518587077471}
   - component: {fileID: 7167268151183995113}
+  - component: {fileID: 543632243083870433}
   m_Layer: 0
   m_Name: NetworkLobbyState
   m_TagString: Untagged
@@ -52,7 +53,7 @@ MonoBehaviour:
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
-  <InScenePlaced>k__BackingField: 0
+  m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
   SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
@@ -85,4 +86,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d9375869f9e1fb439028e4613f7f85f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Networking.NetworkRacePickState
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &543632243083870433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3420737270890463040}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8605d9ad8fe608548b0f44349c94e53e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Networking.NetworkMatchChat
   ShowTopMostFoldoutHeaderGroup: 1

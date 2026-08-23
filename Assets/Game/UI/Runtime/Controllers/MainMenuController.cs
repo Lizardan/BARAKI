@@ -62,13 +62,11 @@ namespace Game.UI.Controllers
         private Button _chatTabButton;
         private Button _matchHistoryTabButton;
         private Button _publicGamesTabButton;
-        private Button _chatSendButton;
         private VisualElement _chatTabContent;
         private VisualElement _matchHistoryTabContent;
         private VisualElement _publicGamesTabContent;
         private VisualElement _settingsTabContent;
-        private VisualElement _chatMessages;
-        private TextField _chatInput;
+        private MenuChatPanel _menuChat;
         private LeftMenuTab _leftMenuTab = LeftMenuTab.Chat;
         private Button _settingsCloseButton;
         private Toggle _soundToggle;
@@ -113,6 +111,7 @@ namespace Game.UI.Controllers
         private Button _lobbyInviteJoinButton;
         private Button _lobbyInviteDismissButton;
         private FriendsHubPanel _friendsHubPanel;
+        private FriendsDirectChatPanel _friendsDirectChat;
         private string _pendingLobbyInviteCode;
         private Label _versionLabel;
         private Label _profileEditErrorLabel;
@@ -237,23 +236,31 @@ namespace Game.UI.Controllers
             _chatTabButton = _root.Q<Button>("ChatTabButton");
             _matchHistoryTabButton = _root.Q<Button>("MatchHistoryTabButton");
             _publicGamesTabButton = _root.Q<Button>("PublicGamesTabButton");
-            _chatSendButton = _root.Q<Button>("ChatSendButton");
             _chatTabContent = _root.Q<VisualElement>("ChatTabContent");
             _matchHistoryTabContent = _root.Q<VisualElement>("MatchHistoryTabContent");
             _publicGamesTabContent = _root.Q<VisualElement>("PublicGamesTabContent");
             _settingsTabContent = _root.Q<VisualElement>("SettingsTabContent");
-            _chatMessages = _root.Q<VisualElement>("ChatMessages");
-            _chatInput = _root.Q<TextField>("ChatInput");
             _settingsCloseButton = _root.Q<Button>("SettingsCloseButton");
             _soundToggle = _root.Q<Toggle>("SoundToggle");
             _volumeSlider = _root.Q<Slider>("VolumeSlider");
             _volumeValueLabel = _root.Q<Label>("VolumeValueLabel");
 
-            StyleHubTextField(_chatInput);
-            if (_chatInput != null)
+            _menuChat?.Dispose();
+            _menuChat = new MenuChatPanel(
+                _root,
+                messageRowClass: "mm-chat-message",
+                messageMetaClass: "mm-chat-message__meta",
+                messageNickClass: "mm-chat-message__nick",
+                messageTimeClass: "mm-chat-message__time",
+                messageTextClass: "mm-chat-message__text");
+            _menuChat.Bind();
+
+            var chatInput = _root.Q<TextField>("ChatInput");
+            StyleHubTextField(chatInput);
+            if (chatInput != null)
             {
-                _chatInput.multiline = false;
-                _chatInput.textEdition.placeholder = "Написать в чат…";
+                chatInput.multiline = false;
+                chatInput.textEdition.placeholder = "Написать в чат…";
             }
 
             if (_joinCodeField != null)
@@ -273,7 +280,7 @@ namespace Game.UI.Controllers
             BuildModeGrid();
             ApplyHubTabVisibility();
             ApplyLeftMenuTabVisibility();
-            BindMenuChat();
+            EnsureChatServiceAsync().Forget();
             EnsureSettingsClosed();
             EnsureMatchEntryClosed();
             EnsureModeSelectClosed();
@@ -370,15 +377,7 @@ namespace Game.UI.Controllers
                 _publicGamesTabButton.clicked += OnPublicGamesTabClicked;
             }
 
-            if (_chatSendButton != null)
-            {
-                _chatSendButton.clicked += OnChatSendClicked;
-            }
-
-            if (_chatInput != null)
-            {
-                _chatInput.RegisterCallback<KeyDownEvent>(OnChatInputKeyDown);
-            }
+            _menuChat?.RegisterCallbacks(true);
 
             if (_settingsCloseButton != null)
             {
@@ -403,6 +402,8 @@ namespace Game.UI.Controllers
             RefreshReturnToMatchButton();
 
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
+            // TrickleDown: TextField focus swallows Escape on bubble-up.
+            _root?.RegisterCallback<KeyDownEvent>(OnEscapeKeyDown, TrickleDown.TrickleDown);
             _modeDossierPreview?.RegisterCallback<GeometryChangedEvent>(OnModeDossierPreviewGeometry);
             RebuildModeDossierMap();
             _modeDossierPreview?.schedule.Execute(RepaintDossierMap);
@@ -431,6 +432,7 @@ namespace Game.UI.Controllers
         private void OnDisable()
         {
             _root?.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+            _root?.UnregisterCallback<KeyDownEvent>(OnEscapeKeyDown, TrickleDown.TrickleDown);
             _modeDossierPreview?.UnregisterCallback<GeometryChangedEvent>(OnModeDossierPreviewGeometry);
             FriendsHubService.LobbyInviteReceived -= OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged -= OnPlayerNameChanged;
@@ -454,15 +456,7 @@ namespace Game.UI.Controllers
                 _publicGamesTabButton.clicked -= OnPublicGamesTabClicked;
             }
 
-            if (_chatSendButton != null)
-            {
-                _chatSendButton.clicked -= OnChatSendClicked;
-            }
-
-            if (_chatInput != null)
-            {
-                _chatInput.UnregisterCallback<KeyDownEvent>(OnChatInputKeyDown);
-            }
+            _menuChat?.RegisterCallbacks(false);
 
             if (_settingsCloseButton != null)
             {
@@ -490,8 +484,10 @@ namespace Game.UI.Controllers
 
         private void OnDestroy()
         {
+            _menuChat?.Dispose();
             _bindingScope?.Dispose();
             _friendsHubPanel?.Dispose();
+            _friendsDirectChat?.Dispose();
             _lobbyEntryOverlay?.Dispose();
         }
 
@@ -652,36 +648,7 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            if (evt.keyCode == KeyCode.Escape)
-            {
-                evt.StopPropagation();
-                if (_isProfileEditOpen)
-                {
-                    CloseProfileEdit();
-                }
-                else if (_isSettingsOpen)
-                {
-                    OnSettingsClose();
-                }
-                else if (_isModeSelectOpen)
-                {
-                    CloseModeSelect();
-                }
-                else if (_isMatchEntryOpen)
-                {
-                    CloseMatchEntry();
-                }
-                else if (_isJoinUiOpen)
-                {
-                    CloseJoinUi();
-                }
-                else
-                {
-                    OnQuitRequested();
-                }
-
-                return;
-            }
+            // Escape: OnEscapeKeyDown (TrickleDown) — TextField otherwise swallows it.
 
             if (_isSettingsOpen || _isMatchEntryOpen || _isModeSelectOpen || _isProfileEditOpen)
             {
@@ -715,6 +682,51 @@ namespace Game.UI.Controllers
                     evt.StopPropagation();
                     OnPlayRequested();
                     break;
+            }
+        }
+
+        private void OnEscapeKeyDown(KeyDownEvent evt)
+        {
+            if (evt.keyCode != KeyCode.Escape)
+            {
+                return;
+            }
+
+            HandleEscape(evt);
+        }
+
+        private void HandleEscape(EventBase evt)
+        {
+            if (_isTransitioning || _isSettingsAnimating)
+            {
+                return;
+            }
+
+            evt.StopPropagation();
+
+            if (_isProfileEditOpen)
+            {
+                CloseProfileEdit();
+            }
+            else if (_isSettingsOpen)
+            {
+                OnSettingsClose();
+            }
+            else if (_isModeSelectOpen)
+            {
+                CloseModeSelect();
+            }
+            else if (_isJoinUiOpen)
+            {
+                CloseJoinUi();
+            }
+            else if (_isMatchEntryOpen)
+            {
+                CloseMatchEntry();
+            }
+            else
+            {
+                OnQuitRequested();
             }
         }
 
@@ -1094,7 +1106,17 @@ namespace Game.UI.Controllers
                 _friendsErrorLabel,
                 _addFriendSection);
             _friendsHubPanel.JoinLobbyRequested += OnJoinFriendLobbyRequested;
+            _friendsHubPanel.OpenDirectChatRequested += OnOpenDirectChatRequested;
             _friendsHubPanel.Bind();
+
+            _friendsDirectChat?.Dispose();
+            _friendsDirectChat = new FriendsDirectChatPanel(_root);
+            _friendsDirectChat.Bind();
+        }
+
+        private void OnOpenDirectChatRequested(string playerId, string displayName)
+        {
+            _friendsDirectChat?.Open(playerId, displayName);
         }
 
         private void OnPlayerNameChanged() => RefreshProfileLabels();
@@ -1659,81 +1681,26 @@ namespace Game.UI.Controllers
             _settingsButton?.EnableInClassList(DockTabActiveClass, _leftMenuTab == LeftMenuTab.Settings);
         }
 
-        private void BindMenuChat()
+        private async UniTaskVoid EnsureChatServiceAsync()
         {
-            if (_chatMessages == null)
+            if (GameChatService.IsReady)
             {
                 return;
             }
 
-            _chatMessages.Clear();
-            _chatMessages.Add(CreateMenuChatMessage("Система", "00:00", "Общий чат. Сообщения пока только локально."));
-        }
-
-        private static VisualElement CreateMenuChatMessage(string nick, string time, string text)
-        {
-            var row = new VisualElement { pickingMode = PickingMode.Ignore };
-            row.AddToClassList("mm-chat-message");
-
-            var meta = new VisualElement { pickingMode = PickingMode.Ignore };
-            meta.AddToClassList("mm-chat-message__meta");
-
-            var nickLabel = new Label(nick) { pickingMode = PickingMode.Ignore };
-            nickLabel.AddToClassList("mm-chat-message__nick");
-            meta.Add(nickLabel);
-
-            var timeLabel = new Label(time) { pickingMode = PickingMode.Ignore };
-            timeLabel.AddToClassList("mm-chat-message__time");
-            meta.Add(timeLabel);
-            row.Add(meta);
-
-            var body = new Label(text) { pickingMode = PickingMode.Ignore };
-            body.AddToClassList("mm-chat-message__text");
-            row.Add(body);
-            return row;
-        }
-
-        private void OnChatSendClicked() => TrySendMenuChatMessage();
-
-        private void OnChatInputKeyDown(KeyDownEvent evt)
-        {
-            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            try
             {
-                evt.StopPropagation();
-                TrySendMenuChatMessage();
+                await GameChatService.EnsureInitializedAsync();
             }
-        }
-
-        private void TrySendMenuChatMessage()
-        {
-            var text = _chatInput?.value?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(text) || _chatMessages == null)
+            catch (Exception ex)
             {
-                return;
+                Debug.LogWarning($"MainMenu chat ensure skipped: {ex.Message}");
             }
-
-            var time = DateTime.Now.ToString("HH:mm");
-            _chatMessages.Add(CreateMenuChatMessage("Вы", time, text));
-            _chatInput.value = string.Empty;
-            var scroll = _root?.Q<ScrollView>("ChatScroll");
-            scroll?.schedule.Execute(() =>
-            {
-                if (scroll.verticalScroller.highValue > 0f)
-                {
-                    scroll.verticalScroller.value = scroll.verticalScroller.highValue;
-                }
-            });
         }
 
         private bool IsChatInputFocused()
         {
-            if (_chatInput == null)
-            {
-                return false;
-            }
-
-            var focused = _chatInput.focusController?.focusedElement as VisualElement;
-            return focused != null && (_chatInput == focused || _chatInput.Contains(focused));
+            return _menuChat != null && _menuChat.IsInputFocused();
         }
 
         private bool IsJoinCodeFocused()
@@ -2017,8 +1984,6 @@ namespace Game.UI.Controllers
             _chatTabButton?.SetEnabled(menuEnabled);
             _matchHistoryTabButton?.SetEnabled(menuEnabled);
             _publicGamesTabButton?.SetEnabled(menuEnabled);
-            _chatSendButton?.SetEnabled(menuEnabled);
-            _chatInput?.SetEnabled(menuEnabled);
             _editProfileButton?.SetEnabled(menuEnabled);
             _friendsHubPanel?.SetInteractable(menuEnabled);
         }

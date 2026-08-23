@@ -63,7 +63,7 @@ mvp: true
 | Ник / ранг / очки | Cloud Save (`displayName`, `rank`, `points` stubs) |
 | Друзья online / in game | Friends presence |
 | Create / Join | Lobby join code + Relay |
-| Chat / история / публичные игры | Вкладки слева в меню (чат пока локальный; списки — заглушки) |
+| Chat / история / публичные игры | Чат: вкладки Общий / Среди друзей + ЛС (Cloudflare); история/публичные — заглушки |
 | Настройки | Вкладка-шестерёнка слева; выход — ✕ в углу как в лаунчере |
 | Invite | Friends → private Lobby |
 | Update gate | GitHub Release tag (`/releases/latest` → tag); Play disabled если outdated |
@@ -106,5 +106,8 @@ Prune: workflow держит последние 2 полноценных рел�
 | Ship client | **Windows x64 Standalone** |
 | Net model | **Host-as-server** + Lobby + Relay |
 | Social | **UGS Friends + Cloud Save** |
+| Menu chat | **Cloudflare Worker** (`Tooling/cloudflare/baraki-chat`) — global / friends feed / DM |
+| Match chat | **Netcode** (`NetworkMatchChat`) |
 | Builds | **GHA → GitHub Releases → in-game force update** |
 | Host migration / reconnect | **Required** (listen-host peer model) |
+| Vivox | **Not used** (regional / Dashboard enable fail) |

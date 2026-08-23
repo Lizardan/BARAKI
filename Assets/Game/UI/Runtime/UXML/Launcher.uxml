@@ -46,11 +46,19 @@
                     <ui:VisualElement class="ln-chat" picking-mode="Ignore">
                         <ui:VisualElement class="ln-chat-header" picking-mode="Ignore">
                             <ui:Label name="ChatTitle" text="ЧАТ" class="ln-section-title" picking-mode="Ignore" />
-                            <ui:Label text="Общий канал · 14 online" class="ln-section-subtitle" picking-mode="Ignore" />
+                            <ui:Label name="ChatSubtitle" text="Общий канал" class="ln-section-subtitle" picking-mode="Ignore" />
                         </ui:VisualElement>
 
-                        <ui:ScrollView name="ChatScroll" class="ln-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
-                            <ui:VisualElement name="ChatMessages" class="ln-chat-messages" picking-mode="Ignore" />
+                        <ui:VisualElement name="ChatChannelTabs" class="ln-chat-tabs" picking-mode="Position">
+                            <ui:Button name="ChatGlobalTabButton" text="ОБЩИЙ" class="ln-chat-tab ln-chat-tab--active" />
+                            <ui:Button name="ChatFriendsTabButton" text="СРЕДИ ДРУЗЕЙ" class="ln-chat-tab" />
+                        </ui:VisualElement>
+
+                        <ui:ScrollView name="ChatGlobalScroll" class="ln-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                            <ui:VisualElement name="ChatGlobalMessages" class="ln-chat-messages" picking-mode="Ignore" />
+                        </ui:ScrollView>
+                        <ui:ScrollView name="ChatFriendsScroll" class="ln-chat-scroll ln-chat-scroll--hidden" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                            <ui:VisualElement name="ChatFriendsMessages" class="ln-chat-messages" picking-mode="Ignore" />
                         </ui:ScrollView>
 
                         <ui:VisualElement name="ChatComposer" class="ln-chat-composer" picking-mode="Position">

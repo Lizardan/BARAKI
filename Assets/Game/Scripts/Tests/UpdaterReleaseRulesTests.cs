@@ -85,6 +85,9 @@ namespace Game.Tests
             Assert.AreEqual(
                 "СИНХРОНИЗАЦИЯ",
                 BootstrapUpdateFlowRules.FormatIdleCtaLabel("Друзья"));
+            Assert.AreEqual(
+                BootstrapUpdateFlowRules.IdleCtaSynchronizingLabel,
+                BootstrapUpdateFlowRules.FormatIdleCtaLabel("Чат"));
         }
     }
 }

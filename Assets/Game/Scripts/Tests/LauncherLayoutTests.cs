@@ -53,8 +53,12 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<VisualElement>("NewsList"), "News list container.");
 
             Assert.IsNotNull(root.Q<Label>("ChatTitle"), "Chat title.");
-            Assert.IsNotNull(root.Q<ScrollView>("ChatScroll"), "Chat scroll.");
-            Assert.IsNotNull(root.Q<VisualElement>("ChatMessages"), "Chat messages.");
+            Assert.IsNotNull(root.Q<Button>("ChatGlobalTabButton"), "Chat global tab.");
+            Assert.IsNotNull(root.Q<Button>("ChatFriendsTabButton"), "Chat friends tab.");
+            Assert.IsNotNull(root.Q<ScrollView>("ChatGlobalScroll"), "Chat global scroll.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatGlobalMessages"), "Chat global messages.");
+            Assert.IsNotNull(root.Q<ScrollView>("ChatFriendsScroll"), "Chat friends scroll.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatFriendsMessages"), "Chat friends messages.");
             Assert.IsNotNull(root.Q<TextField>("ChatInput"), "Chat input.");
             Assert.IsNotNull(root.Q<Button>("ChatSendButton"), "Chat send.");
             Assert.IsNotNull(root.Q<VisualElement>("WindowFrame"), "Window contour.");
@@ -157,7 +161,10 @@ namespace Game.Tests
             Assert.IsNotNull(root.Q<Button>("ChatTabButton"), "Chat tab.");
             Assert.IsNotNull(root.Q<Button>("MatchHistoryTabButton"), "Match history tab.");
             Assert.IsNotNull(root.Q<Button>("PublicGamesTabButton"), "Public games tab.");
-            Assert.IsNotNull(root.Q<VisualElement>("ChatMessages"), "Chat messages.");
+            Assert.IsNotNull(root.Q<Button>("ChatGlobalTabButton"), "Chat global channel tab.");
+            Assert.IsNotNull(root.Q<Button>("ChatFriendsTabButton"), "Chat friends channel tab.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatGlobalMessages"), "Chat global messages.");
+            Assert.IsNotNull(root.Q<VisualElement>("ChatFriendsMessages"), "Chat friends messages.");
             Assert.IsNotNull(root.Q<VisualElement>("MatchHistoryList"), "Match history list.");
             Assert.IsNotNull(root.Q<VisualElement>("PublicGamesList"), "Public games list.");
             Assert.IsNotNull(root.Q<VisualElement>("SettingsTabContent"), "Settings tab pane.");
