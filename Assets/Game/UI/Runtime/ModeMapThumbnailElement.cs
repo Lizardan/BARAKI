@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Game.Gameplay.Cameras;
 using Game.Gameplay.Match;
 using Game.Gameplay.Match.Selection;
 using UnityEngine;
@@ -11,14 +13,30 @@ namespace Game.UI
     /// </summary>
     public sealed class ModeMapThumbnailElement : VisualElement
     {
+        public const string SelectedEdgeClass = "mm-cam-edge--selected";
         public const float AuthoredSize = 64f;
+        const string HomeMarkerClass = "mm-cam-home";
 
-        readonly float _panelSize;
+        static readonly CameraBaseScreenEdge[] s_edges =
+        {
+            CameraBaseScreenEdge.Top,
+            CameraBaseScreenEdge.Right,
+            CameraBaseScreenEdge.Bottom,
+            CameraBaseScreenEdge.Left,
+        };
+
+        float _panelSize;
+        readonly bool _fillHost;
         readonly MatchMinimapGeometryElement _geometry;
+        readonly VisualElement _homeMarker;
+        readonly Dictionary<CameraBaseScreenEdge, Button> _edgeButtons = new();
         readonly List<Vector2> _baseCenters = new();
         MatchMinimapTopology _topology;
         float _arenaRadius = MatchArenaGenerator.DefaultArenaRadius;
         float _arenaHalfPx;
+        float _viewYawDegrees;
+        Vector3 _homeWorld;
+        CameraBaseScreenEdge _preferredEdge = CameraBaseScreenEdge.Bottom;
 
         public ModeMapThumbnailElement()
             : this(AuthoredSize)
@@ -26,16 +44,29 @@ namespace Game.UI
         }
 
         public ModeMapThumbnailElement(float panelSize)
+            : this(panelSize, fillHost: false)
+        {
+        }
+
+        public ModeMapThumbnailElement(float panelSize, bool fillHost)
         {
             _panelSize = Mathf.Max(1f, panelSize);
+            _fillHost = fillHost;
             AddToClassList("mm-mode__preview");
-            pickingMode = PickingMode.Ignore;
-            style.width = _panelSize;
-            style.height = _panelSize;
-            style.minWidth = _panelSize;
-            style.minHeight = _panelSize;
-            style.flexShrink = 0;
+            pickingMode = fillHost ? PickingMode.Position : PickingMode.Ignore;
             style.overflow = Overflow.Hidden;
+            if (fillHost)
+            {
+                AddToClassList("mm-mode-dossier__map");
+            }
+            else
+            {
+                style.width = _panelSize;
+                style.height = _panelSize;
+                style.minWidth = _panelSize;
+                style.minHeight = _panelSize;
+                style.flexShrink = 0;
+            }
 
             _geometry = new MatchMinimapGeometryElement();
             _geometry.pickingMode = PickingMode.Ignore;
@@ -45,9 +76,31 @@ namespace Game.UI
             _geometry.style.right = 0f;
             _geometry.style.bottom = 0f;
             Add(_geometry);
+
+            _homeMarker = new VisualElement();
+            _homeMarker.AddToClassList(HomeMarkerClass);
+            _homeMarker.pickingMode = PickingMode.Ignore;
+            _homeMarker.style.display = fillHost ? DisplayStyle.Flex : DisplayStyle.None;
+            Add(_homeMarker);
+
+            if (fillHost)
+            {
+                AddEdgeButton(CameraBaseScreenEdge.Top, "v", "mm-cam-edge--top", "База сверху экрана");
+                AddEdgeButton(CameraBaseScreenEdge.Right, "<", "mm-cam-edge--right", "База справа экрана");
+                AddEdgeButton(CameraBaseScreenEdge.Bottom, "^", "mm-cam-edge--bottom", "База снизу экрана");
+                AddEdgeButton(CameraBaseScreenEdge.Left, ">", "mm-cam-edge--left", "База слева экрана");
+            }
+
+            RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
 
+        public event Action<CameraBaseScreenEdge> EdgeClicked;
+
         public float PanelSize => _panelSize;
+
+        public float ViewYawDegrees => _viewYawDegrees;
+
+        public CameraBaseScreenEdge PreferredEdge => _preferredEdge;
 
         public IReadOnlyList<Vector2> BaseCenters => _baseCenters;
 
@@ -90,19 +143,64 @@ namespace Game.UI
             return (min + max) * 0.5f;
         }
 
-        public void SetTopology(MatchMinimapTopology topology, float arenaRadius)
+        public void SetTopology(MatchMinimapTopology topology, float arenaRadius) =>
+            SetTopology(topology, arenaRadius, viewYawDegrees: 0f, homeWorld: Vector3.zero);
+
+        public void SetTopology(
+            MatchMinimapTopology topology,
+            float arenaRadius,
+            float viewYawDegrees,
+            Vector3 homeWorld)
         {
             _topology = topology;
             _arenaRadius = Mathf.Max(1f, arenaRadius);
+            _viewYawDegrees = viewYawDegrees;
+            _homeWorld = homeWorld;
+            RefreshDraw();
+        }
+
+        public void ApplyCameraEdge(CameraBaseScreenEdge edge)
+        {
+            _preferredEdge = GameplayCameraSettings.ClampScreenEdge(edge);
+            _viewYawDegrees = GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
+                _homeWorld,
+                Vector3.zero,
+                _preferredEdge);
+            RefreshEdgeButtons();
+            RefreshDraw();
+        }
+
+        void OnGeometryChanged(GeometryChangedEvent evt)
+        {
+            var size = Mathf.Floor(Mathf.Min(evt.newRect.width, evt.newRect.height));
+            if (size < 8f)
+            {
+                return;
+            }
+
+            if (Mathf.Abs(size - _panelSize) < 0.5f)
+            {
+                MarkDirtyRepaint();
+                RefreshHomeMarker();
+                return;
+            }
+
+            _panelSize = size;
+            RefreshDraw();
+        }
+
+        void RefreshDraw()
+        {
             RebuildDerived();
             _geometry.SetDrawData(
                 _topology,
                 _arenaRadius,
                 _panelSize,
                 _panelSize,
-                viewYawDegrees: 0f,
+                _viewYawDegrees,
                 drawGround: false,
                 drawFilledRects: false);
+            RefreshHomeMarker();
         }
 
         void RebuildDerived()
@@ -131,6 +229,43 @@ namespace Game.UI
             }
         }
 
+        void RefreshHomeMarker()
+        {
+            if (_homeMarker == null || !_fillHost)
+            {
+                return;
+            }
+
+            var home = Project(new Vector2(_homeWorld.x, _homeWorld.z));
+            _homeMarker.style.left = home.x - 5f;
+            _homeMarker.style.top = home.y - 5f;
+        }
+
+        void AddEdgeButton(
+            CameraBaseScreenEdge edge,
+            string glyph,
+            string className,
+            string tooltip)
+        {
+            var button = new Button { name = $"CameraEdge{edge}Button", text = glyph, tooltip = tooltip };
+            button.AddToClassList("mm-cam-edge");
+            button.AddToClassList(className);
+            button.clicked += () => EdgeClicked?.Invoke(edge);
+            _edgeButtons[edge] = button;
+            Add(button);
+        }
+
+        void RefreshEdgeButtons()
+        {
+            foreach (var edge in s_edges)
+            {
+                if (_edgeButtons.TryGetValue(edge, out var button))
+                {
+                    button.EnableInClassList(SelectedEdgeClass, edge == _preferredEdge);
+                }
+            }
+        }
+
         Vector2 Project(Vector2 worldXZ) =>
             Project(worldXZ, MatchMinimapProjection.MapHalfExtent(_arenaRadius));
 
@@ -138,7 +273,8 @@ namespace Game.UI
         {
             var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(
                 new Vector3(worldXZ.x, 0f, worldXZ.y),
-                mapHalfExtent);
+                mapHalfExtent,
+                _viewYawDegrees);
             return MatchMinimapProjection.NormalizedToPanel(normalized, _panelSize, _panelSize);
         }
     }

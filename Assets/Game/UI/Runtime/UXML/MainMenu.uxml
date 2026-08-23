@@ -107,7 +107,7 @@
                         <ui:VisualElement name="GameTabContent" class="mm__game-pane">
                             <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
                             <ui:VisualElement name="ModeDossier" class="mm-mode-dossier">
-                                <ui:VisualElement name="ModeDossierPreview" class="mm-mode-dossier__preview" picking-mode="Ignore" />
+                                <ui:VisualElement name="ModeDossierPreview" class="mm-mode-dossier__preview" picking-mode="Position" />
                                 <ui:VisualElement class="mm-mode-dossier__copy" picking-mode="Ignore">
                                     <ui:Label name="ModeDossierTitle" text="" class="mm-mode-dossier__title" picking-mode="Ignore" />
                                     <ui:Label name="ModeDossierBody" text="" class="mm-mode-dossier__body" picking-mode="Ignore" />

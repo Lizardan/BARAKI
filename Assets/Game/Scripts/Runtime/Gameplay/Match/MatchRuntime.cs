@@ -275,7 +275,7 @@ namespace Game.Gameplay.Match
                 GameplayCameraSettings.ComputeYawDegreesForBaseAtScreenEdge(
                     focusPosition,
                     Vector3.zero,
-                    CameraBaseScreenEdge.Bottom));
+                    GameplayCameraPreferences.PreferredBaseScreenEdge));
             panController.FocusOnPosition(focusPosition);
         }
 

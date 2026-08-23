@@ -36,6 +36,7 @@ namespace Game.UI
         {
             pickingMode = PickingMode.Ignore;
             generateVisualContent += OnGenerateVisualContent;
+            RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
 
         public void SetDrawData(
@@ -58,6 +59,16 @@ namespace Game.UI
             MarkDirtyRepaint();
         }
 
+        void OnGeometryChanged(GeometryChangedEvent evt)
+        {
+            if (evt.newRect.width < 8f || evt.newRect.height < 8f)
+            {
+                return;
+            }
+
+            MarkDirtyRepaint();
+        }
+
         void OnGenerateVisualContent(MeshGenerationContext context)
         {
             if (_topology == null)
@@ -67,6 +78,18 @@ namespace Game.UI
 
             var painter = context.painter2D;
             if (painter == null)
+            {
+                return;
+            }
+
+            var rect = contentRect;
+            if (rect.width >= 8f && rect.height >= 8f)
+            {
+                _panelWidth = rect.width;
+                _panelHeight = rect.height;
+            }
+
+            if (_panelWidth < 8f || _panelHeight < 8f)
             {
                 return;
             }

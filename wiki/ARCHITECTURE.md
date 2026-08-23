@@ -62,6 +62,10 @@ Main Camera несёт `CinemachineBrain`. Runtime-привязка слежен
 оставляет `_followTarget` null — сцена привязывает Player root. Не добавлять `CameraTarget`-ребёнка:
 визуальный bob остаётся на `Model`, Y корня Player физически стабилен.
 
+Предпочтительный край экрана для своей базы (`CameraBaseScreenEdge`) хранится в
+`GameplayCameraPreferences` (PlayerPrefs, по умолчанию низ). Главное меню: клик по краю большой
+схемы режима; старт матча и pad камеры берут то же значение.
+
 ## Input
 
 `Settings/Input/GameInputActions.inputactions` → генерируется C#-класс в `Scripts/Runtime/Input/`

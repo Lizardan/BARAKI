@@ -13,6 +13,8 @@ namespace Game.UI.Controllers
     [RequireComponent(typeof(UIDocument))]
     public sealed class MatchCameraPadController : MonoBehaviour
     {
+        const string SelectedClass = "match-hud__camera-pad-btn--selected";
+
         [SerializeField] UIDocument _uiDocument;
 
         Button _upButton;
@@ -38,6 +40,8 @@ namespace Game.UI.Controllers
             {
                 _hintLabel.text = "Ориентация базы\nна краю экрана";
             }
+
+            RefreshSelected();
         }
 
         void OnEnable()
@@ -61,6 +65,8 @@ namespace Game.UI.Controllers
             {
                 _rightButton.clicked += OnRightClicked;
             }
+
+            RefreshSelected();
         }
 
         void OnDisable()
@@ -94,7 +100,7 @@ namespace Game.UI.Controllers
 
         void OnRightClicked() => Orient(CameraBaseScreenEdge.Right);
 
-        static void Orient(CameraBaseScreenEdge edge)
+        void Orient(CameraBaseScreenEdge edge)
         {
             var pan = GameplayCameraPanController.Current;
             var runtime = MatchRuntime.Current;
@@ -111,7 +117,18 @@ namespace Game.UI.Controllers
             }
 
             var basePosition = GameplayCameraSettings.GetPlayerBaseFocusPosition(layout, slot);
+            GameplayCameraPreferences.PreferredBaseScreenEdge = edge;
             pan.OrientBaseToScreenEdge(basePosition, Vector3.zero, edge);
+            RefreshSelected();
+        }
+
+        void RefreshSelected()
+        {
+            var edge = GameplayCameraPreferences.PreferredBaseScreenEdge;
+            _upButton?.EnableInClassList(SelectedClass, edge == CameraBaseScreenEdge.Top);
+            _downButton?.EnableInClassList(SelectedClass, edge == CameraBaseScreenEdge.Bottom);
+            _leftButton?.EnableInClassList(SelectedClass, edge == CameraBaseScreenEdge.Left);
+            _rightButton?.EnableInClassList(SelectedClass, edge == CameraBaseScreenEdge.Right);
         }
     }
 }

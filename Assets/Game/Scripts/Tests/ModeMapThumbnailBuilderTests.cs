@@ -1,3 +1,4 @@
+using Game.Gameplay.Cameras;
 using Game.UI;
 using Game.UI.Controllers;
 using NUnit.Framework;
@@ -127,6 +128,36 @@ namespace Game.Tests
             Assert.AreEqual(5, preview.BaseCenters.Count);
             Assert.GreaterOrEqual(preview.RoadSegmentCount, 16);
             Assert.GreaterOrEqual(preview.StrokePointCount, 32);
+        }
+
+        [Test]
+        public void BuildFillPreview_UsesDossierMapClass()
+        {
+            var preview = ModeMapThumbnailBuilder.BuildFillPreview(4);
+            Assert.IsTrue(preview.ClassListContains("mm-mode-dossier__map"));
+            Assert.IsTrue(preview.ClassListContains("mm-mode__preview"));
+        }
+
+        [Test]
+        public void BuildFillPreview_AppliesPreferredEdgeAndHasEdgeButtons()
+        {
+            var previous = GameplayCameraPreferences.PreferredBaseScreenEdge;
+            try
+            {
+                GameplayCameraPreferences.PreferredBaseScreenEdge = CameraBaseScreenEdge.Top;
+                var preview = ModeMapThumbnailBuilder.BuildFillPreview(4) as ModeMapThumbnailElement;
+                Assert.IsNotNull(preview);
+                Assert.AreEqual(CameraBaseScreenEdge.Top, preview.PreferredEdge);
+                Assert.AreEqual(180f, Mathf.Abs(Mathf.DeltaAngle(0f, preview.ViewYawDegrees)), 1f);
+                Assert.IsNotNull(preview.Q<Button>("CameraEdgeBottomButton"));
+                Assert.IsNotNull(preview.Q<Button>("CameraEdgeTopButton"));
+                Assert.IsTrue(preview.Q<Button>("CameraEdgeTopButton")
+                    .ClassListContains(ModeMapThumbnailElement.SelectedEdgeClass));
+            }
+            finally
+            {
+                GameplayCameraPreferences.PreferredBaseScreenEdge = previous;
+            }
         }
 
         [Test]

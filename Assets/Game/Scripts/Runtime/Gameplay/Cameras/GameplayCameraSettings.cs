@@ -61,6 +61,35 @@ namespace Game.Gameplay.Cameras
             return layout.Slots[playerSlot].GetBuildingWorldPosition(Game.Core.GameIds.Buildings.Main);
         }
 
+        public static CameraBaseScreenEdge ClampScreenEdge(CameraBaseScreenEdge edge)
+        {
+            var value = (int)edge;
+            if (value < (int)CameraBaseScreenEdge.Bottom || value > (int)CameraBaseScreenEdge.Left)
+            {
+                return CameraBaseScreenEdge.Bottom;
+            }
+
+            return edge;
+        }
+
+        /// <summary>
+        /// Menu schematic yaw: slot 0 sits on <paramref name="edge"/>, same compass as match start.
+        /// </summary>
+        public static float ComputeYawDegreesForPreferredPreview(
+            MatchArenaLayout layout,
+            CameraBaseScreenEdge edge)
+        {
+            if (layout == null || layout.Slots.Count == 0)
+            {
+                return 0f;
+            }
+
+            return ComputeYawDegreesForBaseAtScreenEdge(
+                GetPlayerBaseFocusPosition(layout, 0),
+                Vector3.zero,
+                edge);
+        }
+
         /// <summary>
         /// Yaw that places <paramref name="baseWorldPosition"/> on the chosen screen edge
         /// (arena center toward the opposite edge).

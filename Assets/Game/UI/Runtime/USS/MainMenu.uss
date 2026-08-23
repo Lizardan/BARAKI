@@ -1702,6 +1702,86 @@
     overflow: hidden;
 }
 
+.mm-mode-dossier__preview > .mm-mode-dossier__map {
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 1;
+    margin-bottom: 0;
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.mm-cam-edge {
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    background-color: rgba(16, 18, 17, 0.88);
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    border-radius: 0;
+    color: rgb(133, 137, 128);
+    font-size: 16px;
+    -unity-font-style: bold;
+    letter-spacing: 0;
+    -unity-text-align: middle-center;
+}
+
+.mm-cam-edge--top {
+    top: 6px;
+    left: 22%;
+    right: 22%;
+    height: 26px;
+}
+
+.mm-cam-edge--bottom {
+    bottom: 6px;
+    left: 22%;
+    right: 22%;
+    height: 26px;
+}
+
+.mm-cam-edge--left {
+    left: 6px;
+    top: 22%;
+    bottom: 22%;
+    width: 26px;
+}
+
+.mm-cam-edge--right {
+    right: 6px;
+    top: 22%;
+    bottom: 22%;
+    width: 26px;
+}
+
+.mm-cam-edge:hover {
+    border-color: rgb(185, 154, 98);
+    color: rgb(208, 178, 118);
+}
+
+.mm-cam-edge--selected {
+    background-color: rgb(64, 54, 35);
+    border-color: rgb(185, 154, 98);
+    color: rgb(208, 178, 118);
+}
+
+.mm-cam-home {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: rgb(208, 178, 118);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
+    border-radius: 0;
+}
+
 .mm-mode__label {
     font-size: 16px;
     -unity-font-style: bold;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Core;
+using Game.Gameplay.Cameras;
 using Game.Gameplay.Networking;
 using Game.UI;
 using Game.UI.Animations;
@@ -82,8 +83,8 @@ namespace Game.UI.Controllers
         private Label _modeDossierTitle;
         private Label _modeDossierBody;
         private Label _modeDossierNote;
-        private float _dossierMapPx;
         private int _dossierMappedPlayerCount;
+        private bool _rebuildingDossierMap;
         private Button _createMatchButton;
         private Button _joinMatchButton;
         private Button _joinConfirmButton;
@@ -182,10 +183,6 @@ namespace Game.UI.Controllers
             _profileAvatarLabel = _root.Q<Label>("ProfileAvatarLabel");
             _profileAvatar = _root.Q<VisualElement>("ProfileAvatar");
             _profileBadge = _root.Q<VisualElement>("ProfileBadge");
-            if (_profileBadge != null)
-            {
-                _profileBadge.style.minHeight = 120;
-            }
 
             _friendsCountLabel = _root.Q<Label>("FriendsCountLabel");
             _friendsErrorLabel = _root.Q<Label>("FriendsErrorLabel");
@@ -407,6 +404,8 @@ namespace Game.UI.Controllers
 
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
             _modeDossierPreview?.RegisterCallback<GeometryChangedEvent>(OnModeDossierPreviewGeometry);
+            RebuildModeDossierMap();
+            _modeDossierPreview?.schedule.Execute(RepaintDossierMap);
             FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
             _profileBadge?.RegisterCallback<ClickEvent>(OnProfileBadgeClicked);
@@ -621,6 +620,10 @@ namespace Game.UI.Controllers
             {
                 EnsureSettingsClosed();
             }
+
+            _dossierMappedPlayerCount = 0;
+            RebuildModeDossierMap();
+            RepaintDossierMap();
         }
 
         private void PrepareIntroState()
@@ -1450,14 +1453,13 @@ namespace Game.UI.Controllers
 
         private void OnModeDossierPreviewGeometry(GeometryChangedEvent evt)
         {
-            var size = Mathf.Floor(Mathf.Min(evt.newRect.width, evt.newRect.height));
-            if (size < 8f || Mathf.Abs(size - _dossierMapPx) < 1.5f)
+            if (Mathf.Min(evt.newRect.width, evt.newRect.height) < 8f)
             {
                 return;
             }
 
-            _dossierMapPx = size;
             RebuildModeDossierMap();
+            RepaintDossierMap();
         }
 
         private void RefreshModeDossier()
@@ -1480,38 +1482,64 @@ namespace Game.UI.Controllers
             RebuildModeDossierMap();
         }
 
+        private void OnDossierCameraEdgeClicked(CameraBaseScreenEdge edge)
+        {
+            GameplayCameraPreferences.PreferredBaseScreenEdge = edge;
+            if (_modeDossierPreview?.childCount > 0
+                && _modeDossierPreview[0] is ModeMapThumbnailElement thumbnail)
+            {
+                thumbnail.ApplyCameraEdge(edge);
+            }
+        }
+
         private void RebuildModeDossierMap()
+        {
+            if (_modeDossierPreview == null || _rebuildingDossierMap)
+            {
+                return;
+            }
+
+            if (_dossierMappedPlayerCount == _selectedPlayerCount
+                && _modeDossierPreview.childCount > 0)
+            {
+                return;
+            }
+
+            _rebuildingDossierMap = true;
+            try
+            {
+                _dossierMappedPlayerCount = _selectedPlayerCount;
+                _modeDossierPreview.Clear();
+                var map = ModeMapThumbnailBuilder.BuildFillPreview(_selectedPlayerCount);
+                if (map is ModeMapThumbnailElement thumbnail)
+                {
+                    thumbnail.EdgeClicked += OnDossierCameraEdgeClicked;
+                }
+
+                _modeDossierPreview.Add(map);
+            }
+            finally
+            {
+                _rebuildingDossierMap = false;
+            }
+        }
+
+        private void RepaintDossierMap()
         {
             if (_modeDossierPreview == null)
             {
                 return;
             }
 
-            var size = _dossierMapPx;
-            if (size < 8f)
+            _modeDossierPreview.MarkDirtyRepaint();
+            foreach (var child in _modeDossierPreview.Children())
             {
-                var layout = _modeDossierPreview.layout;
-                size = Mathf.Floor(Mathf.Min(layout.width, layout.height));
+                child.MarkDirtyRepaint();
+                for (var i = 0; i < child.childCount; i++)
+                {
+                    child[i].MarkDirtyRepaint();
+                }
             }
-
-            if (size < 8f)
-            {
-                return;
-            }
-
-            if (_dossierMappedPlayerCount == _selectedPlayerCount
-                && Mathf.Abs(_dossierMapPx - size) < 1.5f
-                && _modeDossierPreview.childCount > 0)
-            {
-                return;
-            }
-
-            _dossierMapPx = size;
-            _dossierMappedPlayerCount = _selectedPlayerCount;
-            _modeDossierPreview.Clear();
-            var map = ModeMapThumbnailBuilder.BuildPreview(_selectedPlayerCount, size);
-            map.pickingMode = PickingMode.Ignore;
-            _modeDossierPreview.Add(map);
         }
 
         private static VisualElement CreateModeRow()

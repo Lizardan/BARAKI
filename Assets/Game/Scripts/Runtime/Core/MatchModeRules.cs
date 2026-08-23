@@ -25,7 +25,8 @@ namespace Game.Core
                 _ => $"FFA {playerCount}",
             };
 
-        public const string ModeMapNote = "Статы те же — меняется только карта.";
+        public const string ModeMapNote =
+            "Нажмите край схемы — с этой стороны экрана будет ваша база.";
 
         public static string GetModeSummary(int playerCount) =>
             playerCount switch

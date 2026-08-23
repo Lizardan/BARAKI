@@ -56,9 +56,10 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ModeMapNote_StatesBalanceIsShared()
+        public void ModeMapNote_ExplainsPreferredCameraEdge()
         {
-            StringAssert.Contains("карта", MatchModeRules.ModeMapNote);
+            StringAssert.Contains("край", MatchModeRules.ModeMapNote);
+            StringAssert.Contains("база", MatchModeRules.ModeMapNote);
         }
     }
 }

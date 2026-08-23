@@ -11,7 +11,9 @@ namespace Game.Tests
         [Test]
         public void ReadEdgeScrollInput_LeftEdge_ReturnsNegativeX()
         {
-            var input = GameplayCameraSettings.ReadEdgeScrollInput(new Vector2(10f, 400f), 24f);
+            var input = GameplayCameraSettings.ReadEdgeScrollInput(
+                new Vector2(10f, Mathf.Max(200f, Screen.height * 0.5f)),
+                24f);
             Assert.AreEqual(-1f, input.x, 0.001f);
             Assert.AreEqual(0f, input.y, 0.001f);
         }
@@ -72,6 +74,24 @@ namespace Game.Tests
             Assert.AreEqual(90f, GameplayCameraSettings.GetYawDegreesFromFollowOffset(offset), 0.01f);
             Assert.Less(offset.x, 0f);
             Assert.AreEqual(0f, offset.z, 0.001f);
+        }
+
+        [Test]
+        public void ClampScreenEdge_InvalidFallsBackToBottom()
+        {
+            Assert.AreEqual(
+                CameraBaseScreenEdge.Bottom,
+                GameplayCameraSettings.ClampScreenEdge((CameraBaseScreenEdge)99));
+        }
+
+        [Test]
+        public void ComputeYawDegreesForPreferredPreview_N4Top_IsAbout180()
+        {
+            var layout = MatchArenaGenerator.Generate(4);
+            var yaw = GameplayCameraSettings.ComputeYawDegreesForPreferredPreview(
+                layout,
+                CameraBaseScreenEdge.Top);
+            Assert.AreEqual(180f, Mathf.Abs(Mathf.DeltaAngle(0f, yaw)), 0.5f);
         }
 
         [Test]
