@@ -1,0 +1,55 @@
+name: Deploy chat Worker
+
+# Menu chat API (Cloudflare Worker + Durable Object). No Unity build.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Tooling/cloudflare/baraki-chat/**"
+      - ".github/workflows/deploy-chat.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-chat
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy baraki-chat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CHAT_API_KEY: ${{ secrets.CHAT_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Deploy Worker
+        working-directory: Tooling/cloudflare/baraki-chat
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" || -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            echo "Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID" >&2
+            exit 1
+          fi
+          npx wrangler deploy 2>&1 | tee /tmp/wrangler-deploy.log
+          echo "----- deploy URL candidates -----"
+          grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/wrangler-deploy.log | sort -u || true
+
+      - name: Set CHAT_API_KEY secret
+        if: ${{ env.CHAT_API_KEY != '' }}
+        working-directory: Tooling/cloudflare/baraki-chat
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$CHAT_API_KEY" | npx wrangler secret put CHAT_API_KEY
+          echo "CHAT_API_KEY secret updated on Worker."
+
+      - name: Skip secret (not configured)
+        if: ${{ env.CHAT_API_KEY == '' }}
+        run: echo "CHAT_API_KEY GitHub secret is empty — Worker accepts unauthenticated clients."
