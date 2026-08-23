@@ -43,6 +43,23 @@ namespace Game.Editor
                 version);
         }
 
+        public static void BuildUpdaterOnly()
+        {
+            PlayerSettings.bundleVersion = UpdaterReleaseRules.UpdaterBuildVersion;
+            PlayerSettings.productName = "BARAKI";
+
+            var updaterReleaseVersion = BuildVersionStampRules.Normalize(
+                System.Environment.GetEnvironmentVariable("BARAKI_UPDATER_VERSION"));
+
+            BuildWindowsPlayer(
+                "WindowsCiBuild.UpdaterOnly",
+                UpdaterBuildRules.Scenes,
+                UpdaterBuildRules.OutputDirectory,
+                UpdaterReleaseRules.InstalledExecutableFileName,
+                UpdaterBuildRules.ExtraScriptingDefines,
+                updaterReleaseVersion);
+        }
+
         private static void WarnIfGitHubPlaytestMissing()
         {
             if (GitHubPlaytestSettings.TryResolveCredentials(out _, out _, out var source) && source == "Embedded")

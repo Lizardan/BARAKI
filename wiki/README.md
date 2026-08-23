@@ -21,6 +21,7 @@
 | `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |
 | `rules/human-unit-bonuses.md` | PRE-006a: BonusSlot, 6 механик Людей, UI оверлея, контент-пайплайн |
 | `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |
+| `rules/distribution.md` | Установщик Inno, GitHub Releases, лендинг Cloudflare Pages |
 
 ## Что здесь не дублируется
 
