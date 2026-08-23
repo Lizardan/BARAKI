@@ -10,7 +10,7 @@ namespace Game.Core
     public static class GameChatRules
     {
         /// <summary>Cloudflare Worker origin. Override with PlayerPrefs key baraki.chat.apiBase.</summary>
-        public const string DefaultApiBaseUrl = "";
+        public const string DefaultApiBaseUrl = "https://baraki-chat.lizard268.workers.dev";
 
         /// <summary>Optional shared key (must match Worker secret CHAT_API_KEY). PlayerPrefs baraki.chat.apiKey.</summary>
         public const string DefaultApiKey = "";

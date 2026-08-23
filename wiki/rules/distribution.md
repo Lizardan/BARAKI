@@ -44,3 +44,12 @@ Job `cloudflare` в updater-workflow дополнительно переписы
 
 - `CLOUDFLARE_API_TOKEN` (шаблон Edit Cloudflare Workers)
 - `CLOUDFLARE_ACCOUNT_ID`
+
+## Деплой меню-чата
+
+Каталог: `Tooling/cloudflare/baraki-chat/`.
+Worker: [https://baraki-chat.lizard268.workers.dev](https://baraki-chat.lizard268.workers.dev).
+Workflow: `deploy-chat.yml` (push в каталог / `workflow_dispatch`).
+Доп. секрет: `CHAT_API_KEY` (общий ключ клиента и Worker).
+
+Подробности API и клиента — [`chat.md`](chat.md).

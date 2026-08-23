@@ -31,12 +31,16 @@ npx wrangler secret put CHAT_API_KEY   # опционально
 
 Клиент:
 
-- `PlayerPrefs` `baraki.chat.apiBase` = origin Worker (или `GameChatRules.DefaultApiBaseUrl`)
-- `PlayerPrefs` `baraki.chat.apiKey` = тот же ключ, что `CHAT_API_KEY` (если задан)
+- `GameChatRules.DefaultApiBaseUrl` = `https://baraki-chat.lizard268.workers.dev` (можно перебить PlayerPrefs `baraki.chat.apiBase`)
+- Ключ: PlayerPrefs `baraki.chat.apiKey` = значение GitHub secret `CHAT_API_KEY` (в исходники не коммитим). Без ключа Worker отвечает 401.
+
+Деплой: workflow [`.github/workflows/deploy-chat.yml`](../../.github/workflows/deploy-chat.yml) (`workflow_dispatch` или push в `Tooling/cloudflare/baraki-chat/`). Нужны секреты `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CHAT_API_KEY`.
 
 Идентичность playtest-grade: заголовки `X-Baraki-Player-Id` / `X-Baraki-Player-Name` (UGS). При необходимости позже — JWT verify.
 
 Клиент после `Open` ЛС вызывает `GameChatService.EnsureDirectPeer`, чтобы poll подтягивал историю до первого send.
+
+Debug-консоль: `chat.setkey <key>`, `chat.setbase <url>`, `chat.clear`.
 
 ## UI
 
