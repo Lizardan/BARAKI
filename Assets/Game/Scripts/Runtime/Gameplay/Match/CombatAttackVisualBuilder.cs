@@ -1,6 +1,7 @@
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Game.Gameplay.Match
 {
@@ -39,7 +40,18 @@ namespace Game.Gameplay.Match
             }
 
             visual.transform.SetParent(parent, false);
+            DisableProjectileShadows(visual);
             return visual;
+        }
+
+        static void DisableProjectileShadows(GameObject visual)
+        {
+            var renderers = visual.GetComponentsInChildren<Renderer>(true);
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                renderers[i].shadowCastingMode = ShadowCastingMode.Off;
+                renderers[i].receiveShadows = false;
+            }
         }
 
         static bool UsesFireballVisual(UnitRole role) =>
@@ -205,7 +217,7 @@ namespace Game.Gameplay.Match
 
         public static void UpdateProjectileTransform(Transform visual, CombatProjectileState projectile)
         {
-            var progress = projectile.Progress;
+            var progress = projectile.ResolvePresentationProgress();
             var position = CombatProjectileTrajectory.Evaluate(
                 projectile.StartPosition,
                 projectile.TargetPosition,

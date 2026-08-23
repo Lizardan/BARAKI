@@ -128,6 +128,14 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CanSpawnPresentationFx_HiddenFog_False_RevealedOrDisabled_True()
+        {
+            Assert.IsFalse(FogVisionRules.CanSpawnPresentationFx(fogDisabled: false, isRevealed: false));
+            Assert.IsTrue(FogVisionRules.CanSpawnPresentationFx(fogDisabled: false, isRevealed: true));
+            Assert.IsTrue(FogVisionRules.CanSpawnPresentationFx(fogDisabled: true, isRevealed: false));
+        }
+
+        [Test]
         public void CanSelectTarget_BlocksEnemyInFog_AllowsOwnAndRevealedEnemy()
         {
             var layout = MatchArenaGenerator.Generate(4);

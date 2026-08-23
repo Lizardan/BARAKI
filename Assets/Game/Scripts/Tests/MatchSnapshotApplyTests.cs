@@ -254,6 +254,89 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ApplyAuthoritativeProjectiles_SetsAppliesSplashAoeOnClient()
+        {
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = (int)MatchPhase.Early,
+                Projectiles = new[]
+                {
+                    new MatchProjectileSnapshot
+                    {
+                        ProjectileId = 42,
+                        AttackerOwnerSlot = 1,
+                        AttackerRole = (byte)UnitRole.Super,
+                        StartX = 0f,
+                        StartY = 1f,
+                        FlightDuration = 0.5f,
+                        IsParabolic = true,
+                        TargetBuildingInstanceId = -1,
+                        SourceBuildingInstanceId = -1,
+                        SourceBuildingId = string.Empty,
+                        AppliesSplashAoe = true,
+                    },
+                },
+            });
+
+            Assert.AreEqual(1, client.Combat.Projectiles.Count);
+            Assert.IsTrue(client.Combat.Projectiles[0].AppliesSplashAoe);
+            Assert.AreEqual(UnitRole.Super, client.Combat.Projectiles[0].AttackerRole);
+        }
+
+        [Test]
+        public void ApplyAuthoritativeSpellCasts_FxOnlyDefWithoutBehaviour_StillQueuesCast()
+        {
+            var vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var def = ScriptableObject.CreateInstance<UnitAbilityDef>();
+            def.Configure(
+                42,
+                "FxOnly",
+                string.Empty,
+                AbilityKind.Active,
+                AbilityUnlock.Always,
+                0,
+                behaviour: null,
+                fx: new AbilityFx { Color = Color.red, VfxPrefab = vfx });
+            var catalog = ScriptableObject.CreateInstance<UnitAbilityCatalog>();
+            catalog.ReplaceAbilities(new[] { def });
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.Combat.AbilityCatalog = catalog;
+            client.ApplyAuthoritativeSnapshot(new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = (int)MatchPhase.Early,
+                SpellCasts = new[]
+                {
+                    new MatchSpellSnapshot
+                    {
+                        Serial = 1,
+                        AbilityId = 42,
+                        CasterUnitId = 1,
+                        OwnerSlot = 0,
+                        CenterX = 3f,
+                        CenterZ = 4f,
+                        Radius = 2f,
+                    },
+                },
+            });
+
+            var casts = client.Combat.ConsumePendingAbilityCasts();
+            Assert.AreEqual(1, casts.Count);
+            Assert.AreEqual(42, casts[0].Def.AbilityId);
+            Assert.IsNull(casts[0].Def.Behaviour);
+            Assert.IsNotNull(casts[0].Def.Fx.VfxPrefab);
+
+            Object.DestroyImmediate(vfx);
+            Object.DestroyImmediate(def);
+            Object.DestroyImmediate(catalog);
+        }
+
+        [Test]
         public void ApplyAuthoritativeSnapshot_UpdatesUnitsIntoCombat()
         {
             var host = new MatchController();

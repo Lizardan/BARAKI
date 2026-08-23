@@ -6,6 +6,7 @@ using Game.Gameplay.Match;
 using Unity.Netcode;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Gameplay.Networking
 {
@@ -19,6 +20,8 @@ namespace Game.Gameplay.Networking
         public static MatchSessionHandle CurrentHandle => s_currentHandle;
         public static bool HasHandle => s_hasHandle;
         public static bool IsNetworked { get; private set; }
+        /// <summary>Set while rematch/results return to lobby so LobbyController does not reload Game.</summary>
+        public static bool IsReturningToLobby { get; private set; }
         public static bool IsRejoiningMatch { get; set; }
         public static int PlayerCount { get; internal set; }
         public static int LocalSlot { get; internal set; } = -1;
@@ -252,6 +255,34 @@ namespace Game.Gameplay.Networking
             {
                 PendingMatchReconnectStore.Clear();
             }
+        }
+
+        public static void MarkReturningToLobby() => IsReturningToLobby = true;
+
+        public static void ClearReturningToLobby() => IsReturningToLobby = false;
+
+        /// <summary>Networked rematch: keep NGO up and send everyone back to Lobby.</summary>
+        public static void RequestReturnToLobby()
+        {
+            if (MatchNetworkAuthority.Instance != null)
+            {
+                MatchNetworkAuthority.Instance.RequestReturnToLobby();
+                return;
+            }
+
+            LeaveMatch();
+            SceneManager.LoadScene(GameSceneNames.Lobby);
+        }
+
+        internal static void LoadLobbyPreservingNetwork()
+        {
+            MarkReturningToLobby();
+            if (SceneManager.GetActiveScene().name == GameSceneNames.Lobby)
+            {
+                return;
+            }
+
+            SceneManager.LoadScene(GameSceneNames.Lobby);
         }
 
         /// <summary>Designated host: new Relay allocation + lobby Data update + StartAsHost.</summary>

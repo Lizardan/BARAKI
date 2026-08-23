@@ -4,6 +4,7 @@ using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Gameplay.Networking
 {
@@ -15,13 +16,16 @@ namespace Game.Gameplay.Networking
     [RequireComponent(typeof(NetworkObject))]
     public sealed class MatchNetworkAuthority : NetworkBehaviour
     {
-        const float SnapshotHz = 15f;
+        /// <summary>Authoritative snapshot publish rate. Keep in lockstep with
+        /// <see cref="NetworkUnitVisualRules.ClientInterpDelaySeconds"/> (2 snapshots).</summary>
+        public const float SnapshotHz = 30f;
 
         [SerializeField] private MatchRuntime _matchRuntime;
 
         float _simAccumulator;
         float _snapshotAccumulator;
         MatchTickMode _tickMode = MatchTickMode.Offline;
+        bool _matchEndedPublished;
 
         public static MatchNetworkAuthority Instance { get; private set; }
 
@@ -270,6 +274,74 @@ namespace Game.Gameplay.Networking
             ApplySnapshotClientRpc(bytes);
         }
 
+        public void RequestReturnToLobby()
+        {
+            if (IsServer)
+            {
+                ApplyReturnToLobby();
+                return;
+            }
+
+            RequestReturnToLobbyServerRpc();
+        }
+
+        void PublishMatchEndedIfNeeded(MatchController controller)
+        {
+            if (_matchEndedPublished || controller == null || controller.Phase != MatchPhase.End)
+            {
+                return;
+            }
+
+            _matchEndedPublished = true;
+            PublishSnapshotNow();
+            NotifyMatchEndedClientRpc(controller.WinnerSlot ?? -1);
+        }
+
+        void ApplyReturnToLobby()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            _matchEndedPublished = false;
+            MatchPauseGate.SetUserPaused(false);
+            NetworkLobbyState.Instance?.ClearMatchStarted();
+            NetworkRacePickState.Instance?.ResetForRematch();
+            NotifyReturnToLobbyClientRpc();
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void RequestReturnToLobbyServerRpc(RpcParams rpcParams = default) =>
+            ApplyReturnToLobby();
+
+        [ClientRpc]
+        void NotifyMatchEndedClientRpc(int winnerSlot)
+        {
+            if (IsServer)
+            {
+                return;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null || controller.Phase == MatchPhase.End)
+            {
+                return;
+            }
+
+            if (winnerSlot >= 0)
+            {
+                controller.EndMatch(winnerSlot);
+            }
+        }
+
+        [ClientRpc]
+        void NotifyReturnToLobbyClientRpc()
+        {
+            MatchNetworkSession.LoadLobbyPreservingNetwork();
+        }
+
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
         void RequestDebugAddGoldToAllServerRpc(int amount, RpcParams rpcParams = default)
         {
@@ -416,7 +488,14 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            if (MatchPauseGate.IsPaused)
+            var controller = _matchRuntime.Controller;
+            var matchEnded = controller != null && controller.Phase == MatchPhase.End;
+            if (matchEnded)
+            {
+                PublishMatchEndedIfNeeded(controller);
+            }
+
+            if (MatchPauseGate.IsPaused && !matchEnded)
             {
                 return;
             }
@@ -426,16 +505,33 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            if (!_matchRuntime.IsMatchStarted || _matchRuntime.Controller == null)
+            if (!_matchRuntime.IsMatchStarted || controller == null)
             {
+                return;
+            }
+
+            if (matchEnded)
+            {
+                _snapshotAccumulator += Time.deltaTime;
+                if (_snapshotAccumulator >= 1f / SnapshotHz)
+                {
+                    _snapshotAccumulator = 0f;
+                    PublishSnapshotNow();
+                }
+
                 return;
             }
 
             var steps = MatchNetworkSimTickRules.ConsumeSteps(ref _simAccumulator, Time.deltaTime);
             for (var i = 0; i < steps; i++)
             {
-                _matchRuntime.Controller.Tick(MatchNetworkSimTickRules.FixedDeltaSeconds);
+                controller.Tick(MatchNetworkSimTickRules.FixedDeltaSeconds);
                 _matchRuntime.NotifyServerTick();
+                if (controller.Phase == MatchPhase.End)
+                {
+                    PublishMatchEndedIfNeeded(controller);
+                    return;
+                }
             }
 
             if (steps <= 0)

@@ -174,7 +174,14 @@ namespace Game.UI.Controllers
         {
             if (MatchNetworkSession.IsNetworked)
             {
-                if (MatchNetworkSession.MatchStarted && !_isTransitioning)
+                if (!MatchNetworkSession.MatchStarted)
+                {
+                    MatchNetworkSession.ClearReturningToLobby();
+                }
+
+                if (MatchNetworkSession.MatchStarted
+                    && !MatchNetworkSession.IsReturningToLobby
+                    && !_isTransitioning)
                 {
                     StartMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
                     return;

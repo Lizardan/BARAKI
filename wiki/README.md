@@ -16,8 +16,8 @@
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
 | `rules/ability-fx.md` | BARAKI Studio: одно окно VFX+радиус, механика AoE, якоря, палитра |
-| `rules/fog.md` | Fog of War: симуляция, Divine Blessing, оверлей на миникарте |
-| `rules/match-network.md` | Старт матча, снапшоты, бонус-оверлей, host drop / split-brain |
+| `rules/fog.md` | Fog of War: симуляция, Divine Blessing, миникарта, cull презентации в тумане |
+| `rules/match-network.md` | Старт матча, снапшоты 30 Гц / v20 splash, конец матча, return-to-lobby |
 | `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |
 | `rules/human-unit-bonuses.md` | PRE-006a: BonusSlot, 6 механик Людей, UI оверлея, контент-пайплайн |
 | `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |

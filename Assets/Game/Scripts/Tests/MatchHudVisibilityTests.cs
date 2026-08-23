@@ -36,5 +36,13 @@ namespace Game.Tests
             Assert.IsTrue(MatchHudVisibility.ShouldShowBarracksTimer(0, 0));
             Assert.IsFalse(MatchHudVisibility.ShouldShowBarracksTimer(1, 0));
         }
+
+        [Test]
+        public void ShouldShowEndResultsFallback_WhenEndAndNotShown()
+        {
+            Assert.IsTrue(MatchHudVisibility.ShouldShowEndResultsFallback(resultsShown: false, MatchPhase.End));
+            Assert.IsFalse(MatchHudVisibility.ShouldShowEndResultsFallback(resultsShown: true, MatchPhase.End));
+            Assert.IsFalse(MatchHudVisibility.ShouldShowEndResultsFallback(resultsShown: false, MatchPhase.Early));
+        }
     }
 }

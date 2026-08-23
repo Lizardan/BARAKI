@@ -24,6 +24,12 @@ namespace Game.UI
             return phase != MatchPhase.End;
         }
 
+        /// <summary>
+        /// Results overlay if the match-ended event was missed but the phase is already End.
+        /// </summary>
+        public static bool ShouldShowEndResultsFallback(bool resultsShown, MatchPhase phase) =>
+            !resultsShown && phase == MatchPhase.End;
+
         /// <summary>Wave countdown labels are local-player only (no enemy barracks intel).</summary>
         public static bool ShouldShowBarracksTimer(int barracksOwnerSlot, int localPlayerSlot) =>
             barracksOwnerSlot == localPlayerSlot;

@@ -33,6 +33,7 @@ namespace Game.Gameplay.Match
             public float PendingImpactFxSeconds = -1f;
             public bool IsFogHidden;
             public Renderer[] CachedRenderers;
+            public ParticleSystem[] CachedParticleSystems;
             public UnitRole Role;
             public bool IsParkedAtBase;
             /// <summary>World model scale relative to melee creep (titan ≈ 3).</summary>
@@ -74,6 +75,17 @@ namespace Game.Gameplay.Match
         readonly Dictionary<int, Transform> _projectileVisuals = new();
         readonly Dictionary<int, bool> _projectileHitsBuilding = new();
         readonly HashSet<int> _projectileSplashIds = new();
+        readonly HashSet<int> _aliveUnitIds = new();
+        readonly List<int> _unitsToRemove = new();
+        readonly HashSet<int> _aliveProjectileIds = new();
+        readonly List<int> _projectilesToRemove = new();
+        readonly Stack<GameObject>[] _projectilePools =
+        {
+            new Stack<GameObject>(),
+            new Stack<GameObject>(),
+            new Stack<GameObject>(),
+        };
+        readonly Dictionary<int, int> _projectilePoolKind = new();
         Transform _root;
         Transform _projectileRoot;
         static Material s_auraDiscMaterial;
@@ -177,11 +189,11 @@ namespace Game.Gameplay.Match
 
         void SyncVisuals(MatchController controller, MatchCombatSystem combat)
         {
-            var aliveIds = new HashSet<int>();
+            _aliveUnitIds.Clear();
 
             foreach (var unit in combat.Units)
             {
-                aliveIds.Add(unit.UnitId);
+                _aliveUnitIds.Add(unit.UnitId);
                 if (!combat.TryGetUnitWorldPosition(unit, out var position))
                 {
                     continue;
@@ -202,7 +214,7 @@ namespace Game.Gameplay.Match
                 if (_runtime.TickMode == MatchTickMode.Client && !isFirstSpawn)
                 {
                     // Snapshot interpolation: sample the authoritative buffer at renderTime
-                    // (server time minus a small delay), so 15 Hz snapshots become smooth motion.
+                    // (server time minus a small delay), so 30 Hz snapshots become smooth motion.
                     var renderTime = ResolveClientRenderTime(controller);
                     if (combat.TryGetUnitRenderPair(
                             unit.UnitId,
@@ -268,6 +280,24 @@ namespace Game.Gameplay.Match
                     visual.Model.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 }
 
+                ApplyFogVisibility(visual, unit, position);
+                if (visual.IsFogHidden)
+                {
+                    if (visual.Animator != null)
+                    {
+                        visual.Animator.enabled = false;
+                    }
+
+                    ClearAuraFx(visual);
+                    visual.StatusBars.SetHealth(unit.CurrentHp / unit.Stats.MaxHp);
+                    if (unit.Stats.HasMana)
+                    {
+                        visual.StatusBars.SetMana(unit.CurrentMana / unit.Stats.MaxMana);
+                    }
+
+                    continue;
+                }
+
                 SyncAuraDisc(visual, unit, combat);
                 SyncSuperAmmoVisibility(visual, unit);
                 DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing);
@@ -278,20 +308,18 @@ namespace Game.Gameplay.Match
                 {
                     visual.StatusBars.SetMana(unit.CurrentMana / unit.Stats.MaxMana);
                 }
-
-                ApplyFogVisibility(visual, unit, position);
             }
 
-            var toRemove = new List<int>();
+            _unitsToRemove.Clear();
             foreach (var pair in _visuals)
             {
-                if (!aliveIds.Contains(pair.Key))
+                if (!_aliveUnitIds.Contains(pair.Key))
                 {
-                    toRemove.Add(pair.Key);
+                    _unitsToRemove.Add(pair.Key);
                 }
             }
 
-            foreach (var unitId in toRemove)
+            foreach (var unitId in _unitsToRemove)
             {
                 if (_visuals.TryGetValue(unitId, out var visual) && visual?.Root != null)
                 {
@@ -361,6 +389,38 @@ namespace Game.Gameplay.Match
             if (visual.PickCollider != null)
             {
                 visual.PickCollider.enabled = !hidden;
+            }
+
+            if (visual.Animator != null)
+            {
+                visual.Animator.enabled = !hidden;
+            }
+
+            if (visual.CachedParticleSystems == null)
+            {
+                visual.CachedParticleSystems = visual.Root.GetComponentsInChildren<ParticleSystem>(true);
+            }
+
+            foreach (var particles in visual.CachedParticleSystems)
+            {
+                if (particles == null)
+                {
+                    continue;
+                }
+
+                if (hidden)
+                {
+                    particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+                else if (!particles.isPlaying)
+                {
+                    particles.Play(true);
+                }
+            }
+
+            if (hidden)
+            {
+                ClearAuraFx(visual);
             }
         }
 
@@ -568,6 +628,11 @@ namespace Game.Gameplay.Match
                 var building = _runtime?.Controller?.Buildings?.GetByInstanceId(unit.CurrentTargetBuildingInstanceId.Value);
                 if (building != null && !building.IsRuins)
                 {
+                    if (!CanSpawnFx(building.WorldPosition))
+                    {
+                        return;
+                    }
+
                     SpawnFx(_fxCatalog.BuildingImpact, building.WorldPosition, ImpactFxLifetimeSeconds);
                 }
 
@@ -575,7 +640,8 @@ namespace Game.Gameplay.Match
             }
 
             if (unit.CurrentTargetId.HasValue
-                && combat.TryGetUnitWorldPosition(unit.CurrentTargetId.Value, out var targetPosition))
+                && combat.TryGetUnitWorldPosition(unit.CurrentTargetId.Value, out var targetPosition)
+                && CanSpawnFx(targetPosition))
             {
                 SpawnFx(_fxCatalog.Blood, targetPosition, BloodFxLifetimeSeconds);
             }
@@ -612,7 +678,8 @@ namespace Game.Gameplay.Match
 
         void SpawnDeathFx(UnitVisual visual)
         {
-            if (!CanSpawnFx() || visual?.Root == null)
+            if (!CanSpawnFx(visual?.Root != null ? visual.Root.position : (Vector3?)null)
+                || visual?.Root == null)
             {
                 return;
             }
@@ -988,12 +1055,12 @@ namespace Game.Gameplay.Match
         void SyncProjectiles(MatchCombatSystem combat)
         {
             EnsureProjectileRoot();
-            var activeIds = new HashSet<int>();
+            _aliveProjectileIds.Clear();
             _projectileHitsBuilding.Clear();
 
             foreach (var projectile in combat.Projectiles)
             {
-                activeIds.Add(projectile.ProjectileId);
+                _aliveProjectileIds.Add(projectile.ProjectileId);
                 _projectileHitsBuilding[projectile.ProjectileId] =
                     projectile.TargetBuildingInstanceId.HasValue || projectile.IsBuildingAttack;
                 if (projectile.AppliesSplashAoe
@@ -1002,43 +1069,134 @@ namespace Game.Gameplay.Match
                     _projectileSplashIds.Add(projectile.ProjectileId);
                 }
 
+                var position = CombatProjectileTrajectory.Evaluate(
+                    projectile.StartPosition,
+                    projectile.TargetPosition,
+                    projectile.ResolvePresentationProgress(),
+                    projectile.IsParabolic);
+                var revealed = IsPresentationRevealed(position);
+
+                if (!revealed)
+                {
+                    if (_projectileVisuals.TryGetValue(projectile.ProjectileId, out var hidden)
+                        && hidden != null)
+                    {
+                        RecycleProjectileVisual(projectile.ProjectileId, hidden);
+                    }
+
+                    continue;
+                }
+
                 if (!_projectileVisuals.TryGetValue(projectile.ProjectileId, out var visual)
                     || visual == null)
                 {
-                    var visualObject = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, _projectileRoot);
-                    visual = visualObject.transform;
+                    visual = RentProjectileVisual(projectile).transform;
                     _projectileVisuals[projectile.ProjectileId] = visual;
                 }
 
                 CombatAttackVisualBuilder.UpdateProjectileTransform(visual, projectile);
             }
 
-            var toRemove = new List<int>();
+            _projectilesToRemove.Clear();
             foreach (var pair in _projectileVisuals)
             {
-                if (!activeIds.Contains(pair.Key))
+                if (!_aliveProjectileIds.Contains(pair.Key))
                 {
-                    toRemove.Add(pair.Key);
+                    _projectilesToRemove.Add(pair.Key);
                 }
             }
 
-            foreach (var projectileId in toRemove)
+            foreach (var projectileId in _projectilesToRemove)
             {
                 if (_projectileVisuals.TryGetValue(projectileId, out var visual) && visual != null)
                 {
                     var impactPosition = visual.position;
                     SpawnProjectileImpactFx(projectileId, impactPosition);
-                    DestroyManaged(visual.gameObject);
+                    RecycleProjectileVisual(projectileId, visual);
+                }
+                else
+                {
+                    _projectileVisuals.Remove(projectileId);
+                    _projectileSplashIds.Remove(projectileId);
+                    _projectilePoolKind.Remove(projectileId);
+                }
+            }
+        }
+
+        GameObject RentProjectileVisual(CombatProjectileState projectile)
+        {
+            var kind = ResolveProjectilePoolKind(projectile);
+            var pool = _projectilePools[kind];
+            while (pool.Count > 0)
+            {
+                var recycled = pool.Pop();
+                if (recycled == null)
+                {
+                    continue;
                 }
 
-                _projectileVisuals.Remove(projectileId);
-                _projectileSplashIds.Remove(projectileId);
+                recycled.SetActive(true);
+                ResetProjectileTrails(recycled);
+                _projectilePoolKind[projectile.ProjectileId] = kind;
+                return recycled;
+            }
+
+            var created = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, _projectileRoot);
+            _projectilePoolKind[projectile.ProjectileId] = kind;
+            return created;
+        }
+
+        void RecycleProjectileVisual(int projectileId, Transform visual)
+        {
+            _projectileVisuals.Remove(projectileId);
+            _projectileSplashIds.Remove(projectileId);
+            if (visual == null)
+            {
+                _projectilePoolKind.Remove(projectileId);
+                return;
+            }
+
+            if (!_projectilePoolKind.TryGetValue(projectileId, out var kind))
+            {
+                kind = 0;
+            }
+
+            _projectilePoolKind.Remove(projectileId);
+            ResetProjectileTrails(visual.gameObject);
+            visual.gameObject.SetActive(false);
+            visual.SetParent(_projectileRoot, false);
+            _projectilePools[kind].Push(visual.gameObject);
+        }
+
+        static int ResolveProjectilePoolKind(CombatProjectileState projectile)
+        {
+            if (projectile.AppliesSplashAoe
+                && projectile.AttackerRole == UnitRole.Super
+                && !projectile.IsBuildingAttack)
+            {
+                return 2;
+            }
+
+            if (projectile.AttackerRole is UnitRole.Caster or UnitRole.Hero)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        static void ResetProjectileTrails(GameObject visual)
+        {
+            var trails = visual.GetComponentsInChildren<TrailRenderer>(true);
+            for (var i = 0; i < trails.Length; i++)
+            {
+                trails[i].Clear();
             }
         }
 
         void SpawnProjectileImpactFx(int projectileId, Vector3 impactPosition)
         {
-            if (!CanSpawnFx())
+            if (!CanSpawnFx(impactPosition))
             {
                 return;
             }
@@ -1052,7 +1210,7 @@ namespace Game.Gameplay.Match
 
         void SpawnCatapultSplashDisc(Vector3 impactPosition)
         {
-            if (!CanSpawnFx() || _root == null)
+            if (!CanSpawnFx(impactPosition) || _root == null)
             {
                 return;
             }
@@ -1085,7 +1243,7 @@ namespace Game.Gameplay.Match
 
         void SpawnFx(GameObject prefab, Vector3 position, float lifetimeSeconds)
         {
-            if (!CanSpawnFx() || prefab == null)
+            if (!CanSpawnFx(position) || prefab == null)
             {
                 return;
             }
@@ -1115,6 +1273,16 @@ namespace Game.Gameplay.Match
         {
             var def = cast.Def;
             if (def == null || def.Fx.Color.a <= 0f)
+            {
+                return;
+            }
+
+            if (!IsPresentationRevealed(cast.CenterPosition))
+            {
+                return;
+            }
+
+            if (_visuals.TryGetValue(cast.CasterUnitId, out var casterVisual) && casterVisual.IsFogHidden)
             {
                 return;
             }
@@ -1201,7 +1369,34 @@ namespace Game.Gameplay.Match
             return true;
         }
 
-        bool CanSpawnFx() => Application.isPlaying && _fxCatalog != null;
+        bool CanSpawnFx() => CanSpawnFx(null);
+
+        bool CanSpawnFx(Vector3? worldPosition)
+        {
+            if (!Application.isPlaying || _fxCatalog == null)
+            {
+                return false;
+            }
+
+            if (!worldPosition.HasValue)
+            {
+                return true;
+            }
+
+            return IsPresentationRevealed(worldPosition.Value);
+        }
+
+        bool IsPresentationRevealed(Vector3 worldPosition)
+        {
+            if (_fogOfWar == null || !_fogOfWar.IsInitialized || _fogOfWar.FogDisabled)
+            {
+                return true;
+            }
+
+            return FogVisionRules.CanSpawnPresentationFx(
+                _fogOfWar.FogDisabled,
+                _fogOfWar.IsRevealed(worldPosition));
+        }
 
         static string ResolveRaceId(MatchUnitState unit, MatchController controller)
         {
@@ -1399,6 +1594,18 @@ namespace Game.Gameplay.Match
             }
 
             _projectileVisuals.Clear();
+            _projectilePoolKind.Clear();
+            for (var i = 0; i < _projectilePools.Length; i++)
+            {
+                while (_projectilePools[i].Count > 0)
+                {
+                    var pooled = _projectilePools[i].Pop();
+                    if (pooled != null)
+                    {
+                        DestroyManaged(pooled);
+                    }
+                }
+            }
 
             if (_projectileRoot != null)
             {

@@ -204,10 +204,7 @@ namespace Game.Gameplay.Match
             var visualCatalog = ResolveUnitVisualCatalog();
             Controller.UnitVisualCatalog = visualCatalog;
             Controller.Combat.UnitVisualCatalog = visualCatalog;
-            if (_abilityCatalog != null)
-            {
-                Controller.Combat.AbilityCatalog = _abilityCatalog;
-            }
+            Controller.Combat.AbilityCatalog = ResolveAbilityCatalog();
 
             Controller.StartMatch(config);
             _isMatchStarted = true;
@@ -241,6 +238,27 @@ namespace Game.Gameplay.Match
 
             var presenter = MatchCombatPresenter.Current;
             return presenter != null ? presenter.VisualCatalog : null;
+        }
+
+        UnitAbilityCatalog ResolveAbilityCatalog()
+        {
+            if (_abilityCatalog != null)
+            {
+                return _abilityCatalog;
+            }
+
+            var fromResources = Resources.Load<UnitAbilityCatalog>("Catalogs/UnitAbilityCatalog");
+            if (fromResources != null)
+            {
+                return fromResources;
+            }
+
+#if UNITY_EDITOR
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<UnitAbilityCatalog>(
+                "Assets/Game/ScriptableObjects/Catalogs/UnitAbilityCatalog.asset");
+#else
+            return null;
+#endif
         }
 
         void EnsureFogOfWar(int localPlayerSlot)

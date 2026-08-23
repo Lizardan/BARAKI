@@ -244,6 +244,10 @@ ObjectField не затирает префаб вне этих папок.
 
 ## Рантайм
 
+Клиент играет `AbilityFx.VfxPrefab` из **своего** `UnitAbilityCatalog` (`Find(abilityId)`),
+не с хоста. Пустой префаб после Find логируется один раз на abilityId (`EmptyVfxPrefab`).
+Def без `Behaviour`, но с `VfxPrefab`, на клиенте не дропается.
+
 - Каст: `MatchCombatPresenter.ShowAbilityFx` → instantiate `VfxPrefab` →
   `AbilityVfxPlacement.ApplyOneShotTransform` → `AbilityVfxTint.Apply` → scale prefab × `AbilityFx.Scale`.
   Lifetime 3 с; Frost — `StunSeconds`. Ground = `GroundY` 0.1. Impact = `Elevate(cast.CenterPosition)`.

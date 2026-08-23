@@ -116,10 +116,16 @@ namespace Game.Gameplay.Networking
             }
 
             // Previous listen-host may no longer be slot 0 after a prior migration.
-            BeginHostLost(MatchNetworkSession.ListenHostSlot, occupied, matchInProgress: true);
+            var matchInProgress = MatchRematchRules.IsMatchInProgressForHostMigration(
+                MatchRuntime.Current?.Controller?.Phase ?? MatchPhase.Lobby);
+            BeginHostLost(MatchNetworkSession.ListenHostSlot, occupied, matchInProgress);
             if (Phase != HostMigrationRules.MigrationPhase.Aborted)
             {
                 BeginStateTransferFromMatch();
+            }
+            else if (!matchInProgress)
+            {
+                MatchNetworkSession.LoadLobbyPreservingNetwork();
             }
         }
 

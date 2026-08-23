@@ -159,6 +159,38 @@ namespace Game.Tests
             Object.DestroyImmediate(root);
         }
 
+        [Test]
+        public void CreateProjectileVisual_SuperSplash_BuildsCatapultRock()
+        {
+            var projectile = new CombatProjectileState(
+                projectileId: 7,
+                attackerUnitId: 1,
+                targetUnitId: 3,
+                attackerOwnerSlot: 0,
+                attackerRole: UnitRole.Super,
+                attackerRaceId: Game.Core.GameIds.Races.Human,
+                rawDamage: 12f,
+                flightDuration: 0.6f,
+                startPosition: Vector3.zero,
+                targetPosition: Vector3.forward * 6f,
+                isParabolic: true,
+                appliesSplashAoe: true);
+            var root = new GameObject("Root");
+            var visual = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, root.transform);
+
+            var bolt = visual.transform.Find("Bolt");
+            Assert.IsNotNull(bolt, "Catapult rock is parented as Bolt");
+            var meshFilter = bolt.GetComponentInChildren<MeshFilter>(true);
+            Assert.IsNotNull(meshFilter?.sharedMesh);
+            var rockPrefab = Resources.Load<GameObject>("Art/ProjectileCatapultRock");
+            Assert.IsNotNull(rockPrefab);
+            var rockMesh = rockPrefab.GetComponentInChildren<MeshFilter>(true)?.sharedMesh;
+            Assert.AreSame(rockMesh, meshFilter.sharedMesh, "Bonus Super splash must use the catapult rock prefab, not the ballista bolt.");
+
+            Object.DestroyImmediate(visual);
+            Object.DestroyImmediate(root);
+        }
+
         static void AssertBallistaBolt(GameObject visual)
         {
             var bolt = visual.transform.Find("Bolt");

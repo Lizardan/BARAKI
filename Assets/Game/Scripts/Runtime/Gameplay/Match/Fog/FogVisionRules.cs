@@ -97,5 +97,12 @@ namespace Game.Gameplay.Match.Fog
                 visionRadius,
                 fogDisabled);
         }
+
+        /// <summary>
+        /// One-shot VFX / projectile meshes spawn only when the point is revealed, or fog is off.
+        /// Simulation is unchanged.
+        /// </summary>
+        public static bool CanSpawnPresentationFx(bool fogDisabled, bool isRevealed) =>
+            fogDisabled || isRevealed;
     }
 }

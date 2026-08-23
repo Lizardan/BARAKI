@@ -7,8 +7,8 @@ namespace Game.Gameplay.Networking
     {
         public const float DefaultCatchUpPerSecond = 14f;
 
-        /// <summary>Render-delay applied on clients before sampling the snapshot buffer (≈2 snapshots).</summary>
-        public const float ClientInterpDelaySeconds = 0.13f;
+        /// <summary>Render-delay applied on clients before sampling the snapshot buffer (2 snapshots at 30 Hz).</summary>
+        public const float ClientInterpDelaySeconds = 2f / 30f;
 
         /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
         public const float HostCatchUpPerSecond = 40f;

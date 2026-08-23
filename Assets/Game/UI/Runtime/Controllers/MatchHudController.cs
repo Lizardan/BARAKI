@@ -159,13 +159,13 @@ namespace Game.UI.Controllers
 
             var phase = controller != null ? controller.Phase : MatchPhase.Lobby;
             var isRunning = controller != null && controller.IsRunning;
+            if (MatchHudVisibility.ShouldShowEndResultsFallback(_resultsShown, phase) && controller != null)
+            {
+                ShowResults(controller.WinnerSlot ?? 0);
+            }
+
             if (MatchHudVisibility.ShouldClearRunningHud(controller != null, isRunning, phase))
             {
-                if (phase == MatchPhase.End && controller != null && !_resultsShown)
-                {
-                    ShowResults(controller.WinnerSlot ?? 0);
-                }
-
                 if (phase != MatchPhase.End)
                 {
                     ClearHud();
@@ -774,6 +774,12 @@ namespace Game.UI.Controllers
 
         void OnRematchClicked()
         {
+            if (MatchNetworkSession.IsNetworked)
+            {
+                MatchNetworkSession.RequestReturnToLobby();
+                return;
+            }
+
             LeaveAndLoadAsync(GameSceneNames.Lobby).Forget();
         }
 

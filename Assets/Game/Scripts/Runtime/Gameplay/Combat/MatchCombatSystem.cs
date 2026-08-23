@@ -41,6 +41,7 @@ namespace Game.Gameplay.Combat
         int _spellCastSerial;
         int _lastAppliedSpellSerial;
         int _lastAppliedProjectileId;
+        readonly HashSet<int> _loggedMissingVfxAbilityIds = new();
 
         sealed class PendingBarracksSpawn
         {
@@ -141,6 +142,7 @@ namespace Game.Gameplay.Combat
             _spellCastSerial = 0;
             _lastAppliedSpellSerial = 0;
             _lastAppliedProjectileId = 0;
+            _loggedMissingVfxAbilityIds.Clear();
             _players.AddRange(players);
             _graph = graph;
             _routes = LaneRouteRegistry.Build(graph);
@@ -859,7 +861,8 @@ namespace Game.Gameplay.Combat
                     snap.IsParabolic,
                     targetBuilding,
                     sourceBuilding,
-                    sourceBuildingId));
+                    sourceBuildingId,
+                    snap.AppliesSplashAoe));
             }
         }
 
@@ -891,6 +894,7 @@ namespace Game.Gameplay.Combat
                 TargetBuildingInstanceId = projectile.TargetBuildingInstanceId ?? -1,
                 SourceBuildingInstanceId = projectile.SourceBuildingInstanceId ?? -1,
                 SourceBuildingId = projectile.SourceBuildingId ?? string.Empty,
+                AppliesSplashAoe = projectile.AppliesSplashAoe,
             });
         }
 
@@ -922,10 +926,23 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                // FX-only defs (main Divine Blessing smites) have no behaviour — still play VFX.
-                if (def.Behaviour == null && !MainExtraAbilityFxDefs.TryGet(snap.AbilityId, out _))
+                // FX-only defs (Studio VfxPrefab, no behaviour) still play on clients.
+                if (def.Behaviour == null
+                    && def.Fx.VfxPrefab == null
+                    && !MainExtraAbilityFxDefs.TryGet(snap.AbilityId, out _))
                 {
                     continue;
+                }
+
+                if (def.Fx.VfxPrefab == null
+                    && !_loggedMissingVfxAbilityIds.Contains(def.AbilityId))
+                {
+                    _loggedMissingVfxAbilityIds.Add(def.AbilityId);
+                    PlaytestLog.Warn(
+                        "AbilityFx",
+                        "EmptyVfxPrefab",
+                        ("abilityId", def.AbilityId),
+                        ("name", def.DisplayName));
                 }
 
                 _presenterAbilityCasts.Add(new AbilityCastEvent(

@@ -23,5 +23,15 @@ namespace Game.Tests
             Assert.IsFalse(NetworkUnitVisualRules.ShouldLerpPositions(MatchTickMode.Server));
             Assert.IsTrue(NetworkUnitVisualRules.ShouldLerpPositions(MatchTickMode.Client));
         }
+
+        [Test]
+        public void ClientInterpDelay_IsTwoSnapshotsAtThirtyHz()
+        {
+            Assert.AreEqual(30f, MatchNetworkAuthority.SnapshotHz);
+            Assert.AreEqual(
+                2f / MatchNetworkAuthority.SnapshotHz,
+                NetworkUnitVisualRules.ClientInterpDelaySeconds,
+                0.0001f);
+        }
     }
 }

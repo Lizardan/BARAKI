@@ -231,6 +231,40 @@ namespace Game.Tests
             Assert.IsTrue(restored.Projectiles[0].IsParabolic);
             Assert.AreEqual(7, restored.Projectiles[1].SourceBuildingInstanceId);
             Assert.AreEqual(GameIds.Buildings.Main, restored.Projectiles[1].SourceBuildingId);
+            Assert.IsFalse(restored.Projectiles[0].AppliesSplashAoe);
+        }
+
+        [Test]
+        public void RoundTrip_V20_PreservesProjectileSplashFlag()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Projectiles = new[]
+                {
+                    new MatchProjectileSnapshot
+                    {
+                        ProjectileId = 11,
+                        AttackerOwnerSlot = 1,
+                        AttackerRole = (byte)UnitRole.Super,
+                        StartX = 1f,
+                        FlightDuration = 0.4f,
+                        IsParabolic = true,
+                        TargetBuildingInstanceId = -1,
+                        SourceBuildingInstanceId = -1,
+                        SourceBuildingId = string.Empty,
+                        AppliesSplashAoe = true,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+            Assert.AreEqual(1, restored.Projectiles.Length);
+            Assert.IsTrue(restored.Projectiles[0].AppliesSplashAoe);
+            Assert.AreEqual((byte)UnitRole.Super, restored.Projectiles[0].AttackerRole);
         }
 
         [Test]

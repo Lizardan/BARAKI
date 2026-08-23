@@ -16,7 +16,7 @@ Listen-host (host-as-server) + NGO. Клиенты **не** тикают сим�
 
 - Хост читает `MatchController` напрямую.
 - Клиент предпочитает снапшот v13, но **если снапшота ещё нет** — fallback на локальный controller после `StartMatch`. Иначе оверлей пустой, а часы зависают на `00:00`.
-- Снапшот публикуется сразу в `BeginMatchOnServer` (`PublishSnapshotNow`), не только на 15 Hz.
+- Снапшот публикуется сразу в `BeginMatchOnServer` (`PublishSnapshotNow`), не только по таймеру `SnapshotHz`.
 - `MatchSnapshotCodec.Deserialize` принимает любую версию `1..CurrentVersion`. Хардкод allow-list (`1 or 2 or … or 17`) при бампе версии роняет **каждый** клиентский RPC (`Unsupported snapshot version`) — оверлей бонуса пустой, часы `00:00`, после выхода хоста клиенты уходят в Offline split-brain.
 
 ## Start → Early
@@ -31,20 +31,38 @@ Capture для миграции: last-good bytes, иначе **локальны�
 
 ## Плавный рендер юнитов (snapshot interpolation)
 
-Хост тикает симуляцию 30 Гц, снапшоты идут 15 Гц + джиттер — прямое применение на клиенте дёргает
-юнитов. Рендер клиентов построен на **snapshot interpolation** по серверному времени:
+Хост тикает симуляцию 30 Гц, снапшоты — `MatchNetworkAuthority.SnapshotHz = 30` (два сэмпла
+в буфере, меньше ощущаемый лаг, чем на 15 Гц). Прямое применение без задержки дёргает юнитов.
+Рендер клиентов построен на **snapshot interpolation** по серверному времени:
 
 - `MatchCombatSystem.ApplyAuthoritativeUnits(..., matchTimeSeconds)` пишет каждый снапшот юнита в
   `UnitRenderTrack` (кольцевой буфер до 8 сэмплов, дубликаты/обратные таймстампы отбрасываются).
   Один track на `unitId`, чистится при удалении юнита.
 - Презентер (`MatchCombatPresenter`) на клиенте семплирует пару по `renderTime`:
   `serverTimeEstimate = snapshot.MatchTimeSeconds + (Time.time - MatchRuntime.LastSnapshotArrivalRealtime)`,
-  `renderTime = serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds` (0.13 с ≈ 2 снапшота).
+  `renderTime = serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds`
+  (`2 / SnapshotHz` ≈ 0.067 с).
   Позиция — `Vector3.Lerp(prev, next, alpha)`, поворот — `ResolveRenderFacing` (анти-crossing по world-up),
   `BehaviorState` / `AttackSwingSerial` — из ближайшего по `alpha` сэмпла (анимации тоже плавные).
 - Хост/оффлайн: позиция догоняется `StepToward(HostCatchUpPerSecond = 40f)` (тики 30 Гц «ступенчатые»),
   поворот — прежний `Slerp(8f * dt)`. Первый спавн визуала всегда — мгновенный snap.
 - `LastSnapshotArrivalRealtime` сбрасывается на `OnSessionStarted` и не выставляется вне `ApplyNetworkSnapshot`.
+
+Снаряды **не** интерполируют снапшотные позиции (в wire — one-shot spawn). Меш летит по
+известной баллистике: `CombatProjectileState.ResolvePresentationProgress` от `SpawnRealtime`
+(кадры / subframe), урон по-прежнему на 30 Гц `Elapsed`. v20 пишет `AppliesSplashAoe` —
+клиентский бонус-Super рисует камень катапульты, не болт.
+
+`QualitySettings.vSyncCount = 1` (ритм монитора, без тиринга; не `targetFrameRate = 60`).
+
+## Конец матча и реванш
+
+- В `EndMatch` сразу `PublishSnapshotNow` + короткий `NotifyMatchEndedClientRpc(winnerSlot)`.
+  Пока фаза `End`, снапшоты с `WinnerSlot` продолжают уходить; пауза **не** глушит публикацию End.
+- HUD: если `Phase == End` и оверлей ещё не показан — `ShouldShowEndResultsFallback`.
+- «Реванш» в сети: `MatchNetworkSession.RequestReturnToLobby` → ServerRpc → всем грузить Lobby
+  **без** `Shutdown()` NGO. `MatchRematchRules.IsMatchInProgressForHostMigration(End) == false`.
+- «В меню» остаётся локальным выходом (`LeaveMatch`).
 
 ## Прочее
 

@@ -203,11 +203,13 @@ namespace Game.Gameplay.Networking
         /// <summary>-1 when not fired by a building.</summary>
         public int SourceBuildingInstanceId;
         public string SourceBuildingId;
+        /// <summary>Bonus Super catapult splash. False on pre-v20 snapshots.</summary>
+        public bool AppliesSplashAoe;
     }
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 19;
+        public const int CurrentVersion = 20;
 
         public static byte[] Serialize(MatchSnapshot snapshot)
         {
@@ -370,6 +372,7 @@ namespace Game.Gameplay.Networking
                     writer.Write(p.TargetBuildingInstanceId);
                     writer.Write(p.SourceBuildingInstanceId);
                     writer.Write(p.SourceBuildingId ?? string.Empty);
+                    writer.Write(p.AppliesSplashAoe);
                 }
             }
 
@@ -668,6 +671,7 @@ namespace Game.Gameplay.Networking
                         TargetBuildingInstanceId = reader.ReadInt32(),
                         SourceBuildingInstanceId = reader.ReadInt32(),
                         SourceBuildingId = reader.ReadString(),
+                        AppliesSplashAoe = version >= 20 && reader.ReadBoolean(),
                     };
                 }
             }

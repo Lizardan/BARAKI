@@ -205,6 +205,17 @@ namespace Game.Gameplay.Networking
             RequestStartServerRpc();
         }
 
+        public void ClearMatchStarted()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            _matchStarted.Value = false;
+            BumpRevision();
+        }
+
         public void RequestReconnect(string sessionToken)
         {
             if (IsServer)
@@ -944,7 +955,8 @@ namespace Game.Gameplay.Networking
             coordinator.BeginHostLost(
                 previousHostSlot,
                 HostMigrationRules.BuildEligibleOccupied(occupied, reserved),
-                matchInProgress: true);
+                matchInProgress: MatchRematchRules.IsMatchInProgressForHostMigration(
+                    MatchRuntime.Current?.Controller?.Phase ?? MatchPhase.End));
             if (coordinator.Phase == HostMigrationRules.MigrationPhase.Aborted)
             {
                 return;

@@ -36,6 +36,10 @@ namespace Game.Gameplay.Combat
             TargetPosition = targetPosition;
             IsParabolic = isParabolic;
             AppliesSplashAoe = appliesSplashAoe;
+            if (UnityEngine.Application.isPlaying)
+            {
+                SpawnRealtime = UnityEngine.Time.time;
+            }
         }
 
         public int ProjectileId { get; }
@@ -58,7 +62,35 @@ namespace Game.Gameplay.Combat
         /// <summary>Bonus Super (catapult): splash on impact; host damage only.</summary>
         public bool AppliesSplashAoe { get; }
         public float Elapsed { get; set; }
+        /// <summary>-1 when unknown (EditMode). Wall-clock spawn for frame-rate presentation.</summary>
+        public float SpawnRealtime { get; set; } = -1f;
 
-        public float Progress => FlightDuration > 0f ? Elapsed / FlightDuration : 1f;
+        public float Progress => ResolvePresentationProgress();
+
+        public float ResolvePresentationElapsed() =>
+            ResolvePresentationElapsed(UnityEngine.Time.time);
+
+        public float ResolvePresentationElapsed(float now)
+        {
+            if (SpawnRealtime >= 0f)
+            {
+                return UnityEngine.Mathf.Max(Elapsed, now - SpawnRealtime);
+            }
+
+            return Elapsed;
+        }
+
+        public float ResolvePresentationProgress() =>
+            ResolvePresentationProgress(UnityEngine.Time.time);
+
+        public float ResolvePresentationProgress(float now)
+        {
+            if (FlightDuration <= 0f)
+            {
+                return 1f;
+            }
+
+            return UnityEngine.Mathf.Clamp01(ResolvePresentationElapsed(now) / FlightDuration);
+        }
     }
 }

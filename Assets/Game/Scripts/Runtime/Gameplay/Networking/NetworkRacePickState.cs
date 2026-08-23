@@ -109,6 +109,37 @@ namespace Game.Gameplay.Networking
             NotifyChanged();
         }
 
+        /// <summary>Force a fresh race-pick session after rematch return-to-lobby.</summary>
+        public void ResetForRematch()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            var playerCount = _playerCount.Value;
+            if (playerCount <= 0)
+            {
+                playerCount = MatchNetworkSession.PlayerCount;
+            }
+
+            if (!MatchModeRules.IsValidPlayerCount(playerCount))
+            {
+                return;
+            }
+
+            _matchSimStarted.Value = false;
+            _racePicks.Clear();
+            for (var slot = 0; slot < playerCount; slot++)
+            {
+                _racePicks.Add(default);
+            }
+
+            _playerCount.Value = playerCount;
+            FillLocalStandInPicks();
+            NotifyChanged();
+        }
+
         void RestoreSessionAfterRebind(int playerCount)
         {
             _playerCount.Value = playerCount;

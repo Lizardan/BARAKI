@@ -186,6 +186,11 @@ namespace Game.Gameplay.Combat
             }
 
             _active.Add(projectile);
+            if (projectile.SpawnRealtime < 0f && UnityEngine.Application.isPlaying)
+            {
+                projectile.SpawnRealtime = UnityEngine.Time.time;
+            }
+
             if (projectile.ProjectileId >= _nextId)
             {
                 _nextId = projectile.ProjectileId + 1;
