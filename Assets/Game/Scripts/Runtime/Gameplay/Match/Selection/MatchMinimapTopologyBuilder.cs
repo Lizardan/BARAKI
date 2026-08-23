@@ -31,13 +31,13 @@ namespace Game.Gameplay.Match.Selection
             var halfSize = layout.ArenaRadius;
 
             AddBasePads(filledRects, layout);
-
+            AppendClosedPolyline(
+                roadSegments,
+                PathWaypoints(DuelPathBuilder.BuildSharedFlankRing(halfSize)));
             AddSegment(
                 roadSegments,
                 MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(-halfSize, 0f, 0f)),
                 MatchArenaGenerator.RotateAuthoredToLayout(new Vector3(halfSize, 0f, 0f)));
-            AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: true, halfSize));
-            AppendPolyline(roadSegments, DuelPathBuilder.SampleStadiumHalf(northSide: false, halfSize));
 
             return new MatchMinimapTopology(filledRects, roadSegments);
         }
@@ -65,16 +65,12 @@ namespace Game.Gameplay.Match.Selection
             var roadSegments = new List<MatchMinimapSegment>();
 
             AddBasePads(filledRects, layout);
+            var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, layout.PlayerCount);
+            AppendClosedPolyline(roadSegments, PathWaypoints(ring));
+            AppendCenterSpokes(roadSegments, layout);
 
-            if (layout.PlayerCount == 3)
+            if (layout.PlayerCount >= 5)
             {
-                AppendN3Perimeter(roadSegments, layout);
-            }
-            else
-            {
-                var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, layout.PlayerCount);
-                AppendPolyline(roadSegments, PathWaypoints(ring));
-                AppendCenterSpokes(roadSegments, layout);
                 var exit = CircularRingRoadGeometry.ExitStraightLength;
                 foreach (var slot in layout.Slots)
                 {
@@ -107,47 +103,6 @@ namespace Game.Gameplay.Match.Selection
             foreach (var slot in layout.Slots)
             {
                 AddSegment(segments, slot.BasePosition, Vector3.zero);
-            }
-        }
-
-        static void AppendN3Perimeter(List<MatchMinimapSegment> segments, MatchArenaLayout layout)
-        {
-            var radius = layout.ArenaRadius;
-            var curve = new List<Vector3>(CircularRingRoadGeometry.ExitCurveSamples + 1);
-            var n = layout.PlayerCount;
-
-            for (var i = 0; i < n; i++)
-            {
-                var slot = layout.Slots[i];
-                var next = layout.Slots[(i + 1) % n];
-
-                curve.Clear();
-                CircularRingRoadGeometry.SampleExitCurve(
-                    slot, Game.Core.GameIds.Buildings.BarracksRight, layout, curve);
-                AppendPolyline(segments, curve);
-
-                var from = CircularRingRoadGeometry.GetExitCurveJoinPoint(
-                    slot, Game.Core.GameIds.Buildings.BarracksRight, radius);
-                var to = CircularRingRoadGeometry.GetExitCurveJoinPoint(
-                    next, Game.Core.GameIds.Buildings.BarracksLeft, radius);
-                AddSegment(segments, from, to);
-
-                curve.Clear();
-                CircularRingRoadGeometry.SampleExitCurve(
-                    next, Game.Core.GameIds.Buildings.BarracksLeft, layout, curve);
-                AppendPolyline(segments, curve);
-            }
-
-            AppendCenterSpokes(segments, layout);
-
-            foreach (var slot in layout.Slots)
-            {
-                var leftTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksLeft);
-                var rightTip = CircularRingRoadGeometry.GetSideExitEnd(slot, Game.Core.GameIds.Buildings.BarracksRight);
-                var leftBarracks = slot.GetBuildingWorldPosition(Game.Core.GameIds.Buildings.BarracksLeft);
-                var rightBarracks = slot.GetBuildingWorldPosition(Game.Core.GameIds.Buildings.BarracksRight);
-                AddSegment(segments, leftBarracks, leftTip);
-                AddSegment(segments, rightBarracks, rightTip);
             }
         }
 
@@ -199,7 +154,25 @@ namespace Game.Gameplay.Match.Selection
                 points.Add(path.GetWaypoint(i));
             }
 
+            AppendClosedPolyline(segments, points);
+        }
+
+        static void AppendClosedPolyline(List<MatchMinimapSegment> segments, IReadOnlyList<Vector3> points)
+        {
             AppendPolyline(segments, points);
+            if (points == null || points.Count < 2)
+            {
+                return;
+            }
+
+            var first = points[0];
+            var last = points[points.Count - 1];
+            first.y = 0f;
+            last.y = 0f;
+            if ((first - last).sqrMagnitude > 0.01f)
+            {
+                AddSegment(segments, points[points.Count - 1], points[0]);
+            }
         }
 
         static void AppendPolyline(List<MatchMinimapSegment> segments, IReadOnlyList<Vector3> points)

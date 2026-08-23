@@ -35,5 +35,30 @@ namespace Game.Tests
         {
             Assert.AreEqual("FFA 5", MatchModeRules.GetModeTitle(5));
         }
+
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        public void GetModeSummary_KnownModes_AreNonEmpty(int n)
+        {
+            var summary = MatchModeRules.GetModeSummary(n);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(summary));
+            Assert.AreNotEqual(MatchModeRules.GetModeSummary(n + 10), summary);
+        }
+
+        [Test]
+        public void GetModeSummary_N2AndN4_DescribeDifferentMaps()
+        {
+            Assert.AreNotEqual(MatchModeRules.GetModeSummary(2), MatchModeRules.GetModeSummary(4));
+            StringAssert.Contains("коридора", MatchModeRules.GetModeSummary(2));
+            StringAssert.Contains("крестом", MatchModeRules.GetModeSummary(4));
+        }
+
+        [Test]
+        public void ModeMapNote_StatesBalanceIsShared()
+        {
+            StringAssert.Contains("карта", MatchModeRules.ModeMapNote);
+        }
     }
 }

@@ -231,8 +231,8 @@ Lobby → Countdown → GenerateArena → InProgress → Ended
 
 ## UI flow
 
-1. Main Menu → **Play Online**
-2. Lobby: **создать/войти** в лобби с фиксированным N, Ready
+1. Main Menu → вкладка **ИГРА**: клик по режиму (досье: схема карты + краткое описание), **В БОЙ** создаёт лобби с этим N (или **ПРИСОЕДИНИТЬСЯ** по коду)
+2. Lobby: Ready
 3. `Game.unity`: race pick → bonus overlay → Match HUD
 4. Results → rematch / lobby
 

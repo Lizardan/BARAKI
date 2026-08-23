@@ -13,6 +13,7 @@ namespace Game.UI
     {
         public const float AuthoredSize = 64f;
 
+        readonly float _panelSize;
         readonly MatchMinimapGeometryElement _geometry;
         readonly List<Vector2> _baseCenters = new();
         MatchMinimapTopology _topology;
@@ -20,13 +21,19 @@ namespace Game.UI
         float _arenaHalfPx;
 
         public ModeMapThumbnailElement()
+            : this(AuthoredSize)
         {
+        }
+
+        public ModeMapThumbnailElement(float panelSize)
+        {
+            _panelSize = Mathf.Max(1f, panelSize);
             AddToClassList("mm-mode__preview");
             pickingMode = PickingMode.Ignore;
-            style.width = AuthoredSize;
-            style.height = AuthoredSize;
-            style.minWidth = AuthoredSize;
-            style.minHeight = AuthoredSize;
+            style.width = _panelSize;
+            style.height = _panelSize;
+            style.minWidth = _panelSize;
+            style.minHeight = _panelSize;
             style.flexShrink = 0;
             style.overflow = Overflow.Hidden;
 
@@ -39,6 +46,8 @@ namespace Game.UI
             _geometry.style.bottom = 0f;
             Add(_geometry);
         }
+
+        public float PanelSize => _panelSize;
 
         public IReadOnlyList<Vector2> BaseCenters => _baseCenters;
 
@@ -56,7 +65,7 @@ namespace Game.UI
             _ = unusedDotHalf;
             if (_baseCenters.Count == 0)
             {
-                return new Vector2(AuthoredSize * 0.5f, AuthoredSize * 0.5f);
+                return new Vector2(_panelSize * 0.5f, _panelSize * 0.5f);
             }
 
             var min = _baseCenters[0];
@@ -89,8 +98,8 @@ namespace Game.UI
             _geometry.SetDrawData(
                 _topology,
                 _arenaRadius,
-                AuthoredSize,
-                AuthoredSize,
+                _panelSize,
+                _panelSize,
                 viewYawDegrees: 0f,
                 drawGround: false,
                 drawFilledRects: false);
@@ -125,12 +134,12 @@ namespace Game.UI
         Vector2 Project(Vector2 worldXZ) =>
             Project(worldXZ, MatchMinimapProjection.MapHalfExtent(_arenaRadius));
 
-        static Vector2 Project(Vector2 worldXZ, float mapHalfExtent)
+        Vector2 Project(Vector2 worldXZ, float mapHalfExtent)
         {
             var normalized = MatchMinimapProjection.WorldToNormalizedUnclamped(
                 new Vector3(worldXZ.x, 0f, worldXZ.y),
                 mapHalfExtent);
-            return MatchMinimapProjection.NormalizedToPanel(normalized, AuthoredSize, AuthoredSize);
+            return MatchMinimapProjection.NormalizedToPanel(normalized, _panelSize, _panelSize);
         }
     }
 }

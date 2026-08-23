@@ -15,13 +15,16 @@ namespace Game.UI.Controllers
     {
         public const float PreviewSize = ModeMapThumbnailElement.AuthoredSize;
 
-        public static VisualElement BuildPreview(int playerCount)
+        public static VisualElement BuildPreview(int playerCount) =>
+            BuildPreview(playerCount, ModeMapThumbnailElement.AuthoredSize);
+
+        public static VisualElement BuildPreview(int playerCount, float panelSize)
         {
             var n = Mathf.Clamp(playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);
             var layout = MatchArenaGenerator.Generate(n);
             var graph = LaneGraphBuilder.Build(layout);
             var topology = MatchMinimapTopologyBuilder.Build(layout, graph);
-            var element = new ModeMapThumbnailElement();
+            var element = new ModeMapThumbnailElement(panelSize);
             element.SetTopology(topology, layout.ArenaRadius);
             return element;
         }
@@ -30,7 +33,6 @@ namespace Game.UI.Controllers
         {
             var button = new Button { name = $"Mode_N{playerCount}" };
             button.AddToClassList("mm-mode");
-            button.style.flexShrink = 0;
             button.Add(BuildPreview(playerCount));
 
             var label = new Label(MatchModeRules.GetModeTitle(playerCount));

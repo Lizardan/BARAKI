@@ -130,6 +130,15 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BuildPreview_CustomSize_KeepsPanelSize()
+        {
+            var preview = ModeMapThumbnailBuilder.BuildPreview(4, 120f) as ModeMapThumbnailElement;
+            Assert.IsNotNull(preview);
+            Assert.AreEqual(120f, preview.PanelSize);
+            Assert.AreEqual(4, preview.BaseCenters.Count);
+        }
+
+        [Test]
         public void BuildModeButton_DisablesNonMvpModes()
         {
             var duel = ModeMapThumbnailBuilder.BuildModeButton(2);

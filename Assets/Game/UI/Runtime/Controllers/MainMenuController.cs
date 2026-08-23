@@ -25,6 +25,17 @@ namespace Game.UI.Controllers
         private const float IntroDuration = 0.4f;
         private const float SettingsAnimDuration = 0.24f;
         private const string OverlayHiddenClass = "ui-overlay--hidden";
+        private const string ModeSelectedClass = "mm-mode--selected";
+        private const string HubTabActiveClass = "mm__friends-tab--active";
+        private const string DockTabActiveClass = "mm__dock-tab--active";
+
+        private enum LeftMenuTab
+        {
+            Chat,
+            MatchHistory,
+            PublicGames,
+            Settings,
+        }
 
         [SerializeField] private UIDocument _uiDocument;
 
@@ -47,6 +58,17 @@ namespace Game.UI.Controllers
         private Button _returnToMatchButton;
         private Button _settingsButton;
         private Button _quitButton;
+        private Button _chatTabButton;
+        private Button _matchHistoryTabButton;
+        private Button _publicGamesTabButton;
+        private Button _chatSendButton;
+        private VisualElement _chatTabContent;
+        private VisualElement _matchHistoryTabContent;
+        private VisualElement _publicGamesTabContent;
+        private VisualElement _settingsTabContent;
+        private VisualElement _chatMessages;
+        private TextField _chatInput;
+        private LeftMenuTab _leftMenuTab = LeftMenuTab.Chat;
         private Button _settingsCloseButton;
         private Toggle _soundToggle;
         private Slider _volumeSlider;
@@ -56,6 +78,12 @@ namespace Game.UI.Controllers
         private VisualElement _modeSelectOverlay;
         private VisualElement _joinCodeRow;
         private VisualElement _modeGrid;
+        private VisualElement _modeDossierPreview;
+        private Label _modeDossierTitle;
+        private Label _modeDossierBody;
+        private Label _modeDossierNote;
+        private float _dossierMapPx;
+        private int _dossierMappedPlayerCount;
         private Button _createMatchButton;
         private Button _joinMatchButton;
         private Button _joinConfirmButton;
@@ -96,12 +124,19 @@ namespace Game.UI.Controllers
         private Button _editProfileButton;
         private Button _profileEditCloseButton;
         private Button _addFriendButton;
+        private Button _gameTabButton;
+        private Button _hubFriendsTabButton;
+        private VisualElement _gameTabContent;
+        private VisualElement _friendsHost;
+        private bool _hubGameTabActive = true;
+        private int _selectedPlayerCount = 4;
         private bool _isTransitioning;
         private bool _isSettingsOpen;
         private bool _isSettingsAnimating;
         private bool _isMatchEntryOpen;
         private bool _isModeSelectOpen;
         private bool _isProfileEditOpen;
+        private bool _isJoinUiOpen;
         private int _pendingAvatarId;
         private bool _overlayBlocksMenu;
         private void Awake()
@@ -129,6 +164,10 @@ namespace Game.UI.Controllers
             _modeSelectOverlay = _root.Q<VisualElement>("ModeSelectOverlay");
             _joinCodeRow = _root.Q<VisualElement>("JoinCodeRow");
             _modeGrid = _root.Q<VisualElement>("ModeGrid");
+            _modeDossierPreview = _root.Q<VisualElement>("ModeDossierPreview");
+            _modeDossierTitle = _root.Q<Label>("ModeDossierTitle");
+            _modeDossierBody = _root.Q<Label>("ModeDossierBody");
+            _modeDossierNote = _root.Q<Label>("ModeDossierNote");
             _createMatchButton = _root.Q<Button>("CreateMatchButton");
             _joinMatchButton = _root.Q<Button>("JoinMatchButton");
             _joinConfirmButton = _root.Q<Button>("JoinConfirmButton");
@@ -172,6 +211,10 @@ namespace Game.UI.Controllers
             _editProfileButton = _root.Q<Button>("EditProfileButton");
             _profileEditCloseButton = _root.Q<Button>("ProfileEditCloseButton");
             _addFriendButton = _root.Q<Button>("AddFriendButton");
+            _gameTabButton = _root.Q<Button>("GameTabButton");
+            _hubFriendsTabButton = _root.Q<Button>("HubFriendsTabButton");
+            _gameTabContent = _root.Q<VisualElement>("GameTabContent");
+            _friendsHost = _root.Q<VisualElement>("FriendsHost");
             BindFriendsHubPanel();
             BindLobbyInviteBanner();
 #if UNITY_EDITOR
@@ -194,16 +237,46 @@ namespace Game.UI.Controllers
             _returnToMatchButton = _root.Q<Button>("ReturnToMatchButton");
             _settingsButton = _root.Q<Button>("SettingsButton");
             _quitButton = _root.Q<Button>("QuitButton");
+            _chatTabButton = _root.Q<Button>("ChatTabButton");
+            _matchHistoryTabButton = _root.Q<Button>("MatchHistoryTabButton");
+            _publicGamesTabButton = _root.Q<Button>("PublicGamesTabButton");
+            _chatSendButton = _root.Q<Button>("ChatSendButton");
+            _chatTabContent = _root.Q<VisualElement>("ChatTabContent");
+            _matchHistoryTabContent = _root.Q<VisualElement>("MatchHistoryTabContent");
+            _publicGamesTabContent = _root.Q<VisualElement>("PublicGamesTabContent");
+            _settingsTabContent = _root.Q<VisualElement>("SettingsTabContent");
+            _chatMessages = _root.Q<VisualElement>("ChatMessages");
+            _chatInput = _root.Q<TextField>("ChatInput");
             _settingsCloseButton = _root.Q<Button>("SettingsCloseButton");
             _soundToggle = _root.Q<Toggle>("SoundToggle");
             _volumeSlider = _root.Q<Slider>("VolumeSlider");
             _volumeValueLabel = _root.Q<Label>("VolumeValueLabel");
+
+            StyleHubTextField(_chatInput);
+            if (_chatInput != null)
+            {
+                _chatInput.multiline = false;
+                _chatInput.textEdition.placeholder = "Написать в чат…";
+            }
+
+            if (_joinCodeField != null)
+            {
+                _joinCodeField.textEdition.placeholder = "Код комнаты";
+            }
+
+            if (_friendIdField != null)
+            {
+                _friendIdField.textEdition.placeholder = "Добавить по имени (Ник#1234)";
+            }
 
             GameAudio.Apply();
             BindSettingsUi();
             BindMatchEntryUi();
             BindHubUi();
             BuildModeGrid();
+            ApplyHubTabVisibility();
+            ApplyLeftMenuTabVisibility();
+            BindMenuChat();
             EnsureSettingsClosed();
             EnsureMatchEntryClosed();
             EnsureModeSelectClosed();
@@ -285,6 +358,31 @@ namespace Game.UI.Controllers
                 _settingsButton.clicked += OnSettingsOpen;
             }
 
+            if (_chatTabButton != null)
+            {
+                _chatTabButton.clicked += OnChatTabClicked;
+            }
+
+            if (_matchHistoryTabButton != null)
+            {
+                _matchHistoryTabButton.clicked += OnMatchHistoryTabClicked;
+            }
+
+            if (_publicGamesTabButton != null)
+            {
+                _publicGamesTabButton.clicked += OnPublicGamesTabClicked;
+            }
+
+            if (_chatSendButton != null)
+            {
+                _chatSendButton.clicked += OnChatSendClicked;
+            }
+
+            if (_chatInput != null)
+            {
+                _chatInput.RegisterCallback<KeyDownEvent>(OnChatInputKeyDown);
+            }
+
             if (_settingsCloseButton != null)
             {
                 _settingsCloseButton.clicked += OnSettingsClose;
@@ -295,9 +393,20 @@ namespace Game.UI.Controllers
                 _returnToMatchButton.clicked += OnReturnToMatchClicked;
             }
 
+            if (_gameTabButton != null)
+            {
+                _gameTabButton.clicked += OnGameHubTabClicked;
+            }
+
+            if (_hubFriendsTabButton != null)
+            {
+                _hubFriendsTabButton.clicked += OnFriendsHubTabClicked;
+            }
+
             RefreshReturnToMatchButton();
 
             _root?.RegisterCallback<KeyDownEvent>(OnKeyDown);
+            _modeDossierPreview?.RegisterCallback<GeometryChangedEvent>(OnModeDossierPreviewGeometry);
             FriendsHubService.LobbyInviteReceived += OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged += OnPlayerNameChanged;
             _profileBadge?.RegisterCallback<ClickEvent>(OnProfileBadgeClicked);
@@ -323,11 +432,37 @@ namespace Game.UI.Controllers
         private void OnDisable()
         {
             _root?.UnregisterCallback<KeyDownEvent>(OnKeyDown);
+            _modeDossierPreview?.UnregisterCallback<GeometryChangedEvent>(OnModeDossierPreviewGeometry);
             FriendsHubService.LobbyInviteReceived -= OnLobbyInviteReceived;
             UnityServicesBootstrap.PlayerNameChanged -= OnPlayerNameChanged;
             if (_settingsButton != null)
             {
                 _settingsButton.clicked -= OnSettingsOpen;
+            }
+
+            if (_chatTabButton != null)
+            {
+                _chatTabButton.clicked -= OnChatTabClicked;
+            }
+
+            if (_matchHistoryTabButton != null)
+            {
+                _matchHistoryTabButton.clicked -= OnMatchHistoryTabClicked;
+            }
+
+            if (_publicGamesTabButton != null)
+            {
+                _publicGamesTabButton.clicked -= OnPublicGamesTabClicked;
+            }
+
+            if (_chatSendButton != null)
+            {
+                _chatSendButton.clicked -= OnChatSendClicked;
+            }
+
+            if (_chatInput != null)
+            {
+                _chatInput.UnregisterCallback<KeyDownEvent>(OnChatInputKeyDown);
             }
 
             if (_settingsCloseButton != null)
@@ -338,6 +473,16 @@ namespace Game.UI.Controllers
             if (_returnToMatchButton != null)
             {
                 _returnToMatchButton.clicked -= OnReturnToMatchClicked;
+            }
+
+            if (_gameTabButton != null)
+            {
+                _gameTabButton.clicked -= OnGameHubTabClicked;
+            }
+
+            if (_hubFriendsTabButton != null)
+            {
+                _hubFriendsTabButton.clicked -= OnFriendsHubTabClicked;
             }
 
             _profileBadge?.UnregisterCallback<ClickEvent>(OnProfileBadgeClicked);
@@ -523,6 +668,10 @@ namespace Game.UI.Controllers
                 {
                     CloseMatchEntry();
                 }
+                else if (_isJoinUiOpen)
+                {
+                    CloseJoinUi();
+                }
                 else
                 {
                     OnQuitRequested();
@@ -540,7 +689,26 @@ namespace Game.UI.Controllers
             {
                 case KeyCode.Return:
                 case KeyCode.KeypadEnter:
+                    evt.StopPropagation();
+                    if (_isJoinUiOpen)
+                    {
+                        JoinMatchAsync(this.GetCancellationTokenOnDestroy()).Forget();
+                        break;
+                    }
+
+                    if (IsChatInputFocused())
+                    {
+                        break;
+                    }
+
+                    OnPlayRequested();
+                    break;
                 case KeyCode.Space:
+                    if (_isJoinUiOpen)
+                    {
+                        break;
+                    }
+
                     evt.StopPropagation();
                     OnPlayRequested();
                     break;
@@ -549,12 +717,12 @@ namespace Game.UI.Controllers
 
         private void OnSettingsOpen()
         {
-            if (_isTransitioning || _isSettingsOpen || _isProfileEditOpen || _settingsOverlay == null)
+            if (_isTransitioning || _isProfileEditOpen)
             {
                 return;
             }
 
-            ShowSettingsAsync(this.GetCancellationTokenOnDestroy()).Forget();
+            ShowLeftMenuTab(LeftMenuTab.Settings);
         }
 
         private void OnSettingsClose()
@@ -635,12 +803,19 @@ namespace Game.UI.Controllers
 
         private void OnPlayRequested()
         {
-            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating || _isMatchEntryOpen || _isProfileEditOpen)
+            if (_isTransitioning || _isSettingsOpen || _isSettingsAnimating || _isMatchEntryOpen || _isProfileEditOpen || _isJoinUiOpen)
             {
                 return;
             }
 
-            OpenMatchEntry();
+            if (!MatchModeRules.IsModeSelectable(_selectedPlayerCount))
+            {
+                ShowGameHubTab();
+                ShowModeSelectError("Выберите режим.");
+                return;
+            }
+
+            CreateMatchAsync(_selectedPlayerCount, this.GetCancellationTokenOnDestroy()).Forget();
         }
 
         void RefreshReturnToMatchButton()
@@ -819,8 +994,8 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var ink = new Color(15f / 255f, 15f / 255f, 16f / 255f, 1f);
-            var cream = new Color(239f / 255f, 228f / 255f, 207f / 255f, 1f);
+            var ink = new Color(8f / 255f, 9f / 255f, 8f / 255f, 1f);
+            var cream = new Color(222f / 255f, 219f / 255f, 210f / 255f, 1f);
             field.style.backgroundColor = ink;
             field.style.color = cream;
 
@@ -864,8 +1039,8 @@ namespace Game.UI.Controllers
                 && _friendsErrorLabel != null
                 && !string.IsNullOrEmpty(UnityServicesBootstrap.LastInitError))
             {
-                _friendsErrorLabel.text =
-                    "Друзья недоступны: нет связи с Unity Auth. Суффикс #xxxx появится после входа.";
+                SetFriendsStatus(
+                    "Друзья недоступны: нет связи с Unity Auth. Суффикс #xxxx появится после входа.");
             }
 
             ScheduleProfileNameRetryAsync(this.GetCancellationTokenOnDestroy()).Forget();
@@ -976,20 +1151,14 @@ namespace Game.UI.Controllers
                 var isValid = FriendsHubRules.IsValidUgsPlayerName(fullName);
                 if (!isValid)
                 {
-                    if (_friendsErrorLabel != null)
-                    {
-                        _friendsErrorLabel.text =
-                            "Имя для друзей ещё не готово. Сохраните профиль или проверьте UGS/сеть.";
-                    }
+                    SetFriendsStatus(
+                        "Имя для друзей ещё не готово. Сохраните профиль или проверьте UGS/сеть.");
 
                     return;
                 }
 
                 GUIUtility.systemCopyBuffer = fullName;
-                if (_friendsErrorLabel != null)
-                {
-                    _friendsErrorLabel.text = "Имя скопировано.";
-                }
+                SetFriendsStatus("Имя скопировано.");
 
                 await FlashProfileCopiedAsync(cancellationToken);
             }
@@ -1110,6 +1279,7 @@ namespace Game.UI.Controllers
 
             if (_previewFriendsHub)
             {
+                ShowFriendsHubTab();
                 _friendsHubPanel.ApplyDesignPreview(_previewFriendsTab);
             }
             else
@@ -1234,35 +1404,120 @@ namespace Game.UI.Controllers
             }
 
             _modeGrid.Clear();
-            _modeGrid.style.flexDirection = FlexDirection.Column;
-            _modeGrid.style.justifyContent = Justify.Center;
-            _modeGrid.style.alignItems = Align.Center;
 
             var row = CreateModeRow();
             for (var n = MatchModeRules.MinPlayers; n <= MatchModeRules.MaxPlayers; n++)
             {
                 var playerCount = n;
                 var button = ModeMapThumbnailBuilder.BuildModeButton(playerCount);
+                if (n < MatchModeRules.MaxPlayers)
+                {
+                    button.AddToClassList("mm-mode--gap");
+                }
+
                 if (MatchModeRules.IsModeSelectable(playerCount))
                 {
-                    button.clicked += () =>
-                        CreateMatchAsync(playerCount, this.GetCancellationTokenOnDestroy()).Forget();
+                    button.clicked += () => SelectMode(playerCount);
                 }
 
                 row.Add(button);
             }
 
             _modeGrid.Add(row);
+            SelectMode(MatchModeRules.IsModeSelectable(4) ? 4 : 2);
+        }
+
+        private void SelectMode(int playerCount)
+        {
+            if (!MatchModeRules.IsModeSelectable(playerCount))
+            {
+                return;
+            }
+
+            _selectedPlayerCount = playerCount;
+            if (_modeGrid == null)
+            {
+                return;
+            }
+
+            foreach (var button in _modeGrid.Query<Button>(className: "mm-mode").ToList())
+            {
+                button.EnableInClassList(ModeSelectedClass, button.name == $"Mode_N{playerCount}");
+            }
+
+            RefreshModeDossier();
+        }
+
+        private void OnModeDossierPreviewGeometry(GeometryChangedEvent evt)
+        {
+            var size = Mathf.Floor(Mathf.Min(evt.newRect.width, evt.newRect.height));
+            if (size < 8f || Mathf.Abs(size - _dossierMapPx) < 1.5f)
+            {
+                return;
+            }
+
+            _dossierMapPx = size;
+            RebuildModeDossierMap();
+        }
+
+        private void RefreshModeDossier()
+        {
+            if (_modeDossierTitle != null)
+            {
+                _modeDossierTitle.text = MatchModeRules.GetModeTitle(_selectedPlayerCount);
+            }
+
+            if (_modeDossierBody != null)
+            {
+                _modeDossierBody.text = MatchModeRules.GetModeSummary(_selectedPlayerCount);
+            }
+
+            if (_modeDossierNote != null)
+            {
+                _modeDossierNote.text = MatchModeRules.ModeMapNote;
+            }
+
+            RebuildModeDossierMap();
+        }
+
+        private void RebuildModeDossierMap()
+        {
+            if (_modeDossierPreview == null)
+            {
+                return;
+            }
+
+            var size = _dossierMapPx;
+            if (size < 8f)
+            {
+                var layout = _modeDossierPreview.layout;
+                size = Mathf.Floor(Mathf.Min(layout.width, layout.height));
+            }
+
+            if (size < 8f)
+            {
+                return;
+            }
+
+            if (_dossierMappedPlayerCount == _selectedPlayerCount
+                && Mathf.Abs(_dossierMapPx - size) < 1.5f
+                && _modeDossierPreview.childCount > 0)
+            {
+                return;
+            }
+
+            _dossierMapPx = size;
+            _dossierMappedPlayerCount = _selectedPlayerCount;
+            _modeDossierPreview.Clear();
+            var map = ModeMapThumbnailBuilder.BuildPreview(_selectedPlayerCount, size);
+            map.pickingMode = PickingMode.Ignore;
+            _modeDossierPreview.Add(map);
         }
 
         private static VisualElement CreateModeRow()
         {
             var row = new VisualElement();
             row.AddToClassList("mm-modes__row");
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.justifyContent = Justify.Center;
-            row.style.alignItems = Align.Center;
-            row.style.flexShrink = 0;
             return row;
         }
 
@@ -1292,25 +1547,176 @@ namespace Game.UI.Controllers
         {
             _isMatchEntryOpen = false;
             _matchEntryOverlay?.AddToClassList(OverlayHiddenClass);
-            _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+            CloseJoinUi();
             ClearMatchEntryError();
         }
 
         private void OnCreateMatchClicked()
         {
             EnsureMatchEntryClosed();
-            OpenModeSelect();
+            ShowGameHubTab();
         }
 
         private void OnJoinMatchClicked()
         {
-            if (_joinCodeRow == null)
+            ShowGameHubTab();
+            OpenJoinUi();
+        }
+
+        private void OpenJoinUi()
+        {
+            _isJoinUiOpen = true;
+            _playButton?.AddToClassList(OverlayHiddenClass);
+            _joinMatchButton?.AddToClassList(OverlayHiddenClass);
+            _joinCodeRow?.RemoveFromClassList(OverlayHiddenClass);
+            _joinConfirmButton?.RemoveFromClassList(OverlayHiddenClass);
+            _joinCodeField?.Focus();
+        }
+
+        private void CloseJoinUi()
+        {
+            _isJoinUiOpen = false;
+            _playButton?.RemoveFromClassList(OverlayHiddenClass);
+            _joinMatchButton?.RemoveFromClassList(OverlayHiddenClass);
+            _joinCodeRow?.AddToClassList(OverlayHiddenClass);
+            _joinConfirmButton?.AddToClassList(OverlayHiddenClass);
+            _playButton?.Focus();
+        }
+
+        private void OnGameHubTabClicked() => ShowGameHubTab();
+
+        private void OnFriendsHubTabClicked() => ShowFriendsHubTab();
+
+        private void ShowGameHubTab()
+        {
+            _hubGameTabActive = true;
+            ApplyHubTabVisibility();
+        }
+
+        private void ShowFriendsHubTab()
+        {
+            _hubGameTabActive = false;
+            ApplyHubTabVisibility();
+        }
+
+        private void ApplyHubTabVisibility()
+        {
+            _gameTabContent?.EnableInClassList(OverlayHiddenClass, !_hubGameTabActive);
+            _friendsHost?.EnableInClassList(OverlayHiddenClass, _hubGameTabActive);
+            _gameTabButton?.EnableInClassList(HubTabActiveClass, _hubGameTabActive);
+            _hubFriendsTabButton?.EnableInClassList(HubTabActiveClass, !_hubGameTabActive);
+        }
+
+        private void OnChatTabClicked() => ShowLeftMenuTab(LeftMenuTab.Chat);
+
+        private void OnMatchHistoryTabClicked() => ShowLeftMenuTab(LeftMenuTab.MatchHistory);
+
+        private void OnPublicGamesTabClicked() => ShowLeftMenuTab(LeftMenuTab.PublicGames);
+
+        private void ShowLeftMenuTab(LeftMenuTab tab)
+        {
+            _leftMenuTab = tab;
+            ApplyLeftMenuTabVisibility();
+        }
+
+        private void ApplyLeftMenuTabVisibility()
+        {
+            _chatTabContent?.EnableInClassList(OverlayHiddenClass, _leftMenuTab != LeftMenuTab.Chat);
+            _matchHistoryTabContent?.EnableInClassList(OverlayHiddenClass, _leftMenuTab != LeftMenuTab.MatchHistory);
+            _publicGamesTabContent?.EnableInClassList(OverlayHiddenClass, _leftMenuTab != LeftMenuTab.PublicGames);
+            _settingsTabContent?.EnableInClassList(OverlayHiddenClass, _leftMenuTab != LeftMenuTab.Settings);
+            _chatTabButton?.EnableInClassList(DockTabActiveClass, _leftMenuTab == LeftMenuTab.Chat);
+            _matchHistoryTabButton?.EnableInClassList(DockTabActiveClass, _leftMenuTab == LeftMenuTab.MatchHistory);
+            _publicGamesTabButton?.EnableInClassList(DockTabActiveClass, _leftMenuTab == LeftMenuTab.PublicGames);
+            _settingsButton?.EnableInClassList(DockTabActiveClass, _leftMenuTab == LeftMenuTab.Settings);
+        }
+
+        private void BindMenuChat()
+        {
+            if (_chatMessages == null)
             {
                 return;
             }
 
-            _joinCodeRow.RemoveFromClassList(OverlayHiddenClass);
-            _joinCodeField?.Focus();
+            _chatMessages.Clear();
+            _chatMessages.Add(CreateMenuChatMessage("Система", "00:00", "Общий чат. Сообщения пока только локально."));
+        }
+
+        private static VisualElement CreateMenuChatMessage(string nick, string time, string text)
+        {
+            var row = new VisualElement { pickingMode = PickingMode.Ignore };
+            row.AddToClassList("mm-chat-message");
+
+            var meta = new VisualElement { pickingMode = PickingMode.Ignore };
+            meta.AddToClassList("mm-chat-message__meta");
+
+            var nickLabel = new Label(nick) { pickingMode = PickingMode.Ignore };
+            nickLabel.AddToClassList("mm-chat-message__nick");
+            meta.Add(nickLabel);
+
+            var timeLabel = new Label(time) { pickingMode = PickingMode.Ignore };
+            timeLabel.AddToClassList("mm-chat-message__time");
+            meta.Add(timeLabel);
+            row.Add(meta);
+
+            var body = new Label(text) { pickingMode = PickingMode.Ignore };
+            body.AddToClassList("mm-chat-message__text");
+            row.Add(body);
+            return row;
+        }
+
+        private void OnChatSendClicked() => TrySendMenuChatMessage();
+
+        private void OnChatInputKeyDown(KeyDownEvent evt)
+        {
+            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            {
+                evt.StopPropagation();
+                TrySendMenuChatMessage();
+            }
+        }
+
+        private void TrySendMenuChatMessage()
+        {
+            var text = _chatInput?.value?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(text) || _chatMessages == null)
+            {
+                return;
+            }
+
+            var time = DateTime.Now.ToString("HH:mm");
+            _chatMessages.Add(CreateMenuChatMessage("Вы", time, text));
+            _chatInput.value = string.Empty;
+            var scroll = _root?.Q<ScrollView>("ChatScroll");
+            scroll?.schedule.Execute(() =>
+            {
+                if (scroll.verticalScroller.highValue > 0f)
+                {
+                    scroll.verticalScroller.value = scroll.verticalScroller.highValue;
+                }
+            });
+        }
+
+        private bool IsChatInputFocused()
+        {
+            if (_chatInput == null)
+            {
+                return false;
+            }
+
+            var focused = _chatInput.focusController?.focusedElement as VisualElement;
+            return focused != null && (_chatInput == focused || _chatInput.Contains(focused));
+        }
+
+        private bool IsJoinCodeFocused()
+        {
+            if (!_isJoinUiOpen || _joinCodeField == null)
+            {
+                return false;
+            }
+
+            var focused = _joinCodeField.focusController?.focusedElement as VisualElement;
+            return focused != null && (_joinCodeField == focused || _joinCodeField.Contains(focused));
         }
 
         private void OpenModeSelect()
@@ -1351,34 +1757,39 @@ namespace Game.UI.Controllers
 
         private void ClearModeSelectError()
         {
-            if (_modeSelectErrorLabel != null)
-            {
-                _modeSelectErrorLabel.text = string.Empty;
-            }
+            SetOverlayLabel(_modeSelectErrorLabel, string.Empty);
         }
 
         private void ClearMatchEntryError()
         {
-            if (_matchEntryErrorLabel != null)
-            {
-                _matchEntryErrorLabel.text = string.Empty;
-            }
+            SetOverlayLabel(_matchEntryErrorLabel, string.Empty);
         }
 
         private void ShowModeSelectError(string message)
         {
-            if (_modeSelectErrorLabel != null)
-            {
-                _modeSelectErrorLabel.text = message ?? string.Empty;
-            }
+            SetOverlayLabel(_modeSelectErrorLabel, message);
         }
 
         private void ShowMatchEntryError(string message)
         {
-            if (_matchEntryErrorLabel != null)
+            SetOverlayLabel(_matchEntryErrorLabel, message);
+        }
+
+        private void SetFriendsStatus(string message)
+        {
+            SetOverlayLabel(_friendsErrorLabel, message);
+        }
+
+        private static void SetOverlayLabel(Label label, string message)
+        {
+            if (label == null)
             {
-                _matchEntryErrorLabel.text = message ?? string.Empty;
+                return;
             }
+
+            var text = message ?? string.Empty;
+            label.text = text;
+            label.EnableInClassList(OverlayHiddenClass, string.IsNullOrEmpty(text));
         }
 
         private static string FormatMatchSetupError(System.Exception ex)
@@ -1448,7 +1859,7 @@ namespace Game.UI.Controllers
                 Debug.LogWarning($"Create match failed: {ex.Message}");
                 _isTransitioning = false;
                 EnsureLobbyEntryClosed();
-                OpenModeSelect();
+                ShowGameHubTab();
                 ShowModeSelectError(FormatMatchSetupError(ex));
             }
         }
@@ -1475,6 +1886,7 @@ namespace Game.UI.Controllers
             bool showJoinUiOnError)
         {
             _isTransitioning = true;
+            ShowLobbyEntry();
             try
             {
                 var displayName = string.IsNullOrWhiteSpace(PlayerProfileService.DisplayName)
@@ -1507,10 +1919,11 @@ namespace Game.UI.Controllers
                 MatchNetworkSession.Shutdown();
                 Debug.LogWarning($"Join match failed: {ex.Message}");
                 _isTransitioning = false;
+                EnsureLobbyEntryClosed();
                 if (showJoinUiOnError)
                 {
-                    OpenMatchEntry();
-                    _joinCodeRow?.RemoveFromClassList(OverlayHiddenClass);
+                    ShowGameHubTab();
+                    OpenJoinUi();
                     if (_joinCodeField != null)
                     {
                         _joinCodeField.value = code;
@@ -1564,9 +1977,20 @@ namespace Game.UI.Controllers
             var menuEnabled = !_overlayBlocksMenu;
 
             _playButton?.SetEnabled(menuEnabled);
+            _joinMatchButton?.SetEnabled(menuEnabled);
+            _joinConfirmButton?.SetEnabled(menuEnabled);
+            _joinCodeField?.SetEnabled(menuEnabled);
+            _gameTabButton?.SetEnabled(menuEnabled);
+            _hubFriendsTabButton?.SetEnabled(menuEnabled);
+            _modeGrid?.SetEnabled(menuEnabled);
             _returnToMatchButton?.SetEnabled(menuEnabled && PendingMatchReconnectStore.TryLoadActive(out _));
             _settingsButton?.SetEnabled(menuEnabled);
             _quitButton?.SetEnabled(menuEnabled);
+            _chatTabButton?.SetEnabled(menuEnabled);
+            _matchHistoryTabButton?.SetEnabled(menuEnabled);
+            _publicGamesTabButton?.SetEnabled(menuEnabled);
+            _chatSendButton?.SetEnabled(menuEnabled);
+            _chatInput?.SetEnabled(menuEnabled);
             _editProfileButton?.SetEnabled(menuEnabled);
             _friendsHubPanel?.SetInteractable(menuEnabled);
         }

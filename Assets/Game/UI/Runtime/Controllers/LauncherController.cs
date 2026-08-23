@@ -62,7 +62,12 @@ namespace Game.UI.Controllers
         private readonly LauncherWindowChromeDriver _windowChrome = new();
         private LauncherProgressPhase _phase = LauncherProgressPhase.Ready;
         private IVisualElementScheduledItem _shineSchedule;
+        private IVisualElementScheduledItem _barSchedule;
         private float _shineElapsed;
+        private float _visualBar01;
+        private float _targetBar01;
+        private bool _barCatchingUp;
+        private UniTask _barVisualChain = UniTask.CompletedTask;
         private bool _isEntering;
         private bool _isUpdating;
         private bool _isReadyToRestart;
@@ -136,6 +141,7 @@ namespace Game.UI.Controllers
 
             RegisterCallbacks(false);
             StopShineAnimation();
+            StopBarTicker();
             _windowChrome.Detach();
         }
 
@@ -326,7 +332,7 @@ namespace Game.UI.Controllers
                     _rangeRemoteVersion);
             }
 
-            var percent = GameUpdateUiRules.ProgressPercent(progress01);
+            var percent = GameUpdateUiRules.ProgressPercent(_visualBar01);
             if (_progressPercentLabel != null)
             {
                 _progressPercentLabel.text = LauncherProgressRules.ShouldShowProgressDetails(phase)
@@ -334,10 +340,14 @@ namespace Game.UI.Controllers
                     : string.Empty;
             }
 
-            if (_progressFill != null)
+            _targetBar01 = Mathf.Clamp(progress01, 0f, 1f);
+            if (!LauncherProgressRules.ShouldShowProgressDetails(phase))
             {
-                _progressFill.style.width = Length.Percent(Mathf.Clamp(progress01, 0f, 1f) * 100f);
+                _visualBar01 = _targetBar01;
             }
+
+            ApplyVisualBarWidth();
+            EnsureBarTicker();
 
             var showDetails = LauncherProgressRules.ShouldShowProgressDetails(phase);
             if (_progressDetails != null)
@@ -572,6 +582,24 @@ namespace Game.UI.Controllers
 
         private void OnApplyProgress(GameUpdateApplyProgress progress)
         {
+            _barVisualChain = ContinueBarVisualAsync(_barVisualChain, progress);
+        }
+
+        private async UniTask ContinueBarVisualAsync(UniTask previous, GameUpdateApplyProgress progress)
+        {
+            try
+            {
+                await previous;
+            }
+            catch (System.OperationCanceledException)
+            {
+            }
+
+            if (this == null)
+            {
+                return;
+            }
+
             if (!GameUpdatePendingRestartRules.ShouldAcceptApplyProgress(_isReadyToRestart, progress.Phase))
             {
                 return;
@@ -579,14 +607,108 @@ namespace Game.UI.Controllers
 
             if (progress.Phase == GameUpdateApplyPhase.ReadyToRestart)
             {
-                ShowReadyToRestart(GameLocalVersion.Current, _applyRemoteVersion);
+                await CatchUpBarAsync(1f);
                 return;
             }
 
             var phase = LauncherProgressRules.FromApplyPhase(progress.Phase);
             var bar01 = GameUpdateApplyProgressRules.MapBarProgress(progress.Phase, progress.Phase01);
+            if (phase != _phase
+                && LauncherProgressRules.ShouldShowProgressDetails(_phase)
+                && LauncherProgressRules.ShouldShowProgressDetails(phase))
+            {
+                await CatchUpBarAsync(1f);
+                if (this == null)
+                {
+                    return;
+                }
+
+                _visualBar01 = 0f;
+                _targetBar01 = 0f;
+                ApplyVisualBarWidth();
+            }
+
             ApplyProgress(phase, bar01);
             SetUpdateRange(GameLocalVersion.Current, _applyRemoteVersion);
+        }
+
+        private async UniTask CatchUpBarAsync(float to)
+        {
+            _targetBar01 = Mathf.Clamp01(to);
+            if (_progressFill == null)
+            {
+                _visualBar01 = _targetBar01;
+                return;
+            }
+
+            _barCatchingUp = true;
+            try
+            {
+                while (this != null && !LauncherProgressBarRules.HasCaughtUp(_visualBar01, _targetBar01))
+                {
+                    var dt = Time.unscaledDeltaTime;
+                    if (dt <= 0f)
+                    {
+                        dt = 0.016f;
+                    }
+
+                    _visualBar01 = LauncherProgressBarRules.StepDisplayed(_visualBar01, _targetBar01, dt);
+                    ApplyVisualBarWidth();
+                    await UniTask.Yield();
+                }
+
+                if (this == null)
+                {
+                    return;
+                }
+
+                _visualBar01 = _targetBar01;
+                ApplyVisualBarWidth();
+            }
+            finally
+            {
+                _barCatchingUp = false;
+            }
+        }
+
+        private void EnsureBarTicker()
+        {
+            if (_barSchedule != null || _progressFill == null)
+            {
+                return;
+            }
+
+            _barSchedule = _progressFill.schedule.Execute(TickVisualBar).Every(16);
+        }
+
+        private void StopBarTicker()
+        {
+            _barSchedule?.Pause();
+            _barSchedule = null;
+        }
+
+        private void TickVisualBar()
+        {
+            if (_barCatchingUp)
+            {
+                return;
+            }
+
+            _visualBar01 = LauncherProgressBarRules.StepDisplayed(_visualBar01, _targetBar01, 0.016f);
+            ApplyVisualBarWidth();
+        }
+
+        private void ApplyVisualBarWidth()
+        {
+            if (_progressFill != null)
+            {
+                _progressFill.style.width = Length.Percent(_visualBar01 * 100f);
+            }
+
+            if (_progressPercentLabel != null && LauncherProgressRules.ShouldShowProgressDetails(_phase))
+            {
+                _progressPercentLabel.text = GameUpdateUiRules.ProgressPercent(_visualBar01) + "%";
+            }
         }
 
         private async UniTaskVoid ApplyUpdateAsync()
@@ -611,6 +733,18 @@ namespace Game.UI.Controllers
             {
                 var progress = new Progress<GameUpdateApplyProgress>(OnApplyProgress);
                 await GameUpdateService.DownloadAndPrepareAsync(progress);
+                if (this == null)
+                {
+                    return;
+                }
+
+                await _barVisualChain;
+                if (this == null)
+                {
+                    return;
+                }
+
+                await CatchUpBarAsync(1f);
                 if (this == null)
                 {
                     return;
@@ -720,6 +854,10 @@ namespace Game.UI.Controllers
             var body = new VisualElement { pickingMode = PickingMode.Ignore };
             body.AddToClassList("ln-news-card__body");
 
+            var dateLabel = new Label(date) { pickingMode = PickingMode.Ignore };
+            dateLabel.AddToClassList("ln-news-card__date");
+            body.Add(dateLabel);
+
             var titleLabel = new Label(title) { pickingMode = PickingMode.Ignore };
             titleLabel.AddToClassList("ln-news-card__title");
             body.Add(titleLabel);
@@ -727,10 +865,6 @@ namespace Game.UI.Controllers
             var descLabel = new Label(description) { pickingMode = PickingMode.Ignore };
             descLabel.AddToClassList("ln-news-card__desc");
             body.Add(descLabel);
-
-            var dateLabel = new Label(date) { pickingMode = PickingMode.Ignore };
-            dateLabel.AddToClassList("ln-news-card__date");
-            body.Add(dateLabel);
 
             card.Add(body);
             return card;

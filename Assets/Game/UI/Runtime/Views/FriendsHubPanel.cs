@@ -549,10 +549,14 @@ namespace Game.UI.Views
 
         void SetError(string message)
         {
-            if (_friendsErrorLabel != null)
+            if (_friendsErrorLabel == null)
             {
-                _friendsErrorLabel.text = message ?? string.Empty;
+                return;
             }
+
+            var text = message ?? string.Empty;
+            _friendsErrorLabel.text = text;
+            _friendsErrorLabel.EnableInClassList("ui-overlay--hidden", string.IsNullOrEmpty(text));
         }
 
         static string FormatFriendError(Exception ex)

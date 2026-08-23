@@ -68,6 +68,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | HUB-002 | Cloud Save profile (nick; rank/points stub) | done | PlayerProfileService |
 | HUB-003 | UGS Friends + presence | done | FriendsHubService |
 | HUB-004 | Invite friend → game lobby | done | Presence lobbyCode + join code |
+| HUB-005 | Left dock: chat / history / public games / settings | done | UI shell; chat local-only; lists placeholder |
 
 ---
 

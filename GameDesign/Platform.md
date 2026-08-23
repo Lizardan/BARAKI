@@ -63,6 +63,8 @@ mvp: true
 | Ник / ранг / очки | Cloud Save (`displayName`, `rank`, `points` stubs) |
 | Друзья online / in game | Friends presence |
 | Create / Join | Lobby join code + Relay |
+| Chat / история / публичные игры | Вкладки слева в меню (чат пока локальный; списки — заглушки) |
+| Настройки | Вкладка-шестерёнка слева; выход — ✕ в углу как в лаунчере |
 | Invite | Friends → private Lobby |
 | Update gate | GitHub Release tag (`/releases/latest` → tag); Play disabled если outdated |
 | Legal | GitHub Pages — https://lizardan.github.io/BARAKI/privacy.html · terms.html |

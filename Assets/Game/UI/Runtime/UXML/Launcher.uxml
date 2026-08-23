@@ -7,73 +7,80 @@
         <ui:VisualElement class="ln-shade" picking-mode="Ignore" />
 
         <ui:VisualElement name="LauncherShell" class="ln-shell" picking-mode="Ignore">
-            <ui:VisualElement name="LeftPanel" class="ln-panel ln-panel--side ln-panel--left" picking-mode="Position">
+            <ui:VisualElement class="ln-corner ln-corner--tl" picking-mode="Ignore" />
+            <ui:VisualElement class="ln-corner ln-corner--br" picking-mode="Ignore" />
+
+            <ui:VisualElement name="LeftPanel" class="ln-header" picking-mode="Position">
                 <ui:VisualElement class="ln-brand" picking-mode="Ignore">
-                    <ui:VisualElement name="GameLogo" class="ln-logo" picking-mode="Ignore">
-                        <ui:Label text="B" class="ln-logo__mark" picking-mode="Ignore" />
+                    <ui:Label name="GameTitle" text="BARAKI" class="ln-brand__title" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="ClientVersionLabel" text="v0.0.0" class="ln-brand__version" picking-mode="Ignore" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="ln-body" picking-mode="Ignore">
+                <ui:VisualElement name="CenterPanel" class="ln-main" picking-mode="Position">
+                    <ui:VisualElement class="ln-news" picking-mode="Ignore">
+                        <ui:VisualElement class="ln-news-header" picking-mode="Ignore">
+                            <ui:Label text="НОВОСТИ" class="ln-section-title" picking-mode="Ignore" />
+                            <ui:Label text="Последние обновления и анонсы" class="ln-section-subtitle" picking-mode="Ignore" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="HeroBanner" class="ln-hero" picking-mode="Ignore">
+                            <ui:VisualElement name="HeroImage" class="ln-hero__image" picking-mode="Ignore" />
+                            <ui:VisualElement class="ln-hero__shade" picking-mode="Ignore" />
+                            <ui:VisualElement class="ln-hero__content" picking-mode="Position">
+                                <ui:Label text="ПАТЧ" class="ln-hero__kicker" picking-mode="Ignore" />
+                                <ui:Label name="HeroTitle" text="Сезон «Железный клин»" class="ln-hero__title" picking-mode="Ignore" />
+                                <ui:Label name="HeroBody" text="Новые карты, баланс рас и быстрый вход в матч прямо из лаунчера. Соберите отряд и докажите, кто держит форпост." class="ln-hero__body" picking-mode="Ignore" />
+                                <ui:Button name="HeroReadMoreButton" text="ПОДРОБНЕЕ" class="ln-btn ln-btn--outline" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:ScrollView name="NewsScroll" class="ln-news-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+                            <ui:VisualElement name="NewsList" class="ln-news-list" picking-mode="Ignore" />
+                        </ui:ScrollView>
                     </ui:VisualElement>
-                    <ui:VisualElement class="ln-brand__title-row" picking-mode="Ignore">
-                        <ui:Label name="GameTitle" text="BARAKI" class="ln-brand__title" picking-mode="Ignore" />
-                        <ui:Label name="ClientVersionLabel" text="v0.0.0" class="ln-brand__version" picking-mode="Ignore" />
-                    </ui:VisualElement>
-                    <ui:Label name="GameTagline" text="Три пути · Одна победа · Тактический FFA" class="ln-brand__tagline" picking-mode="Ignore" />
                 </ui:VisualElement>
 
-                <ui:VisualElement name="ProgressBlock" class="ln-progress" picking-mode="Ignore">
-                    <ui:VisualElement class="ln-progress__head" picking-mode="Ignore">
-                        <ui:Label name="ProgressStatusLabel" text="Готово к запуску" class="ln-progress__status" enable-rich-text="true" picking-mode="Ignore" />
-                        <ui:Label name="ProgressPercentLabel" text="" class="ln-progress__percent" picking-mode="Ignore" />
-                    </ui:VisualElement>
+                <ui:VisualElement name="RightPanel" class="ln-side" picking-mode="Position">
+                    <ui:VisualElement class="ln-chat" picking-mode="Ignore">
+                        <ui:VisualElement class="ln-chat-header" picking-mode="Ignore">
+                            <ui:Label name="ChatTitle" text="ЧАТ" class="ln-section-title" picking-mode="Ignore" />
+                            <ui:Label text="Общий канал · 14 online" class="ln-section-subtitle" picking-mode="Ignore" />
+                        </ui:VisualElement>
 
-                    <ui:VisualElement name="ProgressDetails" class="ln-progress__details ln-progress__details--hidden" picking-mode="Ignore">
-                        <ui:VisualElement name="ProgressTrack" class="ln-progress__track" picking-mode="Ignore">
-                            <ui:VisualElement name="ProgressFill" class="ln-progress__fill" picking-mode="Ignore" />
-                            <ui:VisualElement name="ProgressShine" class="ln-progress__shine" picking-mode="Ignore" />
+                        <ui:ScrollView name="ChatScroll" class="ln-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                            <ui:VisualElement name="ChatMessages" class="ln-chat-messages" picking-mode="Ignore" />
+                        </ui:ScrollView>
+
+                        <ui:VisualElement name="ChatComposer" class="ln-chat-composer" picking-mode="Position">
+                            <ui:TextField name="ChatInput" class="ln-chat-input" max-length="280" />
+                            <ui:Button name="ChatSendButton" text="ОТПРАВИТЬ" class="ln-btn ln-btn--send" />
                         </ui:VisualElement>
                     </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
 
-                    <ui:Button name="PlayButton" text="ИГРАТЬ" class="ln-btn ln-btn--play" />
-                    <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="ln-btn ln-btn--play ln-btn--return ln-btn--hidden" />
-
+            <ui:VisualElement class="ln-footer" picking-mode="Position">
+                <ui:VisualElement name="ProgressBlock" class="ln-progress" picking-mode="Ignore">
+                    <ui:Label text="Состояние клиента" class="ln-progress__kicker" picking-mode="Ignore" />
+                    <ui:VisualElement class="ln-progress__head" picking-mode="Ignore">
+                        <ui:VisualElement class="ln-status-dot" picking-mode="Ignore" />
+                        <ui:Label name="ProgressStatusLabel" text="Готово к запуску" class="ln-progress__status" enable-rich-text="true" picking-mode="Ignore" />
+                        <ui:VisualElement name="ProgressDetails" class="ln-progress__details ln-progress__details--hidden" picking-mode="Ignore">
+                            <ui:VisualElement name="ProgressTrack" class="ln-progress__track" picking-mode="Ignore">
+                                <ui:VisualElement name="ProgressFill" class="ln-progress__fill" picking-mode="Ignore" />
+                                <ui:VisualElement name="ProgressShine" class="ln-progress__shine" picking-mode="Ignore" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:Label name="ProgressPercentLabel" text="" class="ln-progress__percent" picking-mode="Ignore" />
+                    </ui:VisualElement>
                     <ui:Label name="ProgressErrorLabel" text="" class="ln-progress__error ln-progress__error--hidden" picking-mode="Ignore" />
                 </ui:VisualElement>
-            </ui:VisualElement>
 
-            <ui:VisualElement name="CenterPanel" class="ln-panel ln-panel--center" picking-mode="Position">
-                <ui:VisualElement name="HeroBanner" class="ln-hero" picking-mode="Ignore">
-                    <ui:VisualElement name="HeroImage" class="ln-hero__image" picking-mode="Ignore" />
-                    <ui:VisualElement class="ln-hero__shade" picking-mode="Ignore" />
-                    <ui:VisualElement class="ln-hero__content" picking-mode="Position">
-                        <ui:Label text="ПАТЧ" class="ln-hero__kicker" picking-mode="Ignore" />
-                        <ui:Label name="HeroTitle" text="Сезон «Железный клин»" class="ln-hero__title" picking-mode="Ignore" />
-                        <ui:Label name="HeroBody" text="Новые карты, баланс рас и быстрый вход в матч прямо из лаунчера. Соберите отряд и докажите, кто держит форпост." class="ln-hero__body" picking-mode="Ignore" />
-                        <ui:Button name="HeroReadMoreButton" text="ПОДРОБНЕЕ" class="ln-btn ln-btn--outline" />
-                    </ui:VisualElement>
-                </ui:VisualElement>
-
-                <ui:VisualElement class="ln-news-header" picking-mode="Ignore">
-                    <ui:Label text="НОВОСТИ" class="ln-section-title" picking-mode="Ignore" />
-                    <ui:Label text="Последние обновления и анонсы" class="ln-section-subtitle" picking-mode="Ignore" />
-                </ui:VisualElement>
-
-                <ui:ScrollView name="NewsScroll" class="ln-news-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
-                    <ui:VisualElement name="NewsList" class="ln-news-list" picking-mode="Ignore" />
-                </ui:ScrollView>
-            </ui:VisualElement>
-
-            <ui:VisualElement name="RightPanel" class="ln-panel ln-panel--side ln-panel--right" picking-mode="Position">
-                <ui:VisualElement class="ln-chat-header" picking-mode="Ignore">
-                    <ui:Label name="ChatTitle" text="ЧАТ" class="ln-section-title" picking-mode="Ignore" />
-                    <ui:Label text="Общий канал · 14 online" class="ln-section-subtitle" picking-mode="Ignore" />
-                </ui:VisualElement>
-
-                <ui:ScrollView name="ChatScroll" class="ln-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
-                    <ui:VisualElement name="ChatMessages" class="ln-chat-messages" picking-mode="Ignore" />
-                </ui:ScrollView>
-
-                <ui:VisualElement name="ChatComposer" class="ln-chat-composer" picking-mode="Position">
-                    <ui:TextField name="ChatInput" class="ln-chat-input" max-length="280" />
-                    <ui:Button name="ChatSendButton" text="ОТПРАВИТЬ" class="ln-btn ln-btn--send" />
+                <ui:VisualElement class="ln-footer-actions" picking-mode="Position">
+                    <ui:Button name="PlayButton" text="ИГРАТЬ" class="ln-btn ln-btn--play" />
+                    <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="ln-btn ln-btn--play ln-btn--return ln-btn--hidden" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

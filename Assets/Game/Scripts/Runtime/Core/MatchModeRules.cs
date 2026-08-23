@@ -1,8 +1,8 @@
 namespace Game.Core
 {
-    /// <summary>
-    /// Which player-count modes are selectable in Match Entry.
-    /// </summary>
+        /// <summary>
+        /// Which player-count modes are selectable on the main-menu ИГРА tab.
+        /// </summary>
     public static class MatchModeRules
     {
         public const int MinPlayers = 2;
@@ -23,6 +23,18 @@ namespace Game.Core
                 4 => "FFA 4",
                 5 => "FFA 5",
                 _ => $"FFA {playerCount}",
+            };
+
+        public const string ModeMapNote = "Статы те же — меняется только карта.";
+
+        public static string GetModeSummary(int playerCount) =>
+            playerCount switch
+            {
+                2 => "Две базы напротив. Три коридора — фланг, центр, фланг — все ведут к одному сопернику.",
+                3 => "Три базы треугольником. Фланги бьют соседей, центр сходится в арене.",
+                4 => "Четыре базы крестом. Фланги на соседей, центр — к базе напротив через арену.",
+                5 => "Пять баз по кругу. Фланги по кольцу, все центры встречаются в арене.",
+                _ => "Базы на периметре. Три исходящие дороги у каждого игрока.",
             };
     }
 }

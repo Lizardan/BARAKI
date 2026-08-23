@@ -1,83 +1,165 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/BarakiTheme.uss" />
-    <Style src="../USS/MainMenu.uss" />
+    <ui:Style src="../USS/BarakiTheme.uss" />
+    <ui:Style src="../USS/MainMenu.uss" />
     <ui:VisualElement name="MenuScreen" class="ui-screen mm" picking-mode="Position">
         <ui:VisualElement name="MenuBackdrop" class="ui-bg" picking-mode="Ignore" />
-        <ui:VisualElement class="ui-bg-shade" picking-mode="Ignore" />
-        <ui:VisualElement class="ui-vignette" picking-mode="Ignore" />
-
-        <ui:VisualElement name="ProfileBlock" class="mm__profile-block" picking-mode="Position">
-            <ui:VisualElement name="ProfileBadge" class="mm__profile-badge mm__profile-badge--copyable" picking-mode="Position">
-                <ui:VisualElement name="ProfileAvatar" class="mm__avatar" picking-mode="Ignore">
-                    <ui:Label name="ProfileAvatarLabel" text="?" class="mm__avatar-text" picking-mode="Ignore" />
-                </ui:VisualElement>
-                <ui:VisualElement class="mm__profile-badge-text" picking-mode="Ignore">
-                    <ui:VisualElement name="ProfileNameRow" class="mm__profile-name-row" picking-mode="Ignore">
-                        <ui:Label name="ProfileNameLabel" text="Игрок" class="mm__profile-name" enable-rich-text="true" picking-mode="Ignore" />
-                    </ui:VisualElement>
-                    <ui:Label name="ProfileStatsLabel" text="Ранг — · Очки —" class="mm__profile-stats" picking-mode="Ignore" />
-                    <ui:Label name="ProfileRecordLabel" text="Матчи — · Победы — · Поражения —" class="mm__profile-stats mm__profile-stats--bottom" picking-mode="Ignore" />
-                </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:Button name="EditProfileButton" text="РЕДАКТИРОВАТЬ" class="mm__profile-edit-btn" />
-        </ui:VisualElement>
+        <ui:VisualElement class="mm__ambient mm__ambient--left" picking-mode="Ignore" />
+        <ui:VisualElement class="mm__ambient mm__ambient--right" picking-mode="Ignore" />
+        <ui:VisualElement class="mm__shade" picking-mode="Ignore" />
 
         <ui:VisualElement class="mm__shell" picking-mode="Ignore">
-            <ui:VisualElement class="mm__main" picking-mode="Ignore">
+            <ui:VisualElement class="mm__header" picking-mode="Ignore">
                 <ui:VisualElement name="MenuBrand" class="mm__brand" picking-mode="Ignore">
-                    <ui:Label name="TitleLabel" text="BARAKI" class="ui-title" />
-                    <ui:Label text="ТРИ ПУТИ · ОДНА ПОБЕДА" class="ui-tagline" />
-                    <ui:VisualElement class="ui-rule" />
-                    <ui:Label text="Windows · 2–5 игроков · FFA" class="ui-meta" />
+                    <ui:Label name="TitleLabel" text="BARAKI" class="mm__title" picking-mode="Ignore" />
                 </ui:VisualElement>
-
-                <ui:VisualElement name="MenuPanel" class="mm__nav ui-panel ui-panel--lg">
-                    <ui:VisualElement class="ui-panel__inner mm__nav-inner">
-                        <ui:Label text="ИГРА" class="ui-panel__header-text mm__section-label" />
-                        <ui:Button name="PlayButton" text="В БОЙ" class="ui-btn ui-btn--primary" />
-                        <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="ui-btn ui-overlay--hidden" />
-                        <ui:Button name="SettingsButton" text="НАСТРОЙКИ" class="ui-btn" />
-                        <ui:Button name="QuitButton" text="ВЫХОД" class="ui-btn ui-btn--muted" />
-                        <ui:VisualElement class="ui-hints">
-                            <ui:Label text="Enter — в бой" class="ui-hints__text" />
-                            <ui:Label text="Esc — выход" class="ui-hints__text" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
+                <ui:VisualElement name="VersionBar" class="mm__version-bar" picking-mode="Ignore">
+                    <ui:Label name="VersionLabel" text="v0.0.0" class="mm__version-text" picking-mode="Ignore" />
                 </ui:VisualElement>
             </ui:VisualElement>
 
-            <ui:VisualElement name="HubPanel" class="mm__side ui-panel ui-panel--lg">
-                <ui:VisualElement class="ui-panel__inner mm__side-inner">
-                    <ui:VisualElement class="ui-panel__header">
-                        <ui:Label text="ДРУЗЬЯ" class="ui-panel__header-text" />
-                        <ui:Label name="FriendsCountLabel" text="0" class="mm__friends-count" />
-                    </ui:VisualElement>
-                    <ui:VisualElement name="FriendsTabs" class="mm__friends-tabs">
-                        <ui:Button name="FriendsTabButton" text="ДРУЗЬЯ" class="mm__friends-tab mm__friends-tab--active" />
-                        <ui:Button name="InvitesTabButton" text="ПРИГЛАШЕНИЯ" class="mm__friends-tab" />
-                    </ui:VisualElement>
-                    <ui:VisualElement name="FriendsTabContent" class="mm__friends-tab-pane">
-                        <ui:ScrollView name="FriendsScroll" class="mm__friends-scroll" mode="Vertical">
-                            <ui:VisualElement name="FriendsListContainer" class="mm__friends-list-container" />
-                        </ui:ScrollView>
-                        <ui:Label name="FriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
-                        <ui:VisualElement name="AddFriendSection" class="mm__friends-add">
-                            <ui:Label text="Добавить по имени (Ник#1234)" class="ui-label mm__friends-add-label" />
-                            <ui:TextField name="FriendIdField" class="mm-join__field" max-length="32" />
-                            <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
+            <ui:VisualElement class="mm__body" picking-mode="Ignore">
+                <ui:VisualElement class="mm__main" picking-mode="Position">
+                    <ui:VisualElement name="MenuPanel" class="mm__panel">
+                        <ui:VisualElement name="ProfileBlock" class="mm__profile-block" picking-mode="Position">
+                            <ui:VisualElement name="ProfileBadge" class="mm__profile-badge mm__profile-badge--copyable" picking-mode="Position">
+                                <ui:VisualElement name="ProfileAvatar" class="mm__avatar" picking-mode="Ignore">
+                                    <ui:Label name="ProfileAvatarLabel" text="?" class="mm__avatar-text" picking-mode="Ignore" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="mm__profile-badge-text" picking-mode="Ignore">
+                                    <ui:VisualElement name="ProfileNameRow" class="mm__profile-name-row" picking-mode="Ignore">
+                                        <ui:Label name="ProfileNameLabel" text="Игрок" class="mm__profile-name" enable-rich-text="true" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+                                    <ui:Label name="ProfileStatsLabel" text="Ранг — · Очки —" class="mm__profile-stats" picking-mode="Ignore" />
+                                    <ui:Label name="ProfileRecordLabel" text="Матчи — · Победы — · Поражения —" class="mm__profile-stats mm__profile-stats--bottom" picking-mode="Ignore" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:Button name="EditProfileButton" text="РЕДАКТИРОВАТЬ" class="mm__profile-edit-btn" />
+                        </ui:VisualElement>
+
+                        <ui:Button name="ReturnToMatchButton" text="ВЕРНУТЬСЯ В МАТЧ" class="mm-menu-btn mm__return-btn ui-overlay--hidden" />
+
+                        <ui:VisualElement name="LeftTabHost" class="mm__left-host">
+                            <ui:VisualElement name="ChatTabContent" class="mm__left-pane mm__left-pane--chat">
+                                <ui:ScrollView name="ChatScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="ChatMessages" class="mm-chat-messages" picking-mode="Ignore" />
+                                </ui:ScrollView>
+                                <ui:VisualElement name="ChatComposer" class="mm-chat-composer" picking-mode="Position">
+                                    <ui:TextField name="ChatInput" class="mm-chat-input" max-length="280" />
+                                    <ui:Button name="ChatSendButton" text="ОТПРАВИТЬ" class="mm-chat-send" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="MatchHistoryTabContent" class="mm__left-pane ui-overlay--hidden">
+                                <ui:ScrollView name="MatchHistoryScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="MatchHistoryList" class="mm-list" picking-mode="Ignore">
+                                        <ui:Label text="История матчей пока пуста." class="mm-empty" picking-mode="Ignore" />
+                                        <ui:Label text="Сыгранные бои появятся здесь." class="mm-empty mm-empty--hint" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+                                </ui:ScrollView>
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="PublicGamesTabContent" class="mm__left-pane ui-overlay--hidden">
+                                <ui:ScrollView name="PublicGamesScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="PublicGamesList" class="mm-list" picking-mode="Ignore">
+                                        <ui:Label text="Публичных игр сейчас нет." class="mm-empty" picking-mode="Ignore" />
+                                        <ui:Label text="Открытые комнаты, в которые можно зайти, появятся в этом списке." class="mm-empty mm-empty--hint" picking-mode="Ignore" />
+                                    </ui:VisualElement>
+                                </ui:ScrollView>
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="SettingsTabContent" class="mm__left-pane ui-overlay--hidden">
+                                <ui:Label text="НАСТРОЙКИ" class="mm__left-pane-title" picking-mode="Ignore" />
+                                <ui:VisualElement class="ui-dialog__row">
+                                    <ui:Label text="Звук" class="ui-label" />
+                                    <ui:Toggle name="SoundToggle" class="ui-toggle" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="ui-dialog__row ui-dialog__row--stack">
+                                    <ui:VisualElement class="ui-dialog__row-head">
+                                        <ui:Label text="Громкость" class="ui-label" />
+                                        <ui:Label name="VolumeValueLabel" text="75%" class="ui-dialog__value" />
+                                    </ui:VisualElement>
+                                    <ui:Slider name="VolumeSlider" low-value="0" high-value="1" value="0.75" class="ui-slider" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="LeftTabs" class="mm__dock-tabs">
+                            <ui:Button name="ChatTabButton" text="ЧАТ" class="mm__dock-tab mm__dock-tab--active" />
+                            <ui:Button name="PublicGamesTabButton" text="ИГРЫ" class="mm__dock-tab" />
+                            <ui:Button name="MatchHistoryTabButton" text="ИСТОРИЯ" class="mm__dock-tab" />
+                            <ui:Button name="SettingsButton" tooltip="Настройки" class="mm__dock-tab mm__dock-tab--gear">
+                                <ui:Label text="⚙" class="mm__dock-gear" picking-mode="Ignore" />
+                            </ui:Button>
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement name="InvitesTabContent" class="mm__friends-tab-pane ui-overlay--hidden">
-                        <ui:ScrollView name="InvitesScroll" class="mm__friends-scroll" mode="Vertical">
-                            <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
-                        </ui:ScrollView>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="HubPanel" class="mm__side">
+                    <ui:VisualElement class="mm__side-inner">
+                        <ui:VisualElement name="HubTabs" class="mm__hub-tabs">
+                            <ui:Button name="GameTabButton" text="ИГРА" class="mm__friends-tab mm__friends-tab--active" />
+                            <ui:Button name="HubFriendsTabButton" class="mm__friends-tab mm__friends-tab--with-count">
+                                <ui:Label text="ДРУЗЬЯ" class="mm__hub-tab-title" picking-mode="Ignore" />
+                                <ui:Label name="FriendsCountLabel" text="0" class="mm__friends-count" picking-mode="Ignore" />
+                            </ui:Button>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="GameTabContent" class="mm__game-pane">
+                            <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
+                            <ui:VisualElement name="ModeDossier" class="mm-mode-dossier">
+                                <ui:VisualElement name="ModeDossierPreview" class="mm-mode-dossier__preview" picking-mode="Ignore" />
+                                <ui:VisualElement class="mm-mode-dossier__copy" picking-mode="Ignore">
+                                    <ui:Label name="ModeDossierTitle" text="" class="mm-mode-dossier__title" picking-mode="Ignore" />
+                                    <ui:Label name="ModeDossierBody" text="" class="mm-mode-dossier__body" picking-mode="Ignore" />
+                                    <ui:Label name="ModeDossierNote" text="" class="mm-mode-dossier__note" picking-mode="Ignore" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="mm-join-meta">
+                                <ui:Label name="ModeSelectErrorLabel" text="" class="ui-meta mm-modes__error ui-overlay--hidden" picking-mode="Ignore" />
+                                <ui:Label name="MatchEntryErrorLabel" text="" class="ui-meta mm-join-error ui-overlay--hidden" picking-mode="Ignore" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="mm__game-actions">
+                                <ui:VisualElement class="mm__game-slot">
+                                    <ui:Button name="PlayButton" text="В БОЙ" class="ui-btn ui-btn--primary" />
+                                    <ui:VisualElement name="JoinCodeRow" class="mm-join-slot ui-overlay--hidden">
+                                        <ui:TextField name="JoinCodeField" class="mm-join__field mm-join__field--slot" max-length="8" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                                <ui:VisualElement class="mm__game-slot mm__game-slot--after">
+                                    <ui:Button name="JoinMatchButton" text="ПРИСОЕДИНИТЬСЯ" class="ui-btn" />
+                                    <ui:Button name="JoinConfirmButton" text="ВОЙТИ" class="ui-btn ui-btn--primary ui-overlay--hidden" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement name="FriendsHost" class="mm__friends-host ui-overlay--hidden">
+                            <ui:VisualElement name="FriendsTabs" class="mm__friends-tabs">
+                                <ui:Button name="FriendsTabButton" text="ДРУЗЬЯ" class="mm__friends-tab mm__friends-tab--active" />
+                                <ui:Button name="InvitesTabButton" text="ПРИГЛАШЕНИЯ" class="mm__friends-tab" />
+                            </ui:VisualElement>
+                            <ui:VisualElement name="FriendsTabContent" class="mm__friends-tab-pane">
+                                <ui:ScrollView name="FriendsScroll" class="mm__friends-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="FriendsListContainer" class="mm__friends-list-container" />
+                                </ui:ScrollView>
+                                <ui:VisualElement name="AddFriendSection" class="mm__friends-add">
+                                    <ui:Label name="FriendsErrorLabel" text="" class="ui-meta mm__friends-error ui-overlay--hidden" picking-mode="Ignore" />
+                                    <ui:TextField name="FriendIdField" class="mm-join__field" max-length="32" />
+                                    <ui:Button name="AddFriendButton" text="ДОБАВИТЬ" class="ui-btn" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement name="InvitesTabContent" class="mm__friends-tab-pane ui-overlay--hidden">
+                                <ui:ScrollView name="InvitesScroll" class="mm__friends-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                    <ui:VisualElement name="IncomingRequestsList" class="mm__incoming-list" />
+                                </ui:ScrollView>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="VersionBar" class="mm__version-bar" picking-mode="Ignore">
-            <ui:Label name="VersionLabel" text="v0.0.0" class="mm__version-text" picking-mode="Ignore" />
+        <ui:VisualElement name="WindowChrome" class="mm-window-chrome" picking-mode="Ignore">
+            <ui:Button name="QuitButton" text="✕" tooltip="Выход" class="mm-btn mm-btn--close" />
         </ui:VisualElement>
 
         <ui:VisualElement name="ProfileEditOverlay" class="ui-overlay ui-overlay--hidden">
@@ -106,17 +188,6 @@
                     <ui:Button name="SettingsCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body">
-                    <ui:VisualElement class="ui-dialog__row">
-                        <ui:Label text="Звук" class="ui-label" />
-                        <ui:Toggle name="SoundToggle" class="ui-toggle" />
-                    </ui:VisualElement>
-                    <ui:VisualElement class="ui-dialog__row ui-dialog__row--stack">
-                        <ui:VisualElement class="ui-dialog__row-head">
-                            <ui:Label text="Громкость" class="ui-label" />
-                            <ui:Label name="VolumeValueLabel" text="75%" class="ui-dialog__value" />
-                        </ui:VisualElement>
-                        <ui:Slider name="VolumeSlider" low-value="0" high-value="1" value="0.75" class="ui-slider" />
-                    </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
@@ -129,14 +200,7 @@
                     <ui:Button name="MatchEntryCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
                 <ui:VisualElement class="ui-dialog__body mm-entry__body">
-                    <ui:Label name="MatchEntryErrorLabel" text="" class="ui-meta mm-modes__error" />
                     <ui:Button name="CreateMatchButton" text="СОЗДАТЬ МАТЧ" class="ui-btn ui-btn--primary" />
-                    <ui:Button name="JoinMatchButton" text="ПРИСОЕДИНИТЬСЯ" class="ui-btn" />
-                    <ui:VisualElement name="JoinCodeRow" class="mm-join ui-overlay--hidden">
-                        <ui:Label text="Код комнаты" class="ui-label" />
-                        <ui:TextField name="JoinCodeField" class="mm-join__field" max-length="8" />
-                        <ui:Button name="JoinConfirmButton" text="ВОЙТИ" class="ui-btn ui-btn--primary" />
-                    </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
@@ -154,12 +218,10 @@
                     <ui:Label text="РЕЖИМ" class="ui-dialog__title" />
                     <ui:Button name="ModeSelectCloseButton" text="×" class="ui-dialog__close" />
                 </ui:VisualElement>
-                <ui:Label name="ModeSelectErrorLabel" text="" class="ui-meta mm-modes__error" />
-                <ui:VisualElement name="ModeGrid" class="mm-modes__grid" />
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="LobbyEntryOverlay" class="ui-overlay ui-panel-loading-overlay--hidden">
+        <ui:VisualElement name="LobbyEntryOverlay" class="ui-overlay ui-panel-loading-overlay--hidden" picking-mode="Position">
             <ui:VisualElement class="ui-overlay__dim" />
             <ui:VisualElement class="ui-dialog mm-lobby-entry">
                 <ui:VisualElement class="ui-dialog__body mm-lobby-entry__body">

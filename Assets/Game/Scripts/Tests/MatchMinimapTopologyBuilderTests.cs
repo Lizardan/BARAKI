@@ -119,6 +119,65 @@ namespace Game.Tests
             }
         }
 
+        [TestCase(3)]
+        [TestCase(5)]
+        public void Build_FfaRing_SharedPathClosesOnItself(int players)
+        {
+            var layout = MatchArenaGenerator.Generate(players);
+            var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, players);
+            Assert.IsTrue(ring.IsClosedLoop);
+            var first = ring.GetWaypoint(0);
+            var last = ring.GetWaypoint(ring.WaypointCount - 1);
+            first.y = 0f;
+            last.y = 0f;
+            Assert.Less((first - last).sqrMagnitude, 0.05f);
+        }
+
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        public void Build_MinimapRing_HasNoOpenPerimeterGap(int players)
+        {
+            var layout = MatchArenaGenerator.Generate(players);
+            var graph = LaneGraphBuilder.Build(layout);
+            var topology = MatchMinimapTopologyBuilder.Build(layout, graph);
+            var ring = PerimeterRingPathBuilder.BuildSharedFlankRing(layout.ArenaRadius, players);
+            var lastIndex = ring.WaypointCount - 1;
+            for (var i = 1; i <= lastIndex; i++)
+            {
+                var a = ring.GetWaypoint(i - 1);
+                var b = ring.GetWaypoint(i);
+                Assert.IsTrue(
+                    HasSegmentNear(topology, a, b, 0.4f),
+                    $"N={players} ring gap between waypoints {i - 1} and {i}");
+            }
+        }
+
+        static bool HasSegmentNear(
+            MatchMinimapTopology topology,
+            Vector3 a,
+            Vector3 b,
+            float tolerance)
+        {
+            var from = new Vector2(a.x, a.z);
+            var to = new Vector2(b.x, b.z);
+            var maxDistSq = tolerance * tolerance;
+            foreach (var segment in topology.RoadSegments)
+            {
+                var a0 = (segment.A - from).sqrMagnitude <= maxDistSq;
+                var b0 = (segment.B - to).sqrMagnitude <= maxDistSq;
+                var a1 = (segment.A - to).sqrMagnitude <= maxDistSq;
+                var b1 = (segment.B - from).sqrMagnitude <= maxDistSq;
+                if ((a0 && b0) || (a1 && b1))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         static bool HasSegmentTouching(MatchMinimapTopology topology, Vector2 point, float tolerance)
         {
             var maxDistSq = tolerance * tolerance;

@@ -18,6 +18,7 @@ namespace Game.Editor
         private const string LobbyPath = "Assets/Game/Scenes/Lobby.unity";
         private const string GamePath = "Assets/Game/Scenes/Game.unity";
         private const string PanelSettingsPath = "Assets/Game/Settings/UI/DefaultPanelSettings.asset";
+        private const string LauncherPanelSettingsPath = "Assets/Game/Settings/UI/LauncherPanelSettings.asset";
         private const string BootstrapUxmlPath = "Assets/Game/UI/Runtime/UXML/Launcher.uxml";
         private const string MainMenuUxmlPath = "Assets/Game/UI/Runtime/UXML/MainMenu.uxml";
         private const string LobbyUxmlPath = "Assets/Game/UI/Runtime/UXML/Lobby.uxml";
@@ -65,7 +66,8 @@ namespace Game.Editor
                 uiGroup.transform,
                 "Launcher",
                 BootstrapUxmlPath,
-                typeof(LauncherController));
+                typeof(LauncherController),
+                LauncherPanelSettingsPath);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -133,13 +135,14 @@ namespace Game.Editor
             Transform uiParent,
             string objectName,
             string uxmlPath,
-            System.Type controllerType)
+            System.Type controllerType,
+            string panelSettingsPath = PanelSettingsPath)
         {
             var menuObject = new GameObject(objectName);
             menuObject.transform.SetParent(uiParent, false);
 
             var uiDocument = menuObject.AddComponent<UIDocument>();
-            uiDocument.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            uiDocument.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(panelSettingsPath);
             uiDocument.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             uiDocument.sortingOrder = 100;
 
