@@ -174,4 +174,104 @@ namespace Game.Core
             keyCode is UnityEngine.KeyCode.Return or UnityEngine.KeyCode.KeypadEnter
             || character is '\n' or '\r';
     }
+
+    /// <summary>WebSocket chat transport rules: reconnect policy, outbox limits, wire frames.</summary>
+    public static class GameChatSocketRules
+    {
+        public const float MaxReconnectDelaySeconds = 30f;
+        /// <summary>Pending sends buffered while the socket is down; oldest are dropped beyond this.</summary>
+        public const int MaxOutboxMessages = 20;
+        public const float HeartbeatIntervalSeconds = 30f;
+        /// <summary>No inbound traffic for this long → force reconnect.</summary>
+        public const float DeadConnectionSeconds = 75f;
+
+        /// <summary>1, 2, 4, … capped at <see cref="MaxReconnectDelaySeconds"/>.</summary>
+        public static float NextReconnectDelaySeconds(int attempt)
+        {
+            var exponent = attempt < 0 ? 0 : attempt;
+            if (exponent > 16)
+            {
+                exponent = 16; // pow overflow guard; result is capped anyway
+            }
+
+            return System.Math.Min(MaxReconnectDelaySeconds, System.MathF.Pow(2f, exponent));
+        }
+
+        public static int OutboxCountAfterEnqueue(int currentCount) =>
+            System.Math.Min(currentCount + 1, MaxOutboxMessages);
+
+        public static string BuildSendFrame(string channel, string text, string peerId = null) =>
+            peerId is { Length: > 0 }
+                ? $"{{\"type\":\"send\",\"channel\":\"{channel}\",\"text\":{GameChatRules.JsonEscape(text)},\"peerId\":\"{peerId}\"}}"
+                : $"{{\"type\":\"send\",\"channel\":\"{channel}\",\"text\":{GameChatRules.JsonEscape(text)}}}";
+
+        public static string BuildSyncFrame(string globalAfter, string friendsAfter, string dmAfterJson)
+        {
+            var dm = string.IsNullOrEmpty(dmAfterJson) || dmAfterJson == "{}" ? "{}" : dmAfterJson;
+            return $"{{\"type\":\"sync\",\"globalAfter\":\"{globalAfter ?? string.Empty}\","
+                   + $"\"friendsAfter\":\"{friendsAfter ?? string.Empty}\",\"dm\":{dm}}}";
+        }
+
+        public enum FrameKind
+        {
+            Unknown,
+            Message,
+            Ack,
+            Error,
+        }
+
+        [System.Serializable]
+        public class WireMessage
+        {
+            public string id;
+            public string ts;
+            public string playerId;
+            public string displayName;
+            public string text;
+            public string channel;
+            public string peerId;
+        }
+
+        [System.Serializable]
+        public class WireFrame
+        {
+            public string type;
+            public WireMessage message;
+            public string code;
+        }
+
+        /// <summary>Parse a server frame; unknown/broken payloads yield Unknown.</summary>
+        public static (FrameKind Kind, WireFrame Frame) ParseServerFrame(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json) || json == "pong")
+            {
+                return (FrameKind.Unknown, null);
+            }
+
+            WireFrame frame;
+            try
+            {
+                frame = UnityEngine.JsonUtility.FromJson<WireFrame>(json);
+            }
+            catch (System.ArgumentException)
+            {
+                return (FrameKind.Unknown, null);
+            }
+
+            if (frame?.type == null)
+            {
+                return (FrameKind.Unknown, null);
+            }
+
+            return frame.type switch
+            {
+                // JsonUtility instantiates nested class fields even when absent from JSON,
+                // so an empty message must be rejected by its required payload (id).
+                "msg" when !string.IsNullOrEmpty(frame.message?.id) => (FrameKind.Message, frame),
+                "ack" when !string.IsNullOrEmpty(frame.message?.id) => (FrameKind.Ack, frame),
+                "error" => (FrameKind.Error, frame),
+                _ => (FrameKind.Unknown, frame),
+            };
+        }
+    }
 }

@@ -215,6 +215,9 @@ namespace Game.Gameplay.Match
             renderer.sharedMaterial = material;
         }
 
+        /// <summary>Position delta above this means a teleport (fog recycle / frame hitch): wipe trails.</summary>
+        public const float TeleportTrailClearDistance = 2.5f;
+
         public static void UpdateProjectileTransform(Transform visual, CombatProjectileState projectile)
         {
             var progress = projectile.ResolvePresentationProgress();
@@ -223,7 +226,17 @@ namespace Game.Gameplay.Match
                 projectile.TargetPosition,
                 progress,
                 projectile.IsParabolic);
+
+            // A discontinuous move must not leave a straight trail segment across the map.
+            var jumped = (visual.position - position).sqrMagnitude
+                         > TeleportTrailClearDistance * TeleportTrailClearDistance;
+
             visual.position = position;
+            if (jumped
+                && visual.TryGetComponent<TrailRenderer>(out var trail))
+            {
+                trail.Clear();
+            }
 
             var nextProgress = Mathf.Min(1f, progress + 0.04f);
             var nextPosition = CombatProjectileTrajectory.Evaluate(

@@ -354,6 +354,8 @@ namespace Game.UI.Controllers
             }
 
             LocalMatchRegistry.Clear();
+            // Match never started here: a stale reconnect token must not survive into the menu.
+            PendingMatchReconnectStore.Clear();
             if (MatchNetworkSession.IsNetworked)
             {
                 MatchNetworkSession.Shutdown();

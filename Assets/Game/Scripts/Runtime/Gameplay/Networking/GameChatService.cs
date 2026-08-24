@@ -67,12 +67,10 @@ namespace Game.Gameplay.Networking
     {
         const string PrefsApiBase = "baraki.chat.apiBase";
         const string PrefsApiKey = "baraki.chat.apiKey";
-        const float PollSeconds = 5f;
-        const float PollBackoffSeconds = 15f;
         const float WarnThrottleSeconds = 45f;
+        const float ManualRefreshCooldownSeconds = 1.5f;
 
         static bool s_ready;
-        static bool s_pollRunning;
         static bool s_initRunning;
         static string s_apiBase = string.Empty;
         static string s_apiKey = string.Empty;
@@ -85,10 +83,23 @@ namespace Game.Gameplay.Networking
             new(StringComparer.Ordinal);
         static readonly HashSet<string> s_seenIds = new(StringComparer.Ordinal);
         static int s_sessionId; // bumps every Play enter — invalidates in-flight requests
-        static float s_nextPollAllowedAt;
         static float s_nextWarnAt;
+        static float s_lastManualRefreshRealtime;
         static HttpClient s_http;
         static CancellationTokenSource s_cts = new();
+
+        /// <summary>Pending sends while the socket is down, flushed on reconnect.</summary>
+        readonly struct OutgoingMessage
+        {
+            public OutgoingMessage(string frame)
+            {
+                Frame = frame;
+            }
+
+            public string Frame { get; }
+        }
+
+        static readonly Queue<OutgoingMessage> s_outbox = new();
 
         public static event Action ReadyChanged;
         public static event Action<GameChatMessage> ChannelMessageReceived;
@@ -105,7 +116,6 @@ namespace Game.Gameplay.Networking
         {
             System.Threading.Interlocked.Increment(ref s_sessionId);
             s_ready = false;
-            s_pollRunning = false;
             s_initRunning = false;
             s_apiBase = string.Empty;
             s_apiKey = string.Empty;
@@ -116,9 +126,11 @@ namespace Game.Gameplay.Networking
             s_friendsHistory.Clear();
             s_dmByPeer.Clear();
             s_seenIds.Clear();
-            s_nextPollAllowedAt = 0f;
+            s_outbox.Clear();
             s_nextWarnAt = 0f;
+            s_lastManualRefreshRealtime = 0f;
             RecycleHttpClient();
+            GameChatSocket.Reset();
             ReadyChanged = null;
             ChannelMessageReceived = null;
             DirectMessageReceived = null;
@@ -138,7 +150,7 @@ namespace Game.Gameplay.Networking
             return list;
         }
 
-        /// <summary>Register a DM peer so the poll loop fetches history before the first send.</summary>
+        /// <summary>Register a DM peer so history is fetched before the first send.</summary>
         public static void EnsureDirectPeer(string otherPlayerId)
         {
             var id = GameChatRules.NormalizePlayerId(otherPlayerId);
@@ -194,7 +206,7 @@ namespace Game.Gameplay.Networking
 
                 // Soft-ready: UI can send even if the first session POST fails (common after Play restart).
                 SetReady(true);
-                EnsurePollLoop();
+                StartSocket();
                 try
                 {
                     await PostSessionAsync();
@@ -219,7 +231,7 @@ namespace Game.Gameplay.Networking
                 if (!string.IsNullOrWhiteSpace(s_apiBase))
                 {
                     SetReady(true);
-                    EnsurePollLoop();
+                    StartSocket();
                     RetrySessionAsync().Forget();
                 }
                 else
@@ -276,18 +288,14 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        public static async UniTaskVoid SendChannelAsync(MenuChatChannel channel, string text)
+        public static void SendChannelAsync(MenuChatChannel channel, string text)
         {
             if (!GameChatRules.TrySanitizeMessage(text, out var message) || !IsReady)
             {
                 return;
             }
 
-            var path = channel == MenuChatChannel.FriendsFeed
-                ? "/v1/channels/friends"
-                : "/v1/channels/global";
-
-            // Optimistic local echo — server often succeeds even when Unity reports Curl 55.
+            // Optimistic local echo; the server ack/dedup path keeps history consistent.
             var localId = UnityServicesBootstrap.PlayerId;
             var localName = UnityServicesBootstrap.PlayerName;
             if (string.IsNullOrWhiteSpace(localName))
@@ -305,21 +313,14 @@ namespace Game.Gameplay.Networking
             AppendChannel(optimistic);
             ChannelMessageReceived?.Invoke(optimistic);
 
-            try
-            {
-                var responseJson = await RequestJsonAsync("POST", path, $"{{\"text\":{JsonString(message)}}}");
-                IngestPostedChannelMessage(responseJson, channel);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-                LogThrottledWarning($"GameChatService: send channel failed: {ex.Message}");
-            }
+            EnqueueOutgoing(
+                GameChatSocketRules.BuildSendFrame(
+                    channel == MenuChatChannel.FriendsFeed ? "friends" : "global",
+                    message));
+            FlushOutbox();
         }
 
-        public static async UniTaskVoid SendDirectAsync(string targetPlayerId, string text)
+        public static void SendDirectAsync(string targetPlayerId, string text)
         {
             var target = GameChatRules.NormalizePlayerId(targetPlayerId);
             if (target.Length == 0
@@ -329,19 +330,30 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            if (!s_dmByPeer.ContainsKey(target))
-            {
-                s_dmByPeer[target] = new List<GameChatDirectMessage>();
-            }
+            EnsureDirectPeer(target);
+            EnqueueOutgoing(GameChatSocketRules.BuildSendFrame("dm", message, target));
+            FlushOutbox();
+        }
 
-            try
+        static void EnqueueOutgoing(string frame)
+        {
+            s_outbox.Enqueue(new OutgoingMessage(frame));
+            while (s_outbox.Count > GameChatSocketRules.MaxOutboxMessages)
             {
-                var path = $"/v1/dm/{Uri.EscapeDataString(target)}";
-                await RequestJsonAsync("POST", path, $"{{\"text\":{JsonString(message)}}}");
+                s_outbox.Dequeue(); // drop-oldest beyond the limit
             }
-            catch (Exception ex)
+        }
+
+        static void FlushOutbox()
+        {
+            while (s_outbox.Count > 0)
             {
-                LogThrottledWarning($"GameChatService: send DM failed: {ex.Message}");
+                if (!GameChatSocket.TrySend(s_outbox.Peek().Frame))
+                {
+                    return; // socket down — retry on reconnect
+                }
+
+                s_outbox.Dequeue();
             }
         }
 
@@ -350,63 +362,180 @@ namespace Game.Gameplay.Networking
             SyncOnlineFriendFeedsAsync().Forget();
         }
 
-        static void EnsurePollLoop()
+        /// <summary>
+        /// User-visible chat activity (open tab, send): pull new messages immediately —
+        /// sync frame over the socket when it is up, HTTP catch-up otherwise.
+        /// Throttled to avoid hammering the Worker.
+        /// </summary>
+        public static void RefreshNow()
         {
-            if (s_pollRunning)
+            if (!s_ready)
             {
                 return;
             }
 
-            s_pollRunning = true;
-            PollLoopAsync().Forget();
-        }
-
-        static async UniTaskVoid PollLoopAsync()
-        {
-            var session = s_sessionId;
-            var token = s_cts.Token;
-            while (s_ready && session == s_sessionId && !token.IsCancellationRequested)
+            var now = Time.realtimeSinceStartup;
+            if (now - s_lastManualRefreshRealtime < ManualRefreshCooldownSeconds)
             {
-                var delaySeconds = PollSeconds;
-                try
-                {
-                    if (Time.realtimeSinceStartup < s_nextPollAllowedAt)
-                    {
-                        await UniTask.Delay(
-                            TimeSpan.FromSeconds(Math.Max(0.25f, s_nextPollAllowedAt - Time.realtimeSinceStartup)),
-                            ignoreTimeScale: true,
-                            cancellationToken: token);
-                        continue;
-                    }
-
-                    await PollOnceAsync();
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    if (session != s_sessionId)
-                    {
-                        break;
-                    }
-
-                    LogThrottledWarning($"GameChatService: poll failed: {ex.Message}");
-                    delaySeconds = PollBackoffSeconds;
-                    s_nextPollAllowedAt = Time.realtimeSinceStartup + PollBackoffSeconds;
-                }
-
-                await UniTask.Delay(
-                    TimeSpan.FromSeconds(delaySeconds),
-                    ignoreTimeScale: true,
-                    cancellationToken: token);
+                return;
             }
 
-            s_pollRunning = false;
+            s_lastManualRefreshRealtime = now;
+            if (GameChatSocket.IsConnected)
+            {
+                GameChatSocket.TrySend(BuildSyncFrame());
+                FlushOutbox();
+            }
+            else
+            {
+                CatchUpOnceAsync().Forget();
+            }
         }
 
-        static async UniTask PollOnceAsync()
+        static void StartSocket()
+        {
+            var localName = UnityServicesBootstrap.PlayerName;
+            if (string.IsNullOrWhiteSpace(localName))
+            {
+                localName = PlayerProfileService.DisplayName;
+            }
+
+            GameChatSocket.FrameReceived -= HandleSocketFrame;
+            GameChatSocket.FrameReceived += HandleSocketFrame;
+            GameChatSocket.Connected -= OnSocketConnected;
+            GameChatSocket.Connected += OnSocketConnected;
+            GameChatSocket.Configure(
+                s_apiBase,
+                UnityServicesBootstrap.PlayerId ?? string.Empty,
+                localName,
+                s_apiKey);
+            GameChatSocket.EnsureStarted();
+        }
+
+        static void OnSocketConnected()
+        {
+            // Catch up on everything missed while the socket was down, then flush pending sends.
+            if (GameChatSocket.TrySend(BuildSyncFrame()))
+            {
+                FlushOutbox();
+            }
+        }
+
+        static string BuildSyncFrame()
+        {
+            var dmEntries = new StringBuilder(64);
+            dmEntries.Append('{');
+            var first = true;
+            foreach (var pair in s_afterDm)
+            {
+                if (string.IsNullOrEmpty(pair.Value))
+                {
+                    continue;
+                }
+
+                if (!first)
+                {
+                    dmEntries.Append(',');
+                }
+
+                first = false;
+                dmEntries.Append(JsonString(pair.Key)).Append(':').Append(JsonString(pair.Value));
+            }
+
+            dmEntries.Append('}');
+            return GameChatSocketRules.BuildSyncFrame(s_afterGlobal, s_afterFriends, dmEntries.ToString());
+        }
+
+        static void HandleSocketFrame(string json)
+        {
+            var (kind, frame) = GameChatSocketRules.ParseServerFrame(json);
+            switch (kind)
+            {
+                case GameChatSocketRules.FrameKind.Message:
+                case GameChatSocketRules.FrameKind.Ack:
+                    IngestWireMessage(frame.message);
+                    break;
+                case GameChatSocketRules.FrameKind.Error:
+                    LogThrottledWarning($"GameChatService: socket error frame: {frame.code}");
+                    break;
+            }
+        }
+
+        /// <summary>Single-message ingest for WS msg/ack frames (dedup + cursor bump).</summary>
+        static void IngestWireMessage(GameChatSocketRules.WireMessage raw)
+        {
+            if (raw == null
+                || string.IsNullOrEmpty(raw.id)
+                || !s_seenIds.Add(raw.id))
+            {
+                return;
+            }
+
+            var receivedAt = ParseTs(raw.ts);
+            if (!GameChatRules.IsWithinRetention(receivedAt))
+            {
+                return;
+            }
+
+            var channel = raw.channel ?? string.Empty;
+            if (channel == "dm")
+            {
+                var localId = UnityServicesBootstrap.PlayerId;
+                var peerId = !string.IsNullOrWhiteSpace(raw.peerId) ? raw.peerId : raw.playerId;
+                var fromSelf = string.Equals(raw.playerId, localId, StringComparison.Ordinal);
+                var other = fromSelf ? peerId : raw.playerId;
+                var dm = new GameChatDirectMessage(
+                    other,
+                    raw.playerId,
+                    raw.displayName,
+                    raw.text,
+                    receivedAt,
+                    fromSelf);
+                AppendDirect(dm);
+                DirectMessageReceived?.Invoke(dm);
+                if (!string.IsNullOrEmpty(raw.ts) && !string.IsNullOrEmpty(other))
+                {
+                    s_afterDm.TryGetValue(other, out var prev);
+                    s_afterDm[other] = MaxTs(prev, raw.ts);
+                }
+
+                return;
+            }
+
+            var menuChannel = channel == "friends"
+                ? MenuChatChannel.FriendsFeed
+                : MenuChatChannel.Global;
+            var localPlayerId = UnityServicesBootstrap.PlayerId;
+            var self = string.Equals(raw.playerId, localPlayerId, StringComparison.Ordinal);
+            if (self && IsDuplicateSelfEcho(menuChannel, raw.text))
+            {
+                return;
+            }
+
+            var message = new GameChatMessage(
+                menuChannel,
+                raw.playerId,
+                raw.displayName,
+                raw.text,
+                receivedAt,
+                self);
+            AppendChannel(message);
+            ChannelMessageReceived?.Invoke(message);
+            if (!string.IsNullOrEmpty(raw.ts))
+            {
+                if (menuChannel == MenuChatChannel.FriendsFeed)
+                {
+                    s_afterFriends = MaxTs(s_afterFriends, raw.ts);
+                }
+                else
+                {
+                    s_afterGlobal = MaxTs(s_afterGlobal, raw.ts);
+                }
+            }
+        }
+
+        /// <summary>HTTP catch-up used while the socket is down (open-tab before connect, etc.).</summary>
+        static async UniTask CatchUpOnceAsync()
         {
             // Each request is isolated: one channel failing must not delay the others.
             var globalQuery = string.IsNullOrEmpty(s_afterGlobal)
@@ -423,7 +552,7 @@ namespace Game.Gameplay.Networking
             }
             catch (Exception ex)
             {
-                LogThrottledWarning($"GameChatService: global poll failed: {ex.Message}");
+                LogThrottledWarning($"GameChatService: global catch-up failed: {ex.Message}");
             }
 
             try
@@ -433,7 +562,7 @@ namespace Game.Gameplay.Networking
             }
             catch (Exception ex)
             {
-                LogThrottledWarning($"GameChatService: friends poll failed: {ex.Message}");
+                LogThrottledWarning($"GameChatService: friends catch-up failed: {ex.Message}");
             }
 
             foreach (var peer in new List<string>(s_dmByPeer.Keys))
@@ -449,7 +578,7 @@ namespace Game.Gameplay.Networking
                 }
                 catch (Exception ex)
                 {
-                    LogThrottledWarning($"GameChatService: dm poll failed ({peer}): {ex.Message}");
+                    LogThrottledWarning($"GameChatService: dm catch-up failed ({peer}): {ex.Message}");
                 }
             }
         }
@@ -767,25 +896,6 @@ namespace Game.Gameplay.Networking
             return jsonStart <= 0 ? trimmed : trimmed[jsonStart..];
         }
 
-        static void IngestPostedChannelMessage(string json, MenuChatChannel channel)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return;
-            }
-
-            var posted = JsonUtility.FromJson<PostedMessageEnvelope>(json);
-            if (posted?.message == null)
-            {
-                return;
-            }
-
-            IngestChannelPayload(
-                $"{{\"messages\":[{JsonUtility.ToJson(posted.message)}]}}",
-                channel,
-                bumpAfter: true);
-        }
-
         static bool IsTransientTransmitError(string error)
         {
             if (string.IsNullOrEmpty(error))
@@ -904,12 +1014,6 @@ namespace Game.Gameplay.Networking
         class MessagesEnvelope
         {
             public WireMessage[] messages;
-        }
-
-        [Serializable]
-        class PostedMessageEnvelope
-        {
-            public WireMessage message;
         }
 
         [Serializable]

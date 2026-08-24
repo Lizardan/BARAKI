@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Game.Core;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -201,12 +202,38 @@ namespace Game.Gameplay.Networking
 
         public void Shutdown()
         {
-            if (_networkManager != null && _networkManager.IsListening)
+            if (_networkManager != null
+                && (_networkManager.IsListening || _networkManager.ShutdownInProgress))
             {
+                _shutdownPending = true;
                 _networkManager.Shutdown();
             }
 
             _approvedDisplayNames.Clear();
+            _approvedPlayerIds.Clear();
+            _approvedReconnectTokens.Clear();
+        }
+
+        /// <summary>
+        /// True while NGO is still tearing down a previous session. Starting a new
+        /// session in this window silently fails — callers must wait first.
+        /// </summary>
+        public bool IsShutdownInProgress =>
+            _networkManager != null
+            && (_networkManager.ShutdownInProgress || (_shutdownPending && !_networkManager.IsListening));
+
+        bool _shutdownPending;
+
+        /// <summary>Wait (max ~3 s) until a previous NGO shutdown has fully completed.</summary>
+        public async UniTask WaitForShutdownCompleteAsync()
+        {
+            var deadline = Time.realtimeSinceStartup + 3f;
+            while (IsShutdownInProgress && Time.realtimeSinceStartup < deadline)
+            {
+                await UniTask.NextFrame();
+            }
+
+            _shutdownPending = false;
         }
 
         public void EnsureServerLobby()

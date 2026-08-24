@@ -3,6 +3,10 @@
  * Auth: optional CHAT_API_KEY secret; clients send X-Baraki-Key.
  * Identity: playtest-grade X-Baraki-Player-Id / X-Baraki-Player-Name.
  *
+ * Transport: WebSocket push at GET /v1/ws (send/sync frames); HTTP GET stays for
+ * initial history and catch-up. All messages flow through the single ChatHub
+ * Durable Object, which also owns socket fan-out.
+ *
  * Retention: last 80 channel / 50 DM messages, drop older than 36h.
  * Alarm prunes Durable Object storage hourly so history cannot grow forever.
  */
@@ -18,6 +22,9 @@ export class ChatHub {
     this.state = state;
     this.env = env;
     this.ready = null;
+    // playerId -> Set<WebSocket>. In-memory only: DO eviction drops sockets,
+    // clients reconnect and catch up via the sync frame.
+    this.sockets = new Map();
   }
 
   async ensureLoaded() {
@@ -70,8 +77,12 @@ export class ChatHub {
   }
 
   async fetch(request) {
-    await this.ensureLoaded();
     const url = new URL(request.url);
+    if (url.pathname === "/v1/ws") {
+      return this.handleWebSocket(request, url);
+    }
+
+    await this.ensureLoaded();
     if (request.method === "OPTIONS") {
       return cors(new Response(null, { status: 204 }));
     }
@@ -101,14 +112,6 @@ export class ChatHub {
           this.pruneAll();
           return cors(json({ messages: after(this.global, url.searchParams.get("after"), MAX_CHANNEL) }));
         }
-        if (request.method === "POST") {
-          const text = await readText(request);
-          if (!text) return cors(json({ error: "empty" }, 400));
-          const msg = push(this.global, makeMsg(playerId, displayName, text, "global"), MAX_CHANNEL);
-          this.pruneAll();
-          await this.persist();
-          return cors(json({ message: msg }));
-        }
       }
 
       if (url.pathname === "/v1/channels/friends") {
@@ -127,16 +130,6 @@ export class ChatHub {
           this.pruneAll();
           return cors(json({ messages: after(merged, url.searchParams.get("after"), MAX_CHANNEL) }));
         }
-        if (request.method === "POST") {
-          const text = await readText(request);
-          if (!text) return cors(json({ error: "empty" }, 400));
-          if (!this.feeds.has(playerId)) this.feeds.set(playerId, []);
-          const list = this.feeds.get(playerId);
-          const msg = push(list, makeMsg(playerId, displayName, text, "friends"), MAX_CHANNEL);
-          this.pruneAll();
-          await this.persist();
-          return cors(json({ message: msg }));
-        }
       }
 
       const dmMatch = url.pathname.match(/^\/v1\/dm\/([^/]+)$/);
@@ -150,14 +143,6 @@ export class ChatHub {
           this.pruneAll();
           return cors(json({ messages: after(list, url.searchParams.get("after"), MAX_DM) }));
         }
-        if (request.method === "POST") {
-          const text = await readText(request);
-          if (!text) return cors(json({ error: "empty" }, 400));
-          const msg = push(list, makeMsg(playerId, displayName, text, "dm", peerId), MAX_DM);
-          this.pruneAll();
-          await this.persist();
-          return cors(json({ message: msg }));
-        }
       }
 
       if (request.method === "GET" && url.pathname === "/health") {
@@ -167,6 +152,159 @@ export class ChatHub {
       return cors(json({ error: "not_found" }, 404));
     } catch (err) {
       return cors(json({ error: String(err?.message || err) }, 500));
+    }
+  }
+
+  // --- WebSocket ---
+
+  async handleWebSocket(request, url) {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return cors(json({ error: "expected_websocket" }, 426));
+    }
+    if (!authorize(request, this.env)) {
+      return cors(json({ error: "unauthorized" }, 401));
+    }
+
+    const playerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
+    const displayName = (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim().slice(0, 64);
+    if (!playerId || playerId.length < 4 || playerId.length > 128) {
+      return cors(json({ error: "invalid_player" }, 400));
+    }
+
+    await this.ensureLoaded();
+    const pair = new WebSocketPair();
+    this.registerSocket(playerId, pair[1]);
+    const serverSide = pair[1];
+    serverSide.accept();
+    serverSide.send("pong");
+
+    serverSide.addEventListener("message", async (event) => {
+      try {
+        await this.ensureLoaded();
+        await this.handleClientFrame(serverSide, playerId, displayName, String(event.data ?? ""));
+      } catch (err) {
+        safeSend(serverSide, JSON.stringify({ type: "error", code: String(err?.message || err).slice(0, 120) }));
+      }
+    });
+    serverSide.addEventListener("close", () => this.unregisterSocket(playerId, serverSide));
+    serverSide.addEventListener("error", () => this.unregisterSocket(playerId, serverSide));
+
+    return new Response(null, { status: 101, webSocket: pair[0] });
+  }
+
+  registerSocket(playerId, socket) {
+    let set = this.sockets.get(playerId);
+    if (!set) {
+      set = new Set();
+      this.sockets.set(playerId, set);
+    }
+    set.add(socket);
+  }
+
+  unregisterSocket(playerId, socket) {
+    const set = this.sockets.get(playerId);
+    if (!set) return;
+    set.delete(socket);
+    if (set.size === 0) this.sockets.delete(playerId);
+  }
+
+  async handleClientFrame(ws, playerId, displayName, raw) {
+    if (raw === "ping") {
+      safeSend(ws, "pong");
+      return;
+    }
+
+    let frame;
+    try {
+      frame = JSON.parse(raw);
+    } catch {
+      safeSend(ws, JSON.stringify({ type: "error", code: "bad_json" }));
+      return;
+    }
+
+    if (frame?.type === "sync") {
+      this.sendSync(ws, playerId, frame);
+      return;
+    }
+
+    if (frame?.type === "send") {
+      const text = typeof frame.text === "string" ? frame.text.trim().slice(0, MAX_TEXT) : "";
+      if (!text) {
+        safeSend(ws, JSON.stringify({ type: "error", code: "empty" }));
+        return;
+      }
+
+      let msg;
+      if (frame.channel === "global") {
+        msg = postGlobal(this, playerId, displayName, text);
+      } else if (frame.channel === "friends") {
+        msg = postFriends(this, playerId, displayName, text);
+      } else if (frame.channel === "dm") {
+        const peerId = String(frame.peerId || "").trim();
+        if (!peerId || peerId === playerId) {
+          safeSend(ws, JSON.stringify({ type: "error", code: "invalid_peer" }));
+          return;
+        }
+        msg = postDm(this, playerId, displayName, text, peerId);
+      } else {
+        safeSend(ws, JSON.stringify({ type: "error", code: "bad_channel" }));
+        return;
+      }
+
+      await this.persist();
+      safeSend(ws, JSON.stringify({ type: "ack", message: msg }));
+      return;
+    }
+
+    safeSend(ws, JSON.stringify({ type: "error", code: "bad_frame" }));
+  }
+
+  sendSync(ws, playerId, frame) {
+    const globalAfter = typeof frame.globalAfter === "string" ? frame.globalAfter : "";
+    const friendsAfter = typeof frame.friendsAfter === "string" ? frame.friendsAfter : "";
+    const dmAfter = frame.dm && typeof frame.dm === "object" ? frame.dm : {};
+
+    for (const m of after(this.global, globalAfter, MAX_CHANNEL)) {
+      safeSend(ws, JSON.stringify({ type: "msg", message: m }));
+    }
+
+    const session = this.sessions.get(playerId);
+    const friendIds = session?.friendIds || [];
+    const authors = new Set([playerId, ...friendIds]);
+    const friendsMerged = [];
+    for (const author of authors) {
+      for (const m of this.feeds.get(author) || []) friendsMerged.push(m);
+    }
+    friendsMerged.sort((a, b) => a.ts.localeCompare(b.ts));
+    for (const m of after(friendsMerged, friendsAfter, MAX_CHANNEL)) {
+      safeSend(ws, JSON.stringify({ type: "msg", message: m }));
+    }
+
+    for (const [peerId, cursor] of Object.entries(dmAfter)) {
+      if (typeof cursor !== "string" || !peerId || peerId === playerId) continue;
+      const key = conversationKey(playerId, peerId);
+      for (const m of after(this.dms.get(key) || [], cursor, MAX_DM)) {
+        safeSend(ws, JSON.stringify({ type: "msg", message: m }));
+      }
+    }
+  }
+
+  broadcast(msg) {
+    let targets;
+    if (msg.channel === "global") {
+      targets = [...this.sockets.values()].flatMap((set) => [...set]);
+    } else if (msg.channel === "friends") {
+      const friendIds = this.sessions.get(msg.playerId)?.friendIds || [];
+      targets = audienceSockets(this.sockets, [msg.playerId, ...friendIds]);
+    } else if (msg.channel === "dm") {
+      targets = audienceSockets(this.sockets, [msg.playerId, msg.peerId].filter(Boolean));
+    } else {
+      targets = [];
+    }
+
+    const payload = JSON.stringify({ type: "msg", message: msg });
+    for (const socket of targets) {
+      safeSend(socket, payload);
     }
   }
 }
@@ -206,6 +344,57 @@ function push(list, msg, max) {
   return msg;
 }
 
+// Shared store+broadcast path used by socket "send" frames.
+function postGlobal(hub, playerId, displayName, text) {
+  const msg = push(hub.global, makeMsg(playerId, displayName, text, "global"), MAX_CHANNEL);
+  hub.pruneAll();
+  hub.broadcast(msg);
+  return msg;
+}
+
+function postFriends(hub, playerId, displayName, text) {
+  if (!hub.feeds.has(playerId)) hub.feeds.set(playerId, []);
+  const msg = push(
+    hub.feeds.get(playerId),
+    makeMsg(playerId, displayName, text, "friends"),
+    MAX_CHANNEL,
+  );
+  hub.pruneAll();
+  hub.broadcast(msg);
+  return msg;
+}
+
+function postDm(hub, playerId, displayName, text, peerId) {
+  const key = conversationKey(playerId, peerId);
+  if (!hub.dms.has(key)) hub.dms.set(key, []);
+  const msg = push(
+    hub.dms.get(key),
+    makeMsg(playerId, displayName, text, "dm", peerId),
+    MAX_DM,
+  );
+  hub.pruneAll();
+  hub.broadcast(msg);
+  return msg;
+}
+
+function safeSend(socket, text) {
+  try {
+    if (socket.readyState === 1 /* OPEN */) socket.send(text);
+  } catch {
+    // Dead socket: the close/error handler will unregister it.
+  }
+}
+
+function audienceSockets(socketsByPlayer, playerIds) {
+  const out = [];
+  for (const id of playerIds) {
+    const set = socketsByPlayer.get(id);
+    if (!set) continue;
+    for (const socket of set) out.push(socket);
+  }
+  return out;
+}
+
 function pruneList(list, max, cutoff) {
   const kept = (list || []).filter((m) => Date.parse(m.ts) >= cutoff);
   return kept.length > max ? kept.slice(-max) : kept;
@@ -223,12 +412,6 @@ function after(list, afterTs, max) {
   const source = list || [];
   if (!afterTs) return source.slice(-max);
   return source.filter((m) => m.ts > afterTs).slice(0, max);
-}
-
-async function readText(request) {
-  const body = await request.json().catch(() => ({}));
-  const text = typeof body.text === "string" ? body.text.trim() : "";
-  return text.length > 0 && text.length <= MAX_TEXT ? text : "";
 }
 
 function normalizeIdList(value) {

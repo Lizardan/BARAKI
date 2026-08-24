@@ -78,6 +78,7 @@ namespace Game.Gameplay.Match
         readonly HashSet<int> _aliveUnitIds = new();
         readonly List<int> _unitsToRemove = new();
         readonly HashSet<int> _aliveProjectileIds = new();
+        readonly HashSet<int> _rentedProjectileTrailsCleared = new();
         readonly List<int> _projectilesToRemove = new();
         readonly Stack<GameObject>[] _projectilePools =
         {
@@ -1054,6 +1055,7 @@ namespace Game.Gameplay.Match
         {
             EnsureProjectileRoot();
             _aliveProjectileIds.Clear();
+            _rentedProjectileTrailsCleared.Clear();
             _projectileHitsBuilding.Clear();
 
             foreach (var projectile in combat.Projectiles)
@@ -1093,6 +1095,14 @@ namespace Game.Gameplay.Match
                 }
 
                 CombatAttackVisualBuilder.UpdateProjectileTransform(visual, projectile);
+                if (!_rentedProjectileTrailsCleared.Contains(projectile.ProjectileId))
+                {
+                    // First frame after rent: wipe any trail point recorded at the pooled
+                    // position before the teleport above — otherwise the trail draws a
+                    // straight line across the map from the old flight.
+                    ResetProjectileTrails(visual.gameObject);
+                    _rentedProjectileTrailsCleared.Add(projectile.ProjectileId);
+                }
             }
 
             _projectilesToRemove.Clear();

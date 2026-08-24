@@ -112,6 +112,14 @@ namespace Game.Gameplay.Networking
                 throw new InvalidOperationException("MatchNetworkBootstrap.Ensure returned null.");
             }
 
+            // A previous session may still be tearing down (e.g. quick leave→join).
+            // NGO silently refuses Start* while shutting down — wait it out first.
+            if (bootstrap.IsShutdownInProgress)
+            {
+                PlaytestLog.Info("Net", "WaitPreviousShutdown");
+                await bootstrap.WaitForShutdownCompleteAsync();
+            }
+
             var manager = bootstrap.NetworkManager;
             if (manager == null || manager.NetworkConfig == null)
             {
@@ -229,6 +237,10 @@ namespace Game.Gameplay.Networking
 
         public static void Shutdown(bool clearSession = true)
         {
+            // Fire-and-forget: leave the UGS lobby server-side so a later JoinLobbyByCode
+            // does not fail with "player already in lobby" until app restart.
+            LeaveUgsLobbyAsync().Forget();
+
             MatchNetworkBootstrap.Ensure().Shutdown();
             MatchRelayTransportState.Clear();
             if (!clearSession)
@@ -240,6 +252,7 @@ namespace Game.Gameplay.Networking
             s_hasHandle = false;
             IsNetworked = false;
             IsRejoiningMatch = false;
+            IsReturningToLobby = false;
             PlayerCount = 0;
             LocalSlot = -1;
             ListenHostSlot = NetworkLobbySlotRules.HostSlot;
@@ -250,6 +263,29 @@ namespace Game.Gameplay.Networking
             MatchPauseGate.SetUserPaused(false);
             // Leaving a cleared session must not leave stale joinable lobby presence.
             SessionFlowTracker.NotifyChanged();
+        }
+
+        /// <summary>
+        /// Best-effort UGS lobby exit. The handle may already be cleared by the caller,
+        /// so the lobby id is captured from the live handle/backend before teardown.
+        /// </summary>
+        static async UniTaskVoid LeaveUgsLobbyAsync()
+        {
+            var lobbyId = s_currentHandle.LobbyId;
+            if (string.IsNullOrWhiteSpace(lobbyId) || !IsNetworked)
+            {
+                return;
+            }
+
+            try
+            {
+                await MatchSessionService.Backend.LeaveAsync(lobbyId);
+                PlaytestLog.Info("Lobby", "LeftUgsLobby", ("lobby", lobbyId));
+            }
+            catch (Exception ex)
+            {
+                PlaytestLog.Warn("Lobby", "LeaveUgsLobbyFailed", ("error", ex.Message));
+            }
         }
 
         /// <summary>Drop NGO/Relay only; keep room/slot for host migration rebind.</summary>

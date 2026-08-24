@@ -241,6 +241,30 @@ namespace Game.Gameplay.Networking
             await LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
         }
 
+        /// <summary>Leave the UGS lobby server-side. Swallow "not a member" races.</summary>
+        public async UniTask LeaveAsync(string lobbyId)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                return;
+            }
+
+            await UnityServicesBootstrap.EnsureInitializedAsync();
+            try
+            {
+                // UGS Lobbies has no self-leave call: removing your own player id = leave.
+                await LobbyService.Instance.RemovePlayerAsync(
+                    lobbyId,
+                    UnityServicesBootstrap.PlayerId);
+            }
+            catch (Unity.Services.Core.RequestFailedException ex)
+                when (ex.ErrorCode is 404 or 409 or 410)
+            {
+                // Not found / already left / lobby closed — the goal is achieved.
+                PlaytestLog.Info("LobbyRelay", "LeaveSkipped", ("status", ex.ErrorCode));
+            }
+        }
+
         public async UniTask<string> TryGetLobbyHostPlayerIdAsync(string lobbyId)
         {
             if (string.IsNullOrEmpty(lobbyId))

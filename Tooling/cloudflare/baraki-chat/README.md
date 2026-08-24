@@ -19,10 +19,14 @@ Set the same values in the Unity client (`GameChatRules` / PlayerPrefs):
 
 | Method | Path | Notes |
 |--------|------|-------|
+| GET | `/v1/ws` | WebSocket push: `send` / `sync` frames, `msg` / `ack` / `error` back |
 | POST | `/v1/session` | body `{ friendIds: string[] }` |
-| GET/POST | `/v1/channels/global` | global lobby chat |
-| GET/POST | `/v1/channels/friends` | friends feed |
-| GET/POST | `/v1/dm/:peerId` | direct messages |
+| GET | `/v1/channels/global` | global history (`?after=<ts>` catch-up) |
+| GET | `/v1/channels/friends` | friends feed history |
+| GET | `/v1/dm/:peerId` | DM history |
+
+Message sending happens over the WebSocket (`send` frame); HTTP is read-only
+history + the session sync.
 
 Headers: `X-Baraki-Player-Id`, `X-Baraki-Player-Name`, optional `X-Baraki-Key`.
 

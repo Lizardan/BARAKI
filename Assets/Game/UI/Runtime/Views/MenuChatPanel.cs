@@ -28,6 +28,8 @@ namespace Game.UI
         Label _subtitle;
         MenuChatChannel _active = MenuChatChannel.Global;
         bool _subscribed;
+        bool _reconnectStatusShown;
+        IVisualElementScheduledItem _statusTicker;
 
         public MenuChatPanel(
             VisualElement root,
@@ -90,7 +92,8 @@ namespace Game.UI
                 if (_sendButton != null) _sendButton.clicked += OnSend;
                 if (_input != null)
                 {
-                    _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+                    // TrickleDown: the text-input core swallows Enter on bubble-up.
+                    _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown, TrickleDown.TrickleDown);
                     _input.RegisterCallback<NavigationSubmitEvent>(OnInputSubmit);
                 }
                 if (!_subscribed)
@@ -99,6 +102,8 @@ namespace Game.UI
                     GameChatService.ReadyChanged += OnReadyChanged;
                     _subscribed = true;
                 }
+
+                _statusTicker ??= _root.schedule.Execute(TickSocketStatus).Every(1000);
             }
             else
             {
@@ -107,7 +112,7 @@ namespace Game.UI
                 if (_sendButton != null) _sendButton.clicked -= OnSend;
                 if (_input != null)
                 {
-                    _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+                    _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown, TrickleDown.TrickleDown);
                     _input.UnregisterCallback<NavigationSubmitEvent>(OnInputSubmit);
                 }
                 if (_subscribed)
@@ -116,6 +121,35 @@ namespace Game.UI
                     GameChatService.ReadyChanged -= OnReadyChanged;
                     _subscribed = false;
                 }
+
+                _statusTicker?.Pause();
+            }
+        }
+
+        /// <summary>Socket down for a while → visible "reconnecting" hint in the subtitle.</summary>
+        void TickSocketStatus()
+        {
+            if (_subtitle == null)
+            {
+                return;
+            }
+
+            var reconnecting = !GameChatService.IsReady
+                ? false
+                : !GameChatSocket.IsConnected && GameChatSocket.DowntimeSeconds > 10f;
+            if (reconnecting == _reconnectStatusShown)
+            {
+                return;
+            }
+
+            _reconnectStatusShown = reconnecting;
+            if (reconnecting)
+            {
+                _subtitle.text = "Переподключение…";
+            }
+            else
+            {
+                ShowChannel(_active);
             }
         }
 
@@ -176,6 +210,7 @@ namespace Game.UI
             }
 
             ScrollToEnd(channel);
+            GameChatService.RefreshNow();
         }
 
         void OnSend() => TrySend();
@@ -218,6 +253,7 @@ namespace Game.UI
             }
 
             GameChatService.SendChannelAsync(_active, text);
+            GameChatService.RefreshNow();
         }
 
         void OnChannelMessage(GameChatMessage message)

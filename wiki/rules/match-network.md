@@ -67,3 +67,5 @@ Capture для миграции: last-good bytes, иначе **локальны�
 ## Прочее
 
 - `MatchLobbyHeartbeat.Ensure()` вне Play Mode возвращает `null` (нельзя `DontDestroyOnLoad` в EditMode). Вызовы `MatchNetworkSession` (`ApplyHandle`/`Shutdown`) используют `?.`.
+- **Выход из лобби/матча обязан покидать UGS Lobby**: `MatchNetworkSession.Shutdown` fire-and-forget зовёт `IMatchSessionBackend.LeaveAsync(lobbyId)` (реализация — `RemovePlayerAsync` со своим PlayerId; в UGS Lobbies нет self-leave). Без этого повторный `JoinLobbyByCodeAsync` падает 409 «already in lobby» до рестарта приложения.
+- Быстрый leave→join: NGO шатдаун асинхронен, `StartAsClient/Host` молча отказывают. `TryStartTransportAsync` ждёт `MatchNetworkBootstrap.WaitForShutdownCompleteAsync()` (≤3 c) перед стартом.

@@ -101,7 +101,8 @@ namespace Game.UI.Views
 
             _closeButton.clicked += Close;
             _sendButton.clicked += OnSend;
-            _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+            // TrickleDown: the text-input core swallows Enter/Escape on bubble-up.
+            _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown, TrickleDown.TrickleDown);
             _input.RegisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             GameChatService.DirectMessageReceived += OnDirectMessage;
             _bound = true;
@@ -116,7 +117,7 @@ namespace Game.UI.Views
 
             _closeButton.clicked -= Close;
             _sendButton.clicked -= OnSend;
-            _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+            _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown, TrickleDown.TrickleDown);
             _input.UnregisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             GameChatService.DirectMessageReceived -= OnDirectMessage;
             _bound = false;
@@ -137,6 +138,7 @@ namespace Game.UI.Views
             Rebuild();
             _overlay?.RemoveFromClassList(HiddenClass);
             ScrollToEnd();
+            GameChatService.RefreshNow();
             _input?.schedule.Execute(() => _input?.Focus());
         }
 
@@ -187,6 +189,7 @@ namespace Game.UI.Views
             }
 
             GameChatService.SendDirectAsync(_peerId, text);
+            GameChatService.RefreshNow();
         }
 
         void OnDirectMessage(GameChatDirectMessage message)

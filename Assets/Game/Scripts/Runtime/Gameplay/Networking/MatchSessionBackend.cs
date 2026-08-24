@@ -63,6 +63,12 @@ namespace Game.Gameplay.Networking
     {
         UniTask<MatchSessionHandle> CreateAsync(CreateMatchRequest request);
         UniTask<MatchSessionHandle> JoinAsync(JoinMatchRequest request);
+
+        /// <summary>
+        /// Best-effort exit from the UGS lobby so a later JoinLobbyByCode does not hit
+        /// "player already in lobby". Implementations must not throw for unknown ids.
+        /// </summary>
+        UniTask LeaveAsync(string lobbyId);
     }
 
     /// <summary>In-process lobby registry for Editor offline smoke.</summary>
@@ -97,6 +103,8 @@ namespace Game.Gameplay.Networking
                 transportEndpoint: $"local://{lobby.RoomCode}");
             return UniTask.FromResult(handle);
         }
+
+        public UniTask LeaveAsync(string lobbyId) => UniTask.CompletedTask;
     }
 
     public static class MatchSessionService

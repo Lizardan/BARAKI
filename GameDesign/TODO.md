@@ -128,7 +128,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | EA-005 | Ranked FFA4 (N=4) | deferred |
 | CHAT-001 | JWT-verify идентичности чата в Worker (сейчас заголовки X-Baraki-* подделываемы) | backlog | До публичного EA |
 | CHAT-002 | API-ключ в клиенте — ротация/прокси-выдача вместо вшитого ключа | backlog | До публичного EA |
-| CHAT-003 | Чат polling → WebSocket при росте онлайна (сейчас HTTP-poll 5 c) | backlog | После GATE, при необходимости |
+| CHAT-003 | Чат: WebSocket push вместо polling | done 2026-08-24 | `GameChatSocket` + `/v1/ws` в Worker; WS-only (без fallback), outbox на отправку; канон `wiki/rules/chat.md` |
 
 ---
 
