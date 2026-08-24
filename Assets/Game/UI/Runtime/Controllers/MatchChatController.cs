@@ -15,6 +15,7 @@ namespace Game.UI.Controllers
         const string PauseHiddenClass = "match-hud__pause--hidden";
         const string ResultsHiddenClass = "match-hud__results--hidden";
         const string ExtraAbilityHiddenClass = "match-extra-ability--hidden";
+        static readonly Color MessageColor = new(1f, 0.878f, 0.549f, 1f);
 
         [SerializeField] UIDocument _uiDocument;
 
@@ -116,8 +117,7 @@ namespace Game.UI.Controllers
                 }
 
                 var alpha = GameChatRules.MatchMessageAlpha(age);
-                var c = line.Label.style.color.value;
-                line.Label.style.color = new Color(c.r, c.g, c.b, alpha);
+                line.Label.style.color = new Color(MessageColor.r, MessageColor.g, MessageColor.b, alpha);
             }
         }
 
@@ -142,7 +142,6 @@ namespace Game.UI.Controllers
             if (!_composerOpen)
             {
                 SetComposerOpen(true);
-                _input?.schedule.Execute(() => _input?.Focus());
                 return;
             }
 
@@ -227,7 +226,24 @@ namespace Game.UI.Controllers
             if (!open)
             {
                 _input?.Blur();
+                return;
             }
+
+            FocusComposerInput();
+            _input?.schedule.Execute(FocusComposerInput);
+            _input?.schedule.Execute(FocusComposerInput).StartingIn(16);
+        }
+
+        void FocusComposerInput()
+        {
+            if (!_composerOpen || _input == null)
+            {
+                return;
+            }
+
+            _input.Focus();
+            var caret = _input.text?.Length ?? 0;
+            _input.textSelection.SelectRange(caret, caret);
         }
 
         void OnMatchMessage(string displayName, string message)
@@ -242,6 +258,7 @@ namespace Game.UI.Controllers
                 pickingMode = PickingMode.Ignore,
             };
             label.AddToClassList("match-chat__line");
+            label.style.color = MessageColor;
             _messages.Add(label);
             _lines.Add(new FadeLine { Label = label, BornAt = Time.unscaledTime });
         }

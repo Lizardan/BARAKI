@@ -46,7 +46,7 @@ Debug-консоль: `chat.setkey <key>`, `chat.setbase <url>`, `chat.clear`.
 
 - [`MenuChatPanel`](../../Assets/Game/UI/Runtime/Views/MenuChatPanel.cs) — вкладки graphite; скроллбар скрыт; после загрузки/новых сообщений прокрутка в конец
 - [`FriendsDirectChatPanel`](../../Assets/Game/UI/Runtime/Views/FriendsDirectChatPanel.cs) — `ui-dialog` + mm-chat; скроллбар скрыт; автоскролл вниз
-- Матч: текст без подложки, fade ~3.5 с; композер graphite. **Enter** открывает/отправляет через Input System (`Keyboard.current.enterKey`) — HUD `picking-mode="Ignore"`, поэтому UI Toolkit `KeyDownEvent` на корне не приходит
+- Матч: текст без подложки, fade ~3.5 с; слой `MatchChatLayer` в UXML **после** нижнего дока, чтобы строки и композер были поверх HUD. Enter открывает поле и сразу ставит каретку (`Focus` + `textSelection`); ввод/отправка через Input System (`Keyboard.current.enterKey`). Строки — крупный золотой текст с чёрной обводкой (`match-chat__line`).
 
 ## Лимиты
 

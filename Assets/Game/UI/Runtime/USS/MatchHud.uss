@@ -450,26 +450,27 @@
     position: absolute;
     left: 24px;
     bottom: 220px;
-    width: 420px;
-    max-height: 280px;
+    width: 460px;
+    max-height: 320px;
     flex-direction: column;
     justify-content: flex-end;
-    picking-mode: ignore;
 }
 
 .match-chat__messages {
     flex-direction: column;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 6px;
     min-height: 0;
     flex-grow: 1;
 }
 
 .match-chat__line {
-    font-size: 16px;
-    color: rgb(235, 232, 224);
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgba(0, 0, 0, 0.85);
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(255, 224, 140);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    text-shadow: 0 0 6px rgba(0, 0, 0, 1), 0 2px 8px rgba(0, 0, 0, 0.95);
     white-space: normal;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
@@ -502,7 +503,8 @@
     border-width: 1px;
     border-color: rgb(52, 56, 50);
     background-color: rgb(8, 9, 8);
-    color: rgb(133, 137, 128);
+    color: rgb(255, 236, 196);
+    font-size: 18px;
     padding-left: 2px;
     padding-right: 2px;
 }
@@ -512,7 +514,8 @@
 .match-chat__input .unity-base-text-field__input {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
-    color: rgb(133, 137, 128);
+    color: rgb(255, 236, 196);
+    font-size: 18px;
 }
 
 .match-chat__send {
