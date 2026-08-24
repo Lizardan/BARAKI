@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using Game.Core;
+using Game.Gameplay.Networking;
 using UnityEditor;
 
 namespace Game.Editor
@@ -20,6 +21,7 @@ namespace Game.Editor
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 GameSession.Reset();
+                GameChatService.ResetSessionState();
             }
         }
     }

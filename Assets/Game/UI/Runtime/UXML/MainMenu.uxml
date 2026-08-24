@@ -45,10 +45,10 @@
                                     <ui:Button name="ChatFriendsTabButton" text="СРЕДИ ДРУЗЕЙ" class="mm__chat-channel-tab" />
                                 </ui:VisualElement>
                                 <ui:Label name="ChatSubtitle" text="Общий канал" class="mm__chat-subtitle" picking-mode="Ignore" />
-                                <ui:ScrollView name="ChatGlobalScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                <ui:ScrollView name="ChatGlobalScroll" class="mm-chat-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
                                     <ui:VisualElement name="ChatGlobalMessages" class="mm-chat-messages" picking-mode="Ignore" />
                                 </ui:ScrollView>
-                                <ui:ScrollView name="ChatFriendsScroll" class="mm-chat-scroll mm-chat-scroll--hidden" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto">
+                                <ui:ScrollView name="ChatFriendsScroll" class="mm-chat-scroll mm-chat-scroll--hidden" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
                                     <ui:VisualElement name="ChatFriendsMessages" class="mm-chat-messages" picking-mode="Ignore" />
                                 </ui:ScrollView>
                                 <ui:VisualElement name="ChatComposer" class="mm-chat-composer" picking-mode="Position">

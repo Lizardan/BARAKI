@@ -518,6 +518,13 @@
     margin-bottom: 0;
 }
 
+.mm-chat-scroll .unity-scroller,
+.mm-chat-scroll .unity-scroller--vertical {
+    display: none;
+    width: 0;
+    min-width: 0;
+}
+
 .mm-chat-messages {
     flex-direction: column;
     flex-grow: 0;
@@ -1348,6 +1355,13 @@
     flex-grow: 1;
     min-height: 0;
     margin-bottom: 8px;
+}
+
+.mm__dm-scroll .unity-scroller,
+.mm__dm-scroll .unity-scroller--vertical {
+    display: none;
+    width: 0;
+    min-width: 0;
 }
 
 .mm__dm-composer {

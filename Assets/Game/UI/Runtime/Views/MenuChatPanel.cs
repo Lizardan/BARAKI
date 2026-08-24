@@ -16,7 +16,6 @@ namespace Game.UI
         readonly string _messageTimeClass;
         readonly string _messageTextClass;
         readonly string _tabActiveClass;
-        readonly Action _onScrollToEnd;
 
         Button _globalTab;
         Button _friendsTab;
@@ -67,10 +66,19 @@ namespace Game.UI
             _sendButton = _root.Q<Button>("ChatSendButton");
             _subtitle = _root.Q<Label>("ChatSubtitle");
 
+            HideChatScroller(_globalScroll);
+            HideChatScroller(_friendsScroll);
+            if (_input != null)
+            {
+                _input.multiline = false;
+            }
+
             EnsureFriendsContainer();
             RebuildFromHistory();
             ShowChannel(_active);
             UpdateComposerEnabled();
+            ScrollToEnd(MenuChatChannel.Global);
+            ScrollToEnd(MenuChatChannel.FriendsFeed);
         }
 
         public void RegisterCallbacks(bool register)
@@ -80,7 +88,11 @@ namespace Game.UI
                 if (_globalTab != null) _globalTab.clicked += OnGlobalTab;
                 if (_friendsTab != null) _friendsTab.clicked += OnFriendsTab;
                 if (_sendButton != null) _sendButton.clicked += OnSend;
-                if (_input != null) _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+                if (_input != null)
+                {
+                    _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+                    _input.RegisterCallback<NavigationSubmitEvent>(OnInputSubmit);
+                }
                 if (!_subscribed)
                 {
                     GameChatService.ChannelMessageReceived += OnChannelMessage;
@@ -93,7 +105,11 @@ namespace Game.UI
                 if (_globalTab != null) _globalTab.clicked -= OnGlobalTab;
                 if (_friendsTab != null) _friendsTab.clicked -= OnFriendsTab;
                 if (_sendButton != null) _sendButton.clicked -= OnSend;
-                if (_input != null) _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+                if (_input != null)
+                {
+                    _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+                    _input.UnregisterCallback<NavigationSubmitEvent>(OnInputSubmit);
+                }
                 if (_subscribed)
                 {
                     GameChatService.ChannelMessageReceived -= OnChannelMessage;
@@ -158,17 +174,28 @@ namespace Game.UI
                     ? "Лента друзей"
                     : (GameChatService.IsReady ? "Общий канал" : GameChatRules.ChatUnavailableHint);
             }
+
+            ScrollToEnd(channel);
         }
 
         void OnSend() => TrySend();
 
+        void OnInputSubmit(NavigationSubmitEvent evt)
+        {
+            evt.StopPropagation();
+            TrySend();
+        }
+
         void OnInputKeyDown(KeyDownEvent evt)
         {
-            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            if (!GameChatRules.IsComposerSubmit(evt.keyCode, evt.character))
             {
-                evt.StopPropagation();
-                TrySend();
+                return;
             }
+
+            evt.StopPropagation();
+            evt.PreventDefault();
+            TrySend();
         }
 
         void TrySend()
@@ -206,11 +233,16 @@ namespace Game.UI
             {
                 _subtitle.text = "Общий канал";
             }
+
+            RebuildFromHistory();
+            ScrollToEnd(_active);
         }
 
         void UpdateComposerEnabled()
         {
-            var enabled = GameChatService.IsReady;
+            // Keep composer interactive even while chat warms up / recovers from a stuck HTTP gate.
+            // Send path still soft-fails with ChatUnavailableHint when !IsReady.
+            const bool enabled = true;
             _sendButton?.SetEnabled(enabled);
             if (_input != null)
             {
@@ -248,6 +280,8 @@ namespace Game.UI
                     : "Общий чат. Сообщения видят игроки в лаунчере и меню.";
                 container.Add(CreateRow("Система", DateTime.Now, hint));
             }
+
+            ScrollToEnd(channel);
         }
 
         void AppendMessage(GameChatMessage message)
@@ -296,13 +330,35 @@ namespace Game.UI
         void ScrollToEnd(MenuChatChannel channel)
         {
             var scroll = channel == MenuChatChannel.FriendsFeed ? _friendsScroll : _globalScroll;
-            scroll?.schedule.Execute(() =>
+            ScrollViewToEnd(scroll);
+        }
+
+        static void HideChatScroller(ScrollView scroll)
+        {
+            if (scroll == null)
             {
-                if (scroll.verticalScroller.highValue > 0f)
-                {
-                    scroll.verticalScroller.value = scroll.verticalScroller.highValue;
-                }
-            });
+                return;
+            }
+
+            scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            scroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+        }
+
+        static void ScrollViewToEnd(ScrollView scroll)
+        {
+            if (scroll == null)
+            {
+                return;
+            }
+
+            void Apply()
+            {
+                var y = scroll.verticalScroller.highValue;
+                scroll.scrollOffset = new Vector2(0f, y > 0f ? y : 99999f);
+            }
+
+            scroll.schedule.Execute(Apply);
+            scroll.schedule.Execute(Apply).StartingIn(32);
         }
     }
 }

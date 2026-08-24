@@ -1,5 +1,6 @@
 using Game.Core;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Game.Tests
 {
@@ -54,6 +55,33 @@ namespace Game.Tests
         public void WarmingStatusLabel_IsChat()
         {
             Assert.AreEqual("Чат", GameChatRules.WarmingStatusLabel);
+        }
+
+        [Test]
+        public void HistoryCaps_AreBounded()
+        {
+            Assert.LessOrEqual(GameChatRules.MaxChannelHistory, 100);
+            Assert.LessOrEqual(GameChatRules.MaxDirectHistory, 80);
+            Assert.Greater(GameChatRules.HistoryRetentionHours, 0);
+        }
+
+        [Test]
+        public void IsWithinRetention_DropsOldMessages()
+        {
+            Assert.IsTrue(GameChatRules.IsWithinRetention(System.DateTime.Now));
+            Assert.IsFalse(GameChatRules.IsWithinRetention(
+                System.DateTime.Now.AddHours(-GameChatRules.HistoryRetentionHours - 1)));
+        }
+
+        [Test]
+        public void IsComposerSubmit_AcceptsEnterAndNewline()
+        {
+            Assert.IsTrue(GameChatRules.IsComposerSubmit(KeyCode.Return, '\0'));
+            Assert.IsTrue(GameChatRules.IsComposerSubmit(KeyCode.KeypadEnter, '\0'));
+            Assert.IsTrue(GameChatRules.IsComposerSubmit(KeyCode.None, '\n'));
+            Assert.IsTrue(GameChatRules.IsComposerSubmit(KeyCode.None, '\r'));
+            Assert.IsFalse(GameChatRules.IsComposerSubmit(KeyCode.None, 'a'));
+            Assert.IsFalse(GameChatRules.IsComposerSubmit(KeyCode.Space, '\0'));
         }
     }
 

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Networking;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace Game.UI.Controllers
@@ -11,12 +12,18 @@ namespace Game.UI.Controllers
     public sealed class MatchChatController : MonoBehaviour
     {
         const string ComposerHiddenClass = "match-chat__composer--hidden";
+        const string PauseHiddenClass = "match-hud__pause--hidden";
+        const string ResultsHiddenClass = "match-hud__results--hidden";
+        const string ExtraAbilityHiddenClass = "match-extra-ability--hidden";
 
         [SerializeField] UIDocument _uiDocument;
 
         VisualElement _root;
         VisualElement _messages;
         VisualElement _composer;
+        VisualElement _pauseOverlay;
+        VisualElement _resultsOverlay;
+        VisualElement _extraAbilityMenu;
         TextField _input;
         Button _sendButton;
         readonly List<FadeLine> _lines = new();
@@ -38,8 +45,16 @@ namespace Game.UI.Controllers
             _root = _uiDocument.rootVisualElement;
             _messages = _root.Q<VisualElement>("MatchChatMessages");
             _composer = _root.Q<VisualElement>("MatchChatComposer");
+            _pauseOverlay = _root.Q<VisualElement>("PauseOverlay");
+            _resultsOverlay = _root.Q<VisualElement>("ResultsOverlay");
+            _extraAbilityMenu = _root.Q<VisualElement>("ExtraAbilityMenu");
             _input = _root.Q<TextField>("MatchChatInput");
             _sendButton = _root.Q<Button>("MatchChatSendButton");
+            if (_input != null)
+            {
+                _input.multiline = false;
+            }
+
             SetComposerOpen(false);
         }
 
@@ -53,9 +68,9 @@ namespace Game.UI.Controllers
             if (_input != null)
             {
                 _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+                _input.RegisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             }
 
-            _root?.RegisterCallback<KeyDownEvent>(OnRootKeyDown, TrickleDown.TrickleDown);
             MatchChatNetworkFacade.MessageReceived += OnMatchMessage;
         }
 
@@ -69,13 +84,19 @@ namespace Game.UI.Controllers
             if (_input != null)
             {
                 _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+                _input.UnregisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             }
 
-            _root?.UnregisterCallback<KeyDownEvent>(OnRootKeyDown, TrickleDown.TrickleDown);
             MatchChatNetworkFacade.MessageReceived -= OnMatchMessage;
         }
 
         void Update()
+        {
+            UpdateFadeLines();
+            TryHandleEnterHotkey();
+        }
+
+        void UpdateFadeLines()
         {
             if (_lines.Count == 0)
             {
@@ -100,32 +121,59 @@ namespace Game.UI.Controllers
             }
         }
 
-        void OnRootKeyDown(KeyDownEvent evt)
+        void TryHandleEnterHotkey()
         {
-            if (evt.keyCode is not (KeyCode.Return or KeyCode.KeypadEnter))
+            var keyboard = Keyboard.current;
+            if (keyboard == null)
             {
                 return;
             }
 
+            if (!keyboard.enterKey.wasPressedThisFrame && !keyboard.numpadEnterKey.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            if (BlocksMatchChatHotkey())
+            {
+                return;
+            }
+
+            if (!_composerOpen)
+            {
+                SetComposerOpen(true);
+                _input?.schedule.Execute(() => _input?.Focus());
+                return;
+            }
+
+            TrySend();
+        }
+
+        bool BlocksMatchChatHotkey()
+        {
             if (RuntimeDebugConsole.IsOpen)
             {
-                return;
+                return true;
             }
 
-            if (_composerOpen)
+            if (_pauseOverlay != null && !_pauseOverlay.ClassListContains(PauseHiddenClass))
             {
-                return;
+                return true;
             }
 
-            var pause = _root.Q<VisualElement>("PauseOverlay");
-            if (pause != null && !pause.ClassListContains("match-hud__pause--hidden"))
+            if (_resultsOverlay != null && !_resultsOverlay.ClassListContains(ResultsHiddenClass))
             {
-                return;
+                return true;
             }
 
+            return _extraAbilityMenu != null
+                   && !_extraAbilityMenu.ClassListContains(ExtraAbilityHiddenClass);
+        }
+
+        void OnInputSubmit(NavigationSubmitEvent evt)
+        {
             evt.StopPropagation();
-            SetComposerOpen(true);
-            _input?.schedule.Execute(() => _input?.Focus());
+            TrySend();
         }
 
         void OnInputKeyDown(KeyDownEvent evt)
@@ -137,11 +185,14 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
+            if (!GameChatRules.IsComposerSubmit(evt.keyCode, evt.character))
             {
-                evt.StopPropagation();
-                TrySend();
+                return;
             }
+
+            evt.StopPropagation();
+            evt.PreventDefault();
+            TrySend();
         }
 
         void OnSendClicked() => TrySend();

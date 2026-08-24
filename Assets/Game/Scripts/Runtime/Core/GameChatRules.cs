@@ -18,6 +18,9 @@ namespace Game.Core
         public const string GlobalChannelName = "baraki-global";
         public const string FriendsFeedChannelPrefix = "friends-feed-";
         public const int MaxMessageLength = 280;
+        public const int MaxChannelHistory = 80;
+        public const int MaxDirectHistory = 50;
+        public const int HistoryRetentionHours = 36;
         public const float MatchMessageVisibleSeconds = 3.5f;
         public const float MatchMessageFadeSeconds = 1.25f;
         public const string GlobalTabLabel = "ОБЩИЙ";
@@ -42,12 +45,7 @@ namespace Game.Core
             }
 
             var trimmed = text.Trim();
-            if (trimmed.Length <= MaxMessageLength)
-            {
-                return trimmed;
-            }
-
-            return trimmed[..MaxMessageLength];
+            return trimmed.Length <= MaxMessageLength ? trimmed : trimmed[..MaxMessageLength];
         }
 
         public static bool TrySanitizeMessage(string text, out string sanitized)
@@ -84,6 +82,14 @@ namespace Game.Core
         public static string FormatMessageTime(System.DateTime utcOrLocal) =>
             utcOrLocal.ToLocalTime().ToString("HH:mm");
 
+        public static bool IsWithinRetention(System.DateTime receivedAt)
+        {
+            var local = receivedAt.Kind == System.DateTimeKind.Utc
+                ? receivedAt.ToLocalTime()
+                : receivedAt;
+            return (System.DateTime.Now - local).TotalHours <= HistoryRetentionHours;
+        }
+
         public static float MatchMessageAlpha(float ageSeconds)
         {
             if (ageSeconds <= 0f)
@@ -108,5 +114,12 @@ namespace Game.Core
 
         public static bool ShouldRemoveMatchMessage(float ageSeconds) =>
             ageSeconds >= MatchMessageVisibleSeconds;
+
+        /// <summary>
+        /// UI Toolkit + Input System often deliver Enter as character \n with keyCode None.
+        /// </summary>
+        public static bool IsComposerSubmit(UnityEngine.KeyCode keyCode, char character) =>
+            keyCode is UnityEngine.KeyCode.Return or UnityEngine.KeyCode.KeypadEnter
+            || character is '\n' or '\r';
     }
 }

@@ -23,7 +23,7 @@ namespace Game.UI.Controllers
         private const float ShinePeriodSeconds = 1.6f;
         private const float UgsInitTimeoutSeconds = 8f;
         private const float FriendsInitTimeoutSeconds = 8f;
-        private const float ChatInitTimeoutSeconds = 10f;
+        private const float ChatInitTimeoutSeconds = 15f;
 #if BARAKI_UPDATER_ONLY
         private const bool IsUpdaterOnlyBuild = true;
 #else
@@ -323,8 +323,11 @@ namespace Game.UI.Controllers
                     return;
                 }
 
+                // UIDocument may rebuild after first OnEnable bind; re-hook callbacks on the new panel.
+                RegisterCallbacks(false);
                 BindUi();
                 PopulatePlaceholders();
+                RegisterCallbacks(true);
             }).StartingIn(0);
         }
 

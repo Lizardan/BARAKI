@@ -14,6 +14,7 @@ namespace Game.UI.Views
         readonly VisualElement _host;
         VisualElement _overlay;
         Label _title;
+        ScrollView _scroll;
         VisualElement _messages;
         TextField _input;
         Button _sendButton;
@@ -59,9 +60,10 @@ namespace Game.UI.Views
 
             var scroll = new ScrollView { name = "FriendsDmScroll", mode = ScrollViewMode.Vertical };
             scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            scroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            scroll.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             scroll.AddToClassList("mm-chat-scroll");
             scroll.AddToClassList("mm__dm-scroll");
+            _scroll = scroll;
             _messages = new VisualElement { name = "FriendsDmMessages" };
             _messages.AddToClassList("mm-chat-messages");
             scroll.Add(_messages);
@@ -72,6 +74,7 @@ namespace Game.UI.Views
             composer.AddToClassList("mm__dm-composer");
             _input = new TextField { maxLength = GameChatRules.MaxMessageLength };
             _input.AddToClassList("mm-chat-input");
+            _input.multiline = false;
             if (_input.textEdition != null)
             {
                 _input.textEdition.placeholder = "Написать сообщение…";
@@ -99,6 +102,7 @@ namespace Game.UI.Views
             _closeButton.clicked += Close;
             _sendButton.clicked += OnSend;
             _input.RegisterCallback<KeyDownEvent>(OnInputKeyDown);
+            _input.RegisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             GameChatService.DirectMessageReceived += OnDirectMessage;
             _bound = true;
         }
@@ -113,6 +117,7 @@ namespace Game.UI.Views
             _closeButton.clicked -= Close;
             _sendButton.clicked -= OnSend;
             _input.UnregisterCallback<KeyDownEvent>(OnInputKeyDown);
+            _input.UnregisterCallback<NavigationSubmitEvent>(OnInputSubmit);
             GameChatService.DirectMessageReceived -= OnDirectMessage;
             _bound = false;
         }
@@ -131,6 +136,7 @@ namespace Game.UI.Views
 
             Rebuild();
             _overlay?.RemoveFromClassList(HiddenClass);
+            ScrollToEnd();
             _input?.schedule.Execute(() => _input?.Focus());
         }
 
@@ -142,18 +148,29 @@ namespace Game.UI.Views
 
         void OnSend() => TrySend();
 
+        void OnInputSubmit(NavigationSubmitEvent evt)
+        {
+            evt.StopPropagation();
+            TrySend();
+        }
+
         void OnInputKeyDown(KeyDownEvent evt)
         {
-            if (evt.keyCode is KeyCode.Return or KeyCode.KeypadEnter)
-            {
-                evt.StopPropagation();
-                TrySend();
-            }
-            else if (evt.keyCode is KeyCode.Escape)
+            if (evt.keyCode is KeyCode.Escape)
             {
                 evt.StopPropagation();
                 Close();
+                return;
             }
+
+            if (!GameChatRules.IsComposerSubmit(evt.keyCode, evt.character))
+            {
+                return;
+            }
+
+            evt.StopPropagation();
+            evt.PreventDefault();
+            TrySend();
         }
 
         void TrySend()
@@ -200,12 +217,37 @@ namespace Game.UI.Views
             {
                 _messages.Add(CreateLine("Система", DateTime.Now, "Напишите сообщение другу."));
             }
+
+            ScrollToEnd();
         }
 
         void Append(GameChatDirectMessage message)
         {
             var nick = message.FromSelf ? "Вы" : message.SenderDisplayName;
             _messages?.Add(CreateLine(nick, message.ReceivedAt, message.Text));
+            ScrollToEnd();
+        }
+
+        void ScrollToEnd()
+        {
+            ScrollViewToEnd(_scroll);
+        }
+
+        static void ScrollViewToEnd(ScrollView scroll)
+        {
+            if (scroll == null)
+            {
+                return;
+            }
+
+            void Apply()
+            {
+                var y = scroll.verticalScroller.highValue;
+                scroll.scrollOffset = new Vector2(0f, y > 0f ? y : 99999f);
+            }
+
+            scroll.schedule.Execute(Apply);
+            scroll.schedule.Execute(Apply).StartingIn(32);
         }
 
         static VisualElement CreateLine(string nick, DateTime time, string text)

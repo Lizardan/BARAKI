@@ -44,11 +44,17 @@ Debug-консоль: `chat.setkey <key>`, `chat.setbase <url>`, `chat.clear`.
 
 ## UI
 
-- [`MenuChatPanel`](../../Assets/Game/UI/Runtime/Views/MenuChatPanel.cs) — вкладки graphite
-- [`FriendsDirectChatPanel`](../../Assets/Game/UI/Runtime/Views/FriendsDirectChatPanel.cs) — `ui-dialog` + mm-chat
-- Матч: текст без подложки, fade ~3.5 с; композер graphite
+- [`MenuChatPanel`](../../Assets/Game/UI/Runtime/Views/MenuChatPanel.cs) — вкладки graphite; скроллбар скрыт; после загрузки/новых сообщений прокрутка в конец
+- [`FriendsDirectChatPanel`](../../Assets/Game/UI/Runtime/Views/FriendsDirectChatPanel.cs) — `ui-dialog` + mm-chat; скроллбар скрыт; автоскролл вниз
+- Матч: текст без подложки, fade ~3.5 с; композер graphite. **Enter** открывает/отправляет через Input System (`Keyboard.current.enterKey`) — HUD `picking-mode="Ignore"`, поэтому UI Toolkit `KeyDownEvent` на корне не приходит
+
+## Лимиты
+
+- Канал: последние 80 сообщений, не старше 36 ч
+- ЛС: последние 50, не старше 36 ч
+- Cloudflare Worker сам чистит Durable Object (prune на GET/POST + hourly alarm)
 
 ## Код
 
 - `Game.Core`: `GameChatRules`, `NetworkMatchChatRules`
-- `Game.Gameplay`: `GameChatService` (HTTP poll), `NetworkMatchChat`, `MatchChatNetworkFacade`
+- `Game.Gameplay`: `GameChatService` (HTTP poll через `HttpClient`, не UnityWebRequest — Curl в Editor зависает на POST), `NetworkMatchChat`, `MatchChatNetworkFacade`
