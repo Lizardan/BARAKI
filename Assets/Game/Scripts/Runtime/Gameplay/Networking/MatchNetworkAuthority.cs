@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
@@ -26,12 +27,44 @@ namespace Game.Gameplay.Networking
         float _snapshotAccumulator;
         MatchTickMode _tickMode = MatchTickMode.Offline;
         bool _matchEndedPublished;
+        readonly MatchSnapshotWireContext _wire = new();
+        readonly Dictionary<ulong, (int Count, float LastReportRealtime)> _desyncReports = new();
 
         public static MatchNetworkAuthority Instance { get; private set; }
 
         public static event Action<MatchCommandResult> CommandResultReceived;
 
         public MatchTickMode TickMode => _tickMode;
+
+        /// <summary>
+        /// Decode captured migration bytes with the receiving peer's accumulated
+        /// static-roster cache (the bytes may be an incremental publish).
+        /// </summary>
+        public static MatchSnapshot DecodeStateTransferBytes(byte[] bytes)
+        {
+            if (Instance != null)
+            {
+                return Instance._wire.Decode(bytes);
+            }
+
+            return MatchSnapshotCodec.Deserialize(bytes);
+        }
+
+        /// <summary>
+        /// Shared wire context of this peer (it received the same publish stream),
+        /// used by host migration to decode captured bytes incrementally.
+        /// </summary>
+        public static bool TryGetSharedWireContext(out MatchSnapshotWireContext context)
+        {
+            if (Instance != null)
+            {
+                context = Instance._wire;
+                return true;
+            }
+
+            context = null;
+            return false;
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -42,6 +75,9 @@ namespace Game.Gameplay.Networking
 
             Instance = this;
             _tickMode = IsServer ? MatchTickMode.Server : MatchTickMode.Client;
+            _wire.ResetEncode();
+            _wire.ResetDecode();
+            _desyncReports.Clear();
             EnsureRuntime();
             EnsureHostMigrationCoordinator();
         }
@@ -269,7 +305,7 @@ namespace Game.Gameplay.Networking
             }
 
             var snapshot = MatchSnapshotCodec.Capture(_matchRuntime.Controller);
-            var bytes = MatchSnapshotCodec.Serialize(snapshot);
+            var bytes = _wire.Encode(snapshot);
             _matchRuntime.StoreLastNetworkSnapshot(snapshot, bytes);
             ApplySnapshotClientRpc(bytes);
         }
@@ -305,6 +341,8 @@ namespace Game.Gameplay.Networking
             }
 
             _matchEndedPublished = false;
+            _wire.ResetEncode();
+            _desyncReports.Clear();
             MatchPauseGate.SetUserPaused(false);
             NetworkLobbyState.Instance?.ClearMatchStarted();
             NetworkRacePickState.Instance?.ResetForRematch();
@@ -565,16 +603,83 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
-            var snapshot = MatchSnapshotCodec.Deserialize(bytes);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            MatchSnapshot snapshot;
+            try
+            {
+                snapshot = _wire.Decode(bytes);
+            }
+            catch (Exception exception)
+            {
+                // Never freeze silently: log, notify UI once, keep the last known state.
+                PlaytestLog.Warn(
+                    "Match",
+                    "SnapshotDecodeFailed",
+                    ("error", exception.Message),
+                    ("bytes", bytes != null ? bytes.Length : 0));
+                if (Time.realtimeSinceStartup - s_lastDecodeFailureNotifyRealtime > 10f)
+                {
+                    s_lastDecodeFailureNotifyRealtime = Time.realtimeSinceStartup;
+                    try
+                    {
+                        SnapshotDecodeFailed?.Invoke();
+                    }
+                    catch (Exception subscriberException)
+                    {
+                        Debug.LogException(subscriberException);
+                    }
+                }
+
+                return;
+            }
+
             if (!MatchSnapshotChecksum.Matches(snapshot, snapshot.Checksum))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning(
                     $"MatchNetworkAuthority: snapshot checksum mismatch " +
                     $"(got={snapshot.Checksum}, local={MatchSnapshotChecksum.Compute(snapshot)}).");
-            }
 #endif
+                ReportChecksumMismatchServerRpc();
+            }
+
             _matchRuntime?.ApplyNetworkSnapshot(snapshot, bytes);
+        }
+
+        /// <summary>Raised on clients when a snapshot cannot be decoded (version/corruption).</summary>
+        public static event Action SnapshotDecodeFailed;
+
+        static float s_lastDecodeFailureNotifyRealtime = -999f;
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void ReportChecksumMismatchServerRpc(RpcParams rpcParams = default)
+        {
+            var clientId = rpcParams.Receive.SenderClientId;
+            var now = Time.realtimeSinceStartup;
+            _desyncReports.TryGetValue(clientId, out var entry);
+            var count = SnapshotDesyncRules.NextReportCount(entry.Count, now - entry.LastReportRealtime);
+
+            if (SnapshotDesyncRules.ShouldKick(count))
+            {
+                PlaytestLog.Warn(
+                    "Match",
+                    "KickDesyncedClient",
+                    ("clientId", (long)clientId),
+                    ("reports", count));
+                _desyncReports.Remove(clientId);
+                NetworkManager.DisconnectClient(clientId);
+                return;
+            }
+
+            _desyncReports[clientId] = (count, now);
+            if (SnapshotDesyncRules.ShouldResync(count))
+            {
+                PlaytestLog.Warn(
+                    "Match",
+                    "ResyncAfterChecksumMismatch",
+                    ("clientId", (long)clientId),
+                    ("reports", count));
+                PublishSnapshotNow();
+            }
         }
 
         [ClientRpc]

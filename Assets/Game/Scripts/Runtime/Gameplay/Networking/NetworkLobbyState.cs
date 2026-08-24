@@ -44,6 +44,7 @@ namespace Game.Gameplay.Networking
         private readonly NetworkVariable<FixedString64Bytes> _roomCode = new();
         private readonly NetworkVariable<bool> _matchStarted = new();
         private readonly NetworkVariable<int> _revision = new();
+        private readonly NetworkVariable<int> _snapshotCodecVersion = new();
         private readonly NetworkList<NetworkLobbySlot> _slots = new();
         private readonly NetworkVariable<byte> _disconnectUiPhase = new();
         private readonly NetworkVariable<int> _disconnectUiSlot = new(-1);
@@ -60,6 +61,11 @@ namespace Game.Gameplay.Networking
         public int PlayerCount => _playerCount.Value;
         public int SlotCount => _slots.Count;
         public int Revision => _revision.Value;
+        /// <summary>Host's snapshot wire version. 0 until the server initializes it.</summary>
+        public int SnapshotCodecVersion => _snapshotCodecVersion.Value;
+        /// <summary>False when this peer's build cannot read the host's snapshot format.</summary>
+        public bool IsLocalSnapshotCompatible =>
+            SnapshotVersionGate.IsCompatible(MatchSnapshotCodec.CurrentVersion, _snapshotCodecVersion.Value);
         public string RoomCodeValue => _roomCode.Value.ToString();
         public bool MatchStartedValue => _matchStarted.Value;
         public MatchDisconnectHoldRules.OverlayPhase DisconnectUiPhase =>
@@ -81,7 +87,8 @@ namespace Game.Gameplay.Networking
             NetworkLobbySlotRules.CanDesignatedHostStart(
                 MatchNetworkSession.LocalSlot,
                 _matchStarted.Value,
-                LobbyReadyRules.CanHostStart(this));
+                LobbyReadyRules.CanHostStart(this))
+            && IsLocalSnapshotCompatible;
 
         public override void OnNetworkSpawn()
         {
@@ -293,6 +300,7 @@ namespace Game.Gameplay.Networking
             _playerCount.Value = MatchModeRules.IsValidPlayerCount(requestedCount)
                 ? requestedCount
                 : MatchSetup.DefaultPlayerCount;
+            _snapshotCodecVersion.Value = MatchSnapshotCodec.CurrentVersion;
             _roomCode.Value = new FixedString64Bytes(
                 string.IsNullOrWhiteSpace(MatchNetworkSession.CurrentHandle.RoomCode)
                     ? "SERVER"
@@ -473,8 +481,19 @@ namespace Game.Gameplay.Networking
         {
             if (!NetworkLobbySlotRules.IsHostSlot(senderSlot)
                 || _matchStarted.Value
-                || !LobbyReadyRules.CanHostStart(this))
+                || !LobbyReadyRules.CanHostStart(this)
+                || !SnapshotVersionGate.CanStartMatch(_snapshotCodecVersion.Value))
             {
+                if (NetworkLobbySlotRules.IsHostSlot(senderSlot) && !_matchStarted.Value
+                    && !SnapshotVersionGate.CanStartMatch(_snapshotCodecVersion.Value))
+                {
+                    PlaytestLog.Warn(
+                        "Lobby",
+                        "StartBlockedSnapshotVersion",
+                        ("lobby", _snapshotCodecVersion.Value),
+                        ("local", MatchSnapshotCodec.CurrentVersion));
+                }
+
                 return;
             }
 

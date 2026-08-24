@@ -190,7 +190,6 @@ namespace Game.Tests
                         TargetY = 0.4f,
                         TargetZ = 6f,
                         FlightDuration = 0.35f,
-                        Elapsed = 0f,
                         IsParabolic = true,
                         TargetBuildingInstanceId = -1,
                         SourceBuildingInstanceId = -1,
@@ -208,7 +207,6 @@ namespace Game.Tests
                         TargetY = 0.5f,
                         TargetZ = 2f,
                         FlightDuration = 0.2f,
-                        Elapsed = 0f,
                         IsParabolic = false,
                         TargetBuildingInstanceId = -1,
                         SourceBuildingInstanceId = 7,
@@ -227,7 +225,6 @@ namespace Game.Tests
             Assert.AreEqual(0.5f, restored.Projectiles[0].StartY, 0.01f);
             Assert.AreEqual(4f, restored.Projectiles[0].TargetX, 0.01f);
             Assert.AreEqual(0.35f, restored.Projectiles[0].FlightDuration, 0.01f);
-            Assert.AreEqual(0f, restored.Projectiles[0].Elapsed, 0.01f);
             Assert.IsTrue(restored.Projectiles[0].IsParabolic);
             Assert.AreEqual(7, restored.Projectiles[1].SourceBuildingInstanceId);
             Assert.AreEqual(GameIds.Buildings.Main, restored.Projectiles[1].SourceBuildingId);
@@ -640,19 +637,6 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Deserialize_V5_DefaultsMissingAnimAndTimerFields()
-        {
-            var bytes = BuildMinimalV5SnapshotBytes();
-            var restored = MatchSnapshotCodec.Deserialize(bytes);
-
-            Assert.AreEqual(1, restored.Units.Length);
-            Assert.AreEqual(0, restored.Units[0].BehaviorState);
-            Assert.AreEqual(0, restored.Units[0].AttackSwingSerial);
-            Assert.AreEqual(1, restored.Barracks.Length);
-            Assert.AreEqual(0f, restored.Barracks[0].TimeUntilNextWaveSeconds, 0.01f);
-        }
-
-        [Test]
         public void Capture_RoundTrip_PreservesBarracksCallCharges()
         {
             var controller = new MatchController();
@@ -714,10 +698,8 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Deserialize_V2_StillReadsUnitsWithoutV3Fields()
+        public void RoundTrip_MinimalMatch_KeepsStructure()
         {
-            // Build a minimal v2 payload manually via legacy shape: serialize v3 then we only assert
-            // that Capture→Serialize→Deserialize of a live match remains stable.
             var controller = new MatchController();
             controller.StartMatch(MatchConfig.MvpDefault(2));
             var snapshot = MatchSnapshotCodec.Capture(controller);
@@ -746,47 +728,6 @@ namespace Game.Tests
             Assert.AreEqual(
                 MatchTickMode.Offline,
                 MatchTickAuthority.TickModeAfterAuthorityDespawn(networkedSessionHeld: false));
-        }
-
-        /// <summary>Hand-built v5 payload (no BehaviorState / AttackSwingSerial / wave timer).</summary>
-        static byte[] BuildMinimalV5SnapshotBytes()
-        {
-            using var stream = new MemoryStream();
-            using var writer = new BinaryWriter(stream);
-            writer.Write(5);
-            writer.Write(2);
-            writer.Write(1);
-            writer.Write(10f);
-            writer.Write(-1);
-
-            writer.Write(0);
-            writer.Write(0);
-
-            writer.Write(1);
-            writer.Write(1);
-            writer.Write(0);
-            writer.Write("Melee");
-            writer.Write(GameIds.Lanes.Center);
-            writer.Write(1f);
-            writer.Write(2f);
-            writer.Write(0f);
-            writer.Write(1f);
-            writer.Write(50f);
-            writer.Write(true);
-
-            writer.Write(0);
-
-            writer.Write(1);
-            writer.Write(0);
-            writer.Write(GameIds.Buildings.BarracksCenter);
-            writer.Write(1);
-            writer.Write(false);
-            writer.Write(1);
-            writer.Write(false);
-
-            writer.Write(0);
-            writer.Write(0u);
-            return stream.ToArray();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using Game.Gameplay.Match;
 
 namespace Game.Gameplay.Networking
@@ -9,14 +10,29 @@ namespace Game.Gameplay.Networking
             MatchController controller,
             byte[] lastGoodBytes,
             int previousHostSlot,
-            bool eliminatePreviousHost = false)
+            bool eliminatePreviousHost = false,
+            MatchSnapshotWireContext wireContext = null)
         {
             if (controller == null || lastGoodBytes == null || lastGoodBytes.Length == 0)
             {
                 return false;
             }
 
-            var snapshot = MatchSnapshotCodec.Deserialize(lastGoodBytes);
+            MatchSnapshot snapshot;
+            try
+            {
+                snapshot = wireContext != null
+                    ? wireContext.Decode(lastGoodBytes)
+                    : MatchSnapshotCodec.Deserialize(lastGoodBytes);
+            }
+            catch (Exception exception)
+            {
+                // Broken last-good is not fatal: migration continues from an empty state.
+                UnityEngine.Debug.LogWarning(
+                    $"HostMigration: last-good snapshot unreadable, continuing without it. {exception.Message}");
+                return false;
+            }
+
             controller.ApplyAuthoritativeSnapshot(snapshot);
 
             if (eliminatePreviousHost && previousHostSlot >= 0)

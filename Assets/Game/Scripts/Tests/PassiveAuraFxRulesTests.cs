@@ -17,23 +17,6 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ResolveAbilityIdFromColor_MatchesNearestAuraTint()
-        {
-            Assert.AreEqual(
-                AbilityIds.AuraHpRegen,
-                PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFxColors.AuraHpRegen));
-            Assert.AreEqual(
-                AbilityIds.AuraAttackSpeedPercent,
-                PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFxColors.AuraAttackSpeed));
-            Assert.AreEqual(
-                AbilityIds.AuraDamagePercent,
-                PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFxColors.AuraDamage));
-            Assert.AreEqual(
-                AbilityIds.AuraArmorPercent,
-                PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFxColors.AuraArmor));
-        }
-
-        [Test]
         public void ResolveScale_GrowsWithAuraRadius_ButIsVisuallyShrunk()
         {
             var small = PassiveAuraFxRules.ResolveScale(PassiveAuraFxKind.Runic, 2f);

@@ -48,6 +48,58 @@ namespace Game.Core
             return trimmed.Length <= MaxMessageLength ? trimmed : trimmed[..MaxMessageLength];
         }
 
+        /// <summary>
+        /// Minimal JSON string escaping. Escapes quotes, backslash and ALL control
+        /// characters below 0x20 (as \u00XX) — otherwise a crafted message produces
+        /// invalid JSON on the Worker / receiving clients.
+        /// </summary>
+        public static string JsonEscape(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return "\"\"";
+            }
+
+            var sb = new System.Text.StringBuilder(value.Length + 8);
+            sb.Append('"');
+            foreach (var c in value)
+            {
+                switch (c)
+                {
+                    case '"':
+                        sb.Append("\\\"");
+                        break;
+                    case '\\':
+                        sb.Append("\\\\");
+                        break;
+                    case '\n':
+                        sb.Append("\\n");
+                        break;
+                    case '\r':
+                        sb.Append("\\r");
+                        break;
+                    case '\t':
+                        sb.Append("\\t");
+                        break;
+                    default:
+                        if (c < 0x20)
+                        {
+                            sb.Append("\\u");
+                            sb.Append(((int)c).ToString("x4"));
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+
+                        break;
+                }
+            }
+
+            sb.Append('"');
+            return sb.ToString();
+        }
+
         public static bool TrySanitizeMessage(string text, out string sanitized)
         {
             sanitized = SanitizeMessage(text);

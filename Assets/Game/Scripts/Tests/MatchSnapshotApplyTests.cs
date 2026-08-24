@@ -220,7 +220,6 @@ namespace Game.Tests
             var snapshot = MatchSnapshotCodec.Capture(host);
             Assert.Greater(snapshot.Projectiles.Length, 0, "Snapshot must carry spawn events.");
             Assert.AreEqual(0, host.Combat.NetworkProjectileSpawns.Count, "Capture drains the network buffer.");
-            Assert.AreEqual(0f, snapshot.Projectiles[0].Elapsed, 0.01f);
 
             var secondCapture = MatchSnapshotCodec.Capture(host);
             Assert.AreEqual(0, secondCapture.Projectiles.Length, "No new shots → empty event list.");
@@ -528,6 +527,81 @@ namespace Game.Tests
                     controllerGold: 500,
                     snapshotGold: 333,
                     useSnapshot: false));
+        }
+
+        [Test]
+        public void ApplyAuthoritativeSnapshot_CarriesMeleeTargetToClient()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.BeginEarlyPhase();
+            var attackerStats = new UnitCombatStats(UnitRole.Melee, 200f, 0f, 10f, 10f, 1f, 1.2f, 0f, 1);
+            var victimStats = new UnitCombatStats(UnitRole.Melee, 500f, 0f, 1f, 1f, 0.1f, 1f, 0f, 1);
+            var attacker = host.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, attackerStats);
+            var victim = host.Combat.SpawnUnit(1, GameIds.Lanes.Center, UnitRole.Melee, victimStats);
+            attacker.WorldPosition = new Vector3(0f, 0.15f, 0f);
+            victim.WorldPosition = new Vector3(0f, 0.15f, 1f);
+
+            var sawTarget = false;
+            for (var i = 0; i < 40; i++)
+            {
+                host.Combat.Tick(0.05f);
+                if (attacker.CurrentTargetId.HasValue)
+                {
+                    sawTarget = true;
+                    break;
+                }
+            }
+
+            Assert.IsTrue(sawTarget, "Host melee should acquire a target.");
+            Assert.AreEqual(victim.UnitId, attacker.CurrentTargetId.Value);
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(MatchSnapshotCodec.Capture(host));
+
+            var clientAttacker = client.Combat.GetUnit(attacker.UnitId);
+            Assert.IsNotNull(clientAttacker, "Attacker must exist on the client.");
+            Assert.IsNotNull(
+                clientAttacker.CurrentTargetId,
+                "Melee target must reach the client — without it melee impact FX never plays off-host.");
+            Assert.AreEqual(victim.UnitId, clientAttacker.CurrentTargetId.Value);
+        }
+
+        [Test]
+        public void ApplyAuthoritativeSnapshot_CarriesAuraAbilityIdAndAttackCommit()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(MatchConfig.MvpDefault(2));
+            controller.BeginEarlyPhase();
+            var stats = new UnitCombatStats(UnitRole.Melee, 100f, 0f, 1f, 1f, 0.1f, 1f, 0f, 1);
+            var unit = controller.Combat.SpawnUnit(0, GameIds.Lanes.Center, UnitRole.Melee, stats);
+            unit.WorldPosition = new Vector3(0f, 0.15f, 0f);
+
+            var snapshot = MatchSnapshotCodec.Capture(controller);
+            Assert.Greater(snapshot.Units.Length, 0, "Scenario needs at least one unit.");
+
+            snapshot.Units[0].AuraAbilityId = AbilityIds.AuraDamagePercent;
+            snapshot.Units[0].IsAttackCommitted = true;
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(snapshot));
+            Assert.AreEqual(AbilityIds.AuraDamagePercent, restored.Units[0].AuraAbilityId);
+            Assert.IsTrue(restored.Units[0].IsAttackCommitted);
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(restored);
+
+            var clientUnit = client.Combat.GetUnit(snapshot.Units[0].UnitId);
+            Assert.IsNotNull(clientUnit);
+            Assert.AreEqual(
+                AbilityIds.AuraDamagePercent,
+                clientUnit.AuraAbilityId,
+                "Aura ability id must reach MatchUnitState so clients draw the right aura.");
+            Assert.Greater(
+                clientUnit.AttackCommitRemainingSeconds,
+                0f,
+                "Attack commit flag must reach clients (Super ammo hide).");
         }
 
         static BuildingState FindBuilding(MatchController controller, int ownerSlot, string buildingId)

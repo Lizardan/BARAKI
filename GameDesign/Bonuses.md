@@ -8,7 +8,7 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 
 # Bonuses
 
-> **Статус:** UI-оверлей **есть** (PRE-001 done). Геймплей/умения слотов — **пустые кнопки**. Invent + внедрение всех 12 = **PRE-006**, **блокер расы #2** (вместе с PRE-005, PRE-007 + GATE). См. `TODO.md`.
+> **Статус:** UI-оверлей (PRE-001) и **юнитовые бонусы слотов 1–6 реализованы** (PRE-006a: Cleave / Deadeye / Battlemace / Siege Regen Aura / Last Call / Catapult — канон в `wiki/rules/human-unit-bonuses.md`). Слоты **7–12** (герои ×3, титан, расовые уники ×2) пока disabled в UI = **остаток PRE-006b**, блокер расы #2 (вместе с PRE-007 + GATE). См. `TODO.md`.
 
 ## Обзор
 
@@ -40,20 +40,20 @@ note: Каркас; реализация PRE-001
 
 ## 12 слотов на расу
 
-| # | Слот | Смысл каркаса | Эффект |
-|---|------|---------------|--------|
-| 1 | `BONUS_SLOT_MELEE` | Melee | Замена на усиленную версию: доп. статы + 1–2 способности |
-| 2 | `BONUS_SLOT_RANGED` | Ranged | То же |
-| 3 | `BONUS_SLOT_CASTER` | Caster | То же |
-| 4 | `BONUS_SLOT_SIEGE` | Siege | То же |
-| 5 | `BONUS_SLOT_FLYING` | Flying | То же |
-| 6 | `BONUS_SLOT_SUPER` | Super | То же |
-| 7 | `BONUS_SLOT_HERO_1` | Герой слот 1 | Тот же слот, другой def (усиленный) |
-| 8 | `BONUS_SLOT_HERO_2` | Герой слот 2 | То же |
-| 9 | `BONUS_SLOT_HERO_3` | Герой слот 3 | То же |
-| 10 | `BONUS_SLOT_TITAN` | Титан | Усиленный титан при summon |
-| 11 | `BONUS_SLOT_RACE_UNIQUE_1` | Уникальный #1 | Не замена юнита; per race |
-| 12 | `BONUS_SLOT_RACE_UNIQUE_2` | Уникальный #2 | Не замена юнита; per race |
+| # | Слот | Смысл каркаса | Эффект | Статус |
+|---|------|---------------|--------|--------|
+| 1 | `BONUS_SLOT_MELEE` | Melee | Замена на усиленную версию: доп. статы + Cleave (on-hit AoE) | ✅ PRE-006a |
+| 2 | `BONUS_SLOT_RANGED` | Ranged | То же + Deadeye (крит ×2 on-hit 15%) | ✅ PRE-006a |
+| 3 | `BONUS_SLOT_CASTER` | Caster | То же + Battlemace (melee-булава + staff) | ✅ PRE-006a |
+| 4 | `BONUS_SLOT_SIEGE` | Siege | То же + Siege Regen Aura (+1 HP/с, r=8) | ✅ PRE-006a |
+| 5 | `BONUS_SLOT_FLYING` | Flying | То же + Last Call (спавн Ranged при смерти 25%) | ✅ PRE-006a |
+| 6 | `BONUS_SLOT_SUPER` | Super | То же + Catapult (парабола + splash в точке прилёта) | ✅ PRE-006a |
+| 7 | `BONUS_SLOT_HERO_1` | Герой слот 1 | Тот же слот, другой def (усиленный) | ❌ 006b |
+| 8 | `BONUS_SLOT_HERO_2` | Герой слот 2 | То же | ❌ 006b |
+| 9 | `BONUS_SLOT_HERO_3` | Герой слот 3 | То же | ❌ 006b |
+| 10 | `BONUS_SLOT_TITAN` | Титан | Усиленный титан при summon | ❌ 006b |
+| 11 | `BONUS_SLOT_RACE_UNIQUE_1` | Уникальный #1 | Не замена юнита; per race | ❌ 006b |
+| 12 | `BONUS_SLOT_RACE_UNIQUE_2` | Уникальный #2 | Не замена юнита; per race | ❌ 006b |
 
 ```entity
 id: BONUS_SLOT_MELEE
@@ -179,6 +179,7 @@ Race pick → Match start (waves run) → Bonus overlay 60s
 
 ## Open
 
-- [ ] Конкретные статы/умения enhanced-юнитов (PRE-006) — закрытие = критерий PRE-006 done
-- [ ] Уникальные расовые бонусы слотов 11–12 Людей (PRE-006)
+- [x] Конкретные статы/умения enhanced-юнитов слотов 1–6 (PRE-006a) — `wiki/rules/human-unit-bonuses.md`
+- [ ] Умения слотов 7–12: усиленные герои ×3, титан, уники Людей (PRE-006b) — закрытие = критерий PRE-006 done
+- [ ] Уникальные расовые бонусы слотов 11–12 Людей (PRE-006b)
 - [x] UI оверлея и сетевой state (PRE-001)

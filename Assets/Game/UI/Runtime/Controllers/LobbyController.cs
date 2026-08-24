@@ -471,6 +471,22 @@ namespace Game.UI.Controllers
             var localSlot = MatchNetworkSession.LocalSlot;
             var isHost = NetworkLobbySlotRules.IsHostSlot(localSlot);
             var matchStarted = MatchNetworkSession.MatchStarted;
+
+            if (!matchStarted && !MatchNetworkSession.IsLocalSnapshotCompatible)
+            {
+                if (_subtitleLabel != null)
+                {
+                    _subtitleLabel.text =
+                        "Версия игры не совпадает с хостом — обнови клиент и зайди заново";
+                }
+
+                PlaytestLog.Warn(
+                    "Lobby",
+                    "SnapshotVersionMismatch",
+                    ("lobby", MatchNetworkSession.LobbySnapshotCodecVersion),
+                    ("local", MatchSnapshotCodec.CurrentVersion));
+            }
+
             _fillLocalButton?.SetEnabled(isHost && !matchStarted);
             _readyButton?.SetEnabled(localSlot >= 0 && !matchStarted);
             if (_readyButton != null && localSlot >= 0)

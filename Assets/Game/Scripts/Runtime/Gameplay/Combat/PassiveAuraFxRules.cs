@@ -55,31 +55,5 @@ namespace Game.Gameplay.Combat
             var scale = auraRadius / Mathf.Max(0.1f, reference) * VisualFootprintMultiplier;
             return Mathf.Max(0.08f, scale);
         }
-
-        /// <summary>Client snapshot has color only — pick the nearest known aura tint.</summary>
-        public static int ResolveAbilityIdFromColor(Color color)
-        {
-            var bestId = AbilityIds.AuraDamagePercent;
-            var bestScore = float.MaxValue;
-            Try(AbilityIds.AuraHpRegen, AbilityFxColors.AuraHpRegen);
-            Try(AbilityIds.AuraAttackSpeedPercent, AbilityFxColors.AuraAttackSpeed);
-            Try(AbilityIds.AuraDamagePercent, AbilityFxColors.AuraDamage);
-            Try(AbilityIds.AuraArmorPercent, AbilityFxColors.AuraArmor);
-            Try(AbilityIds.AuraMaxHpPercent, AbilityFxColors.AuraMaxHp);
-            return bestId;
-
-            void Try(int id, Color candidate)
-            {
-                var dr = color.r - candidate.r;
-                var dg = color.g - candidate.g;
-                var db = color.b - candidate.b;
-                var score = dr * dr + dg * dg + db * db;
-                if (score < bestScore)
-                {
-                    bestScore = score;
-                    bestId = id;
-                }
-            }
-        }
     }
 }

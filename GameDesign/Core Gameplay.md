@@ -96,7 +96,7 @@ Level ↑ также **ускоряет** spawn. Уничтоженный barrac
 | Действие | MVP |
 |----------|-----|
 | Research upgrade | ✓ |
-| Pick match bonus (overlay 60s) | PRE-006 (UI PRE-001 done; контент pending) |
+| Pick match bonus (overlay 60s) | слоты 1–6 done (PRE-006a); 7–12 pending (PRE-006b) |
 | Upgrade barracks level | ✓ (1→4, per lane) |
 | Upgrade main level | ✓ (2000g → L2, 3000g → L3) |
 | Main magic | ✓ (до `main_level` слотов; race spells) |

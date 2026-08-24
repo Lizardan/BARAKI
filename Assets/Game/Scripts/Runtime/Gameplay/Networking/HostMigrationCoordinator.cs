@@ -240,7 +240,10 @@ namespace Game.Gameplay.Networking
                 controller,
                 CapturedStateBytes,
                 PreviousHostSlot,
-                eliminatePreviousHost: false);
+                eliminatePreviousHost: false,
+                wireContext: MatchNetworkAuthority.TryGetSharedWireContext(out var wire)
+                    ? wire
+                    : null);
         }
 
         public void AdvanceAfterStateTransfer(bool success)

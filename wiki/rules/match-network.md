@@ -17,7 +17,7 @@ Listen-host (host-as-server) + NGO. Клиенты **не** тикают сим�
 - Хост читает `MatchController` напрямую.
 - Клиент предпочитает снапшот v13, но **если снапшота ещё нет** — fallback на локальный controller после `StartMatch`. Иначе оверлей пустой, а часы зависают на `00:00`.
 - Снапшот публикуется сразу в `BeginMatchOnServer` (`PublishSnapshotNow`), не только по таймеру `SnapshotHz`.
-- `MatchSnapshotCodec.Deserialize` принимает любую версию `1..CurrentVersion`. Хардкод allow-list (`1 or 2 or … or 17`) при бампе версии роняет **каждый** клиентский RPC (`Unsupported snapshot version`) — оверлей бонуса пустой, часы `00:00`, после выхода хоста клиенты уходят в Offline split-brain.
+- `MatchSnapshotCodec` читает только текущую версию (v21+); смешанные билды закрываются handshake'ом версии в лобби (`SnapshotVersionGate`, см. `snapshot-wire.md`). Исторический урок: хардкод allow-list версий при бампе ронял каждый клиентский RPC — не возвращать.
 
 ## Start → Early
 
@@ -50,7 +50,7 @@ Capture для миграции: last-good bytes, иначе **локальны�
 
 Снаряды **не** интерполируют снапшотные позиции (в wire — one-shot spawn). Меш летит по
 известной баллистике: `CombatProjectileState.ResolvePresentationProgress` от `SpawnRealtime`
-(кадры / subframe), урон по-прежнему на 30 Гц `Elapsed`. v20 пишет `AppliesSplashAoe` —
+(кадры / subframe), урон по-прежнему на 30 Гц `Elapsed`. Событие снаряда несёт `AppliesSplashAoe` —
 клиентский бонус-Super рисует камень катапульты, не болт.
 
 `QualitySettings.vSyncCount = 1` (ритм монитора, без тиринга; не `targetFrameRate = 60`).

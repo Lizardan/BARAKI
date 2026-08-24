@@ -70,6 +70,8 @@ namespace Game.Gameplay.Combat
         /// </summary>
         public float AuraRadius { get; set; }
         public int AuraColorPacked { get; set; }
+        /// <summary>Replicated passive aura ability id (0 = none). Replaces color-based guessing on clients.</summary>
+        public int AuraAbilityId { get; set; }
 
         /// <summary>Per-slot cooldown remaining, parallel to <see cref="Abilities"/>.</summary>
         public float[] AbilityCooldownRemaining { get; set; }

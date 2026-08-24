@@ -10,7 +10,7 @@
   получают `BonusSlot` / bonus-статы / bonus-префаб.
 - `UnitStatsResolver.Resolve(…, bonusSlot)` берёт bonus-префаб или `RaceDefinition.GetUnitBonus`, затем стакает `RaceUpgradeStatsRules.Apply`.
 - Казармы UI: кнопка выкупа роли показывает **bonus-портрет**, если пик совпадает с ролью.
-- Клиент: снапшот v19 (`BonusSlot` / `AuraRadius` / `AuraColorPacked`); презентер берёт префаб через `TryGetPrefab(…, bonusSlot)`.
+- Клиент: снапшот v21 (`BonusSlot` / `AuraRadius` / `AuraColorPacked` в UnitsStatic); презентер берёт префаб через `TryGetPrefab(…, bonusSlot)`.
 
 ## Ауры (визуал)
 

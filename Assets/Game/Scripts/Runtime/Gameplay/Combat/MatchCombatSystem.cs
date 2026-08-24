@@ -889,7 +889,6 @@ namespace Game.Gameplay.Combat
                 TargetY = projectile.TargetPosition.y,
                 TargetZ = projectile.TargetPosition.z,
                 FlightDuration = projectile.FlightDuration,
-                Elapsed = 0f,
                 IsParabolic = projectile.IsParabolic,
                 TargetBuildingInstanceId = projectile.TargetBuildingInstanceId ?? -1,
                 SourceBuildingInstanceId = projectile.SourceBuildingInstanceId ?? -1,
@@ -987,6 +986,11 @@ namespace Game.Gameplay.Combat
                 existing.BonusSlot = snap.BonusSlot;
                 existing.AuraRadius = snap.AuraRadius;
                 existing.AuraColorPacked = snap.AuraColorPacked;
+                existing.AuraAbilityId = snap.AuraAbilityId;
+                existing.CurrentTargetId = snap.TargetUnitId > 0 ? snap.TargetUnitId : null;
+                existing.CurrentTargetBuildingInstanceId =
+                    snap.TargetBuildingInstanceId >= 0 ? snap.TargetBuildingInstanceId : null;
+                existing.AttackCommitRemainingSeconds = snap.IsAttackCommitted ? 0.01f : 0f;
                 existing.MarchProgressDistance = _routes != null
                     && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var route)
                     ? route.ProjectDistance(position)
@@ -1024,6 +1028,11 @@ namespace Game.Gameplay.Combat
             unit.BonusSlot = snap.BonusSlot;
             unit.AuraRadius = snap.AuraRadius;
             unit.AuraColorPacked = snap.AuraColorPacked;
+            unit.AuraAbilityId = snap.AuraAbilityId;
+            unit.CurrentTargetId = snap.TargetUnitId > 0 ? snap.TargetUnitId : null;
+            unit.CurrentTargetBuildingInstanceId =
+                snap.TargetBuildingInstanceId >= 0 ? snap.TargetBuildingInstanceId : null;
+            unit.AttackCommitRemainingSeconds = snap.IsAttackCommitted ? 0.01f : 0f;
             if (_routes != null && _routes.TryGetRoute(snap.OwnerSlot, laneId, out var spawnRoute))
             {
                 unit.MarchProgressDistance = spawnRoute.ProjectDistance(position);

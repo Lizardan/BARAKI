@@ -17,7 +17,8 @@
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
 | `rules/ability-fx.md` | BARAKI Studio: одно окно VFX+радиус, механика AoE, якоря, палитра |
 | `rules/fog.md` | Fog of War: симуляция, Divine Blessing, миникарта, cull презентации в тумане |
-| `rules/match-network.md` | Старт матча, снапшоты 30 Гц / v20 splash, конец матча, return-to-lobby |
+| `rules/match-network.md` | Старт матча, снапшот-интерполяция, host migration, конец матча |
+| `rules/snapshot-wire.md` | Wire v21: секции, static/dynamic split, EventStream, контракт презентации |
 | `rules/runtime-debug-console.md` | Хоткеи runtime-консоли (`~` открыть, Esc закрыть) |
 | `rules/chat.md` | Чат: Cloudflare (общий / друзья / ЛС) + матч Netcode |
 | `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |

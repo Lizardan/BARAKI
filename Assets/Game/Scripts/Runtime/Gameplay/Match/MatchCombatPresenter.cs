@@ -839,9 +839,7 @@ namespace Game.Gameplay.Match
             {
                 radius = unit.AuraRadius;
                 packedColor = unit.AuraColorPacked;
-                abilityId = radius > 0f
-                    ? PassiveAuraFxRules.ResolveAbilityIdFromColor(AbilityFx.FromRgbaInt(packedColor))
-                    : 0;
+                abilityId = unit.AuraAbilityId;
             }
             else if (!combat.TryGetAuraVisual(unit, out radius, out packedColor, out abilityId))
             {
@@ -1206,39 +1204,6 @@ namespace Game.Gameplay.Match
                 hitsBuilding ? _fxCatalog.BuildingImpact : _fxCatalog.Blood,
                 impactPosition,
                 hitsBuilding ? ImpactFxLifetimeSeconds : BloodFxLifetimeSeconds);
-        }
-
-        void SpawnCatapultSplashDisc(Vector3 impactPosition)
-        {
-            if (!CanSpawnFx(impactPosition) || _root == null)
-            {
-                return;
-            }
-
-            var disc = CreateAuraDisc(_root, HumanBonusUnitRules.CatapultAoeRadius);
-            if (disc == null)
-            {
-                return;
-            }
-
-            disc.name = "CatapultSplashDisc";
-            disc.SetParent(_root, true);
-            disc.position = new Vector3(impactPosition.x, AuraDiscHeight, impactPosition.z);
-            disc.localRotation = Quaternion.identity;
-            disc.localScale = Vector3.one;
-
-            var renderer = disc.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                var color = AbilityFxColors.Ultimate;
-                color.a *= AuraDiscFillAlpha;
-                var block = new MaterialPropertyBlock();
-                block.SetColor(Shader.PropertyToID("_BaseColor"), color);
-                block.SetColor(Shader.PropertyToID("_Color"), color);
-                renderer.SetPropertyBlock(block);
-            }
-
-            Destroy(disc.gameObject, HumanBonusUnitRules.CatapultSplashDiscSeconds);
         }
 
         void SpawnFx(GameObject prefab, Vector3 position, float lifetimeSeconds)

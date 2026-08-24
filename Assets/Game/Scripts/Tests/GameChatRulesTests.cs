@@ -1,3 +1,4 @@
+using System;
 using Game.Core;
 using NUnit.Framework;
 using UnityEngine;
@@ -23,6 +24,36 @@ namespace Game.Tests
             var longText = new string('a', GameChatRules.MaxMessageLength + 20);
             Assert.IsTrue(GameChatRules.TrySanitizeMessage(longText, out var capped));
             Assert.AreEqual(GameChatRules.MaxMessageLength, capped.Length);
+        }
+
+        [Test]
+        public void JsonEscape_EscapesControlChars_KeepsValidJson()
+        {
+            Assert.AreEqual("\"\"", GameChatRules.JsonEscape(null));
+            Assert.AreEqual("\"\"", GameChatRules.JsonEscape(""));
+            Assert.AreEqual("\"hi\"", GameChatRules.JsonEscape("hi"));
+            Assert.AreEqual("\"a\\\"b\"", GameChatRules.JsonEscape("a\"b"));
+            Assert.AreEqual("\"a\\\\b\"", GameChatRules.JsonEscape("a\\b"));
+            Assert.AreEqual("\"line\\nbreak\"", GameChatRules.JsonEscape("line\nbreak"));
+
+            // Raw control characters must never survive unescaped.
+            var crafted = "bad\u0001\u001fmsg";
+            var escaped = GameChatRules.JsonEscape(crafted);
+            Assert.IsFalse(escaped.Contains('\u0001'));
+            Assert.IsFalse(escaped.Contains('\u001f'));
+            Assert.IsTrue(escaped.Contains("\\u0001"));
+            Assert.IsTrue(escaped.Contains("\\u001f"));
+
+            // The result must round-trip through a real JSON parser.
+            var wrapped = "{\"text\":" + escaped + "}";
+            var parsed = JsonUtility.FromJson<JsonProbe>(wrapped);
+            Assert.AreEqual(crafted, parsed.text);
+        }
+
+        [Serializable]
+        private sealed class JsonProbe
+        {
+            public string text;
         }
 
         [Test]

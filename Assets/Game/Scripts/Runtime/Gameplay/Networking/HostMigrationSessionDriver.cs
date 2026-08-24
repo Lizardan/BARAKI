@@ -124,15 +124,31 @@ namespace Game.Gameplay.Networking
                 if (isDesignated && runtime?.Controller != null)
                 {
                     stateApplied = coordinator.TryApplyCapturedState(runtime.Controller);
-                    runtime.StoreLastNetworkSnapshot(
-                        MatchSnapshotCodec.Deserialize(coordinator.CapturedStateBytes),
-                        coordinator.CapturedStateBytes);
+                    try
+                    {
+                        runtime.StoreLastNetworkSnapshot(
+                            MatchNetworkAuthority.DecodeStateTransferBytes(coordinator.CapturedStateBytes),
+                            coordinator.CapturedStateBytes);
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogWarning(
+                            $"HostMigration: captured snapshot unreadable, skipping last-good restore. {exception.Message}");
+                    }
                 }
                 else if (runtime != null && coordinator.CapturedStateBytes is { Length: > 0 })
                 {
-                    var snapshot = MatchSnapshotCodec.Deserialize(coordinator.CapturedStateBytes);
-                    runtime.ApplyNetworkSnapshot(snapshot, coordinator.CapturedStateBytes);
-                    stateApplied = true;
+                    try
+                    {
+                        var snapshot = MatchNetworkAuthority.DecodeStateTransferBytes(coordinator.CapturedStateBytes);
+                        runtime.ApplyNetworkSnapshot(snapshot, coordinator.CapturedStateBytes);
+                        stateApplied = true;
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogWarning(
+                            $"HostMigration: captured snapshot unreadable, starting without state. {exception.Message}");
+                    }
                 }
 
                 // Adaptive wait: designated host resumes once peers rejoin (capped by timeout);

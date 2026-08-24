@@ -35,6 +35,16 @@ namespace Game.Gameplay.Networking
         public static bool HasNetworkLobby => NetworkLobbyState.Instance != null;
         public static bool CanLocalStart => NetworkLobbyState.Instance?.CanLocalStart ?? false;
 
+        /// <summary>
+        /// False when this build cannot read the host's snapshot format (lobby handshake).
+        /// True when there is no lobby state yet (nothing to compare).
+        /// </summary>
+        public static bool IsLocalSnapshotCompatible =>
+            NetworkLobbyState.Instance == null || NetworkLobbyState.Instance.IsLocalSnapshotCompatible;
+
+        /// <summary>Host's snapshot wire version (0 = not initialized).</summary>
+        public static int LobbySnapshotCodecVersion => NetworkLobbyState.Instance?.SnapshotCodecVersion ?? 0;
+
         public static string TransportConnectFailedMessage =>
             MatchTransportConnectRules.ConnectFailedMessage;
 

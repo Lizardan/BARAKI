@@ -93,7 +93,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 ## Phase PRE-RACE2 — до расы #2
 
-> Реализация по одному ID. **Следующий:** PRE-006 (12 бонусов Людей). **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..007** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
+> Реализация по одному ID. **Следующий:** остаток PRE-006 (слоты 7–12). **Раса #2 (EA-001) не начинать**, пока не закрыты **PRE-001..007** и **Phase GATE**. Старые 5 Human tower tracks выкинуты из канона — invent **9 новых**.
 
 | ID | Task | Status | Acceptance |
 |----|------|--------|------------|
@@ -102,7 +102,7 @@ provides: [backlog, priorities, acceptance_criteria]
 | PRE-003 | Divine Blessing (FoW off) + меню 1 способности main | done | Research main L2+ (**1000g / 45s**); FoW off для себя; отложенный выбор 1 stub ability (гейты main tracks); эффекты abilities — **PRE-005**; снапшот v17; см. `Upgrades.md` |
 | PRE-004 | Контент героев слот 2–3 (baseline) | done | Имена TT_Mounted_Paladin / TT_Mounted_Priest; визуал Human_Hero2/3; статы baseline на префабе (`UnitCombatSettings`); 3 hero-бонуса больше не пустые по контенту |
 | PRE-005 | Main extra abilities после Divine Blessing | done | Меню 2×3; **2** способности (Кара зданий 1200 / Кара юнитов 5000; CD 180; 200 mana; общий гейт melee+ranged+armor≥7 + magic≥2); слоты 3–6 stub; main mana; HP main/barracks по уровню; снапшот v18; тесты |
-| PRE-006 | Наполнение всех 12 бонусов Людей | pending | Invent + внедрить **все 12** слотов (10 replacement + 2 unique): не пустые кнопки; эффекты работают в матче; стакаются с tower upgrades; late game ~40–60 мин — мощная армия; см. `Bonuses.md` |
+| PRE-006 | Наполнение всех 12 бонусов Людей | **partial** — PRE-006a done, 006b pending | **PRE-006a (done):** слоты 1–6 (юниты) — Cleave/Deadeye/Battlemace/Siege Regen/Last Call/Catapult; ауры r=8; снапшот v21 (`BonusSlot` в UnitsStatic); канон `wiki/rules/human-unit-bonuses.md`. **Остаток (006b):** слоты 7–12 — усиленные герои ×3 (7–9), усиленный титан (10), расовые уники (11–12); сейчас disabled в UI оверлея |
 | PRE-007 | Tower upgrades ×9 (Humans) invent + implement | pending | **9 новых** треков (старые 5 scrap); только **юниты** (не герои/титан/DPS башен); L1→L2→L3 (без L1 нет L2); 4 башни → до 4 разных треков; UI: убрать stub слота 1, треки на **слотах 4–12**; удалить старые `GameIds`/entities; тесты; см. `Races.md` / `Upgrades.md` |
 
 ---
@@ -126,6 +126,9 @@ provides: [backlog, priorities, acceptance_criteria]
 | EA-002 | Lobby N=3,5 casual | deferred |
 | EA-004 | Ranked Duel (N=2) | deferred |
 | EA-005 | Ranked FFA4 (N=4) | deferred |
+| CHAT-001 | JWT-verify идентичности чата в Worker (сейчас заголовки X-Baraki-* подделываемы) | backlog | До публичного EA |
+| CHAT-002 | API-ключ в клиенте — ротация/прокси-выдача вместо вшитого ключа | backlog | До публичного EA |
+| CHAT-003 | Чат polling → WebSocket при росте онлайна (сейчас HTTP-poll 5 c) | backlog | После GATE, при необходимости |
 
 ---
 
@@ -133,6 +136,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
+| 2026-08-24 | Снапшот wire v21: секционный формат, static/dynamic split, StringTable, EventStream; handshake версии в лобби, graceful decode failure, checksum-resync/kick. Контракт презентации — `wiki/rules/snapshot-wire.md`. Починен melee-FX host-only баг (target в wire). CHAT-фиксы: JSON control-chars, изоляция poll-запросов, строгий 2xx |
 | 2026-08-17 | Контент-раскладка: категории `Units` / `BonusUnits` / `Heroes`(+Titan); `BonusHeroes` зарезервирован; канон в `wiki/rules/content-assets.md` |
 | 2026-08-15 | PRE-005 VFX: Кара зданий/юнитов — `FxKind.SkyBeam` луч с неба; sync через SpellCasts (`AbilityIds` 100/101) |
 | 2026-08-15 | PRE-005: меню 2×3; Кара зданий (1200) / Кара юнитов (5000); гейт melee+ranged+armor≥7 + magic≥2; CD 180 / 200 mana; main mana 100×level; HP main/barracks по уровню; снапшот v18 |

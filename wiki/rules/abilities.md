@@ -148,20 +148,19 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
   `TickAuraRegen` (после `TickHealZones`): хил через `HeroAbilityRules.ApplyHeal` / `GetEffectiveMaxHp`,
   лечит и носителя (дистанция 0).
 - Визуал: полупрозрачный диск (α≈0.28) под носителем — `MatchCombatPresenter.SyncAuraDisc`
-  (`RoadPlatformMesh.BuildDisc`, URP Unlit transparent, `_BaseColor`/`_Color`). Радиус/цвет реплицируются
-  в снапшоте (см. v19) и рисуются **всем** клиентам; на хосте — через `combat.TryGetAuraVisual`.
+  (`RoadPlatformMesh.BuildDisc`, URP Unlit transparent, `_BaseColor`/`_Color`). Радиус/цвет/abilityId
+  реплицируются в снапшоте (UnitsStatic) и рисуются **всем** клиентам; на хосте — через
+  `combat.TryGetAuraVisual`.
 
 ## Снапшот (кодек)
 
-- Формат снапшота — **v19** (`MatchSnapshotCodec`). Способности в снапшоте — массив
-  `AbilityCastEvent` c `AbilityId` (`ushort`) — `Snapshot.SpellCasts` (поле осталось с legacy-имени,
-  имя не менять без рефакторинга кодека+презентера).
-- **v19**: в `MatchUnitSnapshot` добавлены `BonusSlot` (enhanced-вариант юнита, 0 = base),
-  `AuraRadius` (float), `AuraColorPacked` (int RGBA32, `AbilityFx.ToRgbaInt`). Write после
-  `IsParkedAtBase`, read под `version >= 19`. `CurrentVersion = 19`. Ауры/бонусы передаются только
-  при бампе версии — изменять кодек не нужно, пока id стабильны.
+- Формат снапшота — **v21**, секционный (см. `wiki/rules/snapshot-wire.md`). Способности в снапшоте —
+  события `AbilityCast` в EventStream c `AbilityId` (`ushort`); в объектной модели — `Snapshot.SpellCasts`
+  (имя осталось с legacy-версий, не менять без рефакторинга кодека+презентера).
+- Ауры: `AuraRadius` / `AuraColorPacked` / `AuraAbilityId` в UnitsStatic; клиент рисует по явному
+  `AuraAbilityId`, цвет — только для рендера диска. Бонусы: `BonusSlot` там же.
 - Изменения способностей = изменение кол-ва def-ов/параметров; изменять **кодек не нужно**,
-  пока id стабильны.
+  пока id стабильны. Новый визуал = новое событие EventStream (без бампа версии).
 
 ## Инспекторы (Game.Editor)
 

@@ -408,6 +408,7 @@ namespace Game.Gameplay.Networking
 
         static async UniTask PollOnceAsync()
         {
+            // Each request is isolated: one channel failing must not delay the others.
             var globalQuery = string.IsNullOrEmpty(s_afterGlobal)
                 ? "/v1/channels/global"
                 : $"/v1/channels/global?after={Uri.EscapeDataString(s_afterGlobal)}";
@@ -415,10 +416,25 @@ namespace Game.Gameplay.Networking
                 ? "/v1/channels/friends"
                 : $"/v1/channels/friends?after={Uri.EscapeDataString(s_afterFriends)}";
 
-            var globalJson = await RequestJsonAsync("GET", globalQuery, null);
-            IngestChannelPayload(globalJson, MenuChatChannel.Global, bumpAfter: true);
-            var friendsJson = await RequestJsonAsync("GET", friendsQuery, null);
-            IngestChannelPayload(friendsJson, MenuChatChannel.FriendsFeed, bumpAfter: true);
+            try
+            {
+                var globalJson = await RequestJsonAsync("GET", globalQuery, null);
+                IngestChannelPayload(globalJson, MenuChatChannel.Global, bumpAfter: true);
+            }
+            catch (Exception ex)
+            {
+                LogThrottledWarning($"GameChatService: global poll failed: {ex.Message}");
+            }
+
+            try
+            {
+                var friendsJson = await RequestJsonAsync("GET", friendsQuery, null);
+                IngestChannelPayload(friendsJson, MenuChatChannel.FriendsFeed, bumpAfter: true);
+            }
+            catch (Exception ex)
+            {
+                LogThrottledWarning($"GameChatService: friends poll failed: {ex.Message}");
+            }
 
             foreach (var peer in new List<string>(s_dmByPeer.Keys))
             {
@@ -426,8 +442,15 @@ namespace Game.Gameplay.Networking
                 var path = string.IsNullOrEmpty(after)
                     ? $"/v1/dm/{Uri.EscapeDataString(peer)}"
                     : $"/v1/dm/{Uri.EscapeDataString(peer)}?after={Uri.EscapeDataString(after)}";
-                var dmJson = await RequestJsonAsync("GET", path, null);
-                IngestDmPayload(dmJson, peer, bumpAfter: true);
+                try
+                {
+                    var dmJson = await RequestJsonAsync("GET", path, null);
+                    IngestDmPayload(dmJson, peer, bumpAfter: true);
+                }
+                catch (Exception ex)
+                {
+                    LogThrottledWarning($"GameChatService: dm poll failed ({peer}): {ex.Message}");
+                }
             }
         }
 
@@ -674,10 +697,9 @@ namespace Game.Gameplay.Networking
                         throw new OperationCanceledException("chat session reset");
                     }
 
-                    var recovered = TryRecoverBody(body);
                     var code = (int)response.StatusCode;
 
-                    if (response.IsSuccessStatusCode || recovered)
+                    if (response.IsSuccessStatusCode)
                     {
                         return ExtractJsonPayload(body);
                     }
@@ -731,27 +753,6 @@ namespace Game.Gameplay.Networking
 
             s_nextWarnAt = Time.realtimeSinceStartup + WarnThrottleSeconds;
             Debug.LogWarning(message);
-        }
-
-        static bool TryRecoverBody(string body)
-        {
-            if (string.IsNullOrWhiteSpace(body))
-            {
-                return false;
-            }
-
-            var trimmed = body.Trim();
-            // Unity sometimes prefixes Curl errors before the JSON payload.
-            var jsonStart = trimmed.IndexOf('{');
-            if (jsonStart < 0)
-            {
-                return false;
-            }
-
-            var json = trimmed[jsonStart..];
-            return json.Contains("\"ok\"", StringComparison.Ordinal)
-                   || json.Contains("\"message\"", StringComparison.Ordinal)
-                   || json.Contains("\"messages\"", StringComparison.Ordinal);
         }
 
         static string ExtractJsonPayload(string body)
@@ -897,21 +898,7 @@ namespace Game.Gameplay.Networking
             return string.CompareOrdinal(a, b) >= 0 ? a : b;
         }
 
-        static string JsonString(string value)
-        {
-            if (value == null)
-            {
-                return "\"\"";
-            }
-
-            var escaped = value
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("\n", "\\n")
-                .Replace("\r", "\\r")
-                .Replace("\t", "\\t");
-            return $"\"{escaped}\"";
-        }
+        static string JsonString(string value) => GameChatRules.JsonEscape(value);
 
         [Serializable]
         class MessagesEnvelope
