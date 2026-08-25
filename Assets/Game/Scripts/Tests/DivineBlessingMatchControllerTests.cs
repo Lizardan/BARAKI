@@ -93,7 +93,7 @@ namespace Game.Tests
             var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(AbilityIds.MainBuildingSmite, casts[0].Def.AbilityId);
-            Assert.AreEqual(AbilityFxColors.DivineSmite, casts[0].Def.Fx.Color);
+            Assert.AreEqual(ResolveExpectedSmiteColor(AbilityIds.MainBuildingSmite), casts[0].Def.Fx.Color);
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace Game.Tests
             Assert.AreEqual(1, casts.Count);
             Assert.AreEqual(AbilityIds.MainUnitSmite, casts[0].Def.AbilityId);
             Assert.AreEqual(enemy.UnitId, casts[0].TargetUnitId);
-            Assert.AreEqual(AbilityFxColors.DivineSmite, casts[0].Def.Fx.Color);
+            Assert.AreEqual(ResolveExpectedSmiteColor(AbilityIds.MainUnitSmite), casts[0].Def.Fx.Color);
         }
 
         [Test]
@@ -231,6 +231,23 @@ namespace Game.Tests
                 GameIds.Lanes.Center,
                 Game.Gameplay.Data.UnitRole.Melee,
                 stats);
+        }
+
+        /// <summary>
+        /// Smite FX color is authored in BARAKI Studio (MainExtraAbilityFxCatalog asset);
+        /// the runtime def must carry exactly the authored color. Falls back to the
+        /// DivineSmite tint only when the catalog asset itself is missing.
+        /// </summary>
+        static Color ResolveExpectedSmiteColor(int spellAbilityId)
+        {
+            var catalog = MainExtraAbilityFxCatalog.Load();
+            if (catalog == null)
+            {
+                return AbilityFxColors.DivineSmite;
+            }
+
+            var fx = catalog.GetFx(spellAbilityId);
+            return fx.Color.a > 0f ? fx.Color : AbilityFxColors.DivineSmite;
         }
     }
 }
