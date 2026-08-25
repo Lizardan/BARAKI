@@ -3,6 +3,12 @@
   "main": "src/index.js",
   "compatibility_date": "2026-07-23",
   "workers_dev": true,
+  // Unity project id (public, matches ProjectSettings cloudProjectId) — the UGS
+  // id token must carry it in `aud`. Set CHAT_JWT_REQUIRED=1 to drop the legacy
+  // X-Baraki-Key fallback after the client migration completes.
+  "vars": {
+    "CHAT_JWT_PROJECT_ID": "42d17af4-ef64-44ff-ad3f-665c4f394a4d"
+  },
   "durable_objects": {
     "bindings": [
       {

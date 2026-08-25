@@ -17,7 +17,7 @@
 
 Один сокет на приложение: `GameChatSocket` (`ClientWebSocket`) → Worker
 `GET /v1/ws` → единственный Durable Object `ChatHub` (он же хранит историю и
-fan-out'ит). Авторизация — те же заголовки `X-Baraki-*`.
+fan-out'ит). Авторизация — `Authorization: Bearer <UGS id token>` + заголовки `X-Baraki-*`.
 
 Протокол:
 ```
@@ -65,7 +65,15 @@ npx wrangler secret put CHAT_API_KEY   # опционально
 
 Деплой: workflow [`.github/workflows/deploy-chat.yml`](../../.github/workflows/deploy-chat.yml) (`workflow_dispatch` или push в `Tooling/cloudflare/baraki-chat/`). Нужны секреты `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CHAT_API_KEY`.
 
-Идентичность playtest-grade: заголовки `X-Baraki-Player-Id` / `X-Baraki-Player-Name` (UGS). При необходимости позже — JWT verify.
+Идентичность: **UGS JWT** (CHAT-001). Клиент шлёт `Authorization: Bearer <id token>`
+(`AuthenticationService.Instance.AccessToken` через `UnityServicesBootstrap.AccessToken`)
+на WS-handshake (`GameChatSocket`, токен читается на главном потоке перед каждым
+коннектом) и все HTTP-запросы (`GameChatService.RequestJsonAsync`). Worker
+верифицирует RS256-подпись по JWKS Unity (`player-auth.services.api.unity.com/.well-known/jwks.json`,
+кэш 1 ч), проверяет `exp`/`aud` (= Unity project id, var `CHAT_JWT_PROJECT_ID` в
+`wrangler.jsonc`), игрок берётся из `sub`; расхождение с `X-Baraki-Player-Id` → 401.
+Легаси `X-Baraki-Key` остаётся фолбэком до конца миграции; отключается var'ом
+`CHAT_JWT_REQUIRED=1`. Тесты воркера — `node --test` в `Tooling/cloudflare/baraki-chat/test/`.
 
 Клиент после `Open` ЛС вызывает `GameChatService.EnsureDirectPeer`, чтобы история/синк подтягивались до первого send.
 

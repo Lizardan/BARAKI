@@ -1,7 +1,9 @@
 /**
  * BARAKI menu chat API (global + friends feed + DM).
- * Auth: optional CHAT_API_KEY secret; clients send X-Baraki-Key.
- * Identity: playtest-grade X-Baraki-Player-Id / X-Baraki-Player-Name.
+ * Auth: UGS JWT (Authorization: Bearer / X-Baraki-Token) verified against Unity's
+ * JWKS; identity comes from the token `sub` claim. Legacy shared-secret
+ * X-Baraki-Key stays as a fallback while clients migrate (disable with
+ * CHAT_JWT_REQUIRED=1).
  *
  * Transport: WebSocket push at GET /v1/ws (send/sync frames); HTTP GET stays for
  * initial history and catch-up. All messages flow through the single ChatHub
@@ -16,6 +18,168 @@ const MAX_DM = 50;
 const RETENTION_MS = 36 * 60 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ALARM_MS = 60 * 60 * 1000;
+
+const UGS_JWKS_URL = "https://player-auth.services.api.unity.com/.well-known/jwks.json";
+const UGS_JWKS_TTL_MS = 60 * 60 * 1000;
+// Per-isolate JWKS cache (raw jwk + imported CryptoKey per kid).
+let s_jwksCache = { keys: null, fetchedAt: 0 };
+
+/**
+ * Verify a Unity Authentication id token (RS256 JWT) against Unity's published
+ * JWKS. Returns the payload when valid, otherwise null.
+ * Injectable deps keep this testable without network access.
+ */
+export async function verifyUgsJwt(token, opts = {}) {
+  const fetchJwks = opts.fetchJwks || fetchUgsJwks;
+  const nowSec = typeof opts.nowSec === "number" ? opts.nowSec : Math.floor(Date.now() / 1000);
+  const expectedProjectId = (opts.expectedProjectId || "").trim();
+  const requiredIssuer = (opts.requiredIssuer || "").trim();
+
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) return null;
+  const [headerB64, payloadB64, signatureB64] = parts;
+  const header = jsonFromBase64Url(headerB64);
+  const payload = jsonFromBase64Url(payloadB64);
+  if (!header || !payload) return null;
+  if (String(header.alg || "").toUpperCase() !== "RS256") return null;
+  if (typeof payload.exp === "number" && payload.exp <= nowSec + 5) return null;
+  if (typeof payload.nbf === "number" && payload.nbf > nowSec) return null;
+  const sub = typeof payload.sub === "string" ? payload.sub.trim() : "";
+  if (sub.length < 4 || sub.length > 128) return null;
+  if (expectedProjectId) {
+    const aud = Array.isArray(payload.aud) ? payload.aud.map(String) : [String(payload.aud ?? "")];
+    if (!aud.includes(expectedProjectId)) return null;
+  }
+  if (requiredIssuer && String(payload.iss || "") !== requiredIssuer) return null;
+
+  let key = await importUgsKey(header.kid, await fetchJwks(false));
+  if (!key && header.kid) {
+    // Unknown kid (rotation): force one refresh before giving up.
+    key = await importUgsKey(header.kid, await fetchJwks(true));
+  }
+  if (!key) return null;
+
+  const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const signature = base64UrlToBytes(signatureB64);
+  try {
+    const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, signature, data);
+    return ok ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchUgsJwks(force) {
+  const now = Date.now();
+  if (!force && s_jwksCache.keys && now - s_jwksCache.fetchedAt < UGS_JWKS_TTL_MS) {
+    return s_jwksCache.keys;
+  }
+  try {
+    const res = await fetch(UGS_JWKS_URL);
+    if (!res.ok) throw new Error(`jwks ${res.status}`);
+    const data = await res.json();
+    const keys = new Map();
+    for (const k of data.keys || []) {
+      if (k && k.kid && k.kty === "RSA") keys.set(k.kid, k);
+    }
+    if (keys.size > 0) {
+      s_jwksCache = { keys, fetchedAt: now };
+    }
+  } catch {
+    // Keep serving the previous key set; verification of unknown kids fails safely.
+  }
+  return s_jwksCache.keys;
+}
+
+async function importUgsKey(kid, keys) {
+  if (!kid || !keys || !keys.has(kid)) return null;
+  const cached = keys.get(kid);
+  if (cached instanceof CryptoKey) return cached;
+  let imported = null;
+  try {
+    imported = await crypto.subtle.importKey(
+      "jwk",
+      cached,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+  } catch {
+    return null;
+  }
+  keys.set(kid, imported);
+  return imported;
+}
+
+function jsonFromBase64Url(segment) {
+  try {
+    const bytes = base64UrlToBytes(segment);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+function base64UrlToBytes(segment) {
+  let s = String(segment || "").replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4 !== 0) s += "=";
+  const binary = atob(s);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Resolve the caller identity: a valid UGS JWT wins (playerId = `sub`),
+ * otherwise fall back to the legacy shared-secret headers.
+ * Returns { playerId, displayName } or null (→ 401).
+ */
+export async function resolveIdentity(request, env) {
+  const bearer = extractBearerToken(request);
+  if (bearer) {
+    const payload = await verifyUgsJwt(bearer.token, {
+      expectedProjectId: env.CHAT_JWT_PROJECT_ID,
+      requiredIssuer: env.CHAT_JWT_ISSUER,
+    });
+    if (!payload) return null;
+    const headerPlayerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
+    if (headerPlayerId && headerPlayerId !== payload.sub) return null;
+    const claimedName = typeof payload.playerName === "string" ? payload.playerName.trim() : "";
+    const displayName =
+      claimedName ||
+      (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim();
+    return { playerId: payload.sub, displayName: displayName.slice(0, 64) };
+  }
+
+  if (isTruthy(env.CHAT_JWT_REQUIRED)) return null;
+  if (!authorizeSharedKey(request, env)) return null;
+  const playerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
+  if (!playerId || playerId.length < 4 || playerId.length > 128) return null;
+  const displayName = (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim();
+  return { playerId, displayName: displayName.slice(0, 64) };
+}
+
+function extractBearerToken(request) {
+  const authHeader = request.headers.get("Authorization") || "";
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (token) return { token };
+  }
+  const direct = (request.headers.get("X-Baraki-Token") || "").trim();
+  return direct ? { token: direct } : null;
+}
+
+function isTruthy(value) {
+  const v = String(value || "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function authorizeSharedKey(request, env) {
+  const required = (env.CHAT_API_KEY || "").trim();
+  if (!required) return true;
+  const got = (request.headers.get("X-Baraki-Key") || "").trim();
+  return got.length > 0 && got === required;
+}
 
 export class ChatHub {
   constructor(state, env) {
@@ -87,15 +251,13 @@ export class ChatHub {
       return cors(new Response(null, { status: 204 }));
     }
 
-    if (!authorize(request, this.env)) {
+    const identity = await resolveIdentity(request, this.env);
+    if (!identity) {
       return cors(json({ error: "unauthorized" }, 401));
     }
 
-    const playerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
-    const displayName = (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim().slice(0, 64);
-    if (!playerId || playerId.length < 4 || playerId.length > 128) {
-      return cors(json({ error: "invalid_player" }, 400));
-    }
+    const playerId = identity.playerId;
+    const displayName = identity.displayName;
 
     try {
       if (request.method === "POST" && url.pathname === "/v1/session") {
@@ -161,15 +323,14 @@ export class ChatHub {
     if (request.headers.get("Upgrade") !== "websocket") {
       return cors(json({ error: "expected_websocket" }, 426));
     }
-    if (!authorize(request, this.env)) {
+
+    const identity = await resolveIdentity(request, this.env);
+    if (!identity) {
       return cors(json({ error: "unauthorized" }, 401));
     }
 
-    const playerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
-    const displayName = (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim().slice(0, 64);
-    if (!playerId || playerId.length < 4 || playerId.length > 128) {
-      return cors(json({ error: "invalid_player" }, 400));
-    }
+    const playerId = identity.playerId;
+    const displayName = identity.displayName;
 
     await this.ensureLoaded();
     const pair = new WebSocketPair();
@@ -316,13 +477,6 @@ export default {
   },
 };
 
-function authorize(request, env) {
-  const required = (env.CHAT_API_KEY || "").trim();
-  if (!required) return true;
-  const got = (request.headers.get("X-Baraki-Key") || "").trim();
-  return got.length > 0 && got === required;
-}
-
 function makeMsg(playerId, displayName, text, channel, peerId = "") {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -444,7 +598,7 @@ function cors(response) {
   headers.set("access-control-allow-origin", "*");
   headers.set(
     "access-control-allow-headers",
-    "content-type,x-baraki-key,x-baraki-player-id,x-baraki-player-name",
+    "authorization,content-type,x-baraki-key,x-baraki-player-id,x-baraki-player-name,x-baraki-token",
   );
   headers.set("access-control-allow-methods", "GET,POST,OPTIONS");
   return new Response(response.body, { status: response.status, headers });

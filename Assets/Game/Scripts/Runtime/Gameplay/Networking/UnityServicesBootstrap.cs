@@ -48,6 +48,13 @@ namespace Game.Gameplay.Networking
         public static string PlayerId =>
             IsReady ? AuthenticationService.Instance.PlayerId : string.Empty;
 
+        /// <summary>
+        /// UGS identity token (RS256 JWT, sub = PlayerId) for server-side
+        /// verification (chat Worker). Empty when not signed in.
+        /// </summary>
+        public static string AccessToken =>
+            IsReady ? AuthenticationService.Instance.AccessToken ?? string.Empty : string.Empty;
+
         public static string PlayerName
         {
             get

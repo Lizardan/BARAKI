@@ -408,7 +408,8 @@ namespace Game.Gameplay.Networking
                 s_apiBase,
                 UnityServicesBootstrap.PlayerId ?? string.Empty,
                 localName,
-                s_apiKey);
+                s_apiKey,
+                () => UnityServicesBootstrap.AccessToken);
             GameChatSocket.EnsureStarted();
         }
 
@@ -776,6 +777,8 @@ namespace Game.Gameplay.Networking
         static async UniTask<string> RequestJsonAsync(string method, string path, string bodyJson)
         {
             var session = s_sessionId;
+            // Main-thread only API: resolve once, reuse across retry attempts.
+            var accessToken = UnityServicesBootstrap.AccessToken;
             var isGet = string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase);
             var maxAttempts = isGet ? 1 : 2;
             Exception lastError = null;
@@ -791,6 +794,11 @@ namespace Game.Gameplay.Networking
                 if (!string.IsNullOrEmpty(bodyJson))
                 {
                     request.Content = new StringContent(bodyJson, Encoding.UTF8, "application/json");
+                }
+
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {accessToken}");
                 }
 
                 var playerId = UnityServicesBootstrap.PlayerId ?? string.Empty;

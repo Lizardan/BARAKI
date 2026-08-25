@@ -28,7 +28,25 @@ Set the same values in the Unity client (`GameChatRules` / PlayerPrefs):
 Message sending happens over the WebSocket (`send` frame); HTTP is read-only
 history + the session sync.
 
-Headers: `X-Baraki-Player-Id`, `X-Baraki-Player-Name`, optional `X-Baraki-Key`.
+Headers: `Authorization: Bearer <UGS id token>` (или `X-Baraki-Token`), `X-Baraki-Player-Id`,
+`X-Baraki-Player-Name`, legacy-фолбэк `X-Baraki-Key`.
+
+## Auth
+
+Идентичность проверяется по **UGS identity token** (RS256 JWT, `sub` = PlayerId):
+
+1. Worker верифицирует подпись по публичным ключам Unity
+   (`https://player-auth.services.api.unity.com/.well-known/jwks.json`, кэш 1 ч,
+   форс-обновление при неизвестном `kid`) и проверяет `exp`.
+2. `aud` должен содержать Unity project id (`CHAT_JWT_PROJECT_ID`, см. `wrangler.jsonc`).
+3. Игрок берётся из клейма `sub`; клиентский `X-Baraki-Player-Id`, если прислан,
+   обязан совпадать с ним — иначе 401.
+
+Легаси-фолбэк: запросы со старым `X-Baraki-Key` (= секрет `CHAT_API_KEY`)
+принимаются, пока не выставлена переменная **`CHAT_JWT_REQUIRED=1`** — после
+миграции клиентов выставить её и убрать ключ.
+
+Тесты: `node --test test/`.
 
 ## Retention
 

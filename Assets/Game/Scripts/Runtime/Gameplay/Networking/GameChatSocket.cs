@@ -37,6 +37,7 @@ namespace Game.Gameplay.Networking
         static string s_playerId;
         static string s_displayName;
         static string s_apiKey;
+        static Func<string> s_accessTokenProvider;
 
         /// <summary>Tear down socket and state (Play enter / reset).</summary>
         public static void Reset()
@@ -51,6 +52,7 @@ namespace Game.Gameplay.Networking
             s_playerId = null;
             s_displayName = null;
             s_apiKey = null;
+            s_accessTokenProvider = null;
             if (s_lifetimeCts != null)
             {
                 try { s_lifetimeCts.Cancel(); } catch { /* already disposed */ }
@@ -68,12 +70,18 @@ namespace Game.Gameplay.Networking
             Disconnected = null;
         }
 
-        public static void Configure(string apiBase, string playerId, string displayName, string apiKey)
+        public static void Configure(
+            string apiBase,
+            string playerId,
+            string displayName,
+            string apiKey,
+            Func<string> accessTokenProvider = null)
         {
             s_url = BuildWebSocketUrl(apiBase);
             s_playerId = playerId ?? string.Empty;
             s_displayName = ToAscii(displayName);
             s_apiKey = apiKey ?? string.Empty;
+            s_accessTokenProvider = accessTokenProvider;
         }
 
         /// <summary>Start connect/receive/reconnect loop. Idempotent while running.</summary>
@@ -144,7 +152,14 @@ namespace Game.Gameplay.Networking
 
         static async UniTask ConnectOnceAsync(int session, CancellationToken lifetime)
         {
+            // Resolved on the main thread before any await: UGS access must not be
+            // touched from ThreadPool continuations.
+            var accessToken = s_accessTokenProvider?.Invoke() ?? string.Empty;
             using var socket = new ClientWebSocket();
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                socket.Options.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+            }
             if (!string.IsNullOrEmpty(s_apiKey))
             {
                 socket.Options.SetRequestHeader("X-Baraki-Key", s_apiKey);
