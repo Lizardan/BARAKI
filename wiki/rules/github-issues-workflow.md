@@ -72,3 +72,25 @@ Refs / links           — GDD-файлы, wiki/rules/*, связанные issu
 
 Логи консоли, дампы playtest-репортов, разовые вопросы без задачи — не для Issues.
 Баги из playtest — отдельные issue по структуре выше (`[BUG-*]` префикс допустим).
+
+## Запуск задачи в opencode (Cursor)
+
+Связка «увидел issue → запустил сессию» живёт в Cursor:
+
+| Часть | Где |
+|-------|-----|
+| Список задач со статусами | расширение **GitHub Pull Requests and Issues** (фильтр `is:open label:todo-task`) |
+| Кнопка запуска | расширение **BARAKI Task Launcher** (`Tooling/CursorTaskLauncher/`, установлено в `~/.cursor/extensions/`) — кнопка ▶ в шапке редактора или `Ctrl+Alt+Shift+T` |
+| Лаунчер | `Tooling/Start-IssueTask.ps1 -Issue <N>` |
+
+Что делает скрипт: тянет issue через `gh` (открыт? не назначен?), собирает промпт
+(заголовок + тело + правила workflow: acceptance → тесты → закрыть issue) и открывает
+новое окно Windows Terminal с интерактивной сессией opencode (`opencode run --interactive`)
+в корне проекта. Флаг `-PrintPrompt` показывает промпт без запуска; `-NoInteractive` —
+одноразовый прогон. Закрытие issue — за агентом по правилам выше; статус виден в том же
+сайдбаре Cursor.
+
+Исходники extension: `Tooling/CursorTaskLauncher/` (`package.json` + `extension.js`,
+без сборки). После правки — скопировать содержимое папки в
+`~/.cursor/extensions/lizardan.baraki-task-launcher-0.0.1/` и перезапустить Cursor
+(`Developer: Reload Window`).

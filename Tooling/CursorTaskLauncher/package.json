@@ -1,0 +1,58 @@
+{
+  "name": "baraki-task-launcher",
+  "displayName": "BARAKI Task Launcher",
+  "description": "Запуск задач из GitHub Issues в новой сессии opencode (Start-IssueTask.ps1)",
+  "version": "0.0.1",
+  "publisher": "lizardan",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "barakiTaskLauncher.launchIssue",
+        "title": "BARAKI: Запустить issue в opencode",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "barakiTaskLauncher.launchIssueFromInput",
+        "title": "BARAKI: Запустить issue по номеру в opencode"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "barakiTaskLauncher.launchIssue",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "barakiTaskLauncher.launchIssue",
+        "key": "ctrl+alt+shift+t"
+      }
+    ],
+    "configuration": {
+      "title": "BARAKI Task Launcher",
+      "properties": {
+        "barakiTaskLauncher.repo": {
+          "type": "string",
+          "default": "Lizardan/BARAKI",
+          "description": "GitHub репозиторий для списка issues."
+        },
+        "barakiTaskLauncher.label": {
+          "type": "string",
+          "default": "todo-task",
+          "description": "Метка задач, попадающих в пикер (пусто = все открытые)."
+        }
+      }
+    }
+  }
+}
