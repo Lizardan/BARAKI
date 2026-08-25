@@ -319,13 +319,6 @@ jobs:
           [System.IO.File]::WriteAllText((Resolve-Path $ps), $updated)
           Write-Host "Stamped bundleVersion=$ver"
 
-      - name: Stamp GitHub playtest token (XOR embed)
-        shell: pwsh
-        env:
-          PLAYTEST_LOGS_TOKEN: ${{ secrets.PLAYTEST_LOGS_TOKEN }}
-        run: |
-          pwsh -File "Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1"
-
       - name: Build Windows x64
         id: unity-build
         uses: game-ci/unity-builder@v5

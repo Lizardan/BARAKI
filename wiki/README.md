@@ -25,6 +25,7 @@
 | `rules/human-unit-bonuses.md` | PRE-006a: BonusSlot, 6 механик Людей, UI оверлея, контент-пайплайн |
 | `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |
 | `rules/distribution.md` | Установщик Inno, GitHub Releases, лендинг Cloudflare Pages |
+| `rules/github-issues-workflow.md` | Трекинг задач в GitHub Issues: язык, структура, метки, воркфлоу |
 
 ## Что здесь не дублируется
 

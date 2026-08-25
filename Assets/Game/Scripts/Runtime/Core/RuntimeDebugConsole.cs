@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -15,24 +12,20 @@ namespace Game.Core
         private const float Margin = 12f;
         private const float MinWindowWidth = 360f;
         private const float MinWindowHeight = 220f;
-        private const string LastReportFileName = "last-playtest-report.txt";
         private const string CommandFieldName = "RuntimeDebugConsole.Command";
         private const string UiBlockClass = "runtime-debug-console--blocking";
 
         private static RuntimeDebugConsole s_instance;
 
         private readonly RuntimeDebugConsoleLogBuffer _buffer = new();
-        private readonly DebugReportSendGate _sendGate = new();
         private readonly List<VisualElement> _blockedUiRoots = new();
         private Rect _windowRect = new(Margin, Margin, 720f, 360f);
         private Vector2 _scroll;
         private bool _isOpen;
-        private bool _isSending;
         private bool _focusCommandField;
         private bool _submitCommandRequested;
         private bool _clearLogsRequested;
         private bool _copyLogsRequested;
-        private bool _sendLogsRequested;
         private bool _closeRequested;
         private string _status = string.Empty;
         private string _commandLine = string.Empty;
@@ -132,12 +125,6 @@ namespace Game.Core
                 _status = "Скопировано";
             }
 
-            if (_sendLogsRequested)
-            {
-                _sendLogsRequested = false;
-                SendLogAsync().Forget();
-            }
-
             if (_submitCommandRequested)
             {
                 _submitCommandRequested = false;
@@ -216,13 +203,6 @@ namespace Game.Core
                 _clearLogsRequested = true;
             }
 
-            GUI.enabled = !_isSending;
-            if (GUILayout.Button("Отправить лог", _toolbarButtonStyle, GUILayout.Width(130f)))
-            {
-                _sendLogsRequested = true;
-            }
-
-            GUI.enabled = true;
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Закрыть", _toolbarButtonStyle, GUILayout.Width(80f)))
             {
@@ -412,78 +392,6 @@ namespace Game.Core
                 var root = documents[i] != null ? documents[i].rootVisualElement : null;
                 var focused = root?.focusController?.focusedElement;
                 focused?.Blur();
-            }
-        }
-
-        private async UniTaskVoid SendLogAsync()
-        {
-            if (_isSending)
-            {
-                return;
-            }
-
-            var eventsText = _buffer.BuildCopyText();
-            if (string.IsNullOrWhiteSpace(eventsText))
-            {
-                _status = "Нет логов";
-                return;
-            }
-
-            var utcNow = DateTime.UtcNow;
-            if (!_sendGate.TryBeginSend(utcNow, out var blockReason))
-            {
-                _status = blockReason;
-                return;
-            }
-
-            if (!GitHubPlaytestSettings.TryResolveCredentials(out var token, out var repository, out var source))
-            {
-                _status = source switch
-                {
-                    "missing-embedded-and-resources" => "GitHub: нет token embed/Settings",
-                    "empty-token" => "GitHub: token пустой в Settings",
-                    _ => "GitHub не настроен",
-                };
-                return;
-            }
-
-            _isSending = true;
-            _status = "Отправка…";
-
-            var netSection = DebugReportContext.TryBuildNetSection();
-            var title = DebugPlaytestReportBuilder.BuildIssueTitle(netSection, utcNow);
-            var report = DebugPlaytestReportBuilder.BuildReport(eventsText, netSection, utcNow);
-            TryWriteLocalCopy(report);
-
-            var (ok, error, htmlUrl) = await GitHubPlaytestIssueSender.CreateIssueAsync(
-                token,
-                repository,
-                title,
-                report);
-
-            _isSending = false;
-            if (ok)
-            {
-                _sendGate.MarkSuccess(DateTime.UtcNow);
-                _status = string.IsNullOrEmpty(htmlUrl) ? "Отправлено (Issue)" : "Отправлено";
-            }
-            else
-            {
-                _sendGate.MarkFailure(DateTime.UtcNow);
-                _status = string.IsNullOrEmpty(error) ? "Ошибка отправки" : $"Ошибка: {error}";
-            }
-        }
-
-        private static void TryWriteLocalCopy(string report)
-        {
-            try
-            {
-                var path = Path.Combine(Application.persistentDataPath, LastReportFileName);
-                File.WriteAllText(path, report, Encoding.UTF8);
-            }
-            catch
-            {
-                // Local copy is best-effort for Cursor handoff.
             }
         }
 

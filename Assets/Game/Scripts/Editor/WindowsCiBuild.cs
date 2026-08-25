@@ -27,7 +27,6 @@ namespace Game.Editor
             }
 
             PlayerSettings.productName = "BARAKI";
-            WarnIfGitHubPlaytestMissing();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene.enabled)
@@ -58,28 +57,6 @@ namespace Game.Editor
                 UpdaterReleaseRules.InstalledExecutableFileName,
                 UpdaterBuildRules.ExtraScriptingDefines,
                 updaterReleaseVersion);
-        }
-
-        private static void WarnIfGitHubPlaytestMissing()
-        {
-            if (GitHubPlaytestSettings.TryResolveCredentials(out _, out _, out var source) && source == "Embedded")
-            {
-                Debug.Log("WindowsCiBuild: GitHub playtest token embedded OK.");
-                return;
-            }
-
-            if (GitHubPlaytestSettings.TryResolveCredentials(out _, out _, out source))
-            {
-                Debug.LogWarning(
-                    $"WindowsCiBuild: GitHub playtest resolved via {source} (Editor/Resources). " +
-                    "CI player builds should use XOR embed from Stamp-GitHubPlaytestEmbedded.ps1.");
-                return;
-            }
-
-            Debug.LogWarning(
-                "WindowsCiBuild: GitHub playtest token not embedded. " +
-                "CI must run Tooling/BuildSupport/Stamp-GitHubPlaytestEmbedded.ps1 before Unity. " +
-                "Playtest «Отправить лог» will report GitHub not configured.");
         }
 
         private static void BuildWindowsPlayer(
