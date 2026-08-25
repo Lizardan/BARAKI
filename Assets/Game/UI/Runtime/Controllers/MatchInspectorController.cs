@@ -761,6 +761,18 @@ namespace Game.UI.Controllers
             var bonusSlot = player != null
                 ? HumanBonusUnitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role)
                 : 0;
+            if (bonusSlot == 0 && player != null)
+            {
+                if (role == UnitRole.Hero && heroSlot >= 1)
+                {
+                    bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot);
+                }
+                else if (role == UnitRole.Titan)
+                {
+                    bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot);
+                }
+            }
+
             if (bonusSlot > 0
                 && _visualCatalog != null
                 && _visualCatalog.TryGetBonusPortrait(raceId, bonusSlot, out var bonusPortrait)

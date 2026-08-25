@@ -35,6 +35,24 @@ namespace Game.Gameplay.Combat
             int heroSlot = 0,
             int bonusSlot = 0)
         {
+            if (HumanBonusUnitRules.IsChampionBonusSlot(bonusSlot)
+                && HumanBonusUnitRules.MatchesUnit(bonusSlot, role, heroSlot))
+            {
+                if (visualCatalog != null
+                    && visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var veteranPrefab)
+                    && veteranPrefab != null)
+                {
+                    var veteranSettings = veteranPrefab.GetComponentInChildren<UnitCombatSettings>();
+                    if (veteranSettings != null)
+                    {
+                        return BuildFromSettings(veteranSettings, role);
+                    }
+                }
+
+                return HumanBonusUnitRules.ApplyVeteranMultipliers(
+                    ResolveBase(catalog, visualCatalog, raceId, role, heroSlot));
+            }
+
             if (HumanBonusUnitRules.BonusSlotForRole(role) == bonusSlot)
             {
                 if (visualCatalog != null

@@ -52,6 +52,18 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.AuraMaxHpPercent =>
                 new AbilityFxPreviewCaster(UnitRole.Titan, 0, 0, "Титан"),
 
+            AbilityIds.KingsCommand =>
+                new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.KingSlot,
+                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.KingSlot), "Король-ветеран"),
+            AbilityIds.Aegis =>
+                new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.PaladinSlot,
+                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.PaladinSlot), "Паладин-ветеран"),
+            AbilityIds.Sanctuary =>
+                new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.PriestSlot,
+                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.PriestSlot), "Жрец-ветеран"),
+            AbilityIds.GreaterColossus =>
+                new AbilityFxPreviewCaster(UnitRole.Titan, 0, HumanBonusUnitRules.TitanBonusSlot, "Титан-ветеран"),
+
             AbilityIds.CasterHeal or AbilityIds.Frost or AbilityIds.Resurrect =>
                 new AbilityFxPreviewCaster(UnitRole.Caster, 0, 0, "Кастер"),
 

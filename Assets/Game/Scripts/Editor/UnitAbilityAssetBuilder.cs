@@ -106,6 +106,10 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreateSiegeRegen();
             yield return AbilityKitDefaults.CreateFlyingBonus();
             yield return AbilityKitDefaults.CreateSuperBonus();
+            yield return AbilityKitDefaults.CreateKingBonus();
+            yield return AbilityKitDefaults.CreatePaladinBonus();
+            yield return AbilityKitDefaults.CreatePriestBonus();
+            yield return AbilityKitDefaults.CreateTitanBonus();
         }
 
         static void EnsureFolder()
@@ -117,6 +121,7 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanCasterAbilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
             ContentAssetPaths.EnsureHumanUnitFolders();
+            ContentAssetPaths.EnsureHumanBonusHeroFolders();
         }
 
         static string LegacyAbilityPath(int abilityId) =>
@@ -247,6 +252,10 @@ namespace Game.Editor
             AbilityIds.CasterHybrid => ContentAssetPaths.HumanCasterBonusAbilities,
             AbilityIds.FlyingSpawn => ContentAssetPaths.HumanFlyingAbilities,
             AbilityIds.SuperCatapult => ContentAssetPaths.HumanSuperAbilities,
+            AbilityIds.KingsCommand => ContentAssetPaths.HumanBonusHero1Abilities,
+            AbilityIds.Aegis => ContentAssetPaths.HumanBonusHero2Abilities,
+            AbilityIds.Sanctuary => ContentAssetPaths.HumanBonusHero3Abilities,
+            AbilityIds.GreaterColossus => ContentAssetPaths.HumanBonusTitanAbilities,
             _ when abilityId < AbilityIds.Heal => ContentAssetPaths.HumanCasterAbilities,
             _ when abilityId < AbilityIds.Smite => ContentAssetPaths.HumanHero1Abilities,
             _ when abilityId < AbilityIds.HolyNova => ContentAssetPaths.HumanHero2Abilities,
@@ -309,6 +318,12 @@ namespace Game.Editor
             { AbilityIds.CasterHybrid,  "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Electric/CFXR3 Hit Electric C (Air).prefab" },
             { AbilityIds.FlyingSpawn,   "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR4 Falling Stars.prefab" },
             { AbilityIds.SuperCatapult, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR3 Fire Explosion B.prefab" },
+
+            // Veteran champions (PRE-006b)
+            { AbilityIds.KingsCommand,  "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR Explosion 1.prefab" },
+            { AbilityIds.Aegis,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+            { AbilityIds.Sanctuary,     "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Misc/CFXR3 Ambient Glows.prefab" },
+            { AbilityIds.GreaterColossus, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
         };
 
         static void ApplyVfxPrefab(UnitAbilityDef def)

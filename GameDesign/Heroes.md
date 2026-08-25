@@ -284,7 +284,10 @@ read-only runtime-снапшот, обновляемый через `BARAKI/Unit
 
 ## Bonus hero variants
 
-Слоты бонусов 7–9 (`BONUS_SLOT_HERO_*`) — тот же hero slot, другой `HeroDefinition` (`*_BONUS`). Умения TBD. См. `Bonuses.md`.
+Слоты бонусов 7–9 (`BONUS_SLOT_HERO_*`) — **ветераны** (PRE-006b, реализовано): тот же кит с числами ×~1.35,
+сигнатурная замена (King's Command / Aegis / Sanctuary), morale +15%, статы HP ×1.4 / dmg ×1.35 / броня +2,
+визуал = та же модель + флаг на спине. Титан-ветеран — слот 10 (Greater Colossus +25% max HP армии).
+Канон: `Bonuses.md`, `wiki/rules/human-unit-bonuses.md`.
 
 ## Titan (отдельный тип, не 4-й hero slot)
 

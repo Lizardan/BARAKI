@@ -38,12 +38,16 @@ namespace Game.Gameplay.Match
             return portrait != null;
         }
 
-        /// <summary>Portrait of the enhanced unit for a bonus pick slot (1..6); null if not baked.</summary>
+        /// <summary>Portrait of the enhanced variant for a bonus pick slot (1..10); null if not baked.</summary>
         public bool TryGetBonusPortrait(string raceId, int bonusSlot, out Texture2D portrait)
         {
             portrait = GetSet(raceId)?.GetBonusPortrait(bonusSlot);
             return portrait != null;
         }
+
+        /// <summary>True when an enhanced-variant prefab is explicitly registered for this slot.</summary>
+        public bool HasBonusPrefab(string raceId, int bonusSlot) =>
+            GetSet(raceId)?.GetBonusPrefab(bonusSlot) != null;
 
         UnitVisualSet GetSet(string raceId)
         {
@@ -88,6 +92,10 @@ namespace Game.Gameplay.Match
             [SerializeField] private GameObject _siegeBonus;
             [SerializeField] private GameObject _flyingBonus;
             [SerializeField] private GameObject _superBonus;
+            [SerializeField] private GameObject _hero1Bonus;
+            [SerializeField] private GameObject _hero2Bonus;
+            [SerializeField] private GameObject _hero3Bonus;
+            [SerializeField] private GameObject _titanBonus;
 
             [SerializeField] private Texture2D _meleePortrait;
             [SerializeField] private Texture2D _rangedPortrait;
@@ -106,6 +114,10 @@ namespace Game.Gameplay.Match
             [SerializeField] private Texture2D _siegeBonusPortrait;
             [SerializeField] private Texture2D _flyingBonusPortrait;
             [SerializeField] private Texture2D _superBonusPortrait;
+            [SerializeField] private Texture2D _hero1BonusPortrait;
+            [SerializeField] private Texture2D _hero2BonusPortrait;
+            [SerializeField] private Texture2D _hero3BonusPortrait;
+            [SerializeField] private Texture2D _titanBonusPortrait;
 
             public GameObject Melee => _melee;
             public GameObject Ranged => _ranged;
@@ -124,8 +136,7 @@ namespace Game.Gameplay.Match
 
             public GameObject GetPrefab(UnitRole role, int heroSlot, int bonusSlot)
             {
-                if (HumanBonusUnitRules.IsBonusSlot(bonusSlot)
-                    && HumanBonusUnitRules.RoleForBonusSlot(bonusSlot) == role)
+                if (HumanBonusUnitRules.MatchesUnit(bonusSlot, role, heroSlot))
                 {
                     return GetBonusPrefab(bonusSlot) ?? ResolveBasePrefab(role, heroSlot);
                 }
@@ -146,7 +157,7 @@ namespace Game.Gameplay.Match
                 _ => null,
             };
 
-            GameObject GetBonusPrefab(int bonusSlot) => bonusSlot switch
+            public GameObject GetBonusPrefab(int bonusSlot) => bonusSlot switch
             {
                 1 => _meleeBonus,
                 2 => _rangedBonus,
@@ -154,6 +165,10 @@ namespace Game.Gameplay.Match
                 4 => _siegeBonus,
                 5 => _flyingBonus,
                 6 => _superBonus,
+                7 => _hero1Bonus,
+                8 => _hero2Bonus,
+                9 => _hero3Bonus,
+                10 => _titanBonus,
                 _ => null,
             };
 
@@ -180,6 +195,10 @@ namespace Game.Gameplay.Match
                 4 => _siegeBonusPortrait,
                 5 => _flyingBonusPortrait,
                 6 => _superBonusPortrait,
+                7 => _hero1BonusPortrait,
+                8 => _hero2BonusPortrait,
+                9 => _hero3BonusPortrait,
+                10 => _titanBonusPortrait,
                 _ => null,
             };
 

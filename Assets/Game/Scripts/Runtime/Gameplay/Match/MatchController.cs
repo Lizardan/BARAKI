@@ -224,6 +224,11 @@ namespace Game.Gameplay.Match
             if (playerSlot >= 0 && playerSlot < _players.Count)
             {
                 _players[playerSlot].BonusPickSlot = bonusSlot;
+                if (bonusSlot == HumanBonusUnitRules.RaceUnique2Slot)
+                {
+                    // Stone Masonry: retroactively scale every standing building of this owner.
+                    SyncAllBuildingMaxHpFromLevels();
+                }
             }
 
             return true;
@@ -811,7 +816,8 @@ namespace Game.Gameplay.Match
                 stats,
                 isHero: true,
                 heroSlot: heroSlot,
-                level: slotState.Level);
+                level: slotState.Level,
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot));
 
             player.Gold -= HeroRules.DeployGold;
             slotState.State = HeroLifecycleState.Deployed;
@@ -860,7 +866,13 @@ namespace Game.Gameplay.Match
             DespawnParkedTitan(ownerSlot);
             var stats = ResolveTitanStats(player, titan.Level);
             var laneId = BuildingRules.GetLaneBinding(building.BuildingId);
-            var unit = _combat.SpawnUnit(ownerSlot, laneId, UnitRole.Titan, stats, level: titan.Level);
+            var unit = _combat.SpawnUnit(
+                ownerSlot,
+                laneId,
+                UnitRole.Titan,
+                stats,
+                level: titan.Level,
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot));
 
             player.Gold -= TitanRules.DeployGold;
             titan.State = TitanLifecycleState.Deployed;
@@ -1586,7 +1598,7 @@ namespace Game.Gameplay.Match
             foreach (var building in _buildings.Buildings)
             {
                 var level = ResolveBuildingLevel(building);
-                building.SetMaxHp(BuildingRules.GetMaxHp(building.BuildingId, level));
+                building.SetMaxHp(ResolveBuildingMaxHp(building, level), scaleCurrentProportionally: true);
             }
         }
 
@@ -1598,7 +1610,24 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            building.SetMaxHp(BuildingRules.GetMaxHp(buildingId, level));
+            building.SetMaxHp(ResolveBuildingMaxHp(building, level));
+        }
+
+        /// <summary>
+        /// Level max HP, scaled by the owner's Stone Masonry pick (+20%, PRE-006b).
+        /// </summary>
+        float ResolveBuildingMaxHp(BuildingState building, int level)
+        {
+            var maxHp = BuildingRules.GetMaxHp(building.BuildingId, level);
+            if (building.OwnerSlot >= 0
+                && building.OwnerSlot < _players.Count
+                && _players[building.OwnerSlot].BonusPickSlot
+                    == HumanBonusUnitRules.RaceUnique2Slot)
+            {
+                maxHp *= HumanBonusUnitRules.StoneMasonryHpMultiplier;
+            }
+
+            return maxHp;
         }
 
         int ResolveBuildingLevel(BuildingState building)
@@ -1838,7 +1867,8 @@ namespace Game.Gameplay.Match
                 stats,
                 isHero: true,
                 heroSlot: heroSlot,
-                level: roster.Level);
+                level: roster.Level,
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -1895,7 +1925,8 @@ namespace Game.Gameplay.Match
                 GameIds.Lanes.Center,
                 UnitRole.Titan,
                 stats,
-                level: titan.Level);
+                level: titan.Level,
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -1926,23 +1957,32 @@ namespace Game.Gameplay.Match
 
         UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
+            var bonusSlot = player != null
+                ? HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot)
+                : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,
                 UnitVisualCatalog,
-                player.RaceId,
+                player?.RaceId ?? GameIds.Races.Human,
                 UnitRole.Hero,
-                heroSlot);
+                heroSlot,
+                bonusSlot);
             stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
             return RaceUpgradeStatsRules.Apply(stats, player);
         }
 
         UnitCombatStats ResolveTitanStats(MatchPlayerState player, int level = HeroLevelRules.StartingLevel)
         {
+            var bonusSlot = player != null
+                ? HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot)
+                : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,
                 UnitVisualCatalog,
-                player.RaceId,
-                UnitRole.Titan);
+                player?.RaceId ?? GameIds.Races.Human,
+                UnitRole.Titan,
+                heroSlot: 0,
+                bonusSlot);
             stats = HeroLevelRules.ApplyLevelGrowth(stats, level);
             return RaceUpgradeStatsRules.Apply(stats, player);
         }

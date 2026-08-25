@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Game.Gameplay.Combat
 {
     /// <summary>
-    /// Pure rules for the six Human unit bonuses (PRE-006a): bonus slot ↔ role mapping
-    /// and combat-mechanic tuning constants.
+    /// Pure rules for the Human bonuses: unit slots 1–6 (PRE-006a), champion veterans 7–10
+    /// and race uniques 11–12 (PRE-006b): slot mapping and combat-mechanic tuning constants.
     /// </summary>
     public static class HumanBonusUnitRules
     {
@@ -31,7 +31,108 @@ namespace Game.Gameplay.Combat
         public const int RegenAuraAbilityId = 50;
         public const float RegenAuraFlatBonus = 1f;
 
+        // --- PRE-006b: champion bonus slots 7–10 and race uniques 11–12 ---
+        /// <summary>First hero veteran bonus slot (King, hero slot 1).</summary>
+        public const int Hero1BonusSlot = 7;
+        /// <summary>Last hero veteran bonus slot (Priest, hero slot 3).</summary>
+        public const int Hero3BonusSlot = 9;
+        /// <summary>Titan veteran bonus slot.</summary>
+        public const int TitanBonusSlot = 10;
+        /// <summary>Race-unique bonus slot #1 (March Discipline for Humans).</summary>
+        public const int RaceUnique1Slot = 11;
+        /// <summary>Race-unique bonus slot #2 (Stone Masonry for Humans).</summary>
+        public const int RaceUnique2Slot = 12;
+
+        /// <summary>Hero slot N is enhanced when the player picked bonus slot 6 + N (7..9).</summary>
+        public const int HeroBonusSlotOffset = 6;
+
+        /// <summary>Veteran champion stat multipliers vs the base hero/titan (PRE-006b).</summary>
+        public const float VeteranHpMultiplier = 1.4f;
+        public const float VeteranDamageMultiplier = 1.35f;
+        public const float VeteranArmorBonus = 2f;
+
+        /// <summary>March Discipline (slot 11): move speed multiplier for all owner troops.</summary>
+        public const float MarchDisciplineMultiplier = 1.1f;
+        /// <summary>Stone Masonry (slot 12): max HP multiplier for all owner buildings.</summary>
+        public const float StoneMasonryHpMultiplier = 1.2f;
+
         public static bool IsBonusSlot(int slot) => slot >= MinBonusSlot && slot <= MaxBonusSlot;
+
+        /// <summary>Slots 7–9: veteran heroes; the value maps to hero slot via <see cref="HeroSlotForBonusSlot"/>.</summary>
+        public static bool IsHeroBonusSlot(int slot) =>
+            slot >= Hero1BonusSlot && slot <= Hero3BonusSlot;
+
+        /// <summary>Slot 10: veteran titan.</summary>
+        public static bool IsTitanBonusSlot(int slot) => slot == TitanBonusSlot;
+
+        /// <summary>Slots 7–10: veteran champions (heroes + titan).</summary>
+        public static bool IsChampionBonusSlot(int slot) =>
+            IsHeroBonusSlot(slot) || IsTitanBonusSlot(slot);
+
+        /// <summary>Slots 11–12: race uniques (player-level modifiers, no unit replacement).</summary>
+        public static bool IsRaceUniqueSlot(int slot) =>
+            slot >= RaceUnique1Slot && slot <= RaceUnique2Slot;
+
+        public static int HeroSlotForBonusSlot(int slot) => slot - HeroBonusSlotOffset;
+
+        public static int BonusSlotForHeroSlot(int heroSlot) => HeroBonusSlotOffset + heroSlot;
+
+        /// <summary>Effective bonus slot for a hero spawn: pick must match this hero's slot, else 0.</summary>
+        public static int EffectiveBonusSlotForHero(int playerBonusPickSlot, int heroSlot) =>
+            playerBonusPickSlot == BonusSlotForHeroSlot(heroSlot) ? playerBonusPickSlot : 0;
+
+        /// <summary>Effective bonus slot for a titan spawn: pick must be the titan slot, else 0.</summary>
+        public static int EffectiveBonusSlotForTitan(int playerBonusPickSlot) =>
+            playerBonusPickSlot == TitanBonusSlot ? playerBonusPickSlot : 0;
+
+        /// <summary>
+        /// True when <paramref name="bonusSlot"/> marks this unit as an enhanced variant of its
+        /// role/hero slot (unit bonuses 1–6 and champion veterans 7–10).
+        /// </summary>
+        public static bool MatchesUnit(int bonusSlot, UnitRole role, int heroSlot)
+        {
+            if (bonusSlot <= 0)
+            {
+                return false;
+            }
+
+            if (IsBonusSlot(bonusSlot))
+            {
+                return RoleForBonusSlot(bonusSlot) == role;
+            }
+
+            if (role == UnitRole.Hero && IsHeroBonusSlot(bonusSlot))
+            {
+                return HeroSlotForBonusSlot(bonusSlot) == heroSlot;
+            }
+
+            return role == UnitRole.Titan && IsTitanBonusSlot(bonusSlot);
+        }
+
+        /// <summary>Applies veteran champion multipliers to base hero/titan stats (fallback path).</summary>
+        public static UnitCombatStats ApplyVeteranMultipliers(UnitCombatStats stats) =>
+            new(
+                stats.Role,
+                stats.MaxHp * VeteranHpMultiplier,
+                stats.Armor + VeteranArmorBonus,
+                stats.DamageMin * VeteranDamageMultiplier,
+                stats.DamageMax * VeteranDamageMultiplier,
+                stats.AttackSpeed,
+                stats.AttackRange,
+                stats.MoveSpeed,
+                stats.GoldBounty,
+                stats.MaxMana);
+
+        /// <summary>March Discipline speed for any owner troop (units, heroes, titan).</summary>
+        public static float ApplyMarchDiscipline(MatchPlayerState player, float speed)
+        {
+            if (player == null || player.BonusPickSlot != RaceUnique1Slot || speed <= 0f)
+            {
+                return speed;
+            }
+
+            return speed * MarchDisciplineMultiplier;
+        }
 
         /// <summary>
         /// Player pick applies only to the matching role (manual call / wave). Otherwise 0 = base unit.

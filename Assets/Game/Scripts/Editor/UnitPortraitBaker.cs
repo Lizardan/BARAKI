@@ -1,5 +1,6 @@
 using System.IO;
 using Game.Core;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEditor;
@@ -28,6 +29,7 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitUnits);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitHeroes);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusUnits);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusHeroes);
             BakeRace(catalog, GameIds.Races.Human);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
@@ -84,6 +86,15 @@ namespace Game.Editor
                 $"{ContentAssetPaths.HumanPortraitHeroes}/Titan.png");
 
             BakeBonusPortraits(catalog, set, raceId);
+
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1BonusPortrait",
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero1.png", HumanBonusUnitRules.BonusSlotForHeroSlot(1));
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2BonusPortrait",
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero2.png", HumanBonusUnitRules.BonusSlotForHeroSlot(2));
+            BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3BonusPortrait",
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero3.png", HumanBonusUnitRules.BonusSlotForHeroSlot(3));
+            BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanBonusPortrait",
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Titan.png", HumanBonusUnitRules.TitanBonusSlot);
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -148,9 +159,16 @@ namespace Game.Editor
             UnitRole role,
             int heroSlot,
             string portraitProperty,
-            string assetPath)
+            string assetPath,
+            int bonusSlot = 0)
         {
-            if (!catalog.TryGetPrefab(raceId, role, heroSlot, out var prefab) || prefab == null)
+            if (bonusSlot > 0 && !catalog.HasBonusPrefab(raceId, bonusSlot))
+            {
+                // Veteran prefab not built yet — keep the previous portrait instead of re-baking the base.
+                return;
+            }
+
+            if (!catalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var prefab) || prefab == null)
             {
                 return;
             }

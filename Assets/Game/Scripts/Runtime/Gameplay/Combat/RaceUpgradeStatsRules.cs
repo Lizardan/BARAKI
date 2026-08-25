@@ -44,7 +44,7 @@ namespace Game.Gameplay.Combat
                 stats.DamageMax * damageMultiplier + flatDamageBonus,
                 stats.AttackSpeed,
                 stats.AttackRange,
-                stats.MoveSpeed,
+                HumanBonusUnitRules.ApplyMarchDiscipline(player, stats.MoveSpeed),
                 stats.GoldBounty,
                 stats.MaxMana);
         }

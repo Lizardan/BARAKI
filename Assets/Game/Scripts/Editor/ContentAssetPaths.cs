@@ -6,9 +6,9 @@ namespace Game.Editor
 {
     /// <summary>
     /// Canonical editor paths for ScriptableObject game content.
-    /// Layout is race → category (<c>Units</c> / <c>BonusUnits</c> / <c>Heroes</c>) → role folder
-    /// → optional <c>Abilities/</c>. Titan lives with heroes. <c>BonusHeroes/</c> is reserved
-    /// (do not create the empty folder until those assets exist).
+    /// Layout is race → category (<c>Units</c> / <c>BonusUnits</c> / <c>Heroes</c> / <c>BonusHeroes</c>)
+    /// → role folder → optional <c>Abilities/</c>. Titan lives with heroes;
+    /// veteran champions live in <c>BonusHeroes/</c> (PRE-006b).
     /// </summary>
     public static class ContentAssetPaths
     {
@@ -62,6 +62,15 @@ namespace Game.Editor
         public const string HumanHero2Abilities = HumanHero2 + "/Abilities";
         public const string HumanHero3Abilities = HumanHero3 + "/Abilities";
 
+        public const string HumanBonusHero1 = HumanBonusHeroes + "/Hero1";
+        public const string HumanBonusHero2 = HumanBonusHeroes + "/Hero2";
+        public const string HumanBonusHero3 = HumanBonusHeroes + "/Hero3";
+        public const string HumanBonusTitan = HumanBonusHeroes + "/Titan";
+        public const string HumanBonusHero1Abilities = HumanBonusHero1 + "/Abilities";
+        public const string HumanBonusHero2Abilities = HumanBonusHero2 + "/Abilities";
+        public const string HumanBonusHero3Abilities = HumanBonusHero3 + "/Abilities";
+        public const string HumanBonusTitanAbilities = HumanBonusTitan + "/Abilities";
+
         public const string Shared = Root + "/Shared";
         public const string SharedSquads = Shared + "/Squads";
         public const string SharedUpgrades = Shared + "/Upgrades";
@@ -71,6 +80,7 @@ namespace Game.Editor
         public const string HumanPortraitUnits = HumanPortraits + "/Units";
         public const string HumanPortraitHeroes = HumanPortraits + "/Heroes";
         public const string HumanPortraitBonusUnits = HumanPortraits + "/BonusUnits";
+        public const string HumanPortraitBonusHeroes = HumanPortraits + "/BonusHeroes";
 
         public static string HumanHeroFolder(int slot) =>
             slot switch
@@ -177,6 +187,21 @@ namespace Game.Editor
             EnsureFolder(HumanCasterAbilities);
             EnsureFolder(HumanTitan);
             EnsureFolder(HumanTitanAbilities);
+        }
+
+        /// <summary>Veteran champion folders (bonus slots 7–10) + their ability folders.</summary>
+        public static void EnsureHumanBonusHeroFolders()
+        {
+            EnsureFolder(HumanBonusHeroes);
+            EnsureFolder(HumanBonusHero1);
+            EnsureFolder(HumanBonusHero2);
+            EnsureFolder(HumanBonusHero3);
+            EnsureFolder(HumanBonusTitan);
+            EnsureFolder(HumanBonusHero1Abilities);
+            EnsureFolder(HumanBonusHero2Abilities);
+            EnsureFolder(HumanBonusHero3Abilities);
+            EnsureFolder(HumanBonusTitanAbilities);
+            EnsureFolder(HumanPortraitBonusHeroes);
         }
     }
 }

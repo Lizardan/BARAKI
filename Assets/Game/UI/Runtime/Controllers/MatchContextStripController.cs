@@ -280,8 +280,7 @@ namespace Game.UI.Controllers
             Texture2D portrait = null;
             if (_visualCatalog != null)
             {
-                if (HumanBonusUnitRules.IsBonusSlot(unit.BonusSlot)
-                    && HumanBonusUnitRules.RoleForBonusSlot(unit.BonusSlot) == unit.Role)
+                if (HumanBonusUnitRules.MatchesUnit(unit.BonusSlot, unit.Role, unit.HeroSlot))
                 {
                     _visualCatalog.TryGetBonusPortrait(raceId, unit.BonusSlot, out portrait);
                 }

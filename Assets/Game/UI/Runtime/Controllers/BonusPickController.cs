@@ -9,9 +9,9 @@ using UnityEngine.UIElements;
 namespace Game.UI.Controllers
 {
     /// <summary>
-    /// Post-race-pick bonus overlay (PRE-001 / PRE-006a). Shows the 12 bonus slots + countdown while the
+    /// Post-race-pick bonus overlay (PRE-001 / PRE-006). Shows the 12 bonus slots + countdown while the
     /// pick window is open and hides as soon as the local player picks or the deadline expires.
-    /// Slots 1–6 show portraits + tooltips; 7–12 stay permanently disabled until later PRE tasks.
+    /// Slots 1–10 show portraits + tooltips; race uniques 11–12 show name + tooltip only.
     /// Backdrop is picking-mode Ignore — the overlay never blocks pan camera / unit controls.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
@@ -138,7 +138,8 @@ namespace Game.UI.Controllers
             var anyApplied = false;
             foreach (var (button, slot) in _slotButtons)
             {
-                if (!HumanBonusUnitRules.IsBonusSlot(slot))
+                if (!HumanBonusUnitRules.IsBonusSlot(slot)
+                    && !HumanBonusUnitRules.IsChampionBonusSlot(slot))
                 {
                     continue;
                 }
@@ -169,7 +170,7 @@ namespace Game.UI.Controllers
 
         private void OnSlotClicked(int bonusSlot)
         {
-            if (!HumanBonusUnitRules.IsBonusSlot(bonusSlot))
+            if (!BonusPickRules.IsValidSlot(bonusSlot))
             {
                 return;
             }
@@ -193,7 +194,7 @@ namespace Game.UI.Controllers
             var locked = ownPick != BonusPickRules.NoneSlot;
             foreach (var (button, bonusSlot) in _slotButtons)
             {
-                var selectable = HumanBonusUnitRules.IsBonusSlot(bonusSlot);
+                var selectable = BonusPickRules.IsValidSlot(bonusSlot);
                 button.SetEnabled(selectable && !locked);
                 button.EnableInClassList(PickedClass, ownPick == bonusSlot);
                 button.EnableInClassList(LockedClass, !selectable || locked);
@@ -218,7 +219,7 @@ namespace Game.UI.Controllers
                 button.AddToClassList("ui-btn--square");
                 button.AddToClassList("bonus-pick__slot");
 
-                if (!HumanBonusUnitRules.IsBonusSlot(slot))
+                if (!BonusPickRules.IsValidSlot(slot))
                 {
                     button.SetEnabled(false);
                     button.AddToClassList(LockedClass);

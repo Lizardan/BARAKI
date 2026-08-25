@@ -96,19 +96,26 @@ namespace Game.Tests
         }
 
         [Test]
-        public void GetSlotDescription_IsNonEmptyForUnitBonusSlots()
+        public void GetSlotDescription_IsNonEmptyForAllValidSlots()
         {
-            for (var slot = 1; slot <= 6; slot++)
+            for (var slot = 1; slot <= BonusPickRules.SlotCount; slot++)
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(BonusPickRules.GetSlotDescription(slot)), $"slot {slot}");
             }
 
-            for (var slot = 7; slot <= BonusPickRules.SlotCount; slot++)
-            {
-                Assert.AreEqual(string.Empty, BonusPickRules.GetSlotDescription(slot), $"slot {slot}");
-            }
-
             Assert.AreEqual(string.Empty, BonusPickRules.GetSlotDescription(0));
+            Assert.AreEqual(string.Empty, BonusPickRules.GetSlotDescription(BonusPickRules.SlotCount + 1));
+        }
+
+        [Test]
+        public void GetSlotDisplayName_VeteranSlotsUseEnglishNames()
+        {
+            Assert.AreEqual("King Veteran", BonusPickRules.GetSlotDisplayName(7));
+            Assert.AreEqual("Paladin Veteran", BonusPickRules.GetSlotDisplayName(8));
+            Assert.AreEqual("Priest Veteran", BonusPickRules.GetSlotDisplayName(9));
+            Assert.AreEqual("Titan Veteran", BonusPickRules.GetSlotDisplayName(10));
+            Assert.AreEqual("March Discipline", BonusPickRules.GetSlotDisplayName(11));
+            Assert.AreEqual("Stone Masonry", BonusPickRules.GetSlotDisplayName(12));
         }
 
         [Test]

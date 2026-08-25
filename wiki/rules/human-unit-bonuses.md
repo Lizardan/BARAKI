@@ -1,4 +1,4 @@
-# Human unit bonuses (PRE-006a)
+# Human unit bonuses (PRE-006a) и ветераны/уники (PRE-006b)
 
 Шесть юнитовых бонусов Людей (слоты 1–6) + ауры радиусом 8.
 
@@ -57,7 +57,39 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 ## UI
 
 Оверлей BonusPick: панель **350×** как command-dock, слоты `ui-btn--square` (те же пропорции,
-что казармы / главное здание). Портреты 1–6 + tooltip; слоты 7–12 permanently disabled.
+что казармы / главное здание). Портреты 1–10 + tooltip; уники 11–12 — текст + tooltip.
+Все 12 слотов активны для пика (PRE-006b).
+
+## Ветераны и уники (PRE-006b, слоты 7–12)
+
+| Слот | Имя (EN) | Эффект |
+|------|----------|--------|
+| 7 | King Veteran | Тот же кит ×~1.35; ульта → **King's Command** (id 56): вся армия владельца +30% урона 8 с (реюз `UltimateBuff*` на каждом юните); morale-аура 15% dmg |
+| 8 | Paladin Veteran | Тот же кит ×~1.35; Shield → **Aegis** (id 57): +броня И щит-абсорбция 25% max HP (`AbsorbRemaining` в `MatchUnitState`, поглощение до HP в `ApplyDamage`, истекает по длительности); morale 15% AS |
+| 9 | Priest Veteran | Тот же кит ×~1.35; Greater Heal → **Sanctuary** (id 58): `HeroHealZoneState.FollowUnitId` — зона следует за живым кастером, умирает с ним; morale 15% брони |
+| 10 | Titan Veteran | Статы ×1.4/×1.35/+2 поверх 3× сида; Colossus → **Greater Colossus** (id 59): аура MaxHp 25% (обычный `AuraBehaviour`); цена выпуска 2500g без изменений |
+| 11 | March Discipline | +10% скорости всем войскам: `HumanBonusUnitRules.ApplyMarchDiscipline` в `RaceUpgradeStatsRules.Apply` (статы) и в `HandleWave` (march speed волн) |
+| 12 | Stone Masonry | +20% max HP зданий: `MatchController.ResolveBuildingMaxHp` учитывает пик; `BuildingState.SetMaxHp(scaleCurrentProportionally: true)` — текущий HP масштабируется пропорционально; применяется при пике (ретро) и при каждом синке уровней |
+
+Общее:
+
+- Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`HumanBonusUnitRules.Veteran*`). Префаб-сеттингс
+  авторитетен; фолбэк без префаба — `UnitStatsResolver.ResolveBase` × `ApplyVeteranMultipliers`.
+- Слот героя N усиливается пиком `6+N`; титан — пиком 10 (`EffectiveBonusSlotForHero/ForTitan`).
+  `BonusSlot` юнита едет в UnitsStatic v21 без изменений кодека — клиентские визуал/портреты
+  резолвятся тем же `TryGetPrefab/TryGetBonusPortrait` (каталог расширен слотами 7–10).
+- Ветеранские киты: `AbilityKitDefaults.CreateKingBonus/PaladinBonus/PriestBonus/TitanBonus`
+  (+ `CreateVeteranKit(slot)`), сидятся тем же `Build Ability Defs` → `Seed Unit Abilities`;
+  balance — `Sync Balance to Prefabs` (`UnitCombatSettings.CopyFromVeteran`).
+- Префабы: `BARAKI/Units/Build Veteran Prefabs` (`VeteranPrefabBuilder`) — копия базового
+  героя/титана + child `VeteranBanner` (`TT_RTS_Banner_plain`, сид 0.6× роста тела, спина = **−Z**:
+  у TT-бипеда forward после baked yaw = **+Z**, плащ/спина = −Z). Пересборка **сохраняет** ручную
+  подгонку флага (pos/rot/scale) и синхронизированные `UnitCombatSettings`/abilities существующего
+  префаба — сид применяется только к новому префабу.
+- Портреты: `UnitPortraitBaker` печёт `Art/UI/UnitPortraits/Humans/BonusHeroes/{Hero1..3,Titan}.png`.
+
+**Правило контента:** имена (DisplayName, названия бонусов/уников) — **английские**,
+описания — **русские**. У всего контента (defs, слоты бонусов, тултипы).
 
 ## Контент
 
@@ -79,6 +111,11 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 
 Siege BONUS — пеший: `AbilityAnimRules.ResolveAttackClipSeconds(Siege, bonusSlot:4)` = infantry 1.5s.
 
+Ветераны (7–10) — те же модели/аним-сеты, что базовые герои/титан, + child `VeteranBanner`
+(собирает `VeteranPrefabBuilder`). Аним-контроллер наследуется от базового префаба.
+
 ## UI выбора
 
-Нижняя context-strip / inspector: при `unit.BonusSlot` → `TryGetBonusPortrait` + title `«Роль · усиленный»`.
+Нижняя context-strip / inspector: при `unit.BonusSlot` (1–10, `MatchesUnit`) → `TryGetBonusPortrait` +
+title `«Роль · усиленный»` / `«Роль · ветеран»`. Казармы (deploy героя) и main (титан) показывают
+ветеранский портрет, когда пик совпадает со слотом.

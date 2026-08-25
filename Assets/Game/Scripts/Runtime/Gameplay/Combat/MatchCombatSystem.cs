@@ -654,7 +654,9 @@ namespace Game.Gameplay.Combat
                     slot.Role,
                     player,
                     bonusSlot: bonusSlot);
-                var unitMarchSpeed = RaceMarchSpeedRules.GetMarchSpeed(race, definition);
+                var unitMarchSpeed = HumanBonusUnitRules.ApplyMarchDiscipline(
+                    player,
+                    RaceMarchSpeedRules.GetMarchSpeed(race, definition));
                 var spawnDistance = CombatFormationRules.GetSpawnDistanceForRow(
                     slot.RowIndex,
                     rearmostRow,
@@ -1336,6 +1338,15 @@ namespace Game.Gameplay.Combat
                 if (unit.ArmorBuffRemaining <= 0f)
                 {
                     unit.ArmorBuffBonus = 0f;
+                }
+            }
+
+            if (unit.AbsorbSecondsRemaining > 0f)
+            {
+                unit.AbsorbSecondsRemaining = Mathf.Max(0f, unit.AbsorbSecondsRemaining - deltaTime);
+                if (unit.AbsorbSecondsRemaining <= 0f)
+                {
+                    unit.AbsorbRemaining = 0f;
                 }
             }
 
@@ -2542,6 +2553,13 @@ namespace Game.Gameplay.Combat
                 damage *= 1f + percent;
             }
 
+            if (target.AbsorbRemaining > 0f)
+            {
+                var absorbed = Mathf.Min(target.AbsorbRemaining, damage);
+                target.AbsorbRemaining -= absorbed;
+                damage -= absorbed;
+            }
+
             target.CurrentHp -= damage;
 
             if (target.IsAlive)
@@ -3172,6 +3190,18 @@ namespace Game.Gameplay.Combat
                 {
                     _healZones.RemoveAt(i);
                     continue;
+                }
+
+                if (zone.FollowUnitId != 0)
+                {
+                    var bearer = GetUnitById(zone.FollowUnitId);
+                    if (bearer == null || !bearer.IsAlive)
+                    {
+                        _healZones.RemoveAt(i);
+                        continue;
+                    }
+
+                    zone.Center = bearer.WorldPosition;
                 }
 
                 var heal = zone.HealPerSecond * deltaTime;

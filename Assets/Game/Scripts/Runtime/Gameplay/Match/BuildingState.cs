@@ -35,9 +35,24 @@ namespace Game.Gameplay.Match
         /// <summary>
         /// Raises max HP; current HP grows by the same delta (RTS level-up heal of the bonus).
         /// </summary>
-        public void SetMaxHp(float newMaxHp)
+        public void SetMaxHp(float newMaxHp) => SetMaxHp(newMaxHp, scaleCurrentProportionally: false);
+
+        /// <summary>
+        /// Raises max HP. With <paramref name="scaleCurrentProportionally"/> the current HP is
+        /// rescaled by the same ratio (retroactive picks such as Stone Masonry); otherwise the
+        /// current HP grows by the delta (level-up heal).
+        /// </summary>
+        public void SetMaxHp(float newMaxHp, bool scaleCurrentProportionally)
         {
             newMaxHp = Mathf.Max(1f, newMaxHp);
+            if (scaleCurrentProportionally && MaxHp > 0f)
+            {
+                var ratio = newMaxHp / MaxHp;
+                MaxHp = newMaxHp;
+                CurrentHp = Mathf.Clamp(CurrentHp * ratio, 0f, MaxHp);
+                return;
+            }
+
             var delta = newMaxHp - MaxHp;
             MaxHp = newMaxHp;
             if (delta > 0f && !IsRuins)

@@ -59,16 +59,16 @@ namespace Game.Gameplay.Match
             4 => "Siege",
             5 => "Flying",
             6 => "Super",
-            7 => "Герой · слот 1",
-            8 => "Герой · слот 2",
-            9 => "Герой · слот 3",
-            10 => "Титан",
-            11 => "Расовый #1",
-            12 => "Расовый #2",
+            7 => "King Veteran",
+            8 => "Paladin Veteran",
+            9 => "Priest Veteran",
+            10 => "Titan Veteran",
+            11 => "March Discipline",
+            12 => "Stone Masonry",
             _ => string.Empty,
         };
 
-        /// <summary>Short effect text for bonus overlay tooltips (slots 1–6). Empty for 7–12.</summary>
+        /// <summary>Short effect text for bonus overlay tooltips (RU). Empty for unknown slots.</summary>
         public static string GetSlotDescription(int slot) => slot switch
         {
             1 => "Усиленный melee: −20 HP, дальность 2. On-hit 15%: AoE по врагам радиус 2.",
@@ -77,6 +77,12 @@ namespace Game.Gameplay.Match
             4 => "Усиленный siege: +50 HP. Аура: +1 HP/с союзникам в радиусе 8.",
             5 => "Усиленный flying: +10 HP. On-death 25%: спавн базового ranged.",
             6 => "Усиленный super: дальность 12 (мин. 5). Параболический снаряд, AoE 50% радиус 3.",
+            7 => "Ветеран-король: HP ×1.4, урон ×1.35, +2 брони. Ульта «King's Command»: вся армия +30% урона на 8 с. Morale +15% урона.",
+            8 => "Ветеран-паладин: HP ×1.4, урон ×1.35, +2 брони. «Aegis»: броня и щит союзникам рядом. Morale +15% скорости атаки.",
+            9 => "Ветеран-жрец: HP ×1.4, урон ×1.35, +2 брони. «Sanctuary»: лечащая зона следует за жрецом. Morale +15% брони.",
+            10 => "Ветеран-титан: HP ×1.4, урон ×1.35, +2 брони. «Greater Colossus»: армия +25% HP, пока титан жив.",
+            11 => "Дисциплина марша: все войска (юниты, герои, титан) двигаются на 10% быстрее.",
+            12 => "Каменная кладка: все здания получают +20% запаса здоровья — включая уже построенные.",
             _ => string.Empty,
         };
 

@@ -11,10 +11,12 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.AuraAttackSpeedPercent
                 or AbilityIds.AuraArmorPercent
                 or AbilityIds.AuraMaxHpPercent
+                or AbilityIds.GreaterColossus
                 or AbilityIds.AuraHpRegen => AbilityVfxKind.Aura,
 
             AbilityIds.Strike
                 or AbilityIds.Ultimate
+                or AbilityIds.KingsCommand
                 or AbilityIds.Smite
                 or AbilityIds.Consecration
                 or AbilityIds.Slam
@@ -44,6 +46,8 @@ namespace Game.Gameplay.Vfx
             AbilityIds.CasterHybrid => "Caster BONUS",
             AbilityIds.FlyingSpawn => "Flying BONUS",
             AbilityIds.SuperCatapult => "Super BONUS",
+            AbilityIds.KingsCommand or AbilityIds.Aegis or AbilityIds.Sanctuary
+                or AbilityIds.GreaterColossus => "Veteran BONUS",
             AbilityIds.MainBuildingSmite or AbilityIds.MainUnitSmite => "Divine Blessing",
             _ => "Ability",
         };
@@ -59,9 +63,12 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.AuraAttackSpeedPercent
                 or AbilityIds.AuraArmorPercent
                 or AbilityIds.AuraMaxHpPercent
+                or AbilityIds.GreaterColossus
                 or AbilityIds.AuraHpRegen
                 or AbilityIds.Strike
                 or AbilityIds.Ultimate
+                or AbilityIds.KingsCommand
+                or AbilityIds.Aegis
                 or AbilityIds.Slam
                 or AbilityIds.Stomp
                 or AbilityIds.MeleeCleave
@@ -69,7 +76,8 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.Rally => AbilityVfxAnchor.Caster,
 
             AbilityIds.Frost
-                or AbilityIds.Consecration => AbilityVfxAnchor.Ground,
+                or AbilityIds.Consecration
+                or AbilityIds.Sanctuary => AbilityVfxAnchor.Ground,
 
             AbilityIds.SuperCatapult
                 or AbilityIds.FlyingSpawn => AbilityVfxAnchor.Impact,

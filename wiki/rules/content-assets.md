@@ -34,8 +34,9 @@ ScriptableObjects/
             └── Titan/                     # Abilities (Rally / Stomp / Slam / Colossus)
 ```
 
-`BonusHeroes/` (усиленные герои и титан) — **не создавать заранее**; папка появится
-вместе с первыми ассетами.
+`BonusHeroes/` — категория ветеранских чемпионов (PRE-006b): префабы через
+`BARAKI/Units/Build Veteran Prefabs`, ability defs — сигнатуры слотов 7–10
+(`kings-command`, `aegis`, `sanctuary`, `greater-colossus`).
 
 Тот же шаблон у префабов; портреты плоские внутри категории (один PNG на роль):
 
@@ -61,9 +62,8 @@ Art/UI/UnitPortraits/Humans/
   (и `BonusHeroes/` только когда появятся ассеты).
 - Бонусные юниты — **соседняя** категория `BonusUnits/{Role}/`, не `Units/{Role}/Bonus/`.
 - Титан — в `Heroes/Titan/`, не в `Units/`.
-- Папка существует только если в ней есть ассеты. Пустой scaffold (`BonusHeroes`,
-  `Enhanced`, `Bonuses`, `AI`, `Tech`, `Passives`, `Buildings` у SO, общие
-  `Controllers/`) **не создавать заранее**.
+- Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
+  `AI`, `Tech`, `Passives`, `Buildings` у SO, общие `Controllers/`) **не создавать заранее**.
 - Герой/кит с abilities — папка владельца (`Heroes/Hero1`, `Units/Caster`,
   `BonusUnits/Siege`); abilities внутри `Abilities/`.
 - `Catalogs` — только lookup: `RaceCatalog`, `UnitVisualCatalog`, `UnitAbilityCatalog`.
@@ -72,6 +72,8 @@ Art/UI/UnitPortraits/Humans/
   через `AssetDatabase.MoveAsset` (сохраняются `.meta`, GUID и ссылки).
   Миграция: меню `BARAKI/Content/Migrate Content Folders`.
 - `RaceCatalog` / `UnitVisualCatalog` — записи по `raceId`; Human-builders обновляют только свою.
+- **Язык контента:** имена (DisplayName, названия бонусов/уников/слотов) — **английские**;
+  описания (Description, тултипы) — **русские**. У всего контента.
 - `UnitAbilityCatalog` глобальный: ability id уникален между расами.
 - Имена definition-ассетов стабильны (`UNIT_HUMAN_*`, `HERO_HUMAN_*`); ability-файлы —
   kebab-case от `DisplayName`.

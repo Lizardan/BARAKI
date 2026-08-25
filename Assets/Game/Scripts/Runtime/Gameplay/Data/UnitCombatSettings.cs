@@ -81,6 +81,34 @@ namespace Game.Gameplay.Data
             _marchSpeedOverride = 0f;
         }
 
+        /// <summary>
+        /// Veteran champion profile (PRE-006b): base hero numbers with separate HP / damage
+        /// multipliers and a flat armor bonus.
+        /// </summary>
+        public void CopyFromVeteran(
+            HeroDefinition definition,
+            float hpMultiplier,
+            float damageMultiplier,
+            float armorBonus,
+            float? attackRangeOverride = null)
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            _maxHp = definition.MaxHp * (hpMultiplier > 0f ? hpMultiplier : 1f);
+            _armor = definition.Armor + Mathf.Max(0f, armorBonus);
+            _damageMin = definition.DamageMin * (damageMultiplier > 0f ? damageMultiplier : 1f);
+            _damageMax = definition.DamageMax * (damageMultiplier > 0f ? damageMultiplier : 1f);
+            _attackSpeed = definition.AttackSpeed;
+            _attackRange = attackRangeOverride ?? definition.AttackRange;
+            _moveSpeed = definition.MoveSpeed;
+            _goldBounty = definition.GoldBounty;
+            _maxMana = 0f;
+            _marchSpeedOverride = 0f;
+        }
+
         public void CopyFrom(UnitCombatSettings other)
         {
             if (other == null)

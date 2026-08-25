@@ -126,14 +126,18 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.AuraAttackSpeedPercent
                 or AbilityIds.AuraArmorPercent
                 or AbilityIds.AuraMaxHpPercent
+                or AbilityIds.GreaterColossus
                 or AbilityIds.AuraHpRegen => AbilityFxMechanicShape.AuraAroundSelf,
 
             AbilityIds.Frost
                 or AbilityIds.Consecration
+                or AbilityIds.Sanctuary
                 or AbilityIds.GreaterHeal => AbilityFxMechanicShape.AreaOnGround,
 
             AbilityIds.Strike
                 or AbilityIds.Ultimate
+                or AbilityIds.KingsCommand
+                or AbilityIds.Aegis
                 or AbilityIds.Slam
                 or AbilityIds.Stomp
                 or AbilityIds.Heal
@@ -164,12 +168,15 @@ namespace Game.Gameplay.Vfx
                     or AbilityIds.AuraAttackSpeedPercent
                     or AbilityIds.AuraArmorPercent
                     or AbilityIds.AuraMaxHpPercent
+                    or AbilityIds.GreaterColossus
                     or AbilityIds.AuraHpRegen => HeroAbilityRules.AuraRadius,
                 AbilityIds.Strike => HeroAbilityRules.StrikeRadius,
                 AbilityIds.Ultimate => HeroAbilityRules.UltimateRadius,
+                AbilityIds.KingsCommand => HeroAbilityRules.UltimateRadius,
                 AbilityIds.Frost => CasterSpellRules.FrostRadius,
                 AbilityIds.Heal => HeroAbilityRules.HealRadius,
                 AbilityIds.Shield => HeroAbilityRules.ShieldRadius,
+                AbilityIds.Aegis => HeroAbilityRules.ShieldRadius,
                 AbilityIds.Consecration => HeroAbilityRules.ConsecrationRadius,
                 AbilityIds.HolyNova => HeroAbilityRules.NovaRadius,
                 AbilityIds.GreaterHeal => HeroAbilityRules.GreaterHealRadius,
@@ -177,6 +184,7 @@ namespace Game.Gameplay.Vfx
                 AbilityIds.Slam => HeroAbilityRules.SlamRadius,
                 AbilityIds.Stomp => HeroAbilityRules.StompRadius,
                 AbilityIds.Rally => HeroAbilityRules.RallyRadius,
+                AbilityIds.Sanctuary => HeroAbilityRules.GreaterHealRadius,
                 AbilityIds.MeleeCleave => HumanBonusUnitRules.MeleeAoeRadius,
                 AbilityIds.SuperCatapult => HumanBonusUnitRules.CatapultAoeRadius,
                 AbilityIds.MainBuildingSmite => 2.2f,

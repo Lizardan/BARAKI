@@ -40,6 +40,15 @@ namespace Game.Gameplay.Combat
         /// <summary>Super bonus: parabolic catapult splash.</summary>
         public const int SuperCatapult = 55;
 
+        /// <summary>King veteran (bonus slot 7): army-wide damage shout replacing Ultimate (PRE-006b).</summary>
+        public const int KingsCommand = 56;
+        /// <summary>Paladin veteran (bonus slot 8): armor + absorb shield replacing Shield.</summary>
+        public const int Aegis = 57;
+        /// <summary>Priest veteran (bonus slot 9): caster-following heal zone replacing Greater Heal.</summary>
+        public const int Sanctuary = 58;
+        /// <summary>Titan veteran (bonus slot 10): stronger MaxHp aura replacing Colossus.</summary>
+        public const int GreaterColossus = 59;
+
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;
         /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>

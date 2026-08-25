@@ -8,7 +8,7 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 
 # Bonuses
 
-> **Статус:** UI-оверлей (PRE-001) и **юнитовые бонусы слотов 1–6 реализованы** (PRE-006a: Cleave / Deadeye / Battlemace / Siege Regen Aura / Last Call / Catapult — канон в `wiki/rules/human-unit-bonuses.md`). Слоты **7–12** (герои ×3, титан, расовые уники ×2) пока disabled в UI = **остаток PRE-006b**, блокер расы #2 (вместе с PRE-007 + GATE). См. `TODO.md`.
+> **Статус:** все **12 слотов реализованы** (Люди). PRE-006a: слоты 1–6 (юнитовые бонусы). PRE-006b: слоты 7–12 — ветераны (герои ×3, титан) и расовые уники (March Discipline / Stone Masonry). Канон: `wiki/rules/human-unit-bonuses.md`. См. `TODO.md`.
 
 ## Обзор
 
@@ -48,12 +48,25 @@ note: Каркас; реализация PRE-001
 | 4 | `BONUS_SLOT_SIEGE` | Siege | То же + Siege Regen Aura (+1 HP/с, r=8) | ✅ PRE-006a |
 | 5 | `BONUS_SLOT_FLYING` | Flying | То же + Last Call (спавн Ranged при смерти 25%) | ✅ PRE-006a |
 | 6 | `BONUS_SLOT_SUPER` | Super | То же + Catapult (парабола + splash в точке прилёта) | ✅ PRE-006a |
-| 7 | `BONUS_SLOT_HERO_1` | Герой слот 1 | Тот же слот, другой def (усиленный) | ❌ 006b |
-| 8 | `BONUS_SLOT_HERO_2` | Герой слот 2 | То же | ❌ 006b |
-| 9 | `BONUS_SLOT_HERO_3` | Герой слот 3 | То же | ❌ 006b |
-| 10 | `BONUS_SLOT_TITAN` | Титан | Усиленный титан при summon | ❌ 006b |
-| 11 | `BONUS_SLOT_RACE_UNIQUE_1` | Уникальный #1 | Не замена юнита; per race | ❌ 006b |
-| 12 | `BONUS_SLOT_RACE_UNIQUE_2` | Уникальный #2 | Не замена юнита; per race | ❌ 006b |
+| 7 | `BONUS_SLOT_HERO_1` | Король-ветеран | Тот же кит ×~1.35, ульта → **King's Command** (+30% урона всей армии 8 с); morale +15% dmg | ✅ PRE-006b |
+| 8 | `BONUS_SLOT_HERO_2` | Паладин-ветеран | Тот же кит ×~1.35, Shield → **Aegis** (+броня + щит 25% max HP союзникам рядом); morale +15% AS | ✅ PRE-006b |
+| 9 | `BONUS_SLOT_HERO_3` | Жрец-ветеран | Тот же кит ×~1.35, Greater Heal → **Sanctuary** (зона следует за жрецом); morale +15% брони | ✅ PRE-006b |
+| 10 | `BONUS_SLOT_TITAN` | Титан-ветеран | Статы ×1.4/×1.35/+2 armor поверх 3×; Colossus → **Greater Colossus** (+25% max HP армии) | ✅ PRE-006b |
+| 11 | `BONUS_SLOT_RACE_UNIQUE_1` | March Discipline | **+10% скорости передвижения** всем войскам (юниты+герои+титан) | ✅ PRE-006b |
+| 12 | `BONUS_SLOT_RACE_UNIQUE_2` | Stone Masonry | **+20% HP зданий**, ретроактивно всем стоящим (текущий HP масштабируется пропорционально) | ✅ PRE-006b |
+
+### Ветераны (слоты 7–10)
+
+- Формат: **тот же кит**, остальные 3 способности с числами ×~1.35; **одна сигнатура** заменяет базовую способность.
+- Статы: HP ×1.4, урон ×1.35, броня +2 (титан — поверх сида 3× героя 1). Цена выпуска титана не меняется (2500g).
+- Визуал: та же модель + флаг (`TT_RTS_Banner_plain`) на спине, командная покраска как обычно; префабы `Prefabs/Races/Humans/BonusHeroes/{Hero1..3,Titan}/`, портреты автопекутся (`UnitPortraitBaker`).
+- Morale-аура ветерана: +15% (vs +10% у базового героя), тот же стат.
+- Применение пика: только будущие hire/deploy/redeploy героя и summon/redeploy титана (общая replacement policy).
+
+### Расовые уники Людей (слоты 11–12)
+
+- **March Discipline (11):** множитель скорости применяется при спавне (волны/найм/герои/титан) — уже заспавненные войска не ускоряются (replacement policy).
+- **Stone Masonry (12):** при пике все стоящие здания владельца получают ×1.2 max HP, текущий HP масштабируется пропорционально; новые/апгрейднутые здания тоже ×1.2 (синк по уровням учитывает пик).
 
 ```entity
 id: BONUS_SLOT_MELEE
@@ -180,6 +193,5 @@ Race pick → Match start (waves run) → Bonus overlay 60s
 ## Open
 
 - [x] Конкретные статы/умения enhanced-юнитов слотов 1–6 (PRE-006a) — `wiki/rules/human-unit-bonuses.md`
-- [ ] Умения слотов 7–12: усиленные герои ×3, титан, уники Людей (PRE-006b) — закрытие = критерий PRE-006 done
-- [ ] Уникальные расовые бонусы слотов 11–12 Людей (PRE-006b)
+- [x] Умения слотов 7–12: усиленные герои ×3, титан, уники Людей (PRE-006b, 2026-08-25) — King's Command / Aegis / Sanctuary / Greater Colossus / March Discipline / Stone Masonry
 - [x] UI оверлея и сетевой state (PRE-001)

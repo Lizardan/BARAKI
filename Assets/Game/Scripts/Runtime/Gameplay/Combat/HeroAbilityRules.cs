@@ -89,6 +89,22 @@ namespace Game.Gameplay.Combat
         public const float StompStunSeconds = 2f;
         public const float StompCooldownSeconds = 30f;
 
+        // --- PRE-006b: veteran champion signature abilities (bonus slots 7–10) ---
+
+        /// <summary>Veteran auras are stronger morale versions of the base hero aura (10% → 15%).</summary>
+        public const float VeteranAuraBonusPercent = 0.15f;
+
+        /// <summary>King's Command: army-wide damage buff replacing the self-buff Ultimate.</summary>
+        public const float KingsCommandPercent = 0.3f;
+        public const float KingsCommandSeconds = 8f;
+        public const float KingsCommandCooldownSeconds = UltimateCooldownSeconds;
+
+        /// <summary>Aegis: Shield armor numbers + absorb shield worth this fraction of each ally's max HP.</summary>
+        public const float AegisShieldMaxHpFraction = 0.25f;
+
+        /// <summary>Greater Colossus: veteran titan MaxHp aura percent.</summary>
+        public const float AuraMaxHpVeteranBonusPercent = 0.25f;
+
         /// <summary>All living enemies within <paramref name="radius"/> of the hero.</summary>
         public static List<MatchUnitState> GatherEnemiesInRadius(
             MatchUnitState caster,
@@ -307,7 +323,7 @@ namespace Game.Gameplay.Combat
         }
     }
 
-    /// <summary>Stationary ally heal field created by Greater Heal.</summary>
+    /// <summary>Stationary ally heal field created by Greater Heal; Sanctuary follows its caster.</summary>
     public sealed class HeroHealZoneState
     {
         public int CasterUnitId;
@@ -316,5 +332,7 @@ namespace Game.Gameplay.Combat
         public float Radius;
         public float RemainingSeconds;
         public float HealPerSecond;
+        /// <summary>Non-zero: the zone follows this living unit's position each tick (Sanctuary).</summary>
+        public int FollowUnitId;
     }
 }

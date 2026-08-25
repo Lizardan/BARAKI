@@ -233,6 +233,11 @@ namespace Game.Gameplay.Networking
 
         static void SafeRaise(Action action)
         {
+            if (action == null)
+            {
+                return;
+            }
+
             try
             {
                 action();

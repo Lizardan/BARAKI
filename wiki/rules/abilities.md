@@ -11,7 +11,7 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 | `AbilityIds` | Стабильные int-константы id способностей (`AbilityIds.cs`). Передаются в снапшот как `ushort` |
 | `UnitAbilityDef` | SO-ассет одной способности: id, display name, описание, kind, unlock, все тюнинг-параметры, `AbilityFx`, поведение |
 | `UnitAbilityBehaviour` | SO-субассет внутри def: структурная логика (`TryCast`, `QueryAura`, `DescribeParams`) |
-| `UnitAbilityCatalog` | Общий список всех def-ов (25 шт.), сериализован в `Assets/Game/ScriptableObjects/Catalogs/UnitAbilityCatalog.asset` |
+| `UnitAbilityCatalog` | Общий список всех def-ов (29 шт.), сериализован в `Assets/Game/ScriptableObjects/Catalogs/UnitAbilityCatalog.asset` |
 | `UnitCombatSettings` | Единственный боевой компонент префаба: runtime-снапшот статов + массив ссылок на def-ы. **Порядок списка = приоритет каста AI** |
 | `AbilityKitDefaults` | Источник истины тюнинга: фабрики китов `CreateKing/Paladin/Priest/Titan/Caster` + runtime-фолбэк |
 
@@ -47,7 +47,7 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 - **Runtime-фолбэк**: если в prefab settings нет ссылок — `AbilityKitDefaults.Create(role, heroSlot)`
   (`MatchCombatSystem.AttachAbilities`).
 
-## Ид-таблица (25 способностей)
+## Ид-таблица (29 способностей)
 
 | id | DisplayName | Кит | kind | Unlock |
 |----|-------------|-----|------|--------|
@@ -76,6 +76,10 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 | 53 | Battlemace | Caster BONUS | Passive | Always |
 | 54 | Last Call | Flying BONUS | Passive | Always |
 | 55 | Catapult | Super BONUS | Passive | Always |
+| 56 | King's Command | King Veteran (слот 7) | Active | Hero lvl 10 |
+| 57 | Aegis | Paladin Veteran (слот 8) | Active | Hero lvl 4 |
+| 58 | Sanctuary | Priest Veteran (слот 9) | Active | Hero lvl 4 |
+| 59 | Greater Colossus | Titan Veteran (слот 10) | Passive | Hero lvl 7 |
 
 ## Runtime-поток каста (`MatchCombatSystem`)
 

@@ -41,6 +41,12 @@ namespace Game.Editor
         public const string HumanHero2Path = HumanHeroesPath + "/Hero2/Human_Hero2.prefab";
         public const string HumanHero3Path = HumanHeroesPath + "/Hero3/Human_Hero3.prefab";
 
+        public const string HumanBonusHeroesPath = HumanRoot + "/BonusHeroes";
+        public const string HumanHero1BonusPath = HumanBonusHeroesPath + "/Hero1/Human_Hero1_BONUS.prefab";
+        public const string HumanHero2BonusPath = HumanBonusHeroesPath + "/Hero2/Human_Hero2_BONUS.prefab";
+        public const string HumanHero3BonusPath = HumanBonusHeroesPath + "/Hero3/Human_Hero3_BONUS.prefab";
+        public const string HumanTitanBonusPath = HumanBonusHeroesPath + "/Titan/Human_Titan_BONUS.prefab";
+
         static readonly string[] HumanAnimatedPrefabPaths =
         {
             HumanMeleePath,
@@ -72,7 +78,21 @@ namespace Game.Editor
             var hero2 = LoadRequiredPrefab(HumanHero2Path);
             var hero3 = LoadRequiredPrefab(HumanHero3Path);
             var titan = LoadRequiredPrefab(HumanTitanPath);
-            UpdateCatalogFromPrefabs(humanPrefabs, bonusPrefabs, hero1, hero2, hero3, titan);
+            var veteran1 = LoadOptionalPrefab(HumanHero1BonusPath);
+            var veteran2 = LoadOptionalPrefab(HumanHero2BonusPath);
+            var veteran3 = LoadOptionalPrefab(HumanHero3BonusPath);
+            var veteranTitan = LoadOptionalPrefab(HumanTitanBonusPath);
+            UpdateCatalogFromPrefabs(
+                humanPrefabs,
+                bonusPrefabs,
+                hero1,
+                hero2,
+                hero3,
+                titan,
+                veteran1,
+                veteran2,
+                veteran3,
+                veteranTitan);
             UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
             AssetDatabase.SaveAssets();
         }
@@ -124,6 +144,9 @@ namespace Game.Editor
             return prefabs;
         }
 
+        static GameObject LoadOptionalPrefab(string path) =>
+            AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
         static GameObject LoadRequiredPrefab(string path)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -143,13 +166,28 @@ namespace Game.Editor
             GameObject hero1,
             GameObject hero2,
             GameObject hero3,
-            GameObject titan)
+            GameObject titan,
+            GameObject hero1Bonus = null,
+            GameObject hero2Bonus = null,
+            GameObject hero3Bonus = null,
+            GameObject titanBonus = null)
         {
             var catalog = LoadOrCreateCatalog();
             var so = new SerializedObject(catalog);
             var races = so.FindProperty("_races");
             var entry = FindOrAddRace(races, GameIds.Races.Human);
-            AssignSet(entry.FindPropertyRelative("_visuals"), humanPrefabs, bonusPrefabs, hero1, hero2, hero3, titan);
+            AssignSet(
+                entry.FindPropertyRelative("_visuals"),
+                humanPrefabs,
+                bonusPrefabs,
+                hero1,
+                hero2,
+                hero3,
+                titan,
+                hero1Bonus,
+                hero2Bonus,
+                hero3Bonus,
+                titanBonus);
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
         }
@@ -179,7 +217,11 @@ namespace Game.Editor
             GameObject hero1,
             GameObject hero2,
             GameObject hero3,
-            GameObject titan)
+            GameObject titan,
+            GameObject hero1Bonus = null,
+            GameObject hero2Bonus = null,
+            GameObject hero3Bonus = null,
+            GameObject titanBonus = null)
         {
             setProperty.FindPropertyRelative("_melee").objectReferenceValue = prefabs[0];
             setProperty.FindPropertyRelative("_ranged").objectReferenceValue = prefabs[1];
@@ -201,6 +243,25 @@ namespace Game.Editor
             setProperty.FindPropertyRelative("_hero2").objectReferenceValue = hero2;
             setProperty.FindPropertyRelative("_hero3").objectReferenceValue = hero3;
             setProperty.FindPropertyRelative("_titan").objectReferenceValue = titan;
+            if (hero1Bonus != null)
+            {
+                setProperty.FindPropertyRelative("_hero1Bonus").objectReferenceValue = hero1Bonus;
+            }
+
+            if (hero2Bonus != null)
+            {
+                setProperty.FindPropertyRelative("_hero2Bonus").objectReferenceValue = hero2Bonus;
+            }
+
+            if (hero3Bonus != null)
+            {
+                setProperty.FindPropertyRelative("_hero3Bonus").objectReferenceValue = hero3Bonus;
+            }
+
+            if (titanBonus != null)
+            {
+                setProperty.FindPropertyRelative("_titanBonus").objectReferenceValue = titanBonus;
+            }
         }
 
         static UnitVisualCatalog LoadOrCreateCatalog()

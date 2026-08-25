@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using Game.Core;
@@ -70,7 +71,7 @@ namespace Game.Editor
 
             for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
             {
-                var role = Game.Gameplay.Combat.HumanBonusUnitRules.RoleForBonusSlot(bonusSlot);
+                var role = HumanBonusUnitRules.RoleForBonusSlot(bonusSlot);
                 var definition = race.GetUnitBonus(role);
                 if (definition == null)
                 {
@@ -132,6 +133,42 @@ namespace Game.Editor
                          out var titanPath))
             {
                 synced.Add($"Titan: {titanPath}");
+            }
+
+            // Veteran champions (bonus slots 7–10, PRE-006b).
+            for (var bonusSlot = HumanBonusUnitRules.Hero1BonusSlot;
+                 bonusSlot <= HumanBonusUnitRules.TitanBonusSlot;
+                 bonusSlot++)
+            {
+                var isTitan = HumanBonusUnitRules.IsTitanBonusSlot(bonusSlot);
+                var heroSlot = isTitan ? 1 : HumanBonusUnitRules.HeroSlotForBonusSlot(bonusSlot);
+                var baseHero = race.GetHeroBySlot(heroSlot);
+                if (baseHero == null)
+                {
+                    Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for veteran slot {bonusSlot}.");
+                    continue;
+                }
+
+                float? rangeOverride = isTitan ? TitanRules.AttackRange : null;
+                var hpMultiplier = (isTitan ? TitanRules.BaseStatMultiplier : 1f) * HumanBonusUnitRules.VeteranHpMultiplier;
+                if (!TrySyncPrefab(
+                        visualCatalog,
+                        GameIds.Races.Human,
+                        isTitan ? UnitRole.Titan : UnitRole.Hero,
+                        isTitan ? 0 : heroSlot,
+                        settings => settings.CopyFromVeteran(
+                            baseHero,
+                            hpMultiplier,
+                            HumanBonusUnitRules.VeteranDamageMultiplier,
+                            HumanBonusUnitRules.VeteranArmorBonus,
+                            rangeOverride),
+                        out var veteranPath,
+                        bonusSlot))
+                {
+                    continue;
+                }
+
+                synced.Add($"Veteran slot {bonusSlot}: {veteranPath}");
             }
 
             AssetDatabase.SaveAssets();

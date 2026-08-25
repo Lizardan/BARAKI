@@ -101,6 +101,10 @@ namespace Game.Gameplay.Combat
         public float ArmorBuffBonus { get; set; }
         /// <summary>Self-buff damage percent from Ultimate while <see cref="UltimateBuffRemaining"/> &gt; 0.</summary>
         public float UltimateBuffPercent { get; set; }
+        /// <summary>Host-only: remaining absorb-pool HP from Aegis. Consumed before CurrentHp.</summary>
+        public float AbsorbRemaining { get; set; }
+        /// <summary>Host-only: seconds until the Aegis absorb pool expires.</summary>
+        public float AbsorbSecondsRemaining { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>
