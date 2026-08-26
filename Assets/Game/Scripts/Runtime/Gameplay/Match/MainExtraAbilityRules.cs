@@ -20,7 +20,8 @@ namespace Game.Gameplay.Match
         public const int ImplementedCount = 2;
         public const int BuildingSmiteId = 1;
         public const int UnitSmiteId = 2;
-        public const int CommandSlotIndex = 9;
+        /// <summary>Last command slot on the main building panel (MAIN-001: ice ring 9, wave 10).</summary>
+        public const int CommandSlotIndex = 11;
 
         public const int RequiredMeleeLevel = 7;
         public const int RequiredRangedLevel = 7;

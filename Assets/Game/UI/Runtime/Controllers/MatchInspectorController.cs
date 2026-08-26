@@ -488,6 +488,7 @@ namespace Game.UI.Controllers
                         : "Магия — требуется уровень главного здания");
 
                 PopulateHeroHireCommands(player, building, queueFull);
+                PopulateBuildingAbilityCommands(player);
                 PopulateDivineBlessingCommand(player, building, queueFull);
                 return;
             }
@@ -1089,6 +1090,95 @@ namespace Game.UI.Controllers
             }
 
             StartResearch(HeroRules.BuildHireUpgradeId(heroSlot));
+        }
+
+        void PopulateBuildingAbilityCommands(MatchPlayerState player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            PopulateBuildingAbilityCommand(player, BuildingAbilityRules.IceRingId);
+            PopulateBuildingAbilityCommand(player, BuildingAbilityRules.WaveOfLightId);
+        }
+
+        void PopulateBuildingAbilityCommand(MatchPlayerState player, int abilityId)
+        {
+            var slot = abilityId == BuildingAbilityRules.IceRingId
+                ? BuildingAbilityRules.IceRingSlotIndex
+                : BuildingAbilityRules.WaveOfLightSlotIndex;
+            var requiredLevel = BuildingAbilityRules.GetRequiredMainLevel(abilityId);
+            if (!BuildingAbilityRules.IsUnlocked(abilityId, player.MainLevel))
+            {
+                // Keep the button enabled for hover tooltips; click is gated below.
+                SetCommand(
+                    slot,
+                    MatchUpgradeLabelRules.FormatBuildingAbilityLockedButton(abilityId, requiredLevel),
+                    enabled: true,
+                    action: () => { },
+                    MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId));
+                SetCommandLocked(slot, locked: true);
+                return;
+            }
+
+            var canCast = BuildingAbilityRules.CanCast(player, abilityId);
+            var bridge = MatchSelectionBridge.Current;
+            var pending = bridge != null
+                && bridge.IsBuildingAbilityPending
+                && bridge.PendingBuildingAbilityId == abilityId;
+            SetCommand(
+                slot,
+                MatchUpgradeLabelRules.FormatBuildingAbilityButton(
+                    abilityId,
+                    player.MainMana,
+                    player.MainManaMax,
+                    BuildingAbilityRules.GetCooldownRemaining(player, abilityId)),
+                enabled: canCast || pending,
+                action: () => ToggleBuildingAbilityCast(abilityId),
+                MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId));
+            SetCommandLocked(slot, locked: false);
+        }
+
+        void ToggleBuildingAbilityCast(int abilityId)
+        {
+            var bridge = MatchSelectionBridge.Current;
+            if (bridge == null)
+            {
+                return;
+            }
+
+            if (bridge.IsBuildingAbilityPending && bridge.PendingBuildingAbilityId == abilityId)
+            {
+                bridge.CancelBuildingAbilityTargeting();
+                return;
+            }
+
+            var player = FindLocalPlayer(_matchRuntime?.Controller);
+            if (player == null || !BuildingAbilityRules.CanCast(player, abilityId))
+            {
+                return;
+            }
+
+            if (abilityId == BuildingAbilityRules.WaveOfLightId)
+            {
+                // Instant radial wave centered on the base (host resolves the center).
+                if (MatchNetworkCommands.IsAvailable)
+                {
+                    MatchNetworkCommands.RequestCastBuildingAbility(abilityId, UnityEngine.Vector3.zero);
+                }
+                else
+                {
+                    _matchRuntime.Controller.TryCastBuildingAbility(
+                        player.SlotIndex,
+                        abilityId,
+                        UnityEngine.Vector3.zero);
+                }
+
+                return;
+            }
+
+            bridge.BeginBuildingAbilityTargeting(abilityId);
         }
 
         void PopulateDivineBlessingCommand(MatchPlayerState player, BuildingState building, bool queueFull)

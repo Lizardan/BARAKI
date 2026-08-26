@@ -20,9 +20,6 @@ namespace Game.Gameplay.Combat
         /// <summary>Ballista / catapult (Super) release near the start of the TT machine attack clip.</summary>
         public const float SuperSwingImpactNormalizedTime = 0.1f;
 
-        /// <summary>Legacy alias — prefer <see cref="ResolveSwingImpactDelay"/>.</summary>
-        public const float MeleeStrikeDuration = 0.14f;
-
         public const float MeleeLungeDistance = 0.55f;
         public const float ProjectileSpeed = 22f;
         public const float ParabolicArcHeight = 2.8f;

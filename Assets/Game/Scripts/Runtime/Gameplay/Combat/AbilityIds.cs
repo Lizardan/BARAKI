@@ -53,5 +53,9 @@ namespace Game.Gameplay.Combat
         public const int MainBuildingSmite = 100;
         /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>
         public const int MainUnitSmite = 101;
+        /// <summary>Main building ability: Ледяное кольцо (MAIN-001, BuildingAbilityRules id 1).</summary>
+        public const int MainIceRing = 102;
+        /// <summary>Main building ability: Волна света (MAIN-001, BuildingAbilityRules id 2).</summary>
+        public const int MainWaveOfLight = 103;
     }
 }

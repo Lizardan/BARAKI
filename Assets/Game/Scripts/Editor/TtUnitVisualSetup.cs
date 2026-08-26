@@ -23,7 +23,6 @@ namespace Game.Editor
         const string TtAnimationRoot = "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/animation";
         const string TtTextureFolder =
             "Assets/ToonyTinyPeople/TT_RTS/TT_RTS_Standard/models/materials/color/Units/Textures";
-        const string LegacyHumanHeroPath = "Assets/Game/Prefabs/Races/Humans/Heroes/Human_Hero.prefab";
 
         /// <summary>AnimatorController path next to its prefab (role folder / Bonus).</summary>
         public static string ControllerBeside(string prefabPath, string controllerName)
@@ -346,7 +345,6 @@ namespace Game.Editor
         public static void RebuildAll()
         {
             UnitVisualPrefabBuilder.EnsureHumanPrefabFolders();
-            RenameLegacyHeroPrefab();
 
             foreach (var setup in Setups)
             {
@@ -364,26 +362,6 @@ namespace Game.Editor
             AssetDatabase.Refresh();
             UnitVisualPrefabBuilder.EnsureContent();
             Debug.Log("TtUnitVisualSetup: rebuilt " + Setups.Length + " Human TT prefabs.");
-        }
-
-        static void RenameLegacyHeroPrefab()
-        {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(LegacyHumanHeroPath) == null)
-            {
-                return;
-            }
-
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(UnitVisualPrefabBuilder.HumanHero1Path) != null)
-            {
-                return;
-            }
-
-            var error = AssetDatabase.RenameAsset(LegacyHumanHeroPath, "Human_Hero1");
-            if (!string.IsNullOrEmpty(error))
-            {
-                throw new InvalidOperationException(
-                    "Failed to rename Human_Hero.prefab to Human_Hero1: " + error);
-            }
         }
 
         static void DeleteStaleController(string path)

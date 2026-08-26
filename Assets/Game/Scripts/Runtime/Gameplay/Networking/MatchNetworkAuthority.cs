@@ -218,6 +218,25 @@ namespace Game.Gameplay.Networking
             RequestCastMainExtraAbilityServerRpc(targetBuildingInstanceId, targetUnitId);
         }
 
+        /// <summary>Cast an always-available main building ability at a ground point (MAIN-001).</summary>
+        public void RequestCastBuildingAbility(int abilityId, UnityEngine.Vector3 center)
+        {
+            if (IsCommandsBlocked())
+            {
+                PublishCommandResult(MatchCommandResult.HostMigrating);
+                return;
+            }
+
+            if (IsServer)
+            {
+                PublishCommandResult(
+                    TryCastBuildingAbilityLocal(MatchNetworkSession.LocalSlot, abilityId, center));
+                return;
+            }
+
+            RequestCastBuildingAbilityServerRpc(abilityId, center.x, center.y, center.z);
+        }
+
         public void RequestSetTowerTarget(int towerInstanceId, int unitId)
         {
             if (IsCommandsBlocked())
@@ -489,6 +508,21 @@ namespace Game.Gameplay.Networking
                 ResolveSenderSlot(rpcParams),
                 targetBuildingInstanceId,
                 targetUnitId);
+            SendCommandResult(result, rpcParams.Receive.SenderClientId);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void RequestCastBuildingAbilityServerRpc(
+            int abilityId,
+            float centerX,
+            float centerY,
+            float centerZ,
+            RpcParams rpcParams = default)
+        {
+            var result = TryCastBuildingAbilityLocal(
+                ResolveSenderSlot(rpcParams),
+                abilityId,
+                new UnityEngine.Vector3(centerX, centerY, centerZ));
             SendCommandResult(result, rpcParams.Receive.SenderClientId);
         }
 
@@ -862,6 +896,24 @@ namespace Game.Gameplay.Networking
             }
 
             var ok = controller.TryCastMainExtraAbility(slot, targetBuildingInstanceId, targetUnitId);
+            return ok ? MatchCommandResult.Ok : MatchCommandResult.InvalidTarget;
+        }
+
+        MatchCommandResult TryCastBuildingAbilityLocal(int slot, int abilityId, UnityEngine.Vector3 center)
+        {
+            if (IsCommandsBlocked())
+            {
+                return MatchCommandResult.HostMigrating;
+            }
+
+            EnsureRuntime();
+            var controller = _matchRuntime?.Controller;
+            if (controller == null)
+            {
+                return MatchCommandResult.NotAllowed;
+            }
+
+            var ok = controller.TryCastBuildingAbility(slot, abilityId, center);
             return ok ? MatchCommandResult.Ok : MatchCommandResult.InvalidTarget;
         }
 

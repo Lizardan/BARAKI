@@ -36,7 +36,6 @@ namespace Game.Gameplay.Networking
         static string s_url;
         static string s_playerId;
         static string s_displayName;
-        static string s_apiKey;
         static Func<string> s_accessTokenProvider;
 
         /// <summary>Tear down socket and state (Play enter / reset).</summary>
@@ -51,7 +50,6 @@ namespace Game.Gameplay.Networking
             s_url = null;
             s_playerId = null;
             s_displayName = null;
-            s_apiKey = null;
             s_accessTokenProvider = null;
             if (s_lifetimeCts != null)
             {
@@ -74,13 +72,11 @@ namespace Game.Gameplay.Networking
             string apiBase,
             string playerId,
             string displayName,
-            string apiKey,
             Func<string> accessTokenProvider = null)
         {
             s_url = BuildWebSocketUrl(apiBase);
             s_playerId = playerId ?? string.Empty;
             s_displayName = ToAscii(displayName);
-            s_apiKey = apiKey ?? string.Empty;
             s_accessTokenProvider = accessTokenProvider;
         }
 
@@ -159,10 +155,6 @@ namespace Game.Gameplay.Networking
             if (!string.IsNullOrEmpty(accessToken))
             {
                 socket.Options.SetRequestHeader("Authorization", $"Bearer {accessToken}");
-            }
-            if (!string.IsNullOrEmpty(s_apiKey))
-            {
-                socket.Options.SetRequestHeader("X-Baraki-Key", s_apiKey);
             }
 
             socket.Options.SetRequestHeader("X-Baraki-Player-Id", ToAscii(s_playerId));

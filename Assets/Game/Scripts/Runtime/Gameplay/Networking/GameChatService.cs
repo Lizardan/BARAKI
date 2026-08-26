@@ -66,14 +66,12 @@ namespace Game.Gameplay.Networking
     public static class GameChatService
     {
         const string PrefsApiBase = "baraki.chat.apiBase";
-        const string PrefsApiKey = "baraki.chat.apiKey";
         const float WarnThrottleSeconds = 45f;
         const float ManualRefreshCooldownSeconds = 1.5f;
 
         static bool s_ready;
         static bool s_initRunning;
         static string s_apiBase = string.Empty;
-        static string s_apiKey = string.Empty;
         static string s_afterGlobal = string.Empty;
         static string s_afterFriends = string.Empty;
         static readonly Dictionary<string, string> s_afterDm = new(StringComparer.Ordinal);
@@ -118,7 +116,6 @@ namespace Game.Gameplay.Networking
             s_ready = false;
             s_initRunning = false;
             s_apiBase = string.Empty;
-            s_apiKey = string.Empty;
             s_afterGlobal = string.Empty;
             s_afterFriends = string.Empty;
             s_afterDm.Clear();
@@ -193,7 +190,6 @@ namespace Game.Gameplay.Networking
                 }
 
                 s_apiBase = ResolveApiBase();
-                s_apiKey = PlayerPrefs.GetString(PrefsApiKey, GameChatRules.DefaultApiKey);
                 if (string.IsNullOrWhiteSpace(s_apiBase))
                 {
                     Debug.LogWarning("GameChatService: chat API base URL is empty (set PlayerPrefs baraki.chat.apiBase).");
@@ -408,7 +404,6 @@ namespace Game.Gameplay.Networking
                 s_apiBase,
                 UnityServicesBootstrap.PlayerId ?? string.Empty,
                 localName,
-                s_apiKey,
                 () => UnityServicesBootstrap.AccessToken);
             GameChatSocket.EnsureStarted();
         }
@@ -816,10 +811,6 @@ namespace Game.Gameplay.Networking
 
                 name = ToAsciiHeaderValue(name);
                 request.Headers.TryAddWithoutValidation("X-Baraki-Player-Name", name);
-                if (!string.IsNullOrWhiteSpace(s_apiKey))
-                {
-                    request.Headers.TryAddWithoutValidation("X-Baraki-Key", s_apiKey);
-                }
 
                 try
                 {

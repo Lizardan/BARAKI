@@ -170,6 +170,7 @@ namespace Game.Gameplay.Match
             TickPassiveGold(deltaTime);
             TickMainMana(deltaTime);
             TickMainExtraAbilityCooldown(deltaTime);
+            TickBuildingAbilityCooldowns(deltaTime);
             TickHeroRosters(deltaTime);
             TickTitans(deltaTime);
             TickBarracksCallCharges(deltaTime);
@@ -235,7 +236,7 @@ namespace Game.Gameplay.Match
         }
 
         public bool TryGetResearch(int buildingInstanceId, out BuildingResearchState research) =>
-            _research.TryGet(buildingInstanceId, out research);
+            _research.TryGetActive(buildingInstanceId, out research);
 
         /// <summary>
         /// Editor/debug: complete all queued building research for an owner immediately,
@@ -521,6 +522,10 @@ namespace Game.Gameplay.Match
                 _players[p.Slot].MainMana = Math.Max(0f, Math.Min(p.MainMana, _players[p.Slot].MainManaMax));
                 _players[p.Slot].MainExtraAbilityCooldownRemaining =
                     Math.Max(0f, p.MainExtraAbilityCooldownRemaining);
+                _players[p.Slot].IceRingCooldownRemaining =
+                    Math.Max(0f, p.IceRingCooldownRemaining);
+                _players[p.Slot].WaveOfLightCooldownRemaining =
+                    Math.Max(0f, p.WaveOfLightCooldownRemaining);
                 if (p.Slot < _bonusPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
                 {
                     _bonusPicks[p.Slot] = p.BonusPickSlot;
@@ -1340,6 +1345,105 @@ namespace Game.Gameplay.Match
                 radius: def.Radius > 0f ? def.Radius : 1.5f));
         }
 
+        /// <summary>
+        /// Cast an always-available main building ability (MAIN-001):
+        /// the Ice Ring at a ground point near the base, or the radial Wave of Light
+        /// centered on the base. Both hit ground enemy units only.
+        /// </summary>
+        public bool TryCastBuildingAbility(int playerSlot, int abilityId, Vector3 center)
+        {
+            if (!IsRunning || Phase == MatchPhase.Start)
+            {
+                return false;
+            }
+
+            if (playerSlot < 0 || playerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            if (!BuildingAbilityRules.IsValidId(abilityId))
+            {
+                return false;
+            }
+
+            var player = _players[playerSlot];
+            if (player.IsEliminated || !BuildingAbilityRules.CanCast(player, abilityId))
+            {
+                return false;
+            }
+
+            var basePosition = Layout != null && playerSlot >= 0 && playerSlot < Layout.Slots.Count
+                ? Layout.Slots[playerSlot].GetBuildingWorldPosition(GameIds.Buildings.Main)
+                : Vector3.zero;
+            var barracksDistance =
+                BuildingAbilityRules.GetBaseToBarracksDistance(Layout, playerSlot);
+
+            var impactCenter = center;
+            var radius = BuildingAbilityRules.IceRingRadius;
+            if (abilityId == BuildingAbilityRules.WaveOfLightId)
+            {
+                impactCenter = basePosition;
+                radius = BuildingAbilityRules.GetWaveOfLightRadius(barracksDistance);
+            }
+            else
+            {
+                var castRange = BuildingAbilityRules.GetIceRingCastRange(barracksDistance);
+                if (!BuildingAbilityRules.IsInCastRange(basePosition, center, castRange))
+                {
+                    return false;
+                }
+            }
+
+            var damage = BuildingAbilityRules.GetDamage(abilityId);
+            var freezeSeconds = BuildingAbilityRules.GetFreezeSeconds(abilityId);
+            foreach (var unit in _combat.Units)
+            {
+                if (!BuildingAbilityRules.AffectsUnit(unit, playerSlot))
+                {
+                    continue;
+                }
+
+                var dx = unit.WorldPosition.x - impactCenter.x;
+                var dz = unit.WorldPosition.z - impactCenter.z;
+                if (dx * dx + dz * dz > radius * radius)
+                {
+                    continue;
+                }
+
+                _combat.ApplyDamage(null, unit, damage, playerSlot);
+                if (freezeSeconds > 0f && unit.IsAlive)
+                {
+                    unit.FrozenRemainingSeconds = Mathf.Max(unit.FrozenRemainingSeconds, freezeSeconds);
+                }
+            }
+
+            EmitBuildingAbilityFx(playerSlot, abilityId, impactCenter, radius);
+            player.MainMana -= BuildingAbilityRules.GetManaCost(abilityId);
+            BuildingAbilityRules.SetCooldown(
+                player,
+                abilityId,
+                BuildingAbilityRules.GetCooldownSeconds(abilityId));
+            return true;
+        }
+
+        void EmitBuildingAbilityFx(int ownerSlot, int abilityId, Vector3 center, float radius)
+        {
+            var def = MainExtraAbilityFxDefs.GetForBuildingAbility(abilityId);
+            if (def == null)
+            {
+                return;
+            }
+
+            _combat.EmitCast(new AbilityCastEvent(
+                casterUnitId: 0,
+                ownerSlot,
+                def,
+                targetUnitId: 0,
+                center,
+                radius));
+        }
+
         static int GetStatTrackLevel(MatchPlayerState player, string trackId)
         {
             if (trackId == GameIds.Upgrades.MeleeDamage)
@@ -1658,6 +1762,14 @@ namespace Game.Gameplay.Match
 
                 player.MainExtraAbilityCooldownRemaining =
                     Math.Max(0f, player.MainExtraAbilityCooldownRemaining - deltaTime);
+            }
+        }
+
+        void TickBuildingAbilityCooldowns(float deltaTime)
+        {
+            for (var i = 0; i < _players.Count; i++)
+            {
+                BuildingAbilityRules.TickCooldowns(_players[i], deltaTime);
             }
         }
 

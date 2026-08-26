@@ -49,6 +49,7 @@ namespace Game.Gameplay.Vfx
             AbilityIds.KingsCommand or AbilityIds.Aegis or AbilityIds.Sanctuary
                 or AbilityIds.GreaterColossus => "Veteran BONUS",
             AbilityIds.MainBuildingSmite or AbilityIds.MainUnitSmite => "Divine Blessing",
+            AbilityIds.MainIceRing or AbilityIds.MainWaveOfLight => "Main Building",
             _ => "Ability",
         };
 
@@ -77,7 +78,9 @@ namespace Game.Gameplay.Vfx
 
             AbilityIds.Frost
                 or AbilityIds.Consecration
-                or AbilityIds.Sanctuary => AbilityVfxAnchor.Ground,
+                or AbilityIds.Sanctuary
+                or AbilityIds.MainIceRing
+                or AbilityIds.MainWaveOfLight => AbilityVfxAnchor.Ground,
 
             AbilityIds.SuperCatapult
                 or AbilityIds.FlyingSpawn => AbilityVfxAnchor.Impact,

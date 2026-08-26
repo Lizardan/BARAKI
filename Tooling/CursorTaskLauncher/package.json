@@ -2,7 +2,7 @@
   "name": "baraki-task-launcher",
   "displayName": "BARAKI Task Launcher",
   "description": "Задачи BARAKI в сайдбаре: клик по issue запускает opencode; выполненные уходят в закрытые",
-  "version": "0.0.19",
+  "version": "0.0.51",
   "publisher": "lizardan",
   "private": true,
   "engines": {
@@ -28,6 +28,11 @@
         {
           "id": "barakiTasks.taskList",
           "name": "Задачи"
+        },
+        {
+          "id": "barakiTasks.quickPrompt",
+          "name": "Новая задача",
+          "type": "webview"
         }
       ]
     },
@@ -36,6 +41,11 @@
         "command": "barakiTaskLauncher.launchIssue",
         "title": "BARAKI: Запустить issue в opencode",
         "icon": "$(play-circle)"
+      },
+      {
+        "command": "barakiTaskLauncher.resumeLastTask",
+        "title": "Открыть последнюю сессию opencode",
+        "icon": "$(history)"
       },
       {
         "command": "barakiTaskLauncher.refresh",
@@ -48,9 +58,14 @@
         "icon": "$(play)"
       },
       {
+        "command": "barakiTaskLauncher.resumeTask",
+        "title": "Открыть сессию opencode этой задачи (без нового промта)",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "barakiTaskLauncher.doneTask",
-        "title": "Пометить выбранную задачу выполненной",
-        "icon": "$(check-all)"
+        "title": "Апрув: закрыть задачу и сессию",
+        "icon": "$(check)"
       },
       {
         "command": "barakiTaskLauncher.closeTask",
@@ -58,9 +73,9 @@
         "icon": "$(close)"
       },
       {
-        "command": "barakiTaskLauncher.resetTask",
-        "title": "Сбросить выполнение (вернуть в «не начата»)",
-        "icon": "$(discard)"
+        "command": "barakiTaskLauncher.previewIssue",
+        "title": "Предпросмотр задачи (markdown как на GitHub)",
+        "icon": "$(book)"
       },
       {
         "command": "barakiTaskLauncher.refreshSummary",
@@ -75,37 +90,25 @@
           "group": "navigation"
         }
       ],
-      "view/title": [
-        {
-          "command": "barakiTaskLauncher.refresh",
-          "when": "view == barakiTasks.taskList",
-          "group": "navigation@1"
-        },
-        {
-          "command": "barakiTaskLauncher.refreshSummary",
-          "when": "view == barakiTasks.taskList",
-          "group": "navigation@2"
-        }
-      ],
       "view/item/context": [
         {
           "command": "barakiTaskLauncher.startTask",
-          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready|interrupted):/",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready):/",
           "group": "inline@1"
         },
         {
-          "command": "barakiTaskLauncher.doneTask",
-          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready|running|interrupted):/",
+          "command": "barakiTaskLauncher.resumeTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(running|review):/",
           "group": "inline@2"
         },
         {
-          "command": "barakiTaskLauncher.closeTask",
-          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:/",
+          "command": "barakiTaskLauncher.doneTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:review:/",
           "group": "inline@3"
         },
         {
-          "command": "barakiTaskLauncher.resetTask",
-          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:interrupted:/",
+          "command": "barakiTaskLauncher.closeTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready|running):/",
           "group": "inline@4"
         }
       ]

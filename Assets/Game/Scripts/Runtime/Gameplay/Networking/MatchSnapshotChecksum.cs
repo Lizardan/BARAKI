@@ -35,6 +35,8 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, snapshot.Players[i].MainExtraAbilityId);
                         Mix(ref hash, (int)snapshot.Players[i].MainMana);
                         Mix(ref hash, (int)snapshot.Players[i].MainExtraAbilityCooldownRemaining);
+                        Mix(ref hash, (int)snapshot.Players[i].IceRingCooldownRemaining);
+                        Mix(ref hash, (int)snapshot.Players[i].WaveOfLightCooldownRemaining);
                     }
                 }
 

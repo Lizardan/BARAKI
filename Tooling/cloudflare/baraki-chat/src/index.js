@@ -1,9 +1,8 @@
 /**
  * BARAKI menu chat API (global + friends feed + DM).
- * Auth: UGS JWT (Authorization: Bearer / X-Baraki-Token) verified against Unity's
- * JWKS; identity comes from the token `sub` claim. Legacy shared-secret
- * X-Baraki-Key stays as a fallback while clients migrate (disable with
- * CHAT_JWT_REQUIRED=1).
+ * Auth: UGS JWT (Authorization: Bearer) verified against Unity's JWKS;
+ * identity comes from the token `sub` claim. The legacy shared-secret
+ * X-Baraki-Key fallback has been removed.
  *
  * Transport: WebSocket push at GET /v1/ws (send/sync frames); HTTP GET stays for
  * initial history and catch-up. All messages flow through the single ChatHub
@@ -130,33 +129,24 @@ function base64UrlToBytes(segment) {
 }
 
 /**
- * Resolve the caller identity: a valid UGS JWT wins (playerId = `sub`),
- * otherwise fall back to the legacy shared-secret headers.
+ * Resolve the caller identity from a valid UGS JWT (playerId = `sub`).
  * Returns { playerId, displayName } or null (→ 401).
  */
 export async function resolveIdentity(request, env) {
   const bearer = extractBearerToken(request);
-  if (bearer) {
-    const payload = await verifyUgsJwt(bearer.token, {
-      expectedProjectId: env.CHAT_JWT_PROJECT_ID,
-      requiredIssuer: env.CHAT_JWT_ISSUER,
-    });
-    if (!payload) return null;
-    const headerPlayerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
-    if (headerPlayerId && headerPlayerId !== payload.sub) return null;
-    const claimedName = typeof payload.playerName === "string" ? payload.playerName.trim() : "";
-    const displayName =
-      claimedName ||
-      (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim();
-    return { playerId: payload.sub, displayName: displayName.slice(0, 64) };
-  }
-
-  if (isTruthy(env.CHAT_JWT_REQUIRED)) return null;
-  if (!authorizeSharedKey(request, env)) return null;
-  const playerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
-  if (!playerId || playerId.length < 4 || playerId.length > 128) return null;
-  const displayName = (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim();
-  return { playerId, displayName: displayName.slice(0, 64) };
+  if (!bearer) return null;
+  const payload = await verifyUgsJwt(bearer.token, {
+    expectedProjectId: env.CHAT_JWT_PROJECT_ID,
+    requiredIssuer: env.CHAT_JWT_ISSUER,
+  });
+  if (!payload) return null;
+  const headerPlayerId = (request.headers.get("X-Baraki-Player-Id") || "").trim();
+  if (headerPlayerId && headerPlayerId !== payload.sub) return null;
+  const claimedName = typeof payload.playerName === "string" ? payload.playerName.trim() : "";
+  const displayName =
+    claimedName ||
+    (request.headers.get("X-Baraki-Player-Name") || "Игрок").trim();
+  return { playerId: payload.sub, displayName: displayName.slice(0, 64) };
 }
 
 function extractBearerToken(request) {
@@ -165,20 +155,7 @@ function extractBearerToken(request) {
     const token = authHeader.slice("Bearer ".length).trim();
     if (token) return { token };
   }
-  const direct = (request.headers.get("X-Baraki-Token") || "").trim();
-  return direct ? { token: direct } : null;
-}
-
-function isTruthy(value) {
-  const v = String(value || "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
-
-function authorizeSharedKey(request, env) {
-  const required = (env.CHAT_API_KEY || "").trim();
-  if (!required) return true;
-  const got = (request.headers.get("X-Baraki-Key") || "").trim();
-  return got.length > 0 && got === required;
+  return null;
 }
 
 export class ChatHub {
@@ -598,7 +575,7 @@ function cors(response) {
   headers.set("access-control-allow-origin", "*");
   headers.set(
     "access-control-allow-headers",
-    "authorization,content-type,x-baraki-key,x-baraki-player-id,x-baraki-player-name,x-baraki-token",
+    "authorization,content-type,x-baraki-player-id,x-baraki-player-name",
   );
   headers.set("access-control-allow-methods", "GET,POST,OPTIONS");
   return new Response(response.body, { status: response.status, headers });

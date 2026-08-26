@@ -39,10 +39,6 @@ namespace Game.Gameplay.Match
             return false;
         }
 
-        /// <summary>Legacy alias for active (head) research.</summary>
-        public bool TryGet(int buildingInstanceId, out BuildingResearchState research) =>
-            TryGetActive(buildingInstanceId, out research);
-
         public bool TryGetQueue(int buildingInstanceId, out IReadOnlyList<BuildingResearchState> queue)
         {
             if (_byBuildingInstanceId.TryGetValue(buildingInstanceId, out var list) && list.Count > 0)

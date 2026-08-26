@@ -55,15 +55,14 @@ Soft-fail при недоступном API (timeout/warn).
 ```bash
 cd Tooling/cloudflare/baraki-chat
 npx wrangler deploy
-npx wrangler secret put CHAT_API_KEY   # опционально
 ```
 
 Клиент:
 
 - `GameChatRules.DefaultApiBaseUrl` = `https://baraki-chat.lizard268.workers.dev`
-- `GameChatRules.DefaultApiKey` = тот же ключ, что GitHub/Worker secret `CHAT_API_KEY` (вшит в клиент для playtest; PlayerPrefs `baraki.chat.apiBase` / `apiKey` перебивают дефолты)
+  (PlayerPrefs `baraki.chat.apiBase` перебивает дефолт)
 
-Деплой: workflow [`.github/workflows/deploy-chat.yml`](../../.github/workflows/deploy-chat.yml) (`workflow_dispatch` или push в `Tooling/cloudflare/baraki-chat/`). Нужны секреты `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CHAT_API_KEY`.
+Деплой: workflow [`.github/workflows/deploy-chat.yml`](../../.github/workflows/deploy-chat.yml) (`workflow_dispatch` или push в `Tooling/cloudflare/baraki-chat/`). Нужны секреты `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
 
 Идентичность: **UGS JWT** (CHAT-001). Клиент шлёт `Authorization: Bearer <id token>`
 (`AuthenticationService.Instance.AccessToken` через `UnityServicesBootstrap.AccessToken`)
@@ -72,12 +71,13 @@ npx wrangler secret put CHAT_API_KEY   # опционально
 верифицирует RS256-подпись по JWKS Unity (`player-auth.services.api.unity.com/.well-known/jwks.json`,
 кэш 1 ч), проверяет `exp`/`aud` (= Unity project id, var `CHAT_JWT_PROJECT_ID` в
 `wrangler.jsonc`), игрок берётся из `sub`; расхождение с `X-Baraki-Player-Id` → 401.
-Легаси `X-Baraki-Key` остаётся фолбэком до конца миграции; отключается var'ом
-`CHAT_JWT_REQUIRED=1`. Тесты воркера — `node --test` в `Tooling/cloudflare/baraki-chat/test/`.
+Легаси shared-secret фолбэк `X-Baraki-Key` удалён — запрос без валидного JWT
+получает 401 (старые билды клиента теряют меню-чат). Тесты воркера —
+`node --test "test/*.test.mjs"` в `Tooling/cloudflare/baraki-chat/test/`.
 
 Клиент после `Open` ЛС вызывает `GameChatService.EnsureDirectPeer`, чтобы история/синк подтягивались до первого send.
 
-Debug-консоль: `chat.setkey <key>`, `chat.setbase <url>`, `chat.clear`.
+Debug-консоль: `chat.setbase <url>`, `chat.clear`.
 
 ## UI
 

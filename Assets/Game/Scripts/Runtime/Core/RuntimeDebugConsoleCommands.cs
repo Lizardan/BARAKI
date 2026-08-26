@@ -127,13 +127,9 @@ namespace Game.Core
                 "chat.setbase",
                 "chat.setbase <url> — PlayerPrefs baraki.chat.apiBase",
                 ChatSetBase);
-            s_commands["chat.setkey"] = new Entry(
-                "chat.setkey",
-                "chat.setkey <key> — PlayerPrefs baraki.chat.apiKey (нужен после деплоя Worker)",
-                ChatSetKey);
             s_commands["chat.clear"] = new Entry(
                 "chat.clear",
-                "Сбросить baraki.chat.apiBase / apiKey",
+                "Сбросить baraki.chat.apiBase",
                 ChatClear);
         }
 
@@ -150,23 +146,9 @@ namespace Game.Core
             return $"chat apiBase = {url} (перезапустите warm-up / EnsureInitialized)";
         }
 
-        private static string ChatSetKey(ReadOnlySpan<string> args)
-        {
-            if (args.Length < 1 || string.IsNullOrWhiteSpace(args[0]))
-            {
-                return "Использование: chat.setkey <key>";
-            }
-
-            var key = args[0].Trim();
-            PlayerPrefs.SetString("baraki.chat.apiKey", key);
-            PlayerPrefs.Save();
-            return "chat apiKey сохранён (перезапустите warm-up / EnsureInitialized)";
-        }
-
         private static string ChatClear(ReadOnlySpan<string> args)
         {
             PlayerPrefs.DeleteKey("baraki.chat.apiBase");
-            PlayerPrefs.DeleteKey("baraki.chat.apiKey");
             PlayerPrefs.Save();
             return "chat prefs очищены";
         }

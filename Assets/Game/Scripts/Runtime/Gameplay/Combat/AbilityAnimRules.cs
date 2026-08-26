@@ -34,9 +34,6 @@ namespace Game.Gameplay.Combat
         /// <summary>Titan Rally punch A/B.</summary>
         public const float PunchCastClipSeconds = 1f;
 
-        /// <summary>Legacy alias — prefer <see cref="ResolveCastLockSeconds"/>.</summary>
-        public const float CastLockSeconds = StaffCastClipSeconds;
-
         public static AbilityAnimKind ResolveKind(int abilityId) =>
             abilityId switch
             {

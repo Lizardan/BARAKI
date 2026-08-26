@@ -6,12 +6,15 @@ namespace Game.Gameplay.Match
 {
     /// <summary>
     /// While main-extra targeting is pending: red ground ring under a valid hover target
-    /// (same footprint as click selection).
+    /// (same footprint as click selection). While a main building ability is pending
+    /// (MAIN-001): AoE ring under the pointer — blue inside the allowed cast range, red outside.
     /// </summary>
     public sealed class MatchMainExtraTargetingRingPresenter : MonoBehaviour
     {
         const string RingObjectName = "MainExtraTargetingRing";
         static readonly Color RingColor = new(0.95f, 0.22f, 0.2f, 1f);
+        static readonly Color BuildingAbilityInRangeColor = new(0.35f, 0.75f, 1f, 1f);
+        static readonly Color BuildingAbilityOutOfRangeColor = RingColor;
 
         [SerializeField] private MatchRuntime _runtime;
         [SerializeField] private MatchCombatPresenter _combatPresenter;
@@ -23,6 +26,8 @@ namespace Game.Gameplay.Match
         MatchSelectionBridge _bridge;
         MatchPickTarget _currentTarget = MatchPickTarget.None;
         float _lockedDiameter;
+        bool _buildingAbilityRingActive;
+        Color _appliedColor;
 
         static float GroundY => MatchArenaGreyboxBuilder.RoadHeight + 0.025f;
 
@@ -52,6 +57,19 @@ namespace Game.Gameplay.Match
             {
                 _bridge = MatchSelectionBridge.Current
                           ?? (_runtime != null ? _runtime.GetComponent<MatchSelectionBridge>() : null);
+            }
+
+            if (_bridge != null && _bridge.IsBuildingAbilityPending
+                && _bridge.PendingBuildingAbilityId == BuildingAbilityRules.IceRingId)
+            {
+                UpdateBuildingAbilityRing();
+                return;
+            }
+
+            if (_buildingAbilityRingActive)
+            {
+                _buildingAbilityRingActive = false;
+                SetRingVisible(false);
             }
 
             if (_bridge == null || !_bridge.IsMainExtraCastPending)
@@ -91,6 +109,37 @@ namespace Game.Gameplay.Match
             EnsureRing();
             SetRingVisible(true);
             _ringTransform.position = new Vector3(center.x, GroundY, center.z);
+        }
+
+        void UpdateBuildingAbilityRing()
+        {
+            if (!_bridge.TryGetAimGroundPoint(out var point))
+            {
+                SetRingVisible(false);
+                return;
+            }
+
+            var diameter = BuildingAbilityRules.IceRingRadius * 2f;
+            if (!_buildingAbilityRingActive
+                || _meshFilter == null
+                || _meshFilter.sharedMesh == null)
+            {
+                _buildingAbilityRingActive = true;
+                ApplyRingMesh(diameter);
+            }
+
+            EnsureRing();
+            SetRingVisible(true);
+            _ringTransform.position = new Vector3(point.x, GroundY, point.z);
+
+            var color = _bridge.IsAimInCastRange
+                ? BuildingAbilityInRangeColor
+                : BuildingAbilityOutOfRangeColor;
+            if (color != _appliedColor)
+            {
+                _appliedColor = color;
+                ApplyRingColor(color);
+            }
         }
 
         void ApplyRingMesh(float diameter)
@@ -240,6 +289,20 @@ namespace Game.Gameplay.Match
             {
                 _ringRenderer.enabled = visible;
             }
+        }
+
+        void ApplyRingColor(Color color)
+        {
+            if (_ringRenderer == null)
+            {
+                return;
+            }
+
+            // Property block avoids mutating a shared/asset material.
+            var block = new MaterialPropertyBlock();
+            _ringRenderer.GetPropertyBlock(block);
+            block.SetColor("_BaseColor", color);
+            _ringRenderer.SetPropertyBlock(block);
         }
     }
 }

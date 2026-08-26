@@ -12,9 +12,6 @@ namespace Game.Core
         /// <summary>Cloudflare Worker origin. Override with PlayerPrefs key baraki.chat.apiBase.</summary>
         public const string DefaultApiBaseUrl = "https://baraki-chat.lizard268.workers.dev";
 
-        /// <summary>Optional shared key (must match Worker secret CHAT_API_KEY). PlayerPrefs baraki.chat.apiKey.</summary>
-        public const string DefaultApiKey = "b95b8df8bb6d03634ee88c6feffda2523ad1f1e3fb5a38c2b145c6670bf64ae7";
-
         public const string GlobalChannelName = "baraki-global";
         public const string FriendsFeedChannelPrefix = "friends-feed-";
         public const int MaxMessageLength = 280;

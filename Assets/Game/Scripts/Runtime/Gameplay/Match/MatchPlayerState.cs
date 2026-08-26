@@ -35,6 +35,10 @@ namespace Game.Gameplay.Match
         public float MainMana { get; set; }
         public float MainManaMax { get; private set; }
         public float MainExtraAbilityCooldownRemaining { get; set; }
+        /// <summary>Building ability cooldowns (MAIN-001), replicated in Players v23.</summary>
+        public float IceRingCooldownRemaining { get; set; }
+        /// <summary>Building ability cooldowns (MAIN-001), replicated in Players v23.</summary>
+        public float WaveOfLightCooldownRemaining { get; set; }
         /// <summary>Tower upgrade track levels (PRE-007), index = <see cref="TowerTrackRules"/> order.</summary>
         public int[] TowerTrackLevels { get; private set; } = new int[TowerTrackRules.TrackCount];
 

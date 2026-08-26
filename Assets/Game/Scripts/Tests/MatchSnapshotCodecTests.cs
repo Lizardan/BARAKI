@@ -335,6 +335,44 @@ namespace Game.Tests
         }
 
         [Test]
+        public void RoundTrip_V23_PreservesBuildingAbilityCooldowns()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 2,
+                Phase = 1,
+                MatchTimeSeconds = 30f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        MainLevel = 2,
+                        MainMana = 175f,
+                        IceRingCooldownRemaining = 33.5f,
+                        WaveOfLightCooldownRemaining = 120.25f,
+                    },
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 1,
+                        MainLevel = 3,
+                        IceRingCooldownRemaining = 0f,
+                        WaveOfLightCooldownRemaining = 7f,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 23);
+            Assert.AreEqual(33.5f, restored.Players[0].IceRingCooldownRemaining, 0.01f);
+            Assert.AreEqual(120.25f, restored.Players[0].WaveOfLightCooldownRemaining, 0.01f);
+            Assert.AreEqual(0f, restored.Players[1].IceRingCooldownRemaining, 0.01f);
+            Assert.AreEqual(7f, restored.Players[1].WaveOfLightCooldownRemaining, 0.01f);
+        }
+
+        [Test]
         public void RoundTrip_V19_PreservesBonusAndAuraFields()
         {
             var original = new MatchSnapshot

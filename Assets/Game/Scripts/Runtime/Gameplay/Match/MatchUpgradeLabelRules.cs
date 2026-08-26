@@ -69,6 +69,21 @@ namespace Game.Gameplay.Match
         public static string FormatExtraAbilityPickedTooltip(int abilityId) =>
             MainExtraAbilityRules.GetMenuTooltip(abilityId);
 
+        public static string FormatBuildingAbilityButton(
+            int abilityId,
+            float mana,
+            float manaMax,
+            float cooldown) =>
+            cooldown > 0.05f
+                ? $"{BuildingAbilityRules.GetDisplayName(abilityId)}\n{cooldown:0}с"
+                : $"{BuildingAbilityRules.GetDisplayName(abilityId)}\n{mana:0}/{manaMax:0}";
+
+        public static string FormatBuildingAbilityLockedButton(int abilityId, int requiredMainLevel) =>
+            $"{BuildingAbilityRules.GetDisplayName(abilityId)}\nУр. {requiredMainLevel}";
+
+        public static string FormatBuildingAbilityTooltip(int abilityId) =>
+            BuildingAbilityRules.GetTooltip(abilityId);
+
         public static string FormatHeroHireButton(int heroSlot, int cost) =>
             $"Герой {heroSlot}\n{cost}g";
 

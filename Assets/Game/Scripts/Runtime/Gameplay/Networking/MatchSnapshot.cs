@@ -73,6 +73,9 @@ namespace Game.Gameplay.Networking
         public int MainExtraAbilityId;
         public float MainMana;
         public float MainExtraAbilityCooldownRemaining;
+        /// <summary>Building ability cooldowns (MAIN-001), added in v23.</summary>
+        public float IceRingCooldownRemaining;
+        public float WaveOfLightCooldownRemaining;
     }
 
     public struct MatchHeroSlotSnapshot
@@ -232,7 +235,8 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 22;
+        // v23: building ability cooldowns in the Players section (MAIN-001).
+        public const int CurrentVersion = 23;
 
         /// <summary>Self-contained encode: full static roster, safe for any fresh decoder.</summary>
         public static byte[] Serialize(MatchSnapshot snapshot) =>
@@ -276,6 +280,8 @@ namespace Game.Gameplay.Networking
                     MainExtraAbilityId = p.MainExtraAbilityId,
                     MainMana = p.MainMana,
                     MainExtraAbilityCooldownRemaining = p.MainExtraAbilityCooldownRemaining,
+                    IceRingCooldownRemaining = p.IceRingCooldownRemaining,
+                    WaveOfLightCooldownRemaining = p.WaveOfLightCooldownRemaining,
                     TowerTrackLevels = (int[])p.TowerTrackLevels.Clone(),
                 });
             }
@@ -773,6 +779,8 @@ namespace Game.Gameplay.Networking
                         w.Write(p.MainExtraAbilityId);
                         w.Write(p.MainMana);
                         w.Write(p.MainExtraAbilityCooldownRemaining);
+                        w.Write(p.IceRingCooldownRemaining);
+                        w.Write(p.WaveOfLightCooldownRemaining);
                         for (var t = 0; t < TowerTrackRules.TrackCount; t++)
                         {
                             var level = p.TowerTrackLevels != null && t < p.TowerTrackLevels.Length
@@ -1268,6 +1276,8 @@ namespace Game.Gameplay.Networking
                     MainExtraAbilityId = reader.ReadInt32(),
                     MainMana = reader.ReadSingle(),
                     MainExtraAbilityCooldownRemaining = reader.ReadSingle(),
+                    IceRingCooldownRemaining = Math.Max(0f, reader.ReadSingle()),
+                    WaveOfLightCooldownRemaining = Math.Max(0f, reader.ReadSingle()),
                     TowerTrackLevels = ReadTowerTrackLevels(reader),
                 };
 

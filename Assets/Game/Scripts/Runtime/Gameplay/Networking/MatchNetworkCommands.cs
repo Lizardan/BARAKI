@@ -62,6 +62,9 @@ namespace Game.Gameplay.Networking
                 targetBuildingInstanceId,
                 targetUnitId);
 
+        public static void RequestCastBuildingAbility(int abilityId, UnityEngine.Vector3 center) =>
+            MatchNetworkAuthority.Instance?.RequestCastBuildingAbility(abilityId, center);
+
         public static void RequestSetTowerTarget(int towerInstanceId, int unitId) =>
             MatchNetworkAuthority.Instance?.RequestSetTowerTarget(towerInstanceId, unitId);
 

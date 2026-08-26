@@ -7,6 +7,7 @@ This vendored copy is trimmed for **UI Toolkit-only** projects (no `com.unity.ug
 - `Examples/` — sample scripts
 - `Scripts/UnityEngineBridge/UnityUIComponentExtensions.cs`
 - `Scripts/UnityEngineBridge/UnityGraphicExtensions.cs`
+- `Scripts/UnityEngineBridge/ObservableWWW.cs` (obsolete legacy WWW API, zero references)
 - EventSystems trigger scripts (17 files): `ObservableBeginDragTrigger`, `ObservablePointerClickTrigger`, etc.
 - uGUI regions in `ReactiveCommand.cs` and `ObservableTriggerExtensions.Component.cs`
 

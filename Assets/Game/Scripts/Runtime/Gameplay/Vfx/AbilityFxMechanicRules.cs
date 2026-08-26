@@ -1,4 +1,5 @@
 using Game.Gameplay.Combat;
+using Game.Gameplay.Match;
 using UnityEngine;
 
 namespace Game.Gameplay.Vfx
@@ -132,6 +133,7 @@ namespace Game.Gameplay.Vfx
             AbilityIds.Frost
                 or AbilityIds.Consecration
                 or AbilityIds.Sanctuary
+                or AbilityIds.MainIceRing
                 or AbilityIds.GreaterHeal => AbilityFxMechanicShape.AreaOnGround,
 
             AbilityIds.Strike
@@ -144,7 +146,8 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.Shield
                 or AbilityIds.Rally
                 or AbilityIds.Revive
-                or AbilityIds.MeleeCleave => AbilityFxMechanicShape.BurstAroundSelf,
+                or AbilityIds.MeleeCleave
+                or AbilityIds.MainWaveOfLight => AbilityFxMechanicShape.BurstAroundSelf,
 
             AbilityIds.HolyNova => AbilityFxMechanicShape.BurstAroundTarget,
 
@@ -188,6 +191,9 @@ namespace Game.Gameplay.Vfx
                 AbilityIds.MeleeCleave => HumanBonusUnitRules.MeleeAoeRadius,
                 AbilityIds.SuperCatapult => HumanBonusUnitRules.CatapultAoeRadius,
                 AbilityIds.MainBuildingSmite => 2.2f,
+                AbilityIds.MainIceRing => BuildingAbilityRules.IceRingRadius,
+                // Wave radius is dynamic (base→barracks × factor); Studio shows a placeholder.
+                AbilityIds.MainWaveOfLight => 20f,
                 _ => 0f,
             };
         }

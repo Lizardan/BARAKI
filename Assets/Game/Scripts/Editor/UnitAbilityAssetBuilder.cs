@@ -124,9 +124,6 @@ namespace Game.Editor
             ContentAssetPaths.EnsureHumanBonusHeroFolders();
         }
 
-        static string LegacyAbilityPath(int abilityId) =>
-            $"{ContentAssetPaths.Humans}/Abilities/Ability{abilityId}.asset";
-
         /// <summary>"Holy Nova" -> "holy-nova" (ASCII, kebab-case).</summary>
         static string DisplayNameToFileName(string displayName)
         {
@@ -152,7 +149,6 @@ namespace Game.Editor
         static UnitAbilityDef EnsureDefAsset(UnitAbilityDef defaults, string fileName)
         {
             var newPath = $"{GetAbilityDirectory(defaults.AbilityId)}/{fileName}.asset";
-            var legacyPath = LegacyAbilityPath(defaults.AbilityId);
 
             var existing = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(newPath);
             if (existing != null && existing.AbilityId != defaults.AbilityId)
@@ -161,11 +157,6 @@ namespace Game.Editor
                     $"UnitAbilityAssetBuilder: {newPath} holds id {existing.AbilityId}, expected {defaults.AbilityId}; " +
                     "will look up by id instead.");
                 existing = null;
-            }
-
-            if (existing == null)
-            {
-                existing = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(legacyPath);
             }
 
             if (existing == null)

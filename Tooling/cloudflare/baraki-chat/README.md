@@ -5,15 +5,13 @@
 ```bash
 cd Tooling/cloudflare/baraki-chat
 npx wrangler deploy
-npx wrangler secret put CHAT_API_KEY   # optional but recommended
 ```
 
 Workers URL example: `https://baraki-chat.<account>.workers.dev`
 
-Set the same values in the Unity client (`GameChatRules` / PlayerPrefs):
+Set the same value in the Unity client (`GameChatRules` / PlayerPrefs):
 
 - `baraki.chat.apiBase` = worker origin
-- `baraki.chat.apiKey` = same as `CHAT_API_KEY` (if set)
 
 ## API
 
@@ -28,8 +26,8 @@ Set the same values in the Unity client (`GameChatRules` / PlayerPrefs):
 Message sending happens over the WebSocket (`send` frame); HTTP is read-only
 history + the session sync.
 
-Headers: `Authorization: Bearer <UGS id token>` (или `X-Baraki-Token`), `X-Baraki-Player-Id`,
-`X-Baraki-Player-Name`, legacy-фолбэк `X-Baraki-Key`.
+Headers: `Authorization: Bearer <UGS id token>`, `X-Baraki-Player-Id`,
+`X-Baraki-Player-Name`.
 
 ## Auth
 
@@ -42,9 +40,8 @@ Headers: `Authorization: Bearer <UGS id token>` (или `X-Baraki-Token`), `X-Ba
 3. Игрок берётся из клейма `sub`; клиентский `X-Baraki-Player-Id`, если прислан,
    обязан совпадать с ним — иначе 401.
 
-Легаси-фолбэк: запросы со старым `X-Baraki-Key` (= секрет `CHAT_API_KEY`)
-принимаются, пока не выставлена переменная **`CHAT_JWT_REQUIRED=1`** — после
-миграции клиентов выставить её и убрать ключ.
+Запросы без валидного JWT получают 401. Легаси-фолбэк `X-Baraki-Key`
+(shared-secret) удалён.
 
 Тесты: `node --test test/`.
 
