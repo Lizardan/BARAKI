@@ -3,7 +3,7 @@ const { execFile, exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const VERSION = "0.0.30";
+const VERSION = "0.0.52";
 const STALE_RUNNING_HOURS = 8;
 // сколько секунд тишины в терминале считаем «агент закончил» (сессия ещё открыта)
 const AGENT_IDLE_MS = 60000;
@@ -16,9 +16,17 @@ function logError(ctx, e) {
 // ---------- tool resolution ----------
 // Запуск через shell с кавычками: opencode на Windows — npm-шим (.cmd),
 // execFile без shell его не выполняет.
+// Каждый аргумент квотится: значения с пробелами (например, -c "комментарий
+// апрува") иначе разваливаются на отдельные слова и gh падает
+// с «accepts 1 arg(s), received N».
+function quoteShellArg(value) {
+  const s = String(value);
+  return /^[\w\-.,:=@%+/\\]*$/.test(s) ? s : `"${s.replace(/"/g, '\\"')}"`;
+}
+
 function runTool(cmdPath, args, timeoutMs) {
   return new Promise((res, rej) => {
-    exec(`"${cmdPath}" ${args.join(" ")}`,
+    exec(`"${cmdPath}" ${args.map(quoteShellArg).join(" ")}`,
       { cwd: root(), windowsHide: true, timeout: timeoutMs || 30000, maxBuffer: 8 * 1024 * 1024 },
       (e, out, err) => e ? rej(new Error(err || e.message)) : res(out));
   });
