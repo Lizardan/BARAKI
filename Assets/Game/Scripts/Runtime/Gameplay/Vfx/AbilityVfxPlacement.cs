@@ -21,6 +21,9 @@ namespace Game.Gameplay.Vfx
         /// <summary>Safety-net <c>Destroy</c> for one-shot casts in the presenter.</summary>
         public const float CastLifetimeSeconds = 3f;
 
+        /// <summary>Main Ice Ring visual lifetime (MAIN-001, user tuning 2026-08-26).</summary>
+        public const float MainIceRingLifetimeSeconds = 1f;
+
         public static Vector3 ResolveWorld(
             AbilityVfxAnchor anchor,
             Vector3 casterFeet,
@@ -120,13 +123,19 @@ namespace Game.Gameplay.Vfx
 
         /// <summary>
         /// How long a one-shot stays before the presenter destroys it (and the viewer replays).
-        /// Frost follows stun; everything else uses the 3s safety net.
+        /// Frost follows stun; the main Ice Ring lasts 1s (MAIN-001); everything else uses
+        /// the 3s safety net.
         /// </summary>
         public static float ResolveOneShotLifetimeSeconds(int abilityId, float stunSeconds)
         {
             if (abilityId == AbilityIds.Frost)
             {
                 return stunSeconds > 0f ? stunSeconds : CasterSpellRules.FrostFreezeSeconds;
+            }
+
+            if (abilityId == AbilityIds.MainIceRing)
+            {
+                return MainIceRingLifetimeSeconds;
             }
 
             return CastLifetimeSeconds;

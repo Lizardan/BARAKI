@@ -195,7 +195,8 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
 | 2 | Кара юнитов | 5000 dmg вражескому юниту; CD 180s; 200 mana | тот же |
 | 3–6 | Скоро | stub | всегда locked |
 
-Каст: слот 9 main → targeting mode (`MatchSelectionBridge.BeginMainExtraAbilityTargeting`) →
+Каст: слот 11 main (последний; MAIN-001 занял 9–10) → targeting mode
+(`MatchSelectionBridge.BeginMainExtraAbilityTargeting`) →
 LMB по цели → `TryCastMainExtraAbility` / net `RequestCastMainExtraAbility`.
 UX прицела: красный крестик (`MainExtraAbilityCursor`), красное ground-кольцо на валидном
 hover (`MatchMainExtraTargetingRingPresenter`), tooltip имени у курсора (`TargetingTooltip` в MatchHud;

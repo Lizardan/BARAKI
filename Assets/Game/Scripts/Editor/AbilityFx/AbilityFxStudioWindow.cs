@@ -33,6 +33,11 @@ namespace Game.Editor
         const string DivineSkyBeamPrefabPath = ContentAssetPaths.SkyBeamPrefab;
         const string LegacyDivineBuildingSmitePrefabName = "CFXR3 Fire Explosion B";
         const string LegacyDivineUnitSmitePrefabName = "CFXR Hit A (Red)";
+        // MAIN-001 seeds: ice burst for the ring, light burst for the wave.
+        const string IceRingSeedPrefabPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Ice/CFXR3 Hit Ice B (Air).prefab";
+        const string WaveOfLightSeedPrefabPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Light/CFXR3 Hit Light B (Air).prefab";
 
         static readonly AbilityVfxAnchor[] MarkerOrder =
         {
@@ -1706,6 +1711,8 @@ namespace Game.Editor
 
             rows.Add(Row.FromMainExtra(AbilityIds.MainBuildingSmite));
             rows.Add(Row.FromMainExtra(AbilityIds.MainUnitSmite));
+            rows.Add(Row.FromMainExtra(AbilityIds.MainIceRing));
+            rows.Add(Row.FromMainExtra(AbilityIds.MainWaveOfLight));
             return rows;
         }
 
@@ -1823,6 +1830,34 @@ namespace Game.Editor
                         Anchor = unit.Anchor != AbilityVfxAnchor.Unspecified
                             ? unit.Anchor
                             : AbilityVfxAnchor.Target,
+                    });
+                dirty = true;
+            }
+
+            var iceRing = catalog.GetFx(AbilityIds.MainIceRing);
+            if (iceRing.VfxPrefab == null)
+            {
+                catalog.EditorSetFx(
+                    AbilityIds.MainIceRing,
+                    new AbilityFx
+                    {
+                        Color = iceRing.Color.a > 0.01f ? iceRing.Color : AbilityFxColors.Frost,
+                        VfxPrefab = LoadSeedPrefab(IceRingSeedPrefabPath),
+                        Scale = 2f,
+                    });
+                dirty = true;
+            }
+
+            var waveOfLight = catalog.GetFx(AbilityIds.MainWaveOfLight);
+            if (waveOfLight.VfxPrefab == null)
+            {
+                catalog.EditorSetFx(
+                    AbilityIds.MainWaveOfLight,
+                    new AbilityFx
+                    {
+                        Color = waveOfLight.Color.a > 0.01f ? waveOfLight.Color : AbilityFxColors.Priest,
+                        VfxPrefab = LoadSeedPrefab(WaveOfLightSeedPrefabPath),
+                        Scale = 3f,
                     });
                 dirty = true;
             }

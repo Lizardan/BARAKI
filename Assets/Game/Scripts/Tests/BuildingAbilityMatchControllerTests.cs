@@ -75,7 +75,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void WaveOfLight_GatedByLevelTwo_HitsEnemiesAroundBase()
+        public void WaveOfLight_GatedByLevelTwo_DamagesAsFrontExpands()
         {
             var controller = CreateEarlyMatch();
             var player = controller.Players[0];
@@ -94,10 +94,14 @@ namespace Game.Tests
             var waveRadius = BuildingAbilityRules.GetWaveOfLightRadius(
                 BuildingAbilityRules.GetBaseToBarracksDistance(controller.Layout, 0));
             var nearEnemy = SpawnEnemy(controller, UnitRole.Ranged, maxHp: 5000f);
-            var farEnemy = SpawnEnemy(controller, UnitRole.Super, maxHp: 5000f);
-            nearEnemy.WorldPosition = basePosition + new Vector3(5f, 0f, 0f);
+            var midEnemy = SpawnEnemy(controller, UnitRole.Super, maxHp: 5000f);
+            var farEnemy = SpawnEnemy(controller, UnitRole.Melee, maxHp: 5000f);
+            // Behind the base (−Z) beyond every defensive building's 12 m range,
+            // so only the wave damages them during controller ticks.
+            nearEnemy.WorldPosition = basePosition + new Vector3(0f, 0f, -waveRadius * 0.55f);
+            midEnemy.WorldPosition = basePosition + new Vector3(0f, 0f, -waveRadius * 0.85f);
             farEnemy.WorldPosition =
-                basePosition + new Vector3(waveRadius + 20f, 0f, 0f);
+                basePosition + new Vector3(0f, 0f, -(waveRadius + 20f));
 
             // Center argument is ignored for the wave — it always radiates from the base.
             Assert.IsTrue(controller.TryCastBuildingAbility(
@@ -105,15 +109,27 @@ namespace Game.Tests
                 BuildingAbilityRules.WaveOfLightId,
                 Vector3.zero));
 
-            Assert.AreEqual(5000f - BuildingAbilityRules.WaveOfLightDamage, nearEnemy.CurrentHp, 0.01f);
-            Assert.AreEqual(5000f, farEnemy.CurrentHp, 0.01f);
-            Assert.AreEqual(0f, nearEnemy.FrozenRemainingSeconds, 0.01f);
+            // Nothing is hit before the wave starts expanding.
+            Assert.AreEqual(5000f, nearEnemy.CurrentHp, 0.01f);
+            // Mana and cooldown are spent at cast time (before regen during ticks).
             Assert.AreEqual(
                 MainExtraAbilityRules.GetMainManaMax(2) - BuildingAbilityRules.WaveOfLightManaCost,
                 player.MainMana,
                 0.01f);
             Assert.AreEqual(BuildingAbilityRules.WaveOfLightCooldownSeconds,
                 player.WaveOfLightCooldownRemaining, 0.01f);
+
+            // ~60% of the expansion: only the near enemy has been reached by the front.
+            controller.Tick(BuildingAbilityRules.WaveOfLightExpandSeconds * 0.6f);
+            Assert.AreEqual(5000f - BuildingAbilityRules.WaveOfLightDamage, nearEnemy.CurrentHp, 0.01f);
+            Assert.AreEqual(5000f, midEnemy.CurrentHp, 0.01f);
+
+            // Full expansion: every ground enemy inside the radius was hit exactly once.
+            controller.Tick(BuildingAbilityRules.WaveOfLightExpandSeconds * 0.5f);
+            Assert.AreEqual(5000f - BuildingAbilityRules.WaveOfLightDamage, nearEnemy.CurrentHp, 0.01f);
+            Assert.AreEqual(5000f - BuildingAbilityRules.WaveOfLightDamage, midEnemy.CurrentHp, 0.01f);
+            Assert.AreEqual(5000f, farEnemy.CurrentHp, 0.01f);
+            Assert.AreEqual(0f, nearEnemy.FrozenRemainingSeconds, 0.01f);
 
             var casts = controller.Combat.ConsumePendingAbilityCasts();
             Assert.AreEqual(1, casts.Count);

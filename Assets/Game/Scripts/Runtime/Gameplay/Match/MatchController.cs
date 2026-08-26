@@ -26,6 +26,17 @@ namespace Game.Gameplay.Match
         private int[] _bonusPicks = Array.Empty<int>();
         private float _bonusPickDeadlineSeconds;
         private readonly Random _bonusRandom = new();
+        private readonly List<ActiveBuildingWave> _buildingWaves = new();
+
+        /// <summary>Host-only transient: one expanding Wave of Light cast (MAIN-001).</summary>
+        sealed class ActiveBuildingWave
+        {
+            public Vector3 Center;
+            public float Radius;
+            public int OwnerSlot;
+            public float Elapsed;
+            public readonly HashSet<int> HitUnitIds = new();
+        }
 
         public event Action<MatchPhase, MatchPhase> PhaseChanged;
         public event Action MatchStarted;
@@ -171,6 +182,7 @@ namespace Game.Gameplay.Match
             TickMainMana(deltaTime);
             TickMainExtraAbilityCooldown(deltaTime);
             TickBuildingAbilityCooldowns(deltaTime);
+            TickBuildingWaves(deltaTime);
             TickHeroRosters(deltaTime);
             TickTitans(deltaTime);
             TickBarracksCallCharges(deltaTime);
@@ -1397,25 +1409,19 @@ namespace Game.Gameplay.Match
 
             var damage = BuildingAbilityRules.GetDamage(abilityId);
             var freezeSeconds = BuildingAbilityRules.GetFreezeSeconds(abilityId);
-            foreach (var unit in _combat.Units)
+            if (abilityId == BuildingAbilityRules.WaveOfLightId)
             {
-                if (!BuildingAbilityRules.AffectsUnit(unit, playerSlot))
+                // Damage rides the expanding front; units are hit when the wave reaches them.
+                _buildingWaves.Add(new ActiveBuildingWave
                 {
-                    continue;
-                }
-
-                var dx = unit.WorldPosition.x - impactCenter.x;
-                var dz = unit.WorldPosition.z - impactCenter.z;
-                if (dx * dx + dz * dz > radius * radius)
-                {
-                    continue;
-                }
-
-                _combat.ApplyDamage(null, unit, damage, playerSlot);
-                if (freezeSeconds > 0f && unit.IsAlive)
-                {
-                    unit.FrozenRemainingSeconds = Mathf.Max(unit.FrozenRemainingSeconds, freezeSeconds);
-                }
+                    Center = impactCenter,
+                    Radius = radius,
+                    OwnerSlot = playerSlot,
+                });
+            }
+            else
+            {
+                ApplyIceRingBurst(playerSlot, center, radius, damage, freezeSeconds);
             }
 
             EmitBuildingAbilityFx(playerSlot, abilityId, impactCenter, radius);
@@ -1425,6 +1431,68 @@ namespace Game.Gameplay.Match
                 abilityId,
                 BuildingAbilityRules.GetCooldownSeconds(abilityId));
             return true;
+        }
+
+        void ApplyIceRingBurst(int ownerSlot, Vector3 center, float radius, float damage, float freezeSeconds)
+        {
+            foreach (var unit in _combat.Units)
+            {
+                if (!BuildingAbilityRules.AffectsUnit(unit, ownerSlot))
+                {
+                    continue;
+                }
+
+                var dx = unit.WorldPosition.x - center.x;
+                var dz = unit.WorldPosition.z - center.z;
+                if (dx * dx + dz * dz > radius * radius)
+                {
+                    continue;
+                }
+
+                _combat.ApplyDamage(null, unit, damage, ownerSlot);
+                if (freezeSeconds > 0f && unit.IsAlive)
+                {
+                    unit.FrozenRemainingSeconds = Mathf.Max(unit.FrozenRemainingSeconds, freezeSeconds);
+                }
+            }
+        }
+
+        /// <summary>Advances active Wave of Light casts: the front expands over 1 s,
+        /// damaging each ground enemy exactly once as it is reached.</summary>
+        void TickBuildingWaves(float deltaTime)
+        {
+            for (var i = _buildingWaves.Count - 1; i >= 0; i--)
+            {
+                var wave = _buildingWaves[i];
+                wave.Elapsed += deltaTime;
+                var progress = Mathf.Clamp01(wave.Elapsed / BuildingAbilityRules.WaveOfLightExpandSeconds);
+                var front = wave.Radius * progress;
+                var frontSq = front * front;
+
+                foreach (var unit in _combat.Units)
+                {
+                    if (!BuildingAbilityRules.AffectsUnit(unit, wave.OwnerSlot)
+                        || wave.HitUnitIds.Contains(unit.UnitId))
+                    {
+                        continue;
+                    }
+
+                    var dx = unit.WorldPosition.x - wave.Center.x;
+                    var dz = unit.WorldPosition.z - wave.Center.z;
+                    if (dx * dx + dz * dz > frontSq)
+                    {
+                        continue;
+                    }
+
+                    wave.HitUnitIds.Add(unit.UnitId);
+                    _combat.ApplyDamage(null, unit, BuildingAbilityRules.WaveOfLightDamage, wave.OwnerSlot);
+                }
+
+                if (progress >= 1f)
+                {
+                    _buildingWaves.RemoveAt(i);
+                }
+            }
         }
 
         void EmitBuildingAbilityFx(int ownerSlot, int abilityId, Vector3 center, float radius)

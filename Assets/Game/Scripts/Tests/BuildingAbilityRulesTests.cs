@@ -102,8 +102,8 @@ namespace Game.Tests
         public void Range_Math_UsesBarracksDistanceFactors()
         {
             const float distance = 12.5f;
-            Assert.AreEqual(25f, BuildingAbilityRules.GetIceRingCastRange(distance));
-            Assert.AreEqual(62.5f, BuildingAbilityRules.GetWaveOfLightRadius(distance));
+            Assert.AreEqual(37.5f, BuildingAbilityRules.GetIceRingCastRange(distance));
+            Assert.AreEqual(37.5f, BuildingAbilityRules.GetWaveOfLightRadius(distance));
         }
 
         [Test]

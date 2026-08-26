@@ -15,6 +15,7 @@
 | `rules/unity-ui.md` | UI Toolkit, UIBindingScope, USS-стили |
 | `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
 | `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
+| `rules/building-abilities.md` | MAIN-001: Ледяное кольцо (L1) и Волна света (L2), wire v23, прицел ground-target |
 | `rules/ability-fx.md` | BARAKI Studio: одно окно VFX+радиус, механика AoE, якоря, палитра |
 | `rules/fog.md` | Fog of War: симуляция, Divine Blessing, миникарта, cull презентации в тумане |
 | `rules/match-network.md` | Старт матча, снапшот-интерполяция, host migration, конец матча |

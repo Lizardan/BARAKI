@@ -36,10 +36,13 @@ namespace Game.Gameplay.Match
         /// <summary>Ice Ring AoE radius — same circle as the caster Frost spell.</summary>
         public const float IceRingRadius = CasterSpellRules.FrostRadius;
 
+        /// <summary>Wave of Light expands from the base to full radius over this many seconds.</summary>
+        public const float WaveOfLightExpandSeconds = 1f;
+
         /// <summary>Ice Ring cast range from base = main→center-barracks distance × this.</summary>
-        public const float IceRingCastRangeFactor = 2f;
+        public const float IceRingCastRangeFactor = 3f;
         /// <summary>Wave of Light effect radius from base = main→center-barracks distance × this.</summary>
-        public const float WaveOfLightRadiusFactor = 5f;
+        public const float WaveOfLightRadiusFactor = 3f;
 
         public static bool IsValidId(int abilityId) =>
             abilityId is IceRingId or WaveOfLightId;
@@ -200,6 +203,7 @@ namespace Game.Gameplay.Match
                 $"Применяется только рядом с базой · Перезарядка {IceRingCooldownSeconds:0}с · {IceRingManaCost:0} маны",
             WaveOfLightId =>
                 $"Волна от базы бьёт всех врагов в радиусе ({WaveOfLightRadiusFactor:0}× до казарм) на {WaveOfLightDamage:0} урона\n" +
+                $"Волна расширяется за {WaveOfLightExpandSeconds:0} с — урон наносится фронтом\n" +
                 $"Перезарядка {WaveOfLightCooldownSeconds:0}с · {WaveOfLightManaCost:0} маны",
             _ => string.Empty,
         };

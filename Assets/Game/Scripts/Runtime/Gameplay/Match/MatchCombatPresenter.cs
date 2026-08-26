@@ -58,6 +58,19 @@ namespace Game.Gameplay.Match
             public float TimeRemaining;
         }
 
+        /// <summary>Playback state of one expanding Wave of Light cast (MAIN-001).</summary>
+        sealed class WaveOfLightFxState
+        {
+            public float StartRealtime;
+            public float MaxRadius;
+            public Vector3 Center;
+            public Transform Ring;
+            public Transform Burst;
+            public Vector3 BurstFinalScale;
+            public bool Finished;
+            public float FinishRealtime;
+        }
+
         [SerializeField] private MatchRuntime _runtime;
         [SerializeField] private UnitVisualCatalog _visualCatalog;
         [SerializeField] private MatchFogOfWar _fogOfWar;
@@ -88,6 +101,10 @@ namespace Game.Gameplay.Match
             new Stack<GameObject>(),
         };
         readonly Dictionary<int, int> _projectilePoolKind = new();
+        readonly List<WaveOfLightFxState> _waveOfLightFxs = new();
+        static Material s_waveOfLightRingMaterial;
+        const float WaveOfLightTailSeconds = 0.5f;
+        static readonly Color WaveOfLightColor = new(1f, 0.84f, 0.28f, 1f);
         Transform _root;
         Transform _projectileRoot;
         static Material s_auraDiscMaterial;
@@ -139,6 +156,7 @@ namespace Game.Gameplay.Match
 
             SyncVisuals(controller, controller.Combat);
             SyncAbilityCasts(controller.Combat);
+            TickWaveOfLightFxs();
             SyncProjectiles(controller.Combat);
             TickDyingVisuals(Time.deltaTime);
         }
@@ -1271,8 +1289,140 @@ namespace Game.Gameplay.Match
 
             foreach (var cast in combat.ConsumePendingAbilityCasts())
             {
+                if (cast.Def != null && cast.Def.AbilityId == AbilityIds.MainWaveOfLight)
+                {
+                    StartWaveOfLightFx(cast);
+                    continue;
+                }
+
                 ShowAbilityFx(cast);
             }
+        }
+
+        /// <summary>
+        /// Wave of Light playback: a yellow ground ring grows from the base to the full
+        /// cast radius over <see cref="BuildingAbilityRules.WaveOfLightExpandSeconds"/>,
+        /// showing the real current front; the frost-style burst scales with it.
+        /// </summary>
+        void StartWaveOfLightFx(AbilityCastEvent cast)
+        {
+            if (!IsPresentationRevealed(cast.CenterPosition))
+            {
+                return;
+            }
+
+            EnsureRoot();
+            var state = new WaveOfLightFxState
+            {
+                StartRealtime = Time.time,
+                MaxRadius = Mathf.Max(1f, cast.Radius),
+                Center = cast.CenterPosition,
+            };
+
+            var ringObject = new GameObject("WaveOfLightRing");
+            ringObject.transform.SetParent(_root, false);
+            var meshFilter = ringObject.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = SelectionRingMeshBuilder.BuildAnnulus(1f, 0.05f);
+            var ringRenderer = ringObject.AddComponent<MeshRenderer>();
+            ringRenderer.sharedMaterial = ResolveWaveOfLightRingMaterial();
+            ringRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            ringRenderer.receiveShadows = false;
+            state.Ring = ringObject.transform;
+            state.Ring.position = new Vector3(
+                state.Center.x,
+                MatchArenaGreyboxBuilder.RoadHeight + 0.03f,
+                state.Center.z);
+
+            var prefab = cast.Def.Fx.VfxPrefab;
+            if (prefab != null)
+            {
+                var burst = Instantiate(prefab, _root);
+                burst.transform.position = new Vector3(
+                    state.Center.x,
+                    MatchArenaGreyboxBuilder.RoadHeight + 0.15f,
+                    state.Center.z);
+                AbilityVfxTint.Apply(
+                    burst,
+                    cast.Def.Fx.Color.a > 0.01f ? cast.Def.Fx.Color : WaveOfLightColor);
+                var baseScale = AbilityVfxPlacement.ResolveOneShotLocalScale(
+                    prefab,
+                    AbilityFx.ResolveScale(cast.Def.Fx.Scale));
+                // Frost's authored size covers IceRingRadius metres — rescale to the wave radius.
+                state.BurstFinalScale =
+                    baseScale * (state.MaxRadius / BuildingAbilityRules.IceRingRadius);
+                state.Burst = burst.transform;
+                state.Burst.localScale = baseScale * 0.05f;
+                // The burst dies together with the ring: 1s expansion + 0.5s tail.
+                Destroy(
+                    burst,
+                    BuildingAbilityRules.WaveOfLightExpandSeconds
+                    + WaveOfLightTailSeconds + 0.05f);
+            }
+
+            _waveOfLightFxs.Add(state);
+        }
+
+        void TickWaveOfLightFxs()
+        {
+            for (var i = _waveOfLightFxs.Count - 1; i >= 0; i--)
+            {
+                var wave = _waveOfLightFxs[i];
+                var progress = Mathf.Clamp01(
+                    (Time.time - wave.StartRealtime) / BuildingAbilityRules.WaveOfLightExpandSeconds);
+
+                if (!wave.Finished)
+                {
+                    var radius = Mathf.Max(0.5f, wave.MaxRadius * progress);
+                    if (wave.Ring != null)
+                    {
+                        wave.Ring.localScale = new Vector3(radius, 1f, radius);
+                    }
+
+                    if (wave.Burst != null)
+                    {
+                        wave.Burst.localScale = Vector3.Lerp(
+                            wave.BurstFinalScale * 0.05f,
+                            wave.BurstFinalScale,
+                            progress);
+                    }
+
+                    if (progress >= 1f)
+                    {
+                        wave.Finished = true;
+                        wave.FinishRealtime = Time.time;
+                    }
+                }
+                else if (Time.time - wave.FinishRealtime >= WaveOfLightTailSeconds)
+                {
+                    if (wave.Ring != null)
+                    {
+                        Destroy(wave.Ring.gameObject);
+                    }
+
+                    _waveOfLightFxs.RemoveAt(i);
+                }
+            }
+        }
+
+        Material ResolveWaveOfLightRingMaterial()
+        {
+            if (s_waveOfLightRingMaterial == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (shader == null)
+                {
+                    return null;
+                }
+
+                s_waveOfLightRingMaterial = new Material(shader);
+                s_waveOfLightRingMaterial.SetColor("_BaseColor", WaveOfLightColor);
+                s_waveOfLightRingMaterial.SetFloat("_Surface", 0f);
+                s_waveOfLightRingMaterial.SetOverrideTag("RenderType", "Opaque");
+                s_waveOfLightRingMaterial.SetInt("_Cull", (int)CullMode.Off);
+                s_waveOfLightRingMaterial.renderQueue = (int)RenderQueue.Geometry + 11;
+            }
+
+            return s_waveOfLightRingMaterial;
         }
 
         void ShowAbilityFx(AbilityCastEvent cast)
