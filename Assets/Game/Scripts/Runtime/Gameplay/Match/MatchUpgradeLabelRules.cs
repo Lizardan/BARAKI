@@ -124,6 +124,43 @@ namespace Game.Gameplay.Match
         public static string FormatStatTrackTooltip(string trackId, int nextLevel, int cost, float seconds) =>
             $"{GetStatTrackTitle(trackId)} — уровень {nextLevel}\n{cost}g · {seconds:0}с\n{GetStatTrackEffect(trackId)}";
 
+        public static string GetTowerTrackTitle(int trackIndex) => trackIndex switch
+        {
+            0 => "Flaming Arrows",
+            1 => "Bulwark",
+            2 => "Bloodrage",
+            3 => "Battering Rams",
+            4 => "Arcane Focus",
+            5 => "Skirmishers",
+            6 => "Forced March",
+            7 => "Field Medics",
+            8 => "Last Stand",
+            _ => "Трек башни",
+        };
+
+        public static string GetTowerTrackEffect(int trackIndex)
+        {
+            return trackIndex switch
+            {
+                0 => "Стрелки и летуны поджигают: 2/4/6 dmg/с за уровень в течение 2 с; выстрелы живых башен тоже горят",
+                1 => "Мили и осада: +1/+2/+3 брони; на ур. 3 блок −20% получаемого урона в ближнем бою",
+                2 => "Мили и летуны: после убийства +15%/+25%/+40% скорости атаки на 3 с",
+                3 => "Осада и супер: +25%/+50%/+75% урона по зданиям; на ур. 3 радиус разлёта +1",
+                4 => "Кастеры: перезарядка умений ×0.88/×0.76/×0.64",
+                5 => "Стрелки и кастеры: +0.5/+1.0/+1.5 дальности атаки",
+                6 => "Мили, осада и кастеры: +8%/+16%/+24% скорости движения",
+                7 => "Все юниты: +1/+2/+3 HP/с регенерации",
+                8 => "Все юниты: при HP < 30% урон +20%/+30%/+40%",
+                _ => string.Empty,
+            };
+        }
+
+        public static string FormatTowerTrackButton(int trackIndex, int nextLevel, int cost) =>
+            $"{GetTowerTrackTitle(trackIndex)}\nУр. {nextLevel}\n{cost}g";
+
+        public static string FormatTowerTrackTooltip(int trackIndex, int nextLevel, int cost, float seconds) =>
+            $"{GetTowerTrackTitle(trackIndex)} — уровень {nextLevel}\n{cost}g · {seconds:0}с\n{GetTowerTrackEffect(trackIndex)}";
+
         public static string FormatQueueSlotShort(string upgradeId, int displayLevel)
         {
             if (upgradeId == GameIds.Upgrades.MainPassiveGold)
@@ -169,6 +206,11 @@ namespace Game.Gameplay.Match
             if (HeroRules.TryParseHireUpgradeId(upgradeId, out var heroSlot))
             {
                 return $"Герой {heroSlot}";
+            }
+
+            if (TowerTrackRules.TryGetTrackIndex(upgradeId, out var towerTrackIndex))
+            {
+                return $"Баш {towerTrackIndex + 1} {displayLevel}";
             }
 
             return "?";

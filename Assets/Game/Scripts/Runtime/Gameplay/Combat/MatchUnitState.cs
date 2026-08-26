@@ -138,6 +138,14 @@ namespace Game.Gameplay.Combat
         /// Used to retarget when that foe is eliminated mid-march.
         /// </summary>
         public int MarchFocusOpponentSlot { get; set; } = -1;
+        /// <summary>Host-only: burn damage per second from Flaming Arrows (0 = not burning).</summary>
+        public float BurnDamagePerSecond { get; set; }
+        /// <summary>Host-only: remaining burn seconds.</summary>
+        public float BurnSecondsRemaining { get; set; }
+        /// <summary>Host-only: owner slot credited for burn kills.</summary>
+        public int BurnSourceOwnerSlot { get; set; }
+        /// <summary>Host-only: remaining Bloodrage seconds (attack speed after a kill).</summary>
+        public float BloodrageRemainingSeconds { get; set; }
         public bool IsAlive => CurrentHp > 0f;
     }
 }

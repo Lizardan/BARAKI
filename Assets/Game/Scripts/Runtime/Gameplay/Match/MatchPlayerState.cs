@@ -1,3 +1,5 @@
+using System;
+
 namespace Game.Gameplay.Match
 {
     public sealed class MatchPlayerState
@@ -33,6 +35,34 @@ namespace Game.Gameplay.Match
         public float MainMana { get; set; }
         public float MainManaMax { get; private set; }
         public float MainExtraAbilityCooldownRemaining { get; set; }
+        /// <summary>Tower upgrade track levels (PRE-007), index = <see cref="TowerTrackRules"/> order.</summary>
+        public int[] TowerTrackLevels { get; private set; } = new int[TowerTrackRules.TrackCount];
+
+        /// <summary>Track level by canonical index, clamped to the max level.</summary>
+        public int GetTowerTrackLevel(int trackIndex) =>
+            TowerTrackRules.GetLevel(TowerTrackLevels, trackIndex);
+
+        /// <summary>Track level by upgrade id, clamped to the max level.</summary>
+        public int GetTowerTrackLevel(string upgradeId) =>
+            TowerTrackRules.GetLevel(TowerTrackLevels, upgradeId);
+
+        public void SetTowerTrackLevels(int[] levels)
+        {
+            if (levels == null || levels.Length == 0)
+            {
+                return;
+            }
+
+            if (TowerTrackLevels == null || TowerTrackLevels.Length != levels.Length)
+            {
+                TowerTrackLevels = new int[levels.Length];
+            }
+
+            for (var i = 0; i < levels.Length; i++)
+            {
+                TowerTrackLevels[i] = Math.Max(0, levels[i]);
+            }
+        }
 
         public void SyncMainManaMax(bool fillToMax = false)
         {

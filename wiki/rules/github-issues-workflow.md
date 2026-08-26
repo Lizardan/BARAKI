@@ -79,9 +79,11 @@ Refs / links           — GDD-файлы, wiki/rules/*, связанные issu
 
 | Часть | Где |
 |-------|-----|
-| Список задач со статусами | расширение **GitHub Pull Requests and Issues** (фильтр `is:open label:todo-task`) |
-| Кнопка запуска | расширение **BARAKI Task Launcher** (`Tooling/CursorTaskLauncher/`, установлено в `~/.cursor/extensions/`) — кнопка ▶ в шапке редактора или `Ctrl+Alt+Shift+T` |
+| Панель задач | иконка ▶ в левой панели Cursor (**BARAKI Задачи**): открытые задачи, клик по строке = подробности; жёлтый спиннер = в процессе; серый кружок = не начата; галочка = сделана; автообновление 30 с + кнопка ⟳ |
+| Сводка проекта | над списком задач: краткая сводка + рекомендация, генерируется через opencode после каждого изменения состава задач (новая/закрыта) |
+| Кнопка запуска | расширение **BARAKI Task Launcher** (`Tooling/CursorTaskLauncher/`) или `Ctrl+Alt+Shift+T`; внутри задачи — кнопка «НАЧАТЬ ВЫПОЛНЕНИЕ В OPENCODE»; правый клик → «Запустить в opencode» |
 | Лаунчер | `Tooling/Start-IssueTask.ps1 -Issue <N>` |
+| Тестовые задачи | #48 (Тест 1) и #49 (Тест 2) — для проверки панели; агент создаёт/удаляет файл и закрывает issue |
 
 Что делает скрипт: тянет issue через `gh` (открыт? не назначен?), собирает промпт
 (заголовок + тело + правила workflow: acceptance → тесты → закрыть issue) и открывает
@@ -91,6 +93,8 @@ Refs / links           — GDD-файлы, wiki/rules/*, связанные issu
 сайдбаре Cursor.
 
 Исходники extension: `Tooling/CursorTaskLauncher/` (`package.json` + `extension.js`,
-без сборки). После правки — скопировать содержимое папки в
-`~/.cursor/extensions/lizardan.baraki-task-launcher-0.0.1/` и перезапустить Cursor
-(`Developer: Reload Window`).
+без сборки). Установка/обновление: `npx @vscode/vsce package --allow-missing-repository`
+в папке исходников, затем
+`cursor --install-extension Tooling/CursorTaskLauncher/baraki-task-launcher-<X>.vsix`
+и полный перезапуск Cursor. Ручное копирование папок в `~/.cursor/extensions/` не
+использовать — расходится с реестром `extensions.json` и расширение отбрасывается.

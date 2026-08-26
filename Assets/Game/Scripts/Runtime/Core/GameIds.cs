@@ -122,10 +122,14 @@ namespace Game.Core
             public const string RangedDamage = "UPG_RANGED_DMG";
             public const string Armor = "UPG_ARMOR";
 
-            public const string TowerHumanSteelTemper = "UPG_TOWER_HUMAN_STEEL_TEMPER";
-            public const string TowerHumanHoldTheLine = "UPG_TOWER_HUMAN_HOLD_THE_LINE";
-            public const string TowerHumanBallistaOverdraw = "UPG_TOWER_HUMAN_BALLISTA_OVERDRAW";
-            public const string TowerHumanArcaneRelay = "UPG_TOWER_HUMAN_ARCANE_RELAY";
+            public const string TowerHumanFlamingArrows = "UPG_TOWER_HUMAN_FLAMING_ARROWS";
+            public const string TowerHumanBulwark = "UPG_TOWER_HUMAN_BULWARK";
+            public const string TowerHumanBloodrage = "UPG_TOWER_HUMAN_BLOODRAGE";
+            public const string TowerHumanBatteringRams = "UPG_TOWER_HUMAN_BATTERING_RAMS";
+            public const string TowerHumanArcaneFocus = "UPG_TOWER_HUMAN_ARCANE_FOCUS";
+            public const string TowerHumanSkirmishers = "UPG_TOWER_HUMAN_SKIRMISHERS";
+            public const string TowerHumanForcedMarch = "UPG_TOWER_HUMAN_FORCED_MARCH";
+            public const string TowerHumanFieldMedics = "UPG_TOWER_HUMAN_FIELD_MEDICS";
             public const string TowerHumanLastStand = "UPG_TOWER_HUMAN_LAST_STAND";
         }
 

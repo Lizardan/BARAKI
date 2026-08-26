@@ -62,6 +62,10 @@ namespace Game.Gameplay.Match
 
         public bool HasSpace(int buildingInstanceId) => GetCount(buildingInstanceId) < MaxQueueLength;
 
+        /// <summary>Queue space against an explicit per-building limit (towers use 1).</summary>
+        public bool HasSpace(int buildingInstanceId, int maxQueueLength) =>
+            GetCount(buildingInstanceId) < maxQueueLength;
+
         public int CountUpgrade(int buildingInstanceId, string upgradeId)
         {
             if (string.IsNullOrEmpty(upgradeId)
@@ -96,6 +100,29 @@ namespace Game.Gameplay.Match
             }
 
             if (queue.Count >= MaxQueueLength)
+            {
+                return false;
+            }
+
+            queue.Add(research);
+            return true;
+        }
+
+        /// <summary>Enqueue against an explicit per-building limit (towers use 1).</summary>
+        public bool TryEnqueue(BuildingResearchState research, int maxQueueLength)
+        {
+            if (research == null || maxQueueLength < 1)
+            {
+                return false;
+            }
+
+            if (!_byBuildingInstanceId.TryGetValue(research.BuildingInstanceId, out var queue))
+            {
+                queue = new List<BuildingResearchState>(MaxQueueLength);
+                _byBuildingInstanceId[research.BuildingInstanceId] = queue;
+            }
+
+            if (queue.Count >= maxQueueLength)
             {
                 return false;
             }

@@ -23,7 +23,10 @@ namespace Game.Gameplay.Match
         static GameObject _boltLvl3Prefab;
         static GameObject _catapultRockPrefab;
 
-        public static GameObject CreateProjectileVisual(CombatProjectileState projectile, Transform parent)
+        public static GameObject CreateProjectileVisual(
+            CombatProjectileState projectile,
+            Transform parent,
+            bool flamingArrows = false)
         {
             GameObject visual;
             if (UsesCatapultRockVisual(projectile))
@@ -37,11 +40,39 @@ namespace Game.Gameplay.Match
             else
             {
                 visual = CreateBolt(projectile, ResolveBoltScale(projectile), ResolveBoltPrefab(projectile));
+                if (flamingArrows)
+                {
+                    AttachFlameTrail(visual);
+                }
             }
 
             visual.transform.SetParent(parent, false);
             DisableProjectileShadows(visual);
             return visual;
+        }
+
+        /// <summary>Flaming Arrows (PRE-007): short fire trail behind burning arrows.</summary>
+        static void AttachFlameTrail(GameObject visual)
+        {
+            var trail = visual.AddComponent<TrailRenderer>();
+            trail.time = 0.18f;
+            trail.startWidth = 0.12f;
+            trail.endWidth = 0f;
+            trail.numCapVertices = 2;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.75f, 0.25f), 0f),
+                    new GradientColorKey(new Color(0.9f, 0.2f, 0.05f), 1f),
+                },
+                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+            if (_fireMaterial == null) _fireMaterial = LoadMaterial("Art/ProjectileFire");
+            if (_fireMaterial != null)
+            {
+                trail.material = _fireMaterial;
+            }
         }
 
         static void DisableProjectileShadows(GameObject visual)

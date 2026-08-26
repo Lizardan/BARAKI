@@ -57,5 +57,30 @@ namespace Game.Tests
                 "Нужен ур. главного здания",
                 MatchUpgradeLabelRules.FormatDivineBlessingTooltip(1000, 45f, mainLevel: 2));
         }
+
+        [Test]
+        public void TowerTracks_HaveUniqueTitlesAndRussianEffects()
+        {
+            var titles = new System.Collections.Generic.HashSet<string>();
+            for (var i = 0; i < TowerTrackRules.TrackCount; i++)
+            {
+                Assert.IsTrue(titles.Add(MatchUpgradeLabelRules.GetTowerTrackTitle(i)));
+                Assert.IsNotEmpty(MatchUpgradeLabelRules.GetTowerTrackEffect(i));
+            }
+        }
+
+        [Test]
+        public void FormatTowerTrackButton_ShowsLevelAndCost()
+        {
+            Assert.AreEqual(
+                "Flaming Arrows\nУр. 2\n800g",
+                MatchUpgradeLabelRules.FormatTowerTrackButton(0, 2, 800));
+            StringAssert.Contains(
+                "поджигают",
+                MatchUpgradeLabelRules.FormatTowerTrackTooltip(0, 1, 500, 45f));
+            StringAssert.Contains(
+                "500g · 45с",
+                MatchUpgradeLabelRules.FormatTowerTrackTooltip(0, 1, 500, 45f));
+        }
     }
 }

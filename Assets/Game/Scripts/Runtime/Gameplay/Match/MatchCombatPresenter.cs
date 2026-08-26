@@ -85,6 +85,7 @@ namespace Game.Gameplay.Match
             new Stack<GameObject>(),
             new Stack<GameObject>(),
             new Stack<GameObject>(),
+            new Stack<GameObject>(),
         };
         readonly Dictionary<int, int> _projectilePoolKind = new();
         Transform _root;
@@ -1133,7 +1134,8 @@ namespace Game.Gameplay.Match
 
         GameObject RentProjectileVisual(CombatProjectileState projectile)
         {
-            var kind = ResolveProjectilePoolKind(projectile);
+            var flaming = IsFlamingArrowsShot(projectile);
+            var kind = ResolveProjectilePoolKind(projectile, flaming);
             var pool = _projectilePools[kind];
             while (pool.Count > 0)
             {
@@ -1149,9 +1151,38 @@ namespace Game.Gameplay.Match
                 return recycled;
             }
 
-            var created = CombatAttackVisualBuilder.CreateProjectileVisual(projectile, _projectileRoot);
+            var created = CombatAttackVisualBuilder.CreateProjectileVisual(
+                projectile,
+                _projectileRoot,
+                flamingArrows: flaming);
             _projectilePoolKind[projectile.ProjectileId] = kind;
             return created;
+        }
+
+        /// <summary>Flaming Arrows (PRE-007): ranged/flying shots and living tower shots burn.</summary>
+        bool IsFlamingArrowsShot(CombatProjectileState projectile)
+        {
+            if (projectile.IsBuildingAttack)
+            {
+                if (!BuildingRules.IsTower(projectile.SourceBuildingId))
+                {
+                    return false;
+                }
+            }
+            else if (!TowerTrackRules.RoleMatches(0, projectile.AttackerRole))
+            {
+                return false;
+            }
+
+            var players = _runtime?.Controller?.Players;
+            if (players == null
+                || projectile.AttackerOwnerSlot < 0
+                || projectile.AttackerOwnerSlot >= players.Count)
+            {
+                return false;
+            }
+
+            return players[projectile.AttackerOwnerSlot].GetTowerTrackLevel(0) > 0;
         }
 
         void RecycleProjectileVisual(int projectileId, Transform visual)
@@ -1176,7 +1207,7 @@ namespace Game.Gameplay.Match
             _projectilePools[kind].Push(visual.gameObject);
         }
 
-        static int ResolveProjectilePoolKind(CombatProjectileState projectile)
+        static int ResolveProjectilePoolKind(CombatProjectileState projectile, bool flamingArrows = false)
         {
             if (projectile.AppliesSplashAoe
                 && projectile.AttackerRole == UnitRole.Super
@@ -1190,7 +1221,7 @@ namespace Game.Gameplay.Match
                 return 1;
             }
 
-            return 0;
+            return flamingArrows ? 3 : 0;
         }
 
         static void ResetProjectileTrails(GameObject visual)

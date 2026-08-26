@@ -233,7 +233,9 @@ note: PRE-007
 
 | Race | 9 tracks (L1→L3) |
 |------|-------------------|
-| Human | **TBD** (PRE-007); scrap Steel Temper … Last Stand |
+| Human | **Flaming Arrows** (Ranged+Flying+башни: поджог 2/4/6 dmg/с · 2 с) · **Bulwark** (Melee+Siege: +1/2/3 брони; L3 −20% melee-урона получаемого) · **Bloodrage** (Melee+Flying: после убийства +15/25/40% AS на 3 с) · **Battering Rams** (Siege+Super: +25/50/75% урона по зданиям; L3 +1 splash) · **Arcane Focus** (Caster: CD ×0.88/×0.76/×0.64) · **Skirmishers** (Ranged+Caster: +0.5/1.0/1.5 дальность) · **Forced March** (Melee+Siege+Caster: +8/16/24% скорость) · **Field Medics** (все юниты: +1/2/3 HP/с) · **Last Stand** (все юниты: при HP<30% +20/30/40% урона) — PRE-007 done |
+
+Исключение из `units_only` (решение пользователя 2026-08-26): Flaming Arrows распространяется и на выстрелы живых `BUILDING_TOWER` владельца. Детали — `Races.md` § Tower upgrades.
 
 ## UI
 
@@ -263,6 +265,6 @@ note: PRE-007
 - [x] Gold/time за **magic** upgrades (main) — **500 / 750 / 1000g**
 - [x] Gold/time и эффект **stat** upgrades
 - [x] Gold/time **passive gold** и **main/barracks** research
-- [ ] Список **9** Human tower tracks + эффекты (PRE-007)
+- [x] Список **9** Human tower tracks + эффекты (PRE-007, 2026-08-26)
 - [x] Gold/time **Divine Blessing** — **1000g / 45s**
 - [x] Боевые эффекты **main extra abilities** после blessing (**PRE-005**: Кара зданий / Кара юнитов)

@@ -1,4 +1,4 @@
-# Snapshot wire v21 (секционный формат) и контракт презентации
+# Snapshot wire v22 (секционный формат) и контракт презентации
 
 Связанные правила: `match-network.md` (старт матча, интерполяция, миграция),
 `abilities.md` (SpellCasts), `human-unit-bonuses.md` (BonusSlot/ауры).
@@ -12,14 +12,15 @@
 skip-by-length) и **устойчивость к рассинхрону** (handshake версии в лобби +
 толерантный декодер).
 
-## Wire-формат v21
+## Wire-формат v22
 
 Кодек: `Assets/Game/Scripts/Runtime/Gameplay/Networking/MatchSnapshot.cs`
-(`MatchSnapshotCodec`, `MatchSnapshotWireContext`), `CurrentVersion = 21`.
+(`MatchSnapshotCodec`, `MatchSnapshotWireContext`), `CurrentVersion = 22`
+(v22: уровни tower-треков в Players-секции — см. `tower-tracks.md`).
 Легаси-читатели ≤v20 **удалены** — смешанные билды закрываются handshake'ом (ниже).
 
 ```
-[int32 version = 21]
+[int32 version = 22]
 Header: [int playerCount][int phase][float matchTime][int winnerSlot]
         [float bonusPickDeadline][bool rosterReset]
 Секции (каждая): [uint16 sectionId][int32 payloadLength][payload...]

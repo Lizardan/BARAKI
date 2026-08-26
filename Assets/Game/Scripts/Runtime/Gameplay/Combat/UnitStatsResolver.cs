@@ -20,7 +20,8 @@ namespace Game.Gameplay.Combat
             int bonusSlot = 0)
         {
             var stats = ResolveBase(catalog, visualCatalog, raceId, role, heroSlot, bonusSlot);
-            return RaceUpgradeStatsRules.Apply(stats, player);
+            stats = RaceUpgradeStatsRules.Apply(stats, player);
+            return TowerTrackUnitRules.Apply(stats, player);
         }
 
         /// <summary>

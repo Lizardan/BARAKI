@@ -382,7 +382,9 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
-            if (!_research.HasSpace(buildingInstanceId))
+            if (!_research.HasSpace(
+                    buildingInstanceId,
+                    GetResearchQueueLimit(building.BuildingId)))
             {
                 return false;
             }
@@ -424,7 +426,58 @@ namespace Game.Gameplay.Match
                 return TryStartHeroHireResearch(player, building, heroSlot);
             }
 
+            if (TowerTrackRules.IsTowerTrack(upgradeId))
+            {
+                return TryStartTowerTrackResearch(player, building, upgradeId);
+            }
+
             return false;
+        }
+
+        /// <summary>Towers hold a single research job; other buildings keep the shared limit.</summary>
+        public int GetResearchQueueLimit(string buildingId) =>
+            BuildingRules.IsTower(buildingId) ? 1 : MatchResearchQueue.MaxQueueLength;
+
+        bool TryStartTowerTrackResearch(MatchPlayerState player, BuildingState building, string trackId)
+        {
+            if (!BuildingRules.IsTower(building.BuildingId))
+            {
+                return false;
+            }
+
+            var currentLevel = player.GetTowerTrackLevel(trackId);
+            var queued = _research.CountUpgrade(building.InstanceId, trackId);
+            var projectedLevel = currentLevel + queued;
+            if (!MatchEconomyRules.CanPurchaseTowerTrack(projectedLevel)
+                || !MatchEconomyRules.TryGetTowerTrackUpgrade(
+                    trackId,
+                    projectedLevel,
+                    out var cost,
+                    out var duration))
+            {
+                return false;
+            }
+
+            if (!MatchEconomyRules.TrySpendGold(player.Gold, cost, out var remaining))
+            {
+                return false;
+            }
+
+            var research = new BuildingResearchState(
+                building.InstanceId,
+                player.SlotIndex,
+                building.BuildingId,
+                trackId,
+                cost,
+                duration);
+
+            if (!_research.TryEnqueue(research, GetResearchQueueLimit(building.BuildingId)))
+            {
+                return false;
+            }
+
+            player.Gold = remaining;
+            return true;
         }
 
         public bool TryGetResearchQueue(
@@ -459,6 +512,7 @@ namespace Game.Gameplay.Match
                 _players[p.Slot].MeleeDamageLevel = Math.Max(0, p.MeleeDamageLevel);
                 _players[p.Slot].RangedDamageLevel = Math.Max(0, p.RangedDamageLevel);
                 _players[p.Slot].HpArmorLevel = Math.Max(0, p.HpArmorLevel);
+                _players[p.Slot].SetTowerTrackLevels(p.TowerTrackLevels);
                 _players[p.Slot].DivineBlessingComplete = p.DivineBlessingComplete;
                 _players[p.Slot].MainExtraAbilityId = MainExtraAbilityRules.IsValidId(p.MainExtraAbilityId)
                     ? p.MainExtraAbilityId
@@ -1471,6 +1525,20 @@ namespace Game.Gameplay.Match
                 player.PassiveGoldLevel = Math.Min(
                     MatchEconomyRules.MaxPassiveGoldLevel,
                     player.PassiveGoldLevel + 1);
+                return;
+            }
+
+            if (TowerTrackRules.TryGetTrackIndex(research.UpgradeId, out var towerTrackIndex))
+            {
+                if (research.OwnerSlot < 0 || research.OwnerSlot >= _players.Count)
+                {
+                    return;
+                }
+
+                var player = _players[research.OwnerSlot];
+                player.TowerTrackLevels[towerTrackIndex] = Math.Min(
+                    MatchEconomyRules.MaxTowerTrackLevel,
+                    player.TowerTrackLevels[towerTrackIndex] + 1);
                 return;
             }
 

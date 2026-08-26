@@ -532,8 +532,62 @@ namespace Game.UI.Controllers
 
             if (MatchInspectorFormatting.IsTowerBuilding(building.BuildingId))
             {
-                SetCommand(0, "Апгрейд", enabled: false, null, "Расовые апгрейды башни (скоро).");
+                PopulateTowerTrackCommands(controller, player, building);
+                return;
             }
+        }
+
+        void PopulateTowerTrackCommands(
+            MatchController controller,
+            MatchPlayerState player,
+            BuildingState building)
+        {
+            var queueLimit = controller != null
+                ? controller.GetResearchQueueLimit(building.BuildingId)
+                : 1;
+            var queueFull = controller != null
+                && controller.Research.GetCount(building.InstanceId) >= queueLimit;
+
+            for (var trackIndex = 0; trackIndex < TowerTrackRules.TrackCount; trackIndex++)
+            {
+                PopulateTowerTrackCommand(controller, player, building, queueFull, trackIndex);
+            }
+        }
+
+        void PopulateTowerTrackCommand(
+            MatchController controller,
+            MatchPlayerState player,
+            BuildingState building,
+            bool queueFull,
+            int trackIndex)
+        {
+            const int uiSlotOffset = 3;
+            var trackId = TowerTrackRules.TrackIds[trackIndex];
+            var currentLevel = player?.GetTowerTrackLevel(trackIndex) ?? 0;
+            var queued = controller?.Research.CountUpgrade(building.InstanceId, trackId) ?? 0;
+            var nextLevel = MatchUpgradeLabelRules.GetNextLevel(currentLevel, queued);
+            var cost = 0;
+            var duration = 0f;
+            var hasStep = player != null
+                && MatchEconomyRules.TryGetTowerTrackUpgrade(
+                    trackId,
+                    currentLevel + queued,
+                    out cost,
+                    out duration);
+            var canBuy = hasStep
+                && !queueFull
+                && player != null
+                && player.Gold >= cost;
+            SetCommand(
+                uiSlotOffset + trackIndex,
+                hasStep
+                    ? MatchUpgradeLabelRules.FormatTowerTrackButton(trackIndex, nextLevel, cost)
+                    : $"Макс. {MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex)}",
+                canBuy,
+                () => StartResearch(trackId),
+                hasStep
+                    ? MatchUpgradeLabelRules.FormatTowerTrackTooltip(trackIndex, nextLevel, cost, duration)
+                    : $"{MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex)} — максимальный уровень");
         }
 
         void PopulateStatTrackCommand(

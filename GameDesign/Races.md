@@ -48,7 +48,7 @@ ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
 costs_gold: [500, 800, 1200]       # per track level L1, L2, L3
 research_time_sec: [45, 90, 135]
 mvp: false
-note: PRE-007; Human kit TBD
+note: PRE-007 done; Human kit = FLAMING_ARROWS…LAST_STAND (см. ниже). Исключение: UPG_TOWER_HUMAN_FLAMING_ARROWS распространяется и на выстрелы живых башен владельца (решение пользователя 2026-08-26)
 ```
 
 ```entity
@@ -180,6 +180,8 @@ mvp: true
 
 **Цели эффектов:** только **юниты** (роли melee/ranged/caster/siege/flying/super). **Не** герои, **не** титан, **не** урон/статы самих башен. Типы: (а) пассив на тип(ы) юнитов; (б) доп. умение юниту (пример: siege даёт бафф союзникам). Сила растёт по L1–L3.
 
+**Исключение (Люди):** `UPG_TOWER_HUMAN_FLAMING_ARROWS` действует и на выстрелы живых `BUILDING_TOWER` владельца — горящие стрелы + поджог цели.
+
 **UI (12 command slots):** слоты **1–3** пустые (заглушку «Апгрейд» на слоте 1 убрать); **9** треков на **слотах 4–12** (1-based = `CommandSlot3`…`CommandSlot11`).
 
 **Стоимость / время** (одинаково для всех треков и рас, за каждый level):
@@ -207,7 +209,7 @@ ui_command_slots: [4, 5, 6, 7, 8, 9, 10, 11, 12]   # 1-based; slots 1–3 empty
 costs_gold: [500, 800, 1200]
 research_time_sec: [45, 90, 135]
 mvp: false
-note: PRE-007; Human kit TBD (9 new tracks)
+note: PRE-007 done; Human kit — см. «Люди — 9 треков»
 ```
 
 ```entity
@@ -218,11 +220,25 @@ scope: all_race_tower_tracks
 mvp: true
 ```
 
-### Люди — 9 способностей (TBD)
+### Люди — 9 треков (PRE-007)
 
-Список **Open / PRE-007**. Старые ID `UPG_TOWER_HUMAN_STEEL_TEMPER` … `LAST_STAND` **удалены из канона** (runtime `GameIds` — снять при PRE-007).
+Имена — английские, описания — русские. Все эффекты **только на юниты** (не герои, не титан); исключение — Flaming Arrows (см. выше). Стакается с бонусами PRE-006.
 
-> **4 башни** — до **4 параллельных** исследований (разные треки). **9** треков → выбор, что качать за матч.
+| # | Track id | Имя | Роли | L1 / L2 / L3 |
+|---|----------|-----|------|--------------|
+| 1 | `UPG_TOWER_HUMAN_FLAMING_ARROWS` | Flaming Arrows | Ranged + Flying + башни | Стрелы поджигают: 2/4/6 dmg/с горения в течение 2 с; снаряды этих ролей и башен получают огненный визуал |
+| 2 | `UPG_TOWER_HUMAN_BULWARK` | Bulwark | Melee + Siege | +1/+2/+3 брони; на L3 ещё блок: −20% урона в ближнем бою |
+| 3 | `UPG_TOWER_HUMAN_BLOODRAGE` | Bloodrage | Melee + Flying | После убийства +15%/+25%/+40% скорости атаки на 3 с |
+| 4 | `UPG_TOWER_HUMAN_BATTERING_RAMS` | Battering Rams | Siege + Super | +25%/+50%/+75% урона по зданиям; на L3 ещё +1 радиус splash |
+| 5 | `UPG_TOWER_HUMAN_ARCANE_FOCUS` | Arcane Focus | Caster | Кулдауны умений кастера ×0.88/×0.76/×0.64 |
+| 6 | `UPG_TOWER_HUMAN_SKIRMISHERS` | Skirmishers | Ranged + Caster | +0.5/+1.0/+1.5 дальности атаки |
+| 7 | `UPG_TOWER_HUMAN_FORCED_MARCH` | Forced March | Melee + Siege + Caster | +8%/+16%/+24% скорости движения |
+| 8 | `UPG_TOWER_HUMAN_FIELD_MEDICS` | Field Medics | все юниты | +1/+2/+3 HP/с регенерации |
+| 9 | `UPG_TOWER_HUMAN_LAST_STAND` | Last Stand | все юниты | При HP < 30%: +20%/+30%/+40% урона |
+
+Авоспособности без маны: поджог (#1, on-hit), Bloodrage (#3, по условию «убийство»), Last Stand (#9, по условию «мало HP»), Bulwark L3 (блок).
+
+> **4 башни** — до **4 параллельных** исследований (разные треки; очередь 1 на башню). **9** треков → выбор, что качать за матч.
 
 ## Roster — старт (1 раса)
 
@@ -247,7 +263,16 @@ heroes: [HERO_HUMAN_1, HERO_HUMAN_2, HERO_HUMAN_3]
 bonus_slots: 12               # BONUS_SLOT_*; 2 unique TBD per race
 buildings: BUILDING_SET_HUMAN
 upgrades: UPGRADE_TREE_HUMAN
-tower_tracks: []                  # 9 TBD — PRE-007; scrap STEEL_TEMPER…LAST_STAND
+tower_tracks:                     # PRE-007; порядок = слоты 4–12 UI башни
+  - UPG_TOWER_HUMAN_FLAMING_ARROWS    # Ranged+Flying+башни: поджог on-hit
+  - UPG_TOWER_HUMAN_BULWARK           # Melee+Siege: броня; L3 блок melee
+  - UPG_TOWER_HUMAN_BLOODRAGE         # Melee+Flying: +AS после убийства
+  - UPG_TOWER_HUMAN_BATTERING_RAMS    # Siege+Super: урон по зданиям; L3 splash+
+  - UPG_TOWER_HUMAN_ARCANE_FOCUS      # Caster: кулдауны ×0.88/0.76/0.64
+  - UPG_TOWER_HUMAN_SKIRMISHERS       # Ranged+Caster: дальность атаки
+  - UPG_TOWER_HUMAN_FORCED_MARCH      # Melee+Siege+Caster: скорость движения
+  - UPG_TOWER_HUMAN_FIELD_MEDICS      # все юниты: HP/с регенерация
+  - UPG_TOWER_HUMAN_LAST_STAND        # все юниты: урон при HP<30%
 magic_spells: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
 ```
 
@@ -311,7 +336,7 @@ mvp: true
 
 - [x] Passives Human (+2/−1)
 - [x] Magic spells Human (×3)
-- [ ] Tower tracks Human (**×9**, L1–3) — invent + implement = **PRE-007**; старые ×5 scrap
+- [x] Tower tracks Human (**×9**, L1–3) — invent + implement = **PRE-007** (2026-08-26); старые ×5 scrap удалены
 - [x] Gold/time за **tower** upgrades — **500/800/1200g**, **45/90/135s**
 - [x] Gold/time за **magic** upgrades — **500/750/1000g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)

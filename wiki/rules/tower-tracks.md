@@ -1,0 +1,69 @@
+# Tower upgrade tracks (PRE-007)
+
+Расовые апгрейды башен: 9 треков × L1–L3, исследование в **живой** `BUILDING_TOWER`.
+Связанные правила: `snapshot-wire.md` (v22), `human-unit-bonuses.md` (прецедент стака).
+
+## Канон
+
+- Источник истины: `GameDesign/Races.md` § Tower upgrades (`RACE_TOWER_UPGRADES`,
+  `UPG_TOWER_TRACK_RULES`, список треков + таблица эффектов), `GameDesign/Upgrades.md`
+  (`UPG_TOWER_RACE`). Экономика: **500/800/1200g**, **45/90/135s**.
+- Эффекты — только на обычные юниты (не Hero1–3, не Titan, не DPS башен).
+  **Исключение:** `UPG_TOWER_HUMAN_FLAMING_ARROWS` действует и на выстрелы живых
+  башен владельца (решение пользователя 2026-08-26).
+- Гейты: башня жива (`IsIntact` — общий гейт `MatchController.TryStartResearch`),
+  последовательные уровни (projected = current + queued), кап 3.
+- Очередь **1 на башню** (`MatchController.GetResearchQueueLimit`: tower = 1,
+  остальные = `MatchResearchQueue.MaxQueueLength`); 4 башни = до 4 разных треков параллельно.
+- Старые id `UPG_TOWER_HUMAN_STEEL_TEMPER … HOLD_THE_LINE/BALLISTA_OVERDRAW/ARCANE_RELAY`
+  удалены из канона и из `GameIds` (не возвращать).
+
+## 9 треков Людей (порядок = UI слоты 4–12)
+
+| # | Id | Роли | Эффект |
+|---|----|------|--------|
+| 1 | `UPG_TOWER_HUMAN_FLAMING_ARROWS` | Ranged+Flying+башни | поджог on-hit 2/4/6 dmg/с · 2 с; огненный трейл снарядов |
+| 2 | `_BULWARK` | Melee+Siege | +1/2/3 брони (спавн-статы); L3 блок −20% melee-урона получаемого |
+| 3 | `_BLOODRAGE` | Melee+Flying | после убийства +15/25/40% AS на 3 с |
+| 4 | `_BATTERING_RAMS` | Siege+Super | +25/50/75% урона по зданиям; L3 +1 радиус splash катапульты |
+| 5 | `_ARCANE_FOCUS` | Caster | кулдауны умений ×0.88/×0.76/×0.64 |
+| 6 | `_SKIRMISHERS` | Ranged+Caster | +0.5/1.0/1.5 дальность атаки |
+| 7 | `_FORCED_MARCH` | Melee+Siege+Caster | +8/16/24% скорость движения |
+| 8 | `_FIELD_MEDICS` | все юниты | +1/2/3 HP/с регенерации |
+| 9 | `_LAST_STAND` | все юниты | при HP < 30% урон +20/30/40% |
+
+## Карта кода
+
+| Файл | Роль |
+|------|------|
+| `Gameplay/Match/TowerTrackRules.cs` | ids/порядок, роли, тюнинг эффектов, уровни игрока |
+| `MatchEconomyRules.cs` | `MaxTowerTrackLevel`, `TowerTrackCosts/DurationsSeconds`, `TryGetTowerTrackUpgrade` |
+| `MatchPlayerState.cs` | `TowerTrackLevels[]`, `Get/SetTowerTrackLevels` |
+| `MatchController.cs` | tower-ветка `TryStartResearch` / `ApplyCompletedResearch`, `GetResearchQueueLimit`, apply снапшота |
+| `MatchResearchQueue.cs` | перегрузки `HasSpace/TryEnqueue` с per-building лимитом |
+| `Combat/TowerTrackUnitRules.cs` | спавн-статы (броня/дальность/скорость), фильтр Hero/Titan; хук в `UnitStatsResolver.Resolve` |
+| `Combat/MatchCombatSystem.cs` | burn/bloodrage/last stand/battering/arcane focus/medics (хост-сим) |
+| `Networking/MatchSnapshot.cs` | v22: 9 байт уровней в Players-секции |
+| `UI/Runtime/Controllers/MatchInspectorController.cs` | слоты 4–12 (`PopulateTowerTrackCommands`), stub «Апгрейд» удалён |
+
+## Хостово-клиентский расклад
+
+- Уровни треков едут в **Players-секции v22** (9 байт) → клиентские визуалы и UI
+  читают их из локального `MatchPlayerState`. Активные исследования едут как раньше
+  (Research-секция; новые id интернятся StringTable бесплатно).
+- Burn/Bloodrage таймеры — host-only поля `MatchUnitState` (в wire не едут):
+  HP падает через обычный damage-путь, клиенты видят результат по снапшотам.
+- Огненный визуал: `MatchCombatPresenter.IsFlamingArrowsShot` по уровню трека +
+  роли/башне-источнику; пул снарядов получил kind 3 (flaming bolt).
+
+## Тесты
+
+`TowerTrackRulesTests`, `TowerTrackResearchTests`, `TowerTrackCombatTests`,
+`TowerTrackSnapshotTests` (+ кейсы в `MatchUpgradeLabelRulesTests`).
+После правок: `run_tests` EditMode green.
+
+## Как добавить трек новой расе
+
+Расширить `TowerTrackRules.TrackIds`/`RoleMatches` нельзя без рефакторинга индексов —
+новая раса получает собственную таблицу правил рядом (прецедент: `HumanBonusUnitRules`)
+и свой набор id `UPG_TOWER_<RACE>_*`; Player-секция wire расширится по тому же паттерну.

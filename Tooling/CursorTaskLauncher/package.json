@@ -1,8 +1,8 @@
 {
   "name": "baraki-task-launcher",
   "displayName": "BARAKI Task Launcher",
-  "description": "Запуск задач из GitHub Issues в новой сессии opencode (Start-IssueTask.ps1)",
-  "version": "0.0.1",
+  "description": "Задачи BARAKI в сайдбаре: клик по issue запускает opencode; выполненные уходят в закрытые",
+  "version": "0.0.19",
   "publisher": "lizardan",
   "private": true,
   "engines": {
@@ -14,6 +14,23 @@
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "baraki-tasks",
+          "title": "BARAKI Задачи",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "baraki-tasks": [
+        {
+          "id": "barakiTasks.taskList",
+          "name": "Задачи"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "barakiTaskLauncher.launchIssue",
@@ -21,8 +38,34 @@
         "icon": "$(play-circle)"
       },
       {
-        "command": "barakiTaskLauncher.launchIssueFromInput",
-        "title": "BARAKI: Запустить issue по номеру в opencode"
+        "command": "barakiTaskLauncher.refresh",
+        "title": "Обновить список задач",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "barakiTaskLauncher.startTask",
+        "title": "Запустить выбранную задачу в opencode",
+        "icon": "$(play)"
+      },
+      {
+        "command": "barakiTaskLauncher.doneTask",
+        "title": "Пометить выбранную задачу выполненной",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "barakiTaskLauncher.closeTask",
+        "title": "Закрыть выбранный issue",
+        "icon": "$(close)"
+      },
+      {
+        "command": "barakiTaskLauncher.resetTask",
+        "title": "Сбросить выполнение (вернуть в «не начата»)",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "barakiTaskLauncher.refreshSummary",
+        "title": "Анализ проекта и выбор следующей задачи",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -30,6 +73,40 @@
         {
           "command": "barakiTaskLauncher.launchIssue",
           "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "barakiTaskLauncher.refresh",
+          "when": "view == barakiTasks.taskList",
+          "group": "navigation@1"
+        },
+        {
+          "command": "barakiTaskLauncher.refreshSummary",
+          "when": "view == barakiTasks.taskList",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "barakiTaskLauncher.startTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready|interrupted):/",
+          "group": "inline@1"
+        },
+        {
+          "command": "barakiTaskLauncher.doneTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:(ready|running|interrupted):/",
+          "group": "inline@2"
+        },
+        {
+          "command": "barakiTaskLauncher.closeTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:/",
+          "group": "inline@3"
+        },
+        {
+          "command": "barakiTaskLauncher.resetTask",
+          "when": "view == barakiTasks.taskList && viewItem =~ /^issue:interrupted:/",
+          "group": "inline@4"
         }
       ]
     },
@@ -50,7 +127,13 @@
         "barakiTaskLauncher.label": {
           "type": "string",
           "default": "todo-task",
-          "description": "Метка задач, попадающих в пикер (пусто = все открытые)."
+          "description": "Метка задач, попадающих в панель (пусто = все открытые)."
+        },
+        "barakiTaskLauncher.autoRefreshSeconds": {
+          "type": "number",
+          "default": 30,
+          "minimum": 10,
+          "description": "Период автообновления списка в секундах (0 = только вручную)."
         }
       }
     }

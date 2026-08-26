@@ -1213,11 +1213,66 @@ namespace Game.Gameplay.Combat
                 }
 
                 TickUnit(unit, deltaTime);
+                TickTowerTrackStatus(unit, deltaTime);
             }
 
             TickHealZones(deltaTime);
             TickAuraRegen(deltaTime);
+            TickFieldMedicsRegen(deltaTime);
             ClampUnitsToEffectiveMaxHp();
+        }
+
+        /// <summary>Per-unit tower-track timers: burn damage and Bloodrage decay (PRE-007).</summary>
+        void TickTowerTrackStatus(MatchUnitState unit, float deltaTime)
+        {
+            if (unit.BloodrageRemainingSeconds > 0f)
+            {
+                unit.BloodrageRemainingSeconds = Mathf.Max(0f, unit.BloodrageRemainingSeconds - deltaTime);
+            }
+
+            if (unit.BurnSecondsRemaining <= 0f || unit.BurnDamagePerSecond <= 0f || !unit.IsAlive)
+            {
+                return;
+            }
+
+            unit.BurnSecondsRemaining -= deltaTime;
+            var burnDamage = unit.BurnDamagePerSecond * deltaTime;
+            if (unit.BurnSecondsRemaining <= 0f)
+            {
+                unit.BurnSecondsRemaining = 0f;
+                unit.BurnDamagePerSecond = 0f;
+            }
+
+            ApplyDamage(null, unit, burnDamage, unit.BurnSourceOwnerSlot);
+        }
+
+        /// <summary>Field Medics (tower track 8): flat HP regeneration for regular units.</summary>
+        void TickFieldMedicsRegen(float deltaTime)
+        {
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (unit == null || !unit.IsAlive || unit.IsChampion)
+                {
+                    continue;
+                }
+
+                var level = GetTowerTrackLevel(unit.OwnerSlot, 7);
+                if (level <= 0)
+                {
+                    continue;
+                }
+
+                var maxHp = GetEffectiveMaxHp(unit);
+                if (unit.CurrentHp >= maxHp)
+                {
+                    continue;
+                }
+
+                unit.CurrentHp = Mathf.Min(
+                    maxHp,
+                    unit.CurrentHp + TowerTrackRules.RegenHpPerSecondPerLevel * level * deltaTime);
+            }
         }
 
         void TickProjectiles(float deltaTime)
@@ -2379,17 +2434,18 @@ namespace Game.Gameplay.Combat
             {
                 _buildings?.TryApplyDamage(
                     projectile.TargetBuildingInstanceId.Value,
-                    projectile.RawDamage,
+                    GetVsBuildingDamage(projectile.AttackerOwnerSlot, projectile.AttackerRole, projectile.RawDamage),
                     projectile.AttackerOwnerSlot);
 
                 if (projectile.AppliesSplashAoe)
                 {
                     var attackerVsBuilding = GetUnitById(projectile.AttackerUnitId);
+                    var splashRadius = GetSplashRadius(projectile.AttackerOwnerSlot, projectile.AttackerRole);
                     ApplySplashDamage(
                         attackerVsBuilding,
                         projectile.TargetPosition,
                         projectile.RawDamage * HumanBonusUnitRules.CatapultAoeDamagePercent,
-                        HumanBonusUnitRules.CatapultAoeRadius,
+                        splashRadius,
                         projectile.AttackerOwnerSlot,
                         excludeUnitId: -1);
                     EmitTraitFx(
@@ -2397,7 +2453,7 @@ namespace Game.Gameplay.Combat
                         AbilityIds.SuperCatapult,
                         projectile.TargetPosition,
                         targetUnitId: 0,
-                        HumanBonusUnitRules.CatapultAoeRadius);
+                        splashRadius);
                 }
 
                 return;
@@ -2418,6 +2474,7 @@ namespace Game.Gameplay.Combat
             if (target != null && target.IsAlive)
             {
                 ApplyDamage(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
+                TryApplyFlamingArrowsBurn(projectile, target);
             }
 
             if (rangedCrit)
@@ -2435,7 +2492,7 @@ namespace Game.Gameplay.Combat
                     attacker,
                     projectile.TargetPosition,
                     rawDamage * HumanBonusUnitRules.CatapultAoeDamagePercent,
-                    HumanBonusUnitRules.CatapultAoeRadius,
+                    GetSplashRadius(projectile.AttackerOwnerSlot, projectile.AttackerRole),
                     projectile.AttackerOwnerSlot,
                     excludeUnitId: projectile.TargetUnitId);
                 EmitTraitFx(
@@ -2447,15 +2504,47 @@ namespace Game.Gameplay.Combat
             }
         }
 
+        /// <summary>
+        /// Flaming Arrows (tower track 1): ranged/flying unit shots and living tower shots
+        /// ignite the target on impact.
+        /// </summary>
+        void TryApplyFlamingArrowsBurn(CombatProjectileState projectile, MatchUnitState target)
+        {
+            var isTowerShot = projectile.IsBuildingAttack
+                && BuildingRules.IsTower(projectile.SourceBuildingId);
+            if (!isTowerShot && !TowerTrackRules.RoleMatches(0, projectile.AttackerRole))
+            {
+                return;
+            }
+
+            if (projectile.AttackerOwnerSlot == target.OwnerSlot)
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(projectile.AttackerOwnerSlot, 0);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            target.BurnSourceOwnerSlot = projectile.AttackerOwnerSlot;
+            target.BurnDamagePerSecond = level * TowerTrackRules.BurnDamagePerSecondPerLevel;
+            target.BurnSecondsRemaining = TowerTrackRules.BurnDurationSeconds;
+        }
+
         public void ResolveMeleeImpact(CombatMeleeStrikeState strike)
         {
             var attacker = GetUnitById(strike.AttackerUnitId);
             if (strike.TargetBuildingInstanceId.HasValue)
             {
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
+                var buildingDamage = attacker != null
+                    ? GetVsBuildingDamage(killerSlot, attacker.Role, strike.RawDamage)
+                    : strike.RawDamage;
                 _buildings?.TryApplyDamage(
                     strike.TargetBuildingInstanceId.Value,
-                    strike.RawDamage,
+                    buildingDamage,
                     killerSlot);
                 return;
             }
@@ -2464,7 +2553,7 @@ namespace Game.Gameplay.Combat
             if (target != null && target.IsAlive)
             {
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
-                ApplyDamage(attacker, target, strike.RawDamage, killerSlot);
+                ApplyDamage(attacker, target, ApplyBulwarkBlock(target, strike.RawDamage), killerSlot);
 
                 if (attacker != null && HumanBonusUnitRules.IsCasterBonus(attacker))
                 {
@@ -2545,6 +2634,7 @@ namespace Game.Gameplay.Combat
 
             var damage = CombatRules.ApplyArmor(rawDamage, GetEffectiveArmor(target));
             damage *= GetArmyDamageMultiplier(attacker);
+            damage *= GetLastStandDamageMultiplier(attacker);
             if (attacker != null && attacker.UltimateBuffRemaining > 0f)
             {
                 var percent = attacker.UltimateBuffPercent > 0f
@@ -2584,6 +2674,7 @@ namespace Game.Gameplay.Combat
             _corpses.Add(new CombatCorpseState(target));
             RemoveUnit(target);
             TrySpawnFlyingBonusOnDeath(deathOwnerSlot, deathLaneId, deathPosition, deathBonusSlot, deathMarchFocus);
+            TryApplyBloodrageOnKill(attacker);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
                 deathOwnerSlot,
@@ -2671,6 +2762,115 @@ namespace Game.Gameplay.Combat
             }
 
             return 1f + GetAuraPercent(attacker.OwnerSlot, AuraStat.AttackSpeed, attacker.WorldPosition);
+        }
+
+        /// <summary>Last Stand (tower track 9): bonus damage while the attacker is below the HP threshold.</summary>
+        float GetLastStandDamageMultiplier(MatchUnitState attacker)
+        {
+            if (attacker == null
+                || !attacker.IsAlive
+                || attacker.IsChampion
+                || !TowerTrackRules.RoleMatches(8, attacker.Role))
+            {
+                return 1f;
+            }
+
+            var level = GetTowerTrackLevel(attacker.OwnerSlot, 8);
+            if (level <= 0
+                || attacker.CurrentHp >= GetEffectiveMaxHp(attacker) * TowerTrackRules.LowHealthThreshold)
+            {
+                return 1f;
+            }
+
+            return 1f + TowerTrackRules.LastStandDamagePercentByLevel[level - 1];
+        }
+
+        /// <summary>Bloodrage (tower track 3): attack-speed buff after killing an enemy.</summary>
+        void TryApplyBloodrageOnKill(MatchUnitState attacker)
+        {
+            if (attacker == null
+                || !attacker.IsAlive
+                || attacker.IsChampion
+                || !TowerTrackRules.RoleMatches(2, attacker.Role))
+            {
+                return;
+            }
+
+            if (GetTowerTrackLevel(attacker.OwnerSlot, 2) <= 0)
+            {
+                return;
+            }
+
+            attacker.BloodrageRemainingSeconds = TowerTrackRules.BloodrageDurationSeconds;
+        }
+
+        /// <summary>Attack-speed multiplier while Bloodrage is active (divides the attack interval).</summary>
+        float GetBloodrageMultiplier(MatchUnitState unit)
+        {
+            if (unit == null
+                || unit.IsChampion
+                || unit.BloodrageRemainingSeconds <= 0f
+                || !TowerTrackRules.RoleMatches(2, unit.Role))
+            {
+                return 1f;
+            }
+
+            var level = GetTowerTrackLevel(unit.OwnerSlot, 2);
+            if (level <= 0)
+            {
+                return 1f;
+            }
+
+            return 1f + TowerTrackRules.BloodrageAttackSpeedPercentByLevel[level - 1];
+        }
+
+        /// <summary>Battering Rams (tower track 4): bonus damage against buildings.</summary>
+        float GetVsBuildingDamage(int ownerSlot, UnitRole role, float rawDamage)
+        {
+            if (!TowerTrackRules.RoleMatches(3, role))
+            {
+                return rawDamage;
+            }
+
+            var level = GetTowerTrackLevel(ownerSlot, 3);
+            return level > 0
+                ? rawDamage * (1f + TowerTrackRules.VsBuildingDamagePercentPerLevel * level)
+                : rawDamage;
+        }
+
+        /// <summary>Catapult splash radius with the Battering Rams L3 bonus.</summary>
+        float GetSplashRadius(int ownerSlot, UnitRole role)
+        {
+            var radius = HumanBonusUnitRules.CatapultAoeRadius;
+            if (!TowerTrackRules.RoleMatches(3, role))
+            {
+                return radius;
+            }
+
+            var level = GetTowerTrackLevel(ownerSlot, 3);
+            return level >= MatchEconomyRules.MaxTowerTrackLevel
+                ? radius + TowerTrackRules.SplashRadiusBonusAtMaxLevel
+                : radius;
+        }
+
+        /// <summary>
+        /// Bulwark L3 block (tower track 2): flat reduction of incoming melee damage
+        /// for melee/siege units of owners with the track maxed.
+        /// </summary>
+        float ApplyBulwarkBlock(MatchUnitState target, float rawDamage)
+        {
+            if (target == null
+                || !target.IsAlive
+                || target.IsChampion
+                || !TowerTrackRules.RoleMatches(1, target.Role))
+            {
+                return rawDamage;
+            }
+
+            var level = GetTowerTrackLevel(target.OwnerSlot, 1);
+            return level >= MatchEconomyRules.MaxTowerTrackLevel
+                ? rawDamage * (1f - TowerTrackRules.BulwarkBlockDamageReduction)
+                : rawDamage;
         }
 
         float GetEffectiveArmor(MatchUnitState target)
@@ -2807,7 +3007,9 @@ namespace Game.Gameplay.Combat
         }
 
         float GetUnitAttackInterval(MatchUnitState unit) =>
-            CombatRules.GetAttackIntervalSeconds(unit.Stats.AttackSpeed * GetArmyAttackSpeedMultiplier(unit));
+            CombatRules.GetAttackIntervalSeconds(
+                unit.Stats.AttackSpeed * GetArmyAttackSpeedMultiplier(unit))
+            / GetBloodrageMultiplier(unit);
 
         /// <summary>Effective attack interval including Haste Aura (presenter / anim speed).</summary>
         public float GetAttackIntervalSeconds(MatchUnitState unit) =>
@@ -2833,6 +3035,20 @@ namespace Game.Gameplay.Combat
                 if (player.SlotIndex == ownerSlot)
                 {
                     return player.MagicLevel;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>Tower track level (PRE-007) of the given player slot, 0 when absent.</summary>
+        public int GetTowerTrackLevel(int ownerSlot, int trackIndex)
+        {
+            foreach (var player in _players)
+            {
+                if (player.SlotIndex == ownerSlot)
+                {
+                    return player.GetTowerTrackLevel(trackIndex);
                 }
             }
 
@@ -2965,8 +3181,20 @@ namespace Game.Gameplay.Combat
                 && slotIndex >= 0
                 && slotIndex < unit.AbilityCooldownRemaining.Length)
             {
-                unit.AbilityCooldownRemaining[slotIndex] = seconds;
+                unit.AbilityCooldownRemaining[slotIndex] = seconds * GetArcaneFocusFactor(unit);
             }
+        }
+
+        /// <summary>Arcane Focus (tower track 5): caster ability cooldown multiplier.</summary>
+        float GetArcaneFocusFactor(MatchUnitState unit)
+        {
+            if (unit == null || unit.IsChampion || !TowerTrackRules.RoleMatches(4, unit.Role))
+            {
+                return 1f;
+            }
+
+            var level = GetTowerTrackLevel(unit.OwnerSlot, 4);
+            return level > 0 ? TowerTrackRules.CasterCooldownFactorByLevel[level - 1] : 1f;
         }
 
         bool TryCastAbility(MatchUnitState unit, UnitAbilityDef def, int slotIndex)

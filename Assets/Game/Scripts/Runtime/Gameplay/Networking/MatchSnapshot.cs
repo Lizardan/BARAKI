@@ -54,6 +54,8 @@ namespace Game.Gameplay.Networking
         public int MeleeDamageLevel;
         public int RangedDamageLevel;
         public int HpArmorLevel;
+        /// <summary>Tower upgrade track levels (PRE-007), index = <see cref="TowerTrackRules"/> order.</summary>
+        public int[] TowerTrackLevels;
         /// <summary>Chosen bonus slot (1..12), 0 = none yet.</summary>
         public int BonusPickSlot;
         public float TitanResearchProgressSeconds;
@@ -230,7 +232,7 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        public const int CurrentVersion = 21;
+        public const int CurrentVersion = 22;
 
         /// <summary>Self-contained encode: full static roster, safe for any fresh decoder.</summary>
         public static byte[] Serialize(MatchSnapshot snapshot) =>
@@ -274,6 +276,7 @@ namespace Game.Gameplay.Networking
                     MainExtraAbilityId = p.MainExtraAbilityId,
                     MainMana = p.MainMana,
                     MainExtraAbilityCooldownRemaining = p.MainExtraAbilityCooldownRemaining,
+                    TowerTrackLevels = (int[])p.TowerTrackLevels.Clone(),
                 });
             }
 
@@ -770,6 +773,13 @@ namespace Game.Gameplay.Networking
                         w.Write(p.MainExtraAbilityId);
                         w.Write(p.MainMana);
                         w.Write(p.MainExtraAbilityCooldownRemaining);
+                        for (var t = 0; t < TowerTrackRules.TrackCount; t++)
+                        {
+                            var level = p.TowerTrackLevels != null && t < p.TowerTrackLevels.Length
+                                ? p.TowerTrackLevels[t]
+                                : 0;
+                            w.Write((byte)Math.Clamp(level, 0, byte.MaxValue));
+                        }
                     }
                 });
             }
@@ -1258,6 +1268,7 @@ namespace Game.Gameplay.Networking
                     MainExtraAbilityId = reader.ReadInt32(),
                     MainMana = reader.ReadSingle(),
                     MainExtraAbilityCooldownRemaining = reader.ReadSingle(),
+                    TowerTrackLevels = ReadTowerTrackLevels(reader),
                 };
 
                 if (players[i].TitanLevel <= 0)
@@ -1267,6 +1278,17 @@ namespace Game.Gameplay.Networking
             }
 
             return players;
+        }
+
+        private static int[] ReadTowerTrackLevels(System.IO.BinaryReader reader)
+        {
+            var levels = new int[TowerTrackRules.TrackCount];
+            for (var i = 0; i < levels.Length; i++)
+            {
+                levels[i] = reader.ReadByte();
+            }
+
+            return levels;
         }
 
         private static MatchBuildingSnapshot[] ReadBuildings(System.IO.BinaryReader reader, List<string> strings)

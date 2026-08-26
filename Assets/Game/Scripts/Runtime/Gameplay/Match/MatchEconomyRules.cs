@@ -40,6 +40,10 @@ namespace Game.Gameplay.Match
         public static readonly int[] MagicSlotCosts = { 500, 750, 1000 };
         public static readonly float[] MagicSlotDurationsSeconds = { 60f, 90f, 135f };
 
+        public const int MaxTowerTrackLevel = 3;
+        public static readonly int[] TowerTrackCosts = { 500, 800, 1200 };
+        public static readonly float[] TowerTrackDurationsSeconds = { 45f, 90f, 135f };
+
         public static bool TrySpendGold(int currentGold, int cost, out int remainingGold)
         {
             remainingGold = currentGold;
@@ -153,6 +157,28 @@ namespace Game.Gameplay.Match
             }
 
             return false;
+        }
+
+        /// <summary>Sequential gate: L2 requires L1 of the same track; L3 requires L2.</summary>
+        public static bool CanPurchaseTowerTrack(int currentLevel) =>
+            currentLevel >= 0 && currentLevel < MaxTowerTrackLevel;
+
+        public static bool TryGetTowerTrackUpgrade(
+            string trackId,
+            int currentLevel,
+            out int cost,
+            out float durationSeconds)
+        {
+            cost = 0;
+            durationSeconds = 0f;
+            if (!TowerTrackRules.TryGetTrackIndex(trackId, out _) || !CanPurchaseTowerTrack(currentLevel))
+            {
+                return false;
+            }
+
+            cost = TowerTrackCosts[currentLevel];
+            durationSeconds = TowerTrackDurationsSeconds[currentLevel];
+            return true;
         }
 
         public static bool CanPurchaseMagic(int currentMagicLevel, int mainLevel)
