@@ -855,6 +855,34 @@ class TasksProvider {
 // ---------- быстрый ввод: свой промт → opencode (вьюха под списком задач) ----------
 const QUICK_TERM = "opencode задача";
 
+// наш терминал = имена, которые создаём/используем мы сами. Всё, что не
+// попадает сюда (обычный shell-промпт пользователя) — «свободная вкладка»,
+// которую разрешено переиспользовать для восстановления сессии.
+// Кнопка 💬 открывает opencode с именем ровно "opencode" — он ТОЖЕ наш:
+// диспоузить/перезапускать в нём сессию нельзя.
+function isOurTerminal(t) {
+  const n = (t && t.name) || "";
+  return n.startsWith("opencode") || n.startsWith("UnioTasks");
+}
+
+// Открыть сессию opencode: переиспользуем свободную вкладку терминала
+// (закрываем её и создаём новую с правильным именем на её месте — переименовать
+// существующий терминал через API нельзя), иначе — создаём НОВУЮ вкладку, не
+// трогая открытый opencode.
+function openSessionTerminal(sid, label) {
+  const free = vscode.window.terminals.find((t) => !isOurTerminal(t));
+  if (free) free.dispose();
+  const t = vscode.window.createTerminal({
+    name: label || "opencode",
+    cwd: root(),
+    location: { viewColumn: vscode.ViewColumn.One },
+    iconPath: new vscode.ThemeIcon("rocket")
+  });
+  t.show(true);
+  t.sendText(`opencode --session ${sid}`, true);
+  return t;
+}
+
 class QuickPromptView {
   // actions: { summary, refresh } — квадратные кнопки справа от «ОТКРЫТЬ В OPENCODE»
   constructor(actions) { this._actions = actions || {}; }
@@ -902,13 +930,16 @@ class QuickPromptView {
     border-color: var(--vscode-focusBorder, transparent);
   }
   .sp { flex: 1; }
+  /* кнопка и дропдаун одного роста, чтобы ряд не «плясал» по высоте */
+  #go, #priority { height: 26px; box-sizing: border-box; }
+  #go { display: inline-flex; align-items: center; padding: 0 12px; }
 </style>
 </head>
 <body>
   <textarea id="prompt" placeholder="Опишите задачу… (Ctrl+Enter — завести)"></textarea>
   <div class="row">
     <button id="go" style="font-weight:600;">ЗАВЕСТИ ЗАДАЧУ</button>
-    <select id="priority" style="height:24px;font-size:var(--vscode-font-size);border:1px solid var(--vscode-widget-border, #3c3c3c);border-radius:2px;background:#252526;color:#cccccc;padding:0 4px;">
+    <select id="priority" style="height:26px;font-size:var(--vscode-font-size);border:1px solid var(--vscode-widget-border, #3c3c3c);border-radius:2px;background:#252526;color:#cccccc;padding:0 4px;">
       <option value="🔥 Горит" selected>🔥 Горит</option>
       <option value="🎯 Высокий приоритет">🎯 Высокий</option>
       <option value="📋 По очереди">📋 По очереди</option>
@@ -918,6 +949,7 @@ class QuickPromptView {
     </select>
     <span class="sp"></span>
     <button id="summary" class="sq" title="Анализ проекта и выбор следующей задачи">✨</button>
+    <button id="openoc" class="sq" title="Открыть opencode без задачи">💬</button>
   </div>
 <script>
   const vscode = acquireVsCodeApi();
@@ -934,6 +966,7 @@ class QuickPromptView {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); send(); }
   });
   document.getElementById("summary").addEventListener("click", () => vscode.postMessage({ cmd: "summary" }));
+  document.getElementById("openoc").addEventListener("click", () => vscode.postMessage({ cmd: "openoc" }));
 </script>
 </body>
 </html>`;
@@ -1112,14 +1145,7 @@ function activate(context) {
 
     // открытие сессии НЕ меняет статус: агент ещё ничего не делает в ней.
     // «Выполняется» включится сам, как только пойдёт активность в терминале.
-    const t2 = vscode.window.createTerminal({
-      name: `opencode #${num}`,
-      cwd: root(),
-      location: { viewColumn: vscode.ViewColumn.One },
-      iconPath: new vscode.ThemeIcon("rocket")
-    });
-    t2.show(true);
-    t2.sendText(`opencode --session ${sid}`, true);
+    openSessionTerminal(sid, `opencode #${num}`);
 
     vscode.window.setStatusBarMessage(`opencode: сессия #${num} восстановлена`, 5000);
     provider.refresh();
@@ -1160,28 +1186,14 @@ function activate(context) {
         return;
       }
       // открытие сессии НЕ меняет статус — см. resumeTask
-      const t2 = vscode.window.createTerminal({
-        name: `opencode #${num}`,
-        cwd: root(),
-        location: { viewColumn: vscode.ViewColumn.One },
-        iconPath: new vscode.ThemeIcon("rocket")
-      });
-      t2.show(true);
-      t2.sendText(`opencode --session ${sid}`, true);
+      openSessionTerminal(sid, `opencode #${num}`);
       vscode.window.setStatusBarMessage(`opencode: последняя сессия (#${num}) открыта`, 5000);
       provider.refresh();
       return;
     }
 
     // сессия не привязана к задаче из панели — открываем без смены статусов
-    const t3 = vscode.window.createTerminal({
-      name: "opencode last",
-      cwd: root(),
-      location: { viewColumn: vscode.ViewColumn.One },
-      iconPath: new vscode.ThemeIcon("rocket")
-    });
-    t3.show(true);
-    t3.sendText(`opencode --session ${sid}`, true);
+    openSessionTerminal(sid, "opencode last");
     vscode.window.setStatusBarMessage("opencode: последняя сессия открыта", 5000);
   }
 
@@ -1216,6 +1228,15 @@ function activate(context) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("uniogamesTasks.quickPrompt", new QuickPromptView({
       summary: () => generateSummaryInTerminal(),
+      openoc: () => {
+        const t = vscode.window.createTerminal({
+          name: "opencode",
+          cwd: root(),
+          location: { viewColumn: vscode.ViewColumn.One }
+        });
+        t.show(true);
+        t.sendText("opencode", true);
+      },
       refresh: () => provider.refresh(),
     }))
   );
@@ -1356,19 +1377,9 @@ function activate(context) {
         const existing = vscode.window.terminals.find((t) => t.name === `opencode #${num}`);
         if (existing) { existing.show(true); return; }
       }
-      const OUR_PREFIXES = ["opencode #", "opencode: ", "UnioTasks", QUICK_TERM, SUMMARY_TERM];
-      const empties = vscode.window.terminals.filter((t) =>
-        !OUR_PREFIXES.some((p) => t.name.startsWith(p))
-      );
-      if (empties.length > 0) empties[0].dispose();
-      const t = vscode.window.createTerminal({
-        name: `opencode: ${title || sessionId.slice(0, 12)}`,
-        cwd: root(),
-        location: { viewColumn: vscode.ViewColumn.One },
-        iconPath: new vscode.ThemeIcon("terminal"),
-      });
-      t.show(true);
-      t.sendText(`opencode --session ${sessionId}`, true);
+      // свободная вкладка переиспользуется, открытый opencode (💬) не трогаем —
+      // см. openSessionTerminal
+      openSessionTerminal(sessionId, `opencode: ${title || sessionId.slice(0, 12)}`);
       vscode.window.setStatusBarMessage("opencode: сессия открыта", 5000);
     }),
   );
