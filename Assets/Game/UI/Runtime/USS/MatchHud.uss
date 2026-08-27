@@ -5,13 +5,13 @@
 }
 
 .match-hud-chrome {
-    background-color: rgba(34, 34, 36, 0.92);
+    background-color: rgb(16, 18, 17);
     background-image: none;
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-top-width: 2px;
-    border-bottom-width: 2px;
-    border-color: rgba(125, 117, 104, 0.45);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-color: rgb(52, 56, 50);
     border-radius: 0;
 }
 
@@ -318,9 +318,9 @@
     position: absolute;
     max-width: 220px;
     padding: 8px 10px;
-    background-color: rgba(9, 9, 10, 0.96);
-    border-width: 2px;
-    border-color: rgba(125, 117, 104, 0.55);
+    background-color: rgb(21, 23, 22);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
     z-index: 1000;
 }
 
@@ -330,7 +330,7 @@
 
 .match-command-tooltip__label {
     font-size: 12px;
-    color: rgb(239, 228, 207);
+    color: rgb(222, 219, 210);
     white-space: normal;
     -unity-text-align: middle-left;
 }
