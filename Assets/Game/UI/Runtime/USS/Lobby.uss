@@ -1,8 +1,42 @@
+/* Lobby — graphite dark-fantasy palette */
+
+* {
+    -unity-font: url("../Fonts/NotoSans.ttf");
+}
+
+.lobby {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    background-color: rgb(8, 9, 8);
+    overflow: hidden;
+}
+
+.lobby__bg {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgb(8, 9, 8);
+}
+
+.lobby__shade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(8, 9, 8, 0.18);
+}
+
 .lobby--hidden {
     display: none;
 }
 
 .lobby__stage {
+    position: relative;
     flex-grow: 1;
     flex-direction: column;
     justify-content: center;
@@ -12,25 +46,80 @@
 
 .lobby__header {
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 33px;
 }
 
-.lobby__code {
-    margin-top: 10px;
-    font-size: 18px;
-    letter-spacing: 4px;
-    color: rgb(125, 117, 104);
+#LobbyTitleLabel {
+    font-size: 40px;
     -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(222, 219, 210);
+    letter-spacing: 6px;
+    margin: 0;
+}
+
+#LobbySubtitleLabel {
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(133, 137, 128);
+    letter-spacing: 2px;
+    margin-top: 8px;
+    white-space: normal;
+}
+
+#RoomCodeLabel {
+    margin-top: 16px;
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: rgb(185, 154, 98);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
 }
 
 .lobby__panel-wrap {
     width: 100%;
-    max-width: 520px;
+    max-width: 630px;
+}
+
+.lobby__panel {
+    flex-grow: 1;
+    flex-direction: column;
+    width: 100%;
+    background-color: rgb(21, 23, 22);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
+}
+
+.lobby__panel-header {
+    height: 68px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 27px;
+    padding-right: 27px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(52, 56, 50);
+}
+
+.lobby__panel-title {
+    font-size: 21px;
+    -unity-font-style: bold;
+    color: rgb(185, 154, 98);
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+}
+
+.lobby__panel-body {
+    flex-direction: column;
+    padding: 8px;
 }
 
 .lobby__slots {
     flex-direction: column;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     min-height: 80px;
 }
 
@@ -38,72 +127,223 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px;
-    margin-bottom: 6px;
-    background-color: rgba(9, 9, 10, 0.55);
-    border-width: 2px;
-    border-color: rgba(125, 117, 104, 0.35);
+    padding: 16px;
+    margin-bottom: 8px;
+    background-color: rgb(16, 18, 17);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
     border-radius: 0;
 }
 
 .lobby__slot-name {
-    font-size: 15px;
-    color: rgb(239, 228, 207);
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(222, 219, 210);
     flex-grow: 1;
+    padding-left: 0;
+    -unity-text-align: middle-left;
 }
 
 .lobby__slot-status {
-    font-size: 12px;
+    font-size: 16px;
     -unity-font-style: bold;
     letter-spacing: 1px;
-    color: rgb(184, 169, 130);
-    margin-left: 12px;
+    color: rgb(133, 137, 128);
+    margin-left: 16px;
+    padding-right: 0;
+    -unity-text-align: middle-right;
 }
 
 .lobby__slot-status--ready {
-    color: rgb(120, 180, 110);
+    color: rgb(127, 167, 119);
 }
 
 .lobby__slot-status--empty {
-    color: rgba(184, 169, 130, 0.55);
+    color: rgba(133, 137, 128, 0.55);
 }
 
-.mm-friends-invite {
-    width: 520px;
+.lobby__btn {
+    height: 69px;
+    width: 100%;
+    margin: 0 0 8px 0;
+    padding-left: 24px;
+    padding-right: 24px;
+    border-radius: 0;
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    background-color: rgb(28, 30, 27);
+    color: rgb(208, 178, 118);
+    font-size: 20px;
+    -unity-font-style: bold;
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+    transition-duration: 0.18s;
+    transition-property: background-color, border-color, color;
+}
+
+#BackButton {
+    margin-bottom: 0;
+}
+
+.lobby__btn:hover {
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+    scale: 1;
+}
+
+.lobby__btn:active {
+    background-color: rgb(16, 18, 17);
+    scale: 1;
+}
+
+.lobby__btn:disabled {
+    opacity: 0.4;
+}
+
+.lobby__btn--primary {
+    background-color: rgb(64, 54, 35);
+    border-color: rgb(185, 154, 98);
+}
+
+.lobby__btn--primary:hover {
+    background-color: rgb(80, 66, 40);
+    border-color: rgb(208, 178, 118);
+}
+
+.lobby__btn--muted {
+    color: rgb(133, 137, 128);
+}
+
+/* Friends invite overlay */
+
+.ui-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+}
+
+.ui-overlay--hidden {
+    display: none;
+}
+
+.ui-overlay__dim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(8, 9, 8, 0.82);
+}
+
+.lobby__dialog {
+    position: relative;
+    flex-direction: column;
+    background-color: rgb(21, 23, 22);
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    border-radius: 0;
+}
+
+.lobby__friends-invite {
+    width: 560px;
     max-width: 94%;
 }
 
-.mm-friends-invite__body {
+.lobby__dialog-header {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 20px 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(52, 56, 50);
+}
+
+.lobby__dialog-title {
+    flex-grow: 1;
+    font-size: 24px;
+    -unity-font-style: bold;
+    letter-spacing: 3px;
+    color: rgb(208, 178, 118);
+    -unity-text-align: middle-center;
+}
+
+.lobby__dialog-close {
+    position: absolute;
+    right: 16px;
+    top: 14px;
+    width: 39px;
+    height: 39px;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    background-color: rgb(28, 30, 27);
+    color: rgb(222, 219, 210);
+    font-size: 20px;
+    -unity-font-style: normal;
+}
+
+.lobby__dialog-close:hover {
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+}
+
+.lobby__dialog-body {
     flex-direction: column;
+    padding: 20px;
+    background-color: rgb(8, 9, 8);
     min-height: 300px;
 }
 
-.mm-friends-invite__hint {
-    margin-bottom: 10px;
-    color: rgba(184, 169, 130, 0.9);
-    font-size: 13px;
+.lobby__friends-hint {
+    margin-bottom: 16px;
+    font-size: 16px;
+    color: rgb(133, 137, 128);
     white-space: normal;
 }
 
-.mm__friends-scroll {
+.lobby__friends-scroll {
     flex-grow: 1;
     min-height: 220px;
+    margin-bottom: 8px;
 }
 
-.mm__friends-list-container {
+.lobby__friends-scroll .unity-scroller,
+.lobby__friends-scroll .unity-scroller--vertical {
+    display: none;
+    width: 0;
+    min-width: 0;
+}
+
+.lobby__friends-list-container {
     flex-direction: column;
 }
+
+.lobby__friends-error {
+    min-height: 16px;
+    font-size: 16px;
+    color: rgb(133, 137, 128);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+/* Friend row styles (used by FriendsHubPanel) */
 
 .mm__friend-row {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
-    padding: 9px 10px;
-    background-color: rgba(9, 9, 10, 0.55);
-    border-width: 2px;
-    border-color: rgba(125, 117, 104, 0.28);
-    border-radius: 0;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-color: rgba(52, 56, 50, 0.85);
 }
 
 .mm__friend-row--invite-mode {
@@ -114,8 +354,8 @@
     flex-grow: 1;
     flex-shrink: 1;
     margin-right: 12px;
-    color: rgb(239, 228, 207);
-    font-size: 13px;
+    font-size: 16px;
+    color: rgb(222, 219, 210);
     white-space: normal;
 }
 
@@ -126,56 +366,47 @@
 }
 
 .mm__friend-row__btn {
-    height: 30px;
-    min-width: 92px;
+    height: 36px;
+    min-width: 110px;
+    margin-left: 6px;
     padding-left: 10px;
     padding-right: 10px;
-    font-size: 10px;
+    font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 0.5px;
 }
 
-.mm__friend-row__btn--invite,
-.mm__friend-row__btn--join {
-    color: rgb(239, 228, 207);
-    background-color: rgb(86, 103, 122);
-    border-width: 2px;
-    border-color: rgb(125, 117, 104);
+.mm__friend-row__btn--invite {
+    color: rgb(222, 219, 210);
+    background-color: rgba(185, 154, 98, 0.35);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
     border-radius: 0;
 }
 
-.mm__friend-row__btn--invite:hover,
-.mm__friend-row__btn--join:hover {
-    background-color: rgb(96, 116, 138);
+.mm__friend-row__btn--invite:hover {
+    background-color: rgba(185, 154, 98, 0.55);
 }
 
 .mm__friend-row__full {
-    margin-left: 4px;
+    margin-left: 6px;
     padding-left: 8px;
     padding-right: 8px;
-    height: 30px;
+    height: 36px;
     -unity-text-align: middle-center;
-    font-size: 10px;
+    font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 0.5px;
     color: rgba(210, 140, 140, 0.95);
     background-color: rgba(90, 30, 30, 0.45);
-    border-width: 2px;
+    border-width: 1px;
     border-color: rgba(180, 80, 80, 0.55);
     border-radius: 0;
 }
 
-.mm__friends-error {
-    min-height: 16px;
-    margin-top: 8px;
-    font-size: 11px;
-    color: rgba(125, 117, 104, 0.95);
-    white-space: normal;
-}
-
 .mm__friends-list {
-    color: rgba(184, 169, 130, 0.9);
-    font-size: 13px;
+    color: rgb(133, 137, 128);
+    font-size: 16px;
     white-space: normal;
     -unity-text-align: upper-left;
 }

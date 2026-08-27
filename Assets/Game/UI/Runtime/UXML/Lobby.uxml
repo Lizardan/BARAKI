@@ -1,10 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/BarakiTheme.uss" />
-    <Style src="../USS/Lobby.uss" />
-    <ui:VisualElement name="LobbyScreen" class="ui-screen lobby">
-        <ui:VisualElement class="ui-bg" />
-        <ui:VisualElement class="ui-bg-shade" />
-        <ui:VisualElement class="ui-vignette" />
+    <ui:Style src="../USS/Lobby.uss" />
+    <ui:VisualElement name="LobbyScreen" class="lobby">
+        <ui:VisualElement class="lobby__bg" />
+        <ui:VisualElement class="lobby__shade" />
 
         <ui:VisualElement class="lobby__stage">
             <ui:VisualElement class="lobby__header">
@@ -14,21 +12,17 @@
             </ui:VisualElement>
 
             <ui:VisualElement class="lobby__panel-wrap">
-                <ui:VisualElement class="ui-panel">
-                    <ui:VisualElement class="ui-panel__inner">
-                        <ui:VisualElement class="ui-panel__header">
-                            <ui:Label text="СЛОТЫ" class="ui-panel__header-text" />
-                        </ui:VisualElement>
+                <ui:VisualElement class="lobby__panel">
+                    <ui:VisualElement class="lobby__panel-header">
+                        <ui:Label text="СЛОТЫ" class="lobby__panel-title" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="lobby__panel-body">
                         <ui:VisualElement name="SlotList" class="lobby__slots" />
-                        <ui:Button name="ReadyButton" text="ГОТОВ" class="ui-btn ui-btn--primary" />
-                        <ui:Button name="FillLocalButton" text="ЗАПОЛНИТЬ СЛОТЫ (ЛОКАЛЬНО)" class="ui-btn" />
-                        <ui:Button name="StartButton" text="СТАРТ" class="ui-btn ui-btn--primary" />
-                        <ui:Button name="InviteFriendsButton" text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="ui-btn" />
-                        <ui:Button name="BackButton" text="НАЗАД" class="ui-btn ui-btn--muted" />
-                        <ui:VisualElement class="ui-hints">
-                            <ui:Label text="Старт — когда все готовы" class="ui-hints__text" />
-                            <ui:Label text="Esc — назад" class="ui-hints__text" />
-                        </ui:VisualElement>
+                        <ui:Button name="ReadyButton" text="ГОТОВ" class="lobby__btn lobby__btn--primary" />
+                        <ui:Button name="FillLocalButton" text="ЗАПОЛНИТЬ СЛОТЫ (ЛОКАЛЬНО)" class="lobby__btn" />
+                        <ui:Button name="StartButton" text="СТАРТ" class="lobby__btn lobby__btn--primary" />
+                        <ui:Button name="InviteFriendsButton" text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="lobby__btn" />
+                        <ui:Button name="BackButton" text="НАЗАД" class="lobby__btn lobby__btn--muted" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
@@ -36,25 +30,19 @@
 
         <ui:VisualElement name="FriendsInviteOverlay" class="ui-overlay ui-overlay--hidden">
             <ui:VisualElement class="ui-overlay__dim" />
-            <ui:VisualElement class="ui-dialog mm-friends-invite">
-                <ui:VisualElement class="ui-dialog__header mm-modes__header">
-                    <ui:Label text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="ui-dialog__title" />
-                    <ui:Button name="FriendsInviteCloseButton" text="×" class="ui-dialog__close" />
+            <ui:VisualElement class="lobby__dialog lobby__friends-invite">
+                <ui:VisualElement class="lobby__dialog-header">
+                    <ui:Label text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="lobby__dialog-title" />
+                    <ui:Button name="FriendsInviteCloseButton" text="×" class="lobby__dialog-close" />
                 </ui:VisualElement>
-                <ui:VisualElement class="ui-dialog__body mm-friends-invite__body">
-                    <ui:Label text="Онлайн-друзья получат приглашение в текущую комнату." class="mm-friends-invite__hint" />
-                    <ui:ScrollView name="LobbyFriendsScroll" class="mm__friends-scroll" mode="Vertical">
-                        <ui:VisualElement name="LobbyFriendsListContainer" class="mm__friends-list-container" />
+                <ui:VisualElement class="lobby__dialog-body">
+                    <ui:Label text="Онлайн-друзья получат приглашение в текущую комнату." class="lobby__friends-hint" />
+                    <ui:ScrollView name="LobbyFriendsScroll" class="lobby__friends-scroll" mode="Vertical">
+                        <ui:VisualElement name="LobbyFriendsListContainer" class="lobby__friends-list-container" />
                     </ui:ScrollView>
-                    <ui:Label name="LobbyFriendsErrorLabel" text="" class="ui-meta mm__friends-error" />
+                    <ui:Label name="LobbyFriendsErrorLabel" text="" class="lobby__friends-error" />
                 </ui:VisualElement>
             </ui:VisualElement>
-        </ui:VisualElement>
-
-        <ui:VisualElement class="ui-footer">
-            <ui:Label text="BARAKI" class="ui-footer__text" />
-            <ui:Label text="·" class="ui-footer__dot" />
-            <ui:Label text="ЛОББИ" class="ui-footer__text" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
