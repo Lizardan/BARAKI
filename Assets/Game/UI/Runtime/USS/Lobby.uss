@@ -115,12 +115,11 @@
 .lobby__panel-body {
     flex-direction: column;
     padding: 8px;
-    gap: 8px;
 }
 
 .lobby__slots {
     flex-direction: column;
-    margin-bottom: 0;
+    margin-bottom: 8px;
     min-height: 80px;
 }
 
@@ -166,7 +165,7 @@
 .lobby__btn {
     height: 69px;
     width: 100%;
-    margin: 0;
+    margin: 0 0 8px 0;
     padding-left: 24px;
     padding-right: 24px;
     border-radius: 0;
