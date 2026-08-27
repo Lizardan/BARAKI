@@ -221,7 +221,7 @@
 
 /* Friends invite overlay */
 
-.lobby__overlay {
+.ui-overlay {
     position: absolute;
     left: 0;
     right: 0;
@@ -232,11 +232,11 @@
     z-index: 40;
 }
 
-.lobby__overlay--hidden {
+.ui-overlay--hidden {
     display: none;
 }
 
-.lobby__overlay-dim {
+.ui-overlay__dim {
     position: absolute;
     left: 0;
     right: 0;

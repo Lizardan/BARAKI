@@ -32,8 +32,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="FriendsInviteOverlay" class="lobby__overlay lobby__overlay--hidden">
-            <ui:VisualElement class="lobby__overlay-dim" />
+        <ui:VisualElement name="FriendsInviteOverlay" class="ui-overlay ui-overlay--hidden">
+            <ui:VisualElement class="ui-overlay__dim" />
             <ui:VisualElement class="lobby__dialog lobby__friends-invite">
                 <ui:VisualElement class="lobby__dialog-header">
                     <ui:Label text="ПРИГЛАСИТЬ ДРУЗЕЙ" class="lobby__dialog-title" />
