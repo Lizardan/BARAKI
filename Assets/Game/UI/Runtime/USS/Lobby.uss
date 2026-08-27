@@ -127,7 +127,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 16px;
     margin-bottom: 8px;
     background-color: rgb(16, 18, 17);
     border-width: 1px;
@@ -179,6 +179,10 @@
     -unity-text-align: middle-center;
     transition-duration: 0.18s;
     transition-property: background-color, border-color, color;
+}
+
+.lobby__btn:last-child {
+    margin-bottom: 0;
 }
 
 .lobby__btn:hover {
