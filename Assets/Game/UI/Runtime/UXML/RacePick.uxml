@@ -3,17 +3,17 @@
     <Style src="../USS/RacePick.uss" />
     <ui:VisualElement name="RacePickScreen" class="race-pick" picking-mode="Ignore">
         <ui:VisualElement class="race-pick__center" picking-mode="Ignore">
-            <ui:VisualElement class="ui-chrome race-pick__panel">
+            <ui:VisualElement class="race-pick__panel">
                 <ui:VisualElement class="race-pick__inner">
-                    <ui:VisualElement class="ui-panel__header">
-                        <ui:Label text="ВЫБОР РАСЫ" class="ui-panel__header-text race-pick__title" />
+                    <ui:VisualElement class="race-pick__header">
+                        <ui:Label text="ВЫБОР РАСЫ" class="race-pick__title" />
                     </ui:VisualElement>
                     <ui:VisualElement class="race-pick__body">
                         <ui:Label name="SubtitleLabel" text="Слот 1 · игроков 4" class="race-pick__subtitle" />
-                        <ui:Label name="SlotsLabel" text="" class="ui-panel__note race-pick__slots" />
+                        <ui:Label name="SlotsLabel" text="" class="race-pick__slots" />
                         <ui:VisualElement name="RaceChoices" class="race-pick__choices" />
                         <ui:Label name="SelectedLabel" text="Раса не выбрана" class="race-pick__selected" />
-                        <ui:Button name="ConfirmButton" text="ГОТОВ" class="ui-btn ui-btn--primary race-pick__confirm" />
+                        <ui:Button name="ConfirmButton" text="ГОТОВ" class="race-pick__confirm" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>

@@ -1,10 +1,12 @@
+/* RacePick — unified graphite dark-fantasy shell */
+
 .race-pick {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: rgba(15, 15, 16, 0.55);
+    background-color: rgba(8, 9, 8, 0.82);
 }
 
 .race-pick__center {
@@ -15,46 +17,67 @@
 }
 
 .race-pick__panel {
-    width: 420px;
+    width: 520px;
     max-width: 92%;
-    padding: 16px 18px 14px;
+    background-color: rgb(21, 23, 22);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
 }
 
 .race-pick__inner {
     flex-grow: 1;
-    justify-content: flex-start;
+    flex-direction: column;
+}
+
+.race-pick__header {
+    height: 68px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 27px;
+    padding-right: 27px;
+    margin-bottom: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(52, 56, 50);
 }
 
 .race-pick__title {
-    font-size: 13px;
-    letter-spacing: 4px;
+    font-size: 21px;
+    -unity-font-style: bold;
+    color: rgb(185, 154, 98);
+    letter-spacing: 3px;
 }
 
 .race-pick__body {
     flex-grow: 1;
+    flex-direction: column;
     justify-content: center;
-    padding-top: 4px;
+    padding: 8px;
 }
 
 .race-pick__subtitle {
-    font-size: 13px;
+    font-size: 16px;
     -unity-font-style: bold;
-    color: rgb(125, 117, 104);
+    color: rgb(185, 154, 98);
     letter-spacing: 1px;
     margin-bottom: 8px;
     -unity-text-align: middle-center;
 }
 
 .race-pick__slots {
-    margin-bottom: 12px;
-    font-size: 11px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: rgb(133, 137, 128);
+    -unity-text-align: middle-center;
+    white-space: normal;
 }
 
 .race-pick__choices {
     flex-direction: row;
     width: 100%;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
 .race-pick__race-btn {
@@ -62,34 +85,59 @@
     flex-grow: 0;
     flex-shrink: 0;
     min-width: 0;
-    height: 48px;
+    height: 69px;
     margin-bottom: 0;
-    font-size: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: 18px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(208, 178, 118);
+    background-color: rgb(28, 30, 27);
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    border-radius: 0;
+    transition-property: background-color, border-color;
+    transition-duration: 0.18s;
+}
+
+.race-pick__race-btn:hover {
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+}
+
+.race-pick__race-btn:active {
+    background-color: rgb(16, 18, 17);
 }
 
 .race-pick__race-btn--selected {
-    background-color: rgb(86, 103, 122);
-    border-color: rgb(125, 117, 104);
-    color: rgb(239, 228, 207);
+    color: rgb(208, 178, 118);
+    background-color: rgb(64, 54, 35);
+    border-color: rgb(185, 154, 98);
 }
 
 .race-pick__race-btn--selected:hover {
-    background-color: rgb(96, 116, 138);
-    border-color: rgb(125, 117, 104);
+    background-color: rgb(80, 66, 40);
+    border-color: rgb(208, 178, 118);
 }
 
 .race-pick__race-btn--locked {
     opacity: 0.4;
-    background-color: rgb(24, 24, 26);
-    border-color: rgb(94, 88, 78);
-    color: rgb(184, 169, 130);
+    background-color: rgb(16, 18, 17);
+    border-color: rgb(52, 56, 50);
+    color: rgb(133, 137, 128);
+}
+
+.race-pick__race-btn--locked:hover {
+    background-color: rgb(16, 18, 17);
+    border-color: rgb(52, 56, 50);
 }
 
 .race-pick__selected {
-    font-size: 13px;
+    font-size: 16px;
     -unity-font-style: bold;
-    color: rgb(125, 117, 104);
-    margin-bottom: 10px;
+    color: rgb(133, 137, 128);
+    margin-bottom: 16px;
     -unity-text-align: middle-center;
 }
 
@@ -99,14 +147,37 @@
 
 .race-pick__confirm {
     width: 100%;
-    height: 48px;
-    margin-top: 4px;
+    height: 69px;
+    margin-top: 0;
     margin-bottom: 0;
-    font-size: 14px;
+    padding-left: 24px;
+    padding-right: 24px;
+    font-size: 20px;
+    -unity-font-style: bold;
     letter-spacing: 3px;
-    color: rgb(239, 228, 207);
+    color: rgb(208, 178, 118);
+    background-color: rgb(64, 54, 35);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
+    border-radius: 0;
+    transition-property: background-color, border-color;
+    transition-duration: 0.18s;
+}
+
+.race-pick__confirm:hover {
+    background-color: rgb(80, 66, 40);
+    border-color: rgb(208, 178, 118);
+}
+
+.race-pick__confirm:active {
+    background-color: rgb(52, 43, 28);
 }
 
 .race-pick__confirm--disabled {
-    opacity: 0.55;
+    opacity: 0.4;
+}
+
+.race-pick__confirm--disabled:hover {
+    background-color: rgb(64, 54, 35);
+    border-color: rgb(185, 154, 98);
 }
