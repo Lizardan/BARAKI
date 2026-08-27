@@ -45,3 +45,10 @@
 ## Unity MCP
 - Сервер `unityMCP` (мост на `:6400`). Пути — относительно `Assets/`. Перед мутацией редактора читать `mcpforunity://editor/state`, ждать `isCompiling: false`.
 - Unity API проверять через `unity_reflect`/`unity_docs`, не полагаться на память модели.
+
+## Unity Pipeline (HTTP API)
+- Параллельный HTTP API Unity Editor (`com.unity.pipeline`). **Не конфликтует** с MCP (разные порты, протоколы, transports).
+- Доступ: `unity command --project-path "F:\Unity Projects\BARAKI" <cmd>` через bash. Токен и порт автоматически через descriptor `Library/Pipeline/.unity-pipeline-port`.
+- Использовать для команд, которых нет в MCP: `audit` (Project Auditor), `capture_game_view source=screen` (скриншот с Overlay UI), `get_performance_stats`, `set_autotick`.
+- Не дублировать MCP-команды через Pipeline (manage_gameobject, manage_scene и т.д. — MCP быстрее и удобнее).
+- Аудит: `audit` → сканирование ~30–60 с → `audit_status` → CSV в `Temp/pipeline-audit/`.
