@@ -1,6 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="../USS/BarakiTheme.uss" />
-    <Style src="../USS/RacePick.uss" />
+    <ui:Style src="../USS/RacePick.uss" />
     <ui:VisualElement name="RacePickScreen" class="race-pick" picking-mode="Ignore">
         <ui:VisualElement class="race-pick__center" picking-mode="Ignore">
             <ui:VisualElement class="race-pick__panel">
