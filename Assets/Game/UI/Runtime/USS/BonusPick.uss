@@ -19,7 +19,7 @@
     width: 350px;
     min-width: 350px;
     max-width: 350px;
-    padding: 6px;
+    padding: 8px;
 }
 
 .bonus-pick__inner {
@@ -51,7 +51,7 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     align-content: flex-start;
-    padding: 4px;
+    padding: 0;
 }
 
 .bonus-pick__slot {
@@ -60,22 +60,52 @@
     position: relative;
 }
 
+.ui-btn--square.bonus-pick__slot {
+    border-width: 1px;
+    border-color: rgb(75, 77, 69);
+    background-color: rgb(28, 30, 27);
+    padding: 0;
+    margin: 1%;
+    width: 31%;
+    height: 77px;
+    min-height: 77px;
+    max-height: 77px;
+    min-width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    font-size: 11px;
+    letter-spacing: 1px;
+    scale: 1;
+}
+
+.ui-btn--square.bonus-pick__slot:hover {
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+    scale: 1;
+}
+
 .bonus-pick__slot--picked {
-    opacity: 0.6;
-    background-color: rgb(86, 103, 122);
-    border-color: rgb(125, 117, 104);
+    opacity: 1;
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+}
+
+.bonus-pick__slot--picked.bonus-pick__slot--locked {
+    opacity: 1;
 }
 
 .bonus-pick__slot--locked {
-    opacity: 0.45;
+    opacity: 0.72;
 }
 
 .bonus-pick__portrait {
     position: absolute;
-    left: 6px;
-    top: 6px;
-    right: 6px;
-    bottom: 6px;
+    left: 3.5px;
+    top: 3.5px;
+    right: 3.5px;
+    bottom: 3.5px;
     picking-mode: ignore;
     background-color: rgba(0, 0, 0, 0);
     background-size: cover;
