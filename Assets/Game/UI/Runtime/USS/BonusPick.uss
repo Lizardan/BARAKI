@@ -51,7 +51,7 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     align-content: flex-start;
-    padding: 8px;
+    padding: 0;
 }
 
 .bonus-pick__slot {
@@ -70,14 +70,23 @@
     height: 77px;
 }
 
-.bonus-pick__slot--picked {
-    opacity: 0.6;
+.ui-btn--square.bonus-pick__slot:hover {
     background-color: rgb(36, 39, 35);
     border-color: rgb(185, 154, 98);
 }
 
+.bonus-pick__slot--picked {
+    opacity: 1;
+    background-color: rgb(36, 39, 35);
+    border-color: rgb(185, 154, 98);
+}
+
+.bonus-pick__slot--picked.bonus-pick__slot--locked {
+    opacity: 1;
+}
+
 .bonus-pick__slot--locked {
-    opacity: 0.45;
+    opacity: 0.72;
 }
 
 .bonus-pick__portrait {
