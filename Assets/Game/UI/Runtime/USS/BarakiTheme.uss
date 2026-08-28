@@ -1,6 +1,16 @@
 /* BARAKI — UI Toolkit theme (CSS frames, no sprite kit) */
 
-/* Tokens: text #EFE4CF | accent #C2773A | muted #B8A982 | ink #0F0F10 | panel #222224 | rim #7D7568 */
+/* Graphite dark-fantasy palette */
+:root {
+    --bg-dark: rgb(8, 9, 8);
+    --panel-dark: rgb(16, 18, 17);
+    --panel-mid: rgb(21, 23, 22);
+    --border-graphite: rgb(52, 56, 50);
+    --text-light: rgb(222, 219, 210);
+    --bronze-accent: rgb(185, 154, 98);
+    --bronze-muted: rgb(133, 137, 128);
+    --grid-step: 8px;
+}
 
 * {
     -unity-font: url("../Fonts/NotoSans.ttf");
