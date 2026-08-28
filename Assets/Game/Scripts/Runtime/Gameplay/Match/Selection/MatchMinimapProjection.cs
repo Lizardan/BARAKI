@@ -4,7 +4,7 @@ namespace Game.Gameplay.Match.Selection
 {
     public static class MatchMinimapProjection
     {
-        public const float ContentScale = 0.92f;
+        public const float ContentScale = 1.0f;
 
         /// <summary>
         /// Extra world space beyond the arena ring so centred base pads stay fully visible

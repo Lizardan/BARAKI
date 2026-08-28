@@ -18,6 +18,7 @@ namespace Game.UI.Controllers
         const string PanelActiveClass = "match-dock-panel__inner--active";
         const string ResearchHiddenClass = "match-context-strip__research-block--hidden";
         const string OwnerHiddenClass = "match-context-strip__owner--hidden";
+        const string StatLineHiddenClass = "match-context-strip__stat-line--hidden";
 
         [SerializeField] private UIDocument _uiDocument;
         [SerializeField] private UnitVisualCatalog _visualCatalog;
@@ -184,16 +185,17 @@ namespace Game.UI.Controllers
                 ? MatchInspectorFormatting.FormatHeroName(unit.HeroSlot)
                 : MatchInspectorFormatting.FormatUnitTitle(unit.Role, unit.BonusSlot);
             SetOwnerVisible(false);
-            _hpStat.text = $"HP: {MatchInspectorFormatting.FormatHp(unit.CurrentHp, stats.MaxHp)}";
-            _stat1.text = $"Урон: {MatchInspectorFormatting.FormatDamageRange(stats.DamageMin, stats.DamageMax)}";
-            _stat2.text = $"Броня: {MatchInspectorFormatting.FormatStatValue(stats.Armor)}";
-            _stat3.text = $"Дальность: {MatchInspectorFormatting.FormatStatValue(stats.AttackRange)}";
-            _stat4.text = $"Скорость: {MatchInspectorFormatting.FormatStatValue(stats.MoveSpeed)}";
-            _stat5.text = isHero
+            SetStatText(_hpStat, $"HP: {MatchInspectorFormatting.FormatHp(unit.CurrentHp, stats.MaxHp)}");
+            SetStatText(_stat1, $"Урон: {MatchInspectorFormatting.FormatDamageRange(stats.DamageMin, stats.DamageMax)}");
+            SetStatText(_stat2, $"Броня: {MatchInspectorFormatting.FormatStatValue(stats.Armor)}");
+            SetStatText(_stat3, $"Дальность: {MatchInspectorFormatting.FormatStatValue(stats.AttackRange)}");
+            SetStatText(_stat4, $"Скорость: {MatchInspectorFormatting.FormatStatValue(stats.MoveSpeed)}");
+            var stat5Text = isHero
                 ? FormatHeroProgress(unit)
                 : stats.HasMana
                     ? $"Мана: {MatchInspectorFormatting.FormatHp(unit.CurrentMana, stats.MaxMana)}"
                     : string.Empty;
+            SetStatText(_stat5, stat5Text);
             ApplyUnitPortrait(unit);
             SetResearchVisible(false);
         }
@@ -223,30 +225,30 @@ namespace Game.UI.Controllers
 
             _title.text = MatchInspectorFormatting.FormatBuildingName(building.BuildingId);
             SetOwnerVisible(false);
-            _hpStat.text = $"HP: {MatchInspectorFormatting.FormatHp(building.CurrentHp, building.MaxHp)}";
-            _stat1.text = building.IsRuins ? "Руины" : string.Empty;
-            _stat2.text = string.Empty;
-            _stat3.text = string.Empty;
-            _stat4.text = string.Empty;
-            _stat5.text = string.Empty;
+            SetStatText(_hpStat, $"HP: {MatchInspectorFormatting.FormatHp(building.CurrentHp, building.MaxHp)}");
+            SetStatText(_stat1, building.IsRuins ? "Руины" : string.Empty);
+            SetStatText(_stat2, string.Empty);
+            SetStatText(_stat3, string.Empty);
+            SetStatText(_stat4, string.Empty);
+            SetStatText(_stat5, string.Empty);
 
             if (MatchInspectorFormatting.IsBarracksBuilding(building.BuildingId))
             {
                 var barracks = controller.WaveScheduler.GetBarracks(building.OwnerSlot, building.BuildingId);
                 if (barracks != null)
                 {
-                    _stat2.text = $"Уровень: {barracks.Level}";
+                    SetStatText(_stat2, $"Уровень: {barracks.Level}");
                 }
             }
             else if (MatchInspectorFormatting.IsMainBuilding(building.BuildingId)
                      && building.OwnerSlot < controller.Players.Count)
             {
                 var player = controller.Players[building.OwnerSlot];
-                _stat1.text = building.IsRuins
+                SetStatText(_stat1, building.IsRuins
                     ? "Руины"
-                    : $"Мана: {MatchInspectorFormatting.FormatHp(player.MainMana, player.MainManaMax)}";
-                _stat2.text = $"Ур. {player.MainLevel}";
-                _stat3.text = $"Passive: {player.PassiveGoldLevel}";
+                    : $"Мана: {MatchInspectorFormatting.FormatHp(player.MainMana, player.MainManaMax)}");
+                SetStatText(_stat2, $"Ур. {player.MainLevel}");
+                SetStatText(_stat3, $"Passive: {player.PassiveGoldLevel}");
             }
 
             ClearPortrait();
@@ -485,16 +487,27 @@ namespace Game.UI.Controllers
             _owner.EnableInClassList(OwnerHiddenClass, !visible);
         }
 
+        void SetStatText(Label label, string text)
+        {
+            if (label == null)
+            {
+                return;
+            }
+
+            label.text = text;
+            label.EnableInClassList(StatLineHiddenClass, string.IsNullOrEmpty(text));
+        }
+
         void ClearStats()
         {
             _title.text = string.Empty;
             SetOwnerVisible(false);
-            _hpStat.text = "HP: —";
-            _stat1.text = string.Empty;
-            _stat2.text = string.Empty;
-            _stat3.text = string.Empty;
-            _stat4.text = string.Empty;
-            _stat5.text = string.Empty;
+            SetStatText(_hpStat, "HP: —");
+            SetStatText(_stat1, string.Empty);
+            SetStatText(_stat2, string.Empty);
+            SetStatText(_stat3, string.Empty);
+            SetStatText(_stat4, string.Empty);
+            SetStatText(_stat5, string.Empty);
             ClearPortrait();
             SetResearchVisible(false);
         }

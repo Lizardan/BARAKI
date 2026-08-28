@@ -165,6 +165,7 @@
     flex-direction: column;
     min-width: 0;
     height: 100%;
+    overflow: hidden;
 }
 
 .match-context-strip__title {
@@ -188,6 +189,8 @@
 .match-context-strip__stat-grid {
     flex-grow: 1;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .match-context-strip__stat-line {
@@ -196,8 +199,13 @@
     margin-bottom: 3px;
 }
 
+.match-context-strip__stat-line--hidden {
+    display: none;
+}
+
 .match-context-strip__research-block {
-    margin-top: 8px;
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .match-context-strip__research-block--hidden {
@@ -208,12 +216,13 @@
     flex-direction: row;
     justify-content: flex-start;
     margin-bottom: 8px;
+    gap: 8px;
 }
 
 .match-context-strip__research-queue-slot {
     width: 48px;
     height: 36px;
-    margin-right: 8px;
+    margin-right: 0;
     padding: 2px;
     border-width: 1px;
     border-color: rgb(52, 56, 50);
@@ -237,6 +246,7 @@
 
 .match-context-strip__research-bar {
     height: 18px;
+    width: 100%;
 }
 
 .match-command-grid {
@@ -265,6 +275,8 @@
     border-width: 1px;
     border-color: rgb(75, 77, 69);
     color: rgb(208, 178, 118);
+    padding: 0;
+    margin: 0;
 }
 
 .ui-btn--square.match-command-grid__slot:hover {
@@ -288,10 +300,10 @@
 
 .match-command-portrait {
     position: absolute;
-    left: 6px;
-    top: 6px;
-    right: 6px;
-    bottom: 6px;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     picking-mode: ignore;
     background-color: rgba(0, 0, 0, 0);
     background-size: cover;
@@ -325,6 +337,7 @@
     flex-grow: 1;
     flex-direction: column;
     padding: 8px;
+    overflow: hidden;
 }
 
 .match-inspector__title {
@@ -401,4 +414,9 @@
 #MinimapCanvas {
     width: 100%;
     height: 100%;
+}
+
+/* Research queue last slot: no margin-right since parent uses gap */
+#ResearchQueueSlot2 {
+    margin-right: 0;
 }
