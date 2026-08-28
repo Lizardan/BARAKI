@@ -126,7 +126,6 @@
             <ui:Label name="CommandTooltipLabel" text="" class="match-command-tooltip__label" picking-mode="Ignore" />
         </ui:VisualElement>
         <ui:VisualElement name="PauseOverlay" class="match-hud__pause match-hud__pause--hidden" picking-mode="Position">
-            <ui:VisualElement class="match-hud__pause-dim" picking-mode="Ignore" />
             <ui:VisualElement class="ui-dialog match-hud__pause-panel">
                 <ui:Label text="ПАУЗА" class="ui-dialog__title match-hud__pause-title" picking-mode="Ignore" />
                 <ui:VisualElement class="match-hud__pause-body">

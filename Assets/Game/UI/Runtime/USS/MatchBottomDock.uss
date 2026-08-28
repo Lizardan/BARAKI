@@ -160,6 +160,13 @@
     background-color: rgb(28, 30, 27);
 }
 
+.ui-portrait-frame.match-context-strip__portrait {
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
+    padding: 0;
+}
+
 .match-context-strip__center-col {
     flex-grow: 1;
     flex-direction: column;
@@ -247,6 +254,14 @@
 .match-context-strip__research-bar {
     height: 18px;
     width: 100%;
+}
+
+.ui-bar.match-context-strip__research-bar {
+    background-color: rgb(8, 9, 8);
+    background-image: none;
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
 }
 
 .match-command-grid {

@@ -13,16 +13,7 @@
     display: none;
 }
 
-.match-hud__pause-dim {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.62);
-}
-
-.match-hud__pause-panel {
+.ui-dialog.match-hud__pause-panel {
     width: 460px;
     max-width: 88%;
     align-items: center;
@@ -33,7 +24,7 @@
     border-radius: 0;
 }
 
-.match-hud__pause-title {
+.ui-dialog__title.match-hud__pause-title {
     font-size: 24px;
     -unity-font-style: bold;
     color: rgb(208, 178, 118);
@@ -45,10 +36,10 @@
 .match-hud__pause-body {
     align-self: stretch;
     align-items: stretch;
-    padding: 0 8px 8px 8px;
+    padding: 0;
 }
 
-.match-hud__pause-toggle {
+.ui-btn.match-hud__pause-toggle {
     height: 69px;
     width: 100%;
     margin: 0 0 8px 0;
@@ -67,13 +58,13 @@
     transition-property: background-color, border-color, color;
 }
 
-.match-hud__pause-toggle:hover {
+.ui-btn.match-hud__pause-toggle:hover {
     background-color: rgb(80, 66, 40);
     border-color: rgb(208, 178, 118);
     scale: 1;
 }
 
-.match-hud__pause-toggle:active {
+.ui-btn.match-hud__pause-toggle:active {
     background-color: rgb(52, 43, 28);
     scale: 1;
 }
@@ -104,7 +95,7 @@
     justify-content: center;
 }
 
-.match-hud__pause-quit {
+.ui-btn.match-hud__pause-quit {
     height: 69px;
     width: 100%;
     margin: 0 0 8px 0;
@@ -123,13 +114,13 @@
     transition-property: background-color, border-color, color;
 }
 
-.match-hud__pause-quit:hover {
+.ui-btn.match-hud__pause-quit:hover {
     background-color: rgb(36, 39, 35);
     border-color: rgb(185, 154, 98);
     scale: 1;
 }
 
-.match-hud__pause-quit:active {
+.ui-btn.match-hud__pause-quit:active {
     background-color: rgb(16, 18, 17);
     scale: 1;
 }
@@ -144,5 +135,9 @@
     color: rgb(133, 137, 128);
     letter-spacing: 1px;
     -unity-text-align: middle-center;
-    margin-top: 8px;
+    margin: 8px 0 0 0;
+}
+
+.ui-meta.match-hud__pause-hint {
+    color: rgb(133, 137, 128);
 }

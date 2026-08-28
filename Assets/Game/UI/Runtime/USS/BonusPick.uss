@@ -30,6 +30,16 @@
     justify-content: flex-start;
 }
 
+.ui-panel__header {
+    height: auto;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+}
+
 .ui-panel__header-text.bonus-pick__title {
     font-size: 13px;
     -unity-font-style: bold;
