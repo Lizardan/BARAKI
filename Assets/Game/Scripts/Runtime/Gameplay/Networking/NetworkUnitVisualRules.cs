@@ -7,8 +7,17 @@ namespace Game.Gameplay.Networking
     {
         public const float DefaultCatchUpPerSecond = 14f;
 
-        /// <summary>Render-delay applied on clients before sampling the snapshot buffer (2 snapshots at 30 Hz).</summary>
-        public const float ClientInterpDelaySeconds = 2f / 30f;
+        /// <summary>Snapshot publish rate (must match MatchNetworkAuthority.SnapshotHz).</summary>
+        public const float SnapshotHz = 30f;
+        
+        /// <summary>
+        /// Fixed interpolation delay for both host and client: 4 snapshots at 30 Hz = 0.1333s exactly.
+        /// Competitive FFA требует одинаковый visual delay у всех peers для fair presentation.
+        /// </summary>
+        public const int InterpSnapshotCount = 4;
+        
+        /// <summary>Fixed interpolation delay in seconds (4/30).</summary>
+        public static float InterpDelaySeconds => InterpSnapshotCount / SnapshotHz;
 
         /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
         public const float HostCatchUpPerSecond = 40f;

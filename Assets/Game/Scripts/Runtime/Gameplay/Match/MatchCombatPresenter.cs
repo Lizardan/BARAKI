@@ -231,11 +231,11 @@ namespace Game.Gameplay.Match
                 var renderAttackSwing = unit.AttackSwingSerial;
                 Quaternion? renderRotation = null;
 
-                if (_runtime.TickMode == MatchTickMode.Client && !isFirstSpawn)
+                // Snapshot interpolation for smooth presentation (clients + host with same delay)
+                if (!isFirstSpawn)
                 {
-                    // Snapshot interpolation: sample the authoritative buffer at renderTime
-                    // (server time minus a small delay), so 30 Hz snapshots become smooth motion.
-                    var renderTime = ResolveClientRenderTime(controller);
+                    var renderTime = ResolveRenderTime(controller);
+                    
                     if (combat.TryGetUnitRenderPair(
                             unit.UnitId,
                             renderTime,
@@ -258,18 +258,8 @@ namespace Game.Gameplay.Match
                     }
                 }
 
-                if (_runtime.TickMode == MatchTickMode.Client || isFirstSpawn)
-                {
-                    visual.Root.position = renderPosition;
-                }
-                else
-                {
-                    visual.Root.position = NetworkUnitVisualRules.StepToward(
-                        visual.Root.position,
-                        renderPosition,
-                        Time.deltaTime,
-                        NetworkUnitVisualRules.HostCatchUpPerSecond);
-                }
+                // First spawn always snaps to target position
+                visual.Root.position = renderPosition;
 
                 visual.HasSpawned = true;
                 visual.IsParkedAtBase = unit.IsParkedAtBase;
@@ -604,15 +594,23 @@ namespace Game.Gameplay.Match
             return HumanBonusUnitRules.IsHybridMeleeNow(unit, attackerPosition, targetPosition);
         }
 
-        float ResolveClientRenderTime(MatchController controller)
+        /// <summary>
+        /// Resolve render time for interpolation sampling.
+        /// Both host and client use the same fixed delay (4 snapshots) for fair competitive presentation.
+        /// </summary>
+        float ResolveRenderTime(MatchController controller)
         {
-            var serverTimeEstimate = controller.MatchTimeSeconds;
-            if (_runtime != null && _runtime.LastSnapshotArrivalRealtime >= 0f)
+            var delay = NetworkUnitVisualRules.InterpDelaySeconds;
+            
+            if (_runtime != null && _runtime.TickMode == MatchTickMode.Client && _runtime.LastSnapshotArrivalRealtime >= 0f)
             {
-                serverTimeEstimate += Time.time - _runtime.LastSnapshotArrivalRealtime;
+                // Client: estimate server time, then subtract delay
+                var serverTimeEstimate = controller.MatchTimeSeconds + (Time.time - _runtime.LastSnapshotArrivalRealtime);
+                return serverTimeEstimate - delay;
             }
-
-            return serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds;
+            
+            // Host/offline: local sim time minus delay
+            return controller.MatchTimeSeconds - delay;
         }
 
         void TickPendingImpactFx(

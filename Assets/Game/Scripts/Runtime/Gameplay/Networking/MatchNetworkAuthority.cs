@@ -25,6 +25,7 @@ namespace Game.Gameplay.Networking
 
         float _simAccumulator;
         float _snapshotAccumulator;
+        float _lastFullSnapshotRealtime = -1f;
         MatchTickMode _tickMode = MatchTickMode.Offline;
         bool _matchEndedPublished;
         readonly MatchSnapshotWireContext _wire = new();
@@ -77,6 +78,7 @@ namespace Game.Gameplay.Networking
             _tickMode = IsServer ? MatchTickMode.Server : MatchTickMode.Client;
             _wire.ResetEncode();
             _wire.ResetDecode();
+            _lastFullSnapshotRealtime = Time.realtimeSinceStartup;
             _desyncReports.Clear();
             EnsureRuntime();
             EnsureHostMigrationCoordinator();
@@ -324,6 +326,15 @@ namespace Game.Gameplay.Networking
             }
 
             var snapshot = MatchSnapshotCodec.Capture(_matchRuntime.Controller);
+            
+            // Periodic full snapshot resync (every ~10s) for client recovery + host migration safety
+            var timeSinceLastFull = Time.realtimeSinceStartup - _lastFullSnapshotRealtime;
+            if (timeSinceLastFull >= 10f)
+            {
+                _wire.ResetEncode();
+                _lastFullSnapshotRealtime = Time.realtimeSinceStartup;
+            }
+            
             var bytes = _wire.Encode(snapshot);
             _matchRuntime.StoreLastNetworkSnapshot(snapshot, bytes);
             ApplySnapshotClientRpc(bytes);
@@ -599,6 +610,10 @@ namespace Game.Gameplay.Networking
             {
                 controller.Tick(MatchNetworkSimTickRules.FixedDeltaSeconds);
                 _matchRuntime.NotifyServerTick();
+                
+                // Record render samples from local sim for smooth host presentation
+                controller.Combat?.RecordLocalRenderSamples(controller.MatchTimeSeconds);
+                
                 if (controller.Phase == MatchPhase.End)
                 {
                     PublishMatchEndedIfNeeded(controller);

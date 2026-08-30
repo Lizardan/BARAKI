@@ -70,13 +70,18 @@ namespace Game.Gameplay.Combat
         public float ResolvePresentationElapsed() =>
             ResolvePresentationElapsed(UnityEngine.Time.time);
 
+        /// <summary>
+        /// Presentation elapsed uses wall-clock (Time.time - SpawnRealtime) for smooth ~60 fps visuals.
+        /// Damage/impact timing uses <see cref="Elapsed"/> which advances on 30 Hz sim ticks (authoritative).
+        /// </summary>
         public float ResolvePresentationElapsed(float now)
         {
             if (SpawnRealtime >= 0f)
             {
-                return UnityEngine.Mathf.Max(Elapsed, now - SpawnRealtime);
+                return now - SpawnRealtime;
             }
 
+            // Fallback for EditMode tests where SpawnRealtime is not set
             return Elapsed;
         }
 
