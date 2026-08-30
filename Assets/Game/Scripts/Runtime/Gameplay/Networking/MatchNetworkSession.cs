@@ -39,8 +39,14 @@ namespace Game.Gameplay.Networking
         /// False when this build cannot read the host's snapshot format (lobby handshake).
         /// True when there is no lobby state yet (nothing to compare).
         /// </summary>
-        public static bool IsLocalSnapshotCompatible =>
-            NetworkLobbyState.Instance == null || NetworkLobbyState.Instance.IsLocalSnapshotCompatible;
+        public static bool IsLocalSnapshotCompatible
+        {
+            get
+            {
+                var instance = NetworkLobbyState.Instance;
+                return instance == null || instance.IsLocalSnapshotCompatible;
+            }
+        }
 
         /// <summary>Host's snapshot wire version (0 = not initialized).</summary>
         public static int LobbySnapshotCodecVersion => NetworkLobbyState.Instance?.SnapshotCodecVersion ?? 0;
@@ -117,7 +123,12 @@ namespace Game.Gameplay.Networking
             if (bootstrap.IsShutdownInProgress)
             {
                 PlaytestLog.Info("Net", "WaitPreviousShutdown");
-                await bootstrap.WaitForShutdownCompleteAsync();
+                var shutdownComplete = await bootstrap.WaitForShutdownCompleteAsync();
+                if (!shutdownComplete)
+                {
+                    PlaytestLog.Warn("Net", "ShutdownTimeout", ("elapsed", 3f));
+                    return false;
+                }
             }
 
             var manager = bootstrap.NetworkManager;
@@ -356,6 +367,10 @@ namespace Game.Gameplay.Networking
                     displayName);
                 ApplyHandle(handle);
                 ListenHostSlot = localSlot;
+                
+                // Persist reconnect token immediately after migration (new room/relay code)
+                NetworkLobbyState.Instance?.PersistLocalReconnect();
+                
                 return await TryStartTransportAsync();
             }
 
@@ -389,6 +404,10 @@ namespace Game.Gameplay.Networking
                     localSlot,
                     displayName);
                 ApplyHandle(handle);
+                
+                // Persist reconnect token immediately after migration (new room/relay code)
+                NetworkLobbyState.Instance?.PersistLocalReconnect();
+                
                 return await TryStartTransportAsync();
             }
 

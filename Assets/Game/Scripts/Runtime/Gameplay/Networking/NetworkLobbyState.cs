@@ -719,6 +719,26 @@ namespace Game.Gameplay.Networking
             }
         }
 
+        /// <summary>
+        /// After host migration rejoin timeout: eliminate all reserved (non-rejoined) slots
+        /// so the match can resume with the remaining roster.
+        /// </summary>
+        public void EliminateNonRejoinedSlots()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+
+            for (var slot = 0; slot < _slots.Count; slot++)
+            {
+                if (_slots[slot].IsReserved)
+                {
+                    KickDisconnected(slot, fromPendingMigration: true);
+                }
+            }
+        }
+
         public HostMigrationSlotSnapshot[] ExportSlotSnapshot()
         {
             var snapshot = new HostMigrationSlotSnapshot[_slots.Count];

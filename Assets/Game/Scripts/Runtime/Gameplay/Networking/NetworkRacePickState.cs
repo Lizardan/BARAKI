@@ -17,6 +17,7 @@ namespace Game.Gameplay.Networking
         private readonly NetworkVariable<int> _playerCount = new();
         private readonly NetworkVariable<bool> _matchSimStarted = new();
         private readonly NetworkList<FixedString32Bytes> _racePicks = new();
+        private bool _localMatchStartPending;
 
         public static NetworkRacePickState Instance { get; private set; }
 
@@ -129,6 +130,7 @@ namespace Game.Gameplay.Networking
             }
 
             _matchSimStarted.Value = false;
+            _localMatchStartPending = false;
             _racePicks.Clear();
             for (var slot = 0; slot < playerCount; slot++)
             {
@@ -320,11 +322,12 @@ namespace Game.Gameplay.Networking
 
         void TryStartMatchFromReplicatedState()
         {
-            if (IsServer || !_matchSimStarted.Value)
+            if (IsServer || !_matchSimStarted.Value || _localMatchStartPending)
             {
                 return;
             }
 
+            _localMatchStartPending = true;
             ApplyMatchSetupAndStart(ToMutablePickArray());
         }
 

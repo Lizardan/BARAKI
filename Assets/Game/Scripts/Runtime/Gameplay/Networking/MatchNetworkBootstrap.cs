@@ -225,7 +225,7 @@ namespace Game.Gameplay.Networking
         bool _shutdownPending;
 
         /// <summary>Wait (max ~3 s) until a previous NGO shutdown has fully completed.</summary>
-        public async UniTask WaitForShutdownCompleteAsync()
+        public async UniTask<bool> WaitForShutdownCompleteAsync()
         {
             var deadline = Time.realtimeSinceStartup + 3f;
             while (IsShutdownInProgress && Time.realtimeSinceStartup < deadline)
@@ -234,6 +234,7 @@ namespace Game.Gameplay.Networking
             }
 
             _shutdownPending = false;
+            return !IsShutdownInProgress;
         }
 
         public void EnsureServerLobby()

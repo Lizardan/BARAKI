@@ -158,6 +158,7 @@ namespace Game.Gameplay.Networking
                     var nm = MatchNetworkBootstrap.Ensure()?.NetworkManager;
                     var startedAt = Time.realtimeSinceStartup;
                     var expectedClients = Mathf.Max(0, MatchNetworkSession.PlayerCount - 1);
+                    var timedOut = false;
                     while (!HostMigrationRules.HasClientWaitTimedOut(
                                Time.realtimeSinceStartup - startedAt))
                     {
@@ -171,6 +172,15 @@ namespace Game.Gameplay.Networking
                         }
 
                         await UniTask.DelayFrame(1);
+                    }
+
+                    timedOut = HostMigrationRules.HasClientWaitTimedOut(
+                        Time.realtimeSinceStartup - startedAt);
+                    
+                    // After timeout: eliminate non-rejoined (reserved) slots so match can resume
+                    if (timedOut && NetworkLobbyState.Instance != null)
+                    {
+                        NetworkLobbyState.Instance.EliminateNonRejoinedSlots();
                     }
                 }
                 else

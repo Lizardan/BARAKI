@@ -61,7 +61,11 @@ Header: [int playerCount][int phase][float matchTime][int winnerSlot]
 ### MatchSnapshotWireContext
 
 - Хост держит один инстанс (`MatchNetworkAuthority._wire`): `Encode` диффит
-  статику между паблишами. `ResetEncode()` — при спавне и реванше.
+  статику между паблишами. `ResetEncode()` — при спавне и реванше, а также **каждые ~10 s** для periodic full resync.
+- **Periodic full snapshot** (каждые 10 s): `PublishSnapshotNow` проверяет `Time.realtimeSinceStartup - _lastFullSnapshotRealtime >= 10f`, вызывает `_wire.ResetEncode()`. Это обеспечивает:
+  1. Resync всех клиентов после packet loss / lag spike (self-contained snapshot).
+  2. Host migration safety — `LastNetworkSnapshotBytes` всегда содержит актуальный полный snapshot для capture.
+  3. Защита от накопления desyncs в incremental encoding через shared context.
 - Клиент декодирует тем же контекстом: `Decode` накапливает static-кэш.
 - **Свежий контекст = self-contained payload** (вся статика + rosterReset=true):
   так работают статические `Serialize`/`Deserialize` (тесты) и live-capture миграции.
