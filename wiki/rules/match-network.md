@@ -44,16 +44,14 @@ Capture для миграции: last-good bytes, иначе **локальны�
 - `MatchCombatSystem.ApplyAuthoritativeUnits(..., matchTimeSeconds)` пишет каждый снапшот юнита в
   `UnitRenderTrack` (кольцевой буфер до 8 сэмплов, дубликаты/обратные таймстампы отбрасываются).
   Один track на `unitId`, чистится при удалении юнита.
-- **Interpolation delay = n / SnapshotHz** (целое число снапшотов):
-  - **Host:** фиксированные **4 snapshots** (4/30 = 0.1333 s).
-  - **Client adaptive:** **3 или 4 snapshots** (3/30 = 0.1 s или 4/30 = 0.1333 s) с hysteresis.
-    Переключение на n=4 при max jitter > 1.5× nominal interval (~50 ms spike), возврат к n=3 при jitter < 0.8× threshold.
-    Hysteresis предотвращает flicker между 3/4 на каждом пакете.
-  - Delay выравнивается по границам снапшотов — стабильная lerp между prev/next samples.
+- **Фиксированный interpolation delay для всех peers:** **4 snapshots** (4/30 = **0.1333 s**).
+  - Host и client используют **одинаковый delay** для fair competitive presentation.
+  - Все игроки видят юнитов в одинаковых визуальных позициях (относительно server time).
+  - Listen-host по-прежнему имеет 0 RTT на команды (input lag не устранён — это inherent в listen-host архитектуре).
 - Презентер (`MatchCombatPresenter`) на **клиенте** семплирует пару по `renderTime`:
   `serverTimeEstimate = snapshot.MatchTimeSeconds + (Time.time - MatchRuntime.LastSnapshotArrivalRealtime)`,
-  `renderTime = serverTimeEstimate - AdaptiveInterpDelaySeconds`.
-- Презентер на **хосте** семплирует по `renderTime = MatchTimeSeconds - (4 / SnapshotHz)` (4 snapshots для буферизации).
+  `renderTime = serverTimeEstimate - (4 / SnapshotHz)`.
+- Презентер на **хосте** семплирует по `renderTime = MatchTimeSeconds - (4 / SnapshotHz)`.
   Позиция — `Vector3.Lerp(prev, next, alpha)`, поворот — `ResolveRenderFacing` (анти-crossing по world-up),
   `BehaviorState` / `AttackSwingSerial` — из ближайшего по `alpha` сэмпла (анимации тоже плавные).
 - Первый спавн визуала всегда — мгновенный snap (без interpolation).

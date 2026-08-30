@@ -10,68 +10,17 @@ namespace Game.Gameplay.Networking
         /// <summary>Snapshot publish rate (must match MatchNetworkAuthority.SnapshotHz).</summary>
         public const float SnapshotHz = 30f;
         
-        /// <summary>Default interpolation delay: 4 snapshots at 30 Hz = 0.1333s exactly.</summary>
-        public const int DefaultInterpSnapshotCount = 4;
+        /// <summary>
+        /// Fixed interpolation delay for both host and client: 4 snapshots at 30 Hz = 0.1333s exactly.
+        /// Competitive FFA требует одинаковый visual delay у всех peers для fair presentation.
+        /// </summary>
+        public const int InterpSnapshotCount = 4;
         
-        /// <summary>Minimum interpolation delay: 3 snapshots at 30 Hz = 0.1s exactly.</summary>
-        public const int MinInterpSnapshotCount = 3;
-        
-        /// <summary>Hysteresis threshold: max interval above this triggers n=4, below this allows n=3.</summary>
-        public const float JitterThresholdSnapshotIntervals = 1.5f;
+        /// <summary>Fixed interpolation delay in seconds (4/30).</summary>
+        public static float InterpDelaySeconds => InterpSnapshotCount / SnapshotHz;
 
         /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
         public const float HostCatchUpPerSecond = 40f;
-        
-        /// <summary>
-        /// Compute adaptive interpolation delay (n snapshots at SnapshotHz).
-        /// Switches between n=3 and n=4 with hysteresis to avoid flicker.
-        /// Returns n/SnapshotHz where n is 3 or 4.
-        /// </summary>
-        public static float ComputeAdaptiveDelay(
-            IEnumerable<float> recentIntervals,
-            int previousSnapshotCount)
-        {
-            if (recentIntervals == null)
-            {
-                return DefaultInterpSnapshotCount / SnapshotHz;
-            }
-            
-            var count = 0;
-            var maxInterval = 0f;
-            var nominalInterval = 1f / SnapshotHz;
-            
-            foreach (var interval in recentIntervals)
-            {
-                if (interval > maxInterval)
-                {
-                    maxInterval = interval;
-                }
-                count++;
-            }
-            
-            if (count == 0)
-            {
-                return DefaultInterpSnapshotCount / SnapshotHz;
-            }
-            
-            // Hysteresis: if on n=4, need jitter clearly low to drop to n=3
-            // If on n=3, need jitter spike above threshold to bump to n=4
-            var threshold = nominalInterval * JitterThresholdSnapshotIntervals;
-            
-            int targetCount;
-            if (previousSnapshotCount >= DefaultInterpSnapshotCount)
-            {
-                // On n=4: drop to n=3 only if max jitter is clearly below threshold
-                targetCount = maxInterval < threshold * 0.8f ? MinInterpSnapshotCount : DefaultInterpSnapshotCount;
-            }
-            else
-            {
-                // On n=3: bump to n=4 if max jitter exceeds threshold
-                targetCount = maxInterval > threshold ? DefaultInterpSnapshotCount : MinInterpSnapshotCount;
-            }
-            
-            return targetCount / SnapshotHz;
-        }
 
         public static Vector3 StepToward(
             Vector3 current,

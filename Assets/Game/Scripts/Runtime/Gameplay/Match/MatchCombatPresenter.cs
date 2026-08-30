@@ -231,21 +231,10 @@ namespace Game.Gameplay.Match
                 var renderAttackSwing = unit.AttackSwingSerial;
                 Quaternion? renderRotation = null;
 
-                // Snapshot interpolation for smooth presentation (clients + host)
+                // Snapshot interpolation for smooth presentation (clients + host with same delay)
                 if (!isFirstSpawn)
                 {
-                    float renderTime;
-                    if (_runtime.TickMode == MatchTickMode.Client)
-                    {
-                        // Client: server time estimate minus adaptive delay (n=3 or n=4 snapshots)
-                        renderTime = ResolveClientRenderTime(controller);
-                    }
-                    else
-                    {
-                        // Host: local sim time minus default delay (4 snapshots)
-                        var hostDelay = NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
-                        renderTime = controller.MatchTimeSeconds - hostDelay;
-                    }
+                    var renderTime = ResolveRenderTime(controller);
                     
                     if (combat.TryGetUnitRenderPair(
                             unit.UnitId,
@@ -605,19 +594,23 @@ namespace Game.Gameplay.Match
             return HumanBonusUnitRules.IsHybridMeleeNow(unit, attackerPosition, targetPosition);
         }
 
-        float ResolveClientRenderTime(MatchController controller)
+        /// <summary>
+        /// Resolve render time for interpolation sampling.
+        /// Both host and client use the same fixed delay (4 snapshots) for fair competitive presentation.
+        /// </summary>
+        float ResolveRenderTime(MatchController controller)
         {
-            var serverTimeEstimate = controller.MatchTimeSeconds;
-            if (_runtime != null && _runtime.LastSnapshotArrivalRealtime >= 0f)
-            {
-                serverTimeEstimate += Time.time - _runtime.LastSnapshotArrivalRealtime;
-            }
-
-            var delay = _runtime != null 
-                ? _runtime.AdaptiveInterpDelaySeconds 
-                : NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
+            var delay = NetworkUnitVisualRules.InterpDelaySeconds;
             
-            return serverTimeEstimate - delay;
+            if (_runtime != null && _runtime.TickMode == MatchTickMode.Client && _runtime.LastSnapshotArrivalRealtime >= 0f)
+            {
+                // Client: estimate server time, then subtract delay
+                var serverTimeEstimate = controller.MatchTimeSeconds + (Time.time - _runtime.LastSnapshotArrivalRealtime);
+                return serverTimeEstimate - delay;
+            }
+            
+            // Host/offline: local sim time minus delay
+            return controller.MatchTimeSeconds - delay;
         }
 
         void TickPendingImpactFx(
