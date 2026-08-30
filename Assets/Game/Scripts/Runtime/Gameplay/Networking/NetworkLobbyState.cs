@@ -925,7 +925,7 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        void PersistLocalReconnect()
+        internal void PersistLocalReconnect()
         {
             if (!_matchStarted.Value)
             {
