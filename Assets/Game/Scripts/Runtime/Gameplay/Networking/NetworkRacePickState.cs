@@ -302,6 +302,14 @@ namespace Game.Gameplay.Networking
                 return;
             }
 
+            // Guard: prevent double start from multiple paths (BeginMatchClientRpc + replicated state)
+            if (_localMatchStartPending)
+            {
+                return;
+            }
+
+            _localMatchStartPending = true;
+
             var raceIds = RacePickNetworkRules.ToRaceIdsArray(picks);
             var localSlot = ResolveLocalSlot();
             var setup = new MatchSetup(_playerCount.Value, localSlot, raceIds);
@@ -322,12 +330,11 @@ namespace Game.Gameplay.Networking
 
         void TryStartMatchFromReplicatedState()
         {
-            if (IsServer || !_matchSimStarted.Value || _localMatchStartPending)
+            if (IsServer || !_matchSimStarted.Value)
             {
                 return;
             }
 
-            _localMatchStartPending = true;
             ApplyMatchSetupAndStart(ToMutablePickArray());
         }
 
