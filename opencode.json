@@ -1,4 +1,21 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["wiki/rules/*.md"]
+  "instructions": ["wiki/rules/*.md"],
+  "agent": {
+    "uniotasks-compose": {
+      "description": "Собрать JSON-карточку GitHub Issue без инструментов",
+      "mode": "primary",
+      "tools": {
+        "bash": false,
+        "edit": false,
+        "write": false,
+        "read": false,
+        "grep": false,
+        "glob": false,
+        "list": false,
+        "task": false,
+        "webfetch": false
+      }
+    }
+  }
 }
