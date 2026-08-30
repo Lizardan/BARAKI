@@ -25,12 +25,13 @@ namespace Game.Tests
         }
 
         [Test]
-        public void ClientInterpDelay_IsTwoSnapshotsAtThirtyHz()
+        public void InterpDelay_IsFourSnapshotsAtThirtyHz()
         {
             Assert.AreEqual(30f, MatchNetworkAuthority.SnapshotHz);
+            Assert.AreEqual(4, NetworkUnitVisualRules.InterpSnapshotCount);
             Assert.AreEqual(
-                2f / MatchNetworkAuthority.SnapshotHz,
-                NetworkUnitVisualRules.ClientInterpDelaySeconds,
+                4f / MatchNetworkAuthority.SnapshotHz,
+                NetworkUnitVisualRules.InterpDelaySeconds,
                 0.0001f);
         }
     }
