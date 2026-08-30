@@ -38,24 +38,26 @@ Capture для миграции: last-good bytes, иначе **локальны�
 
 Хост тикает симуляцию 30 Гц, снапшоты — `MatchNetworkAuthority.SnapshotHz = 30` (два сэмпла
 в буфере, меньше ощущаемый лаг, чем на 15 Гц). Прямое применение без задержки дёргает юнитов.
-Рендер клиентов построен на **snapshot interpolation** по серверному времени:
+Рендер **клиентов и хоста** построен на **snapshot interpolation** по серверному времени:
 
+- `MatchCombatSystem.RecordLocalRenderSamples` записывает sim positions в `UnitRenderTrack` после каждого Tick (хост) или при `ApplyAuthoritativeUnits` (клиенты).
 - `MatchCombatSystem.ApplyAuthoritativeUnits(..., matchTimeSeconds)` пишет каждый снапшот юнита в
   `UnitRenderTrack` (кольцевой буфер до 8 сэмплов, дубликаты/обратные таймстампы отбрасываются).
   Один track на `unitId`, чистится при удалении юнита.
-- Презентер (`MatchCombatPresenter`) на клиенте семплирует пару по `renderTime`:
+- **Adaptive interpolation delay:** `MatchRuntime.AdaptiveInterpDelaySeconds` вычисляется из последних 16 snapshot arrival intervals. Целевой delay = 3× avg interval + jitter spike, clamped to [~100ms, 150ms] (3–4.5 snapshots at 30 Hz). Это защищает от underruns при Relay jitter.
+- Презентер (`MatchCombatPresenter`) на **клиенте** семплирует пару по `renderTime`:
   `serverTimeEstimate = snapshot.MatchTimeSeconds + (Time.time - MatchRuntime.LastSnapshotArrivalRealtime)`,
-  `renderTime = serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds`
-  (`2 / SnapshotHz` ≈ 0.067 с).
+  `renderTime = serverTimeEstimate - AdaptiveInterpDelaySeconds`.
+- Презентер на **хосте** семплирует по `renderTime = MatchTimeSeconds - MinInterpDelaySeconds` (~100ms) для буферизации.
   Позиция — `Vector3.Lerp(prev, next, alpha)`, поворот — `ResolveRenderFacing` (анти-crossing по world-up),
   `BehaviorState` / `AttackSwingSerial` — из ближайшего по `alpha` сэмпла (анимации тоже плавные).
-- Хост/оффлайн: позиция догоняется `StepToward(HostCatchUpPerSecond = 40f)` (тики 30 Гц «ступенчатые»),
-  поворот — прежний `Slerp(8f * dt)`. Первый спавн визуала всегда — мгновенный snap.
+- Первый спавн визуала всегда — мгновенный snap (без interpolation).
 - `LastSnapshotArrivalRealtime` сбрасывается на `OnSessionStarted` и не выставляется вне `ApplyNetworkSnapshot`.
 
 Снаряды **не** интерполируют снапшотные позиции (в wire — one-shot spawn). Меш летит по
 известной баллистике: `CombatProjectileState.ResolvePresentationProgress` от `SpawnRealtime`
-(кадры / subframe), урон по-прежнему на 30 Гц `Elapsed`. Событие снаряда несёт `AppliesSplashAoe` —
+(wall-clock `Time.time - SpawnRealtime`, не 30 Hz `Elapsed` — гладко на ~60 fps).
+Урон по-прежнему на 30 Гц `Elapsed` (authoritative). Событие снаряда несёт `AppliesSplashAoe` —
 клиентский бонус-Super рисует камень катапульты, не болт.
 
 `QualitySettings.vSyncCount = 1` (ритм монитора, без тиринга; не `targetFrameRate = 60`).

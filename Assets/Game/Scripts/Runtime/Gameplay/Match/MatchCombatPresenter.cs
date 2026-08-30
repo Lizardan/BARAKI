@@ -231,11 +231,21 @@ namespace Game.Gameplay.Match
                 var renderAttackSwing = unit.AttackSwingSerial;
                 Quaternion? renderRotation = null;
 
-                if (_runtime.TickMode == MatchTickMode.Client && !isFirstSpawn)
+                // Snapshot interpolation for smooth presentation (clients + host)
+                if (!isFirstSpawn)
                 {
-                    // Snapshot interpolation: sample the authoritative buffer at renderTime
-                    // (server time minus a small delay), so 30 Hz snapshots become smooth motion.
-                    var renderTime = ResolveClientRenderTime(controller);
+                    float renderTime;
+                    if (_runtime.TickMode == MatchTickMode.Client)
+                    {
+                        // Client: server time estimate minus adaptive delay
+                        renderTime = ResolveClientRenderTime(controller);
+                    }
+                    else
+                    {
+                        // Host: local sim time minus minimal delay for buffer
+                        renderTime = controller.MatchTimeSeconds - NetworkUnitVisualRules.MinInterpDelaySeconds;
+                    }
+                    
                     if (combat.TryGetUnitRenderPair(
                             unit.UnitId,
                             renderTime,
@@ -258,18 +268,8 @@ namespace Game.Gameplay.Match
                     }
                 }
 
-                if (_runtime.TickMode == MatchTickMode.Client || isFirstSpawn)
-                {
-                    visual.Root.position = renderPosition;
-                }
-                else
-                {
-                    visual.Root.position = NetworkUnitVisualRules.StepToward(
-                        visual.Root.position,
-                        renderPosition,
-                        Time.deltaTime,
-                        NetworkUnitVisualRules.HostCatchUpPerSecond);
-                }
+                // First spawn always snaps to target position
+                visual.Root.position = renderPosition;
 
                 visual.HasSpawned = true;
                 visual.IsParkedAtBase = unit.IsParkedAtBase;
@@ -612,7 +612,11 @@ namespace Game.Gameplay.Match
                 serverTimeEstimate += Time.time - _runtime.LastSnapshotArrivalRealtime;
             }
 
-            return serverTimeEstimate - NetworkUnitVisualRules.ClientInterpDelaySeconds;
+            var delay = _runtime != null 
+                ? _runtime.AdaptiveInterpDelaySeconds 
+                : NetworkUnitVisualRules.MinInterpDelaySeconds;
+            
+            return serverTimeEstimate - delay;
         }
 
         void TickPendingImpactFx(

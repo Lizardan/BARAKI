@@ -1065,6 +1065,29 @@ namespace Game.Gameplay.Combat
             track.Add(matchTimeSeconds, position, facing, behaviorState, attackSwingSerial);
         }
 
+        /// <summary>
+        /// Record render samples from local sim (host) for smooth interpolated presentation.
+        /// Call after Tick on host/offline to populate UnitRenderTrack with sim positions.
+        /// </summary>
+        public void RecordLocalRenderSamples(float matchTimeSeconds)
+        {
+            foreach (var unit in _units)
+            {
+                if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                AddRenderSample(
+                    unit.UnitId,
+                    matchTimeSeconds,
+                    unit.WorldPosition,
+                    unit.FacingDirection,
+                    unit.BehaviorState,
+                    unit.AttackSwingSerial);
+            }
+        }
+
         UnitCombatStats ResolveSnapshotStats(
             UnitRole role,
             int ownerSlot,

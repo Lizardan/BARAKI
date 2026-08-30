@@ -30,6 +30,9 @@ namespace Game.Gameplay.Match
         private MatchSnapshot _lastNetworkSnapshot;
         private byte[] _lastNetworkSnapshotBytes;
         private float _startPhaseRealtime = -1f;
+        private float _previousSnapshotArrivalRealtime = -1f;
+        private readonly Queue<float> _snapshotArrivalIntervals = new();
+        private const int MaxSnapshotIntervalSamples = 16;
 
         private GameplayCameraPanController _panController;
         private MatchSelectionBridge _selectionBridge;
@@ -42,6 +45,9 @@ namespace Game.Gameplay.Match
         public byte[] LastNetworkSnapshotBytes => _lastNetworkSnapshotBytes;
         /// <summary>Local <see cref="Time.time"/> when the last network snapshot arrived (client render-time anchor).</summary>
         public float LastSnapshotArrivalRealtime { get; private set; } = -1f;
+        
+        /// <summary>Adaptive interpolation delay based on recent snapshot arrival jitter (client only).</summary>
+        public float AdaptiveInterpDelaySeconds { get; private set; } = NetworkUnitVisualRules.MinInterpDelaySeconds;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
         public MatchFogOfWar FogOfWar => GetComponent<MatchFogOfWar>();
@@ -86,6 +92,9 @@ namespace Game.Gameplay.Match
             _lastNetworkSnapshot = null;
             _lastNetworkSnapshotBytes = null;
             LastSnapshotArrivalRealtime = -1f;
+            _previousSnapshotArrivalRealtime = -1f;
+            _snapshotArrivalIntervals.Clear();
+            AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.MinInterpDelaySeconds;
             _startPhaseRealtime = -1f;
             PrepareArena();
         }
@@ -128,7 +137,23 @@ namespace Game.Gameplay.Match
         public void ApplyNetworkSnapshot(MatchSnapshot snapshot, byte[] rawBytes = null)
         {
             StoreLastNetworkSnapshot(snapshot, rawBytes);
-            LastSnapshotArrivalRealtime = Time.time;
+            var now = Time.time;
+            
+            // Track snapshot arrival intervals for adaptive interpolation delay
+            if (_previousSnapshotArrivalRealtime >= 0f && _tickMode == MatchTickMode.Client)
+            {
+                var interval = now - _previousSnapshotArrivalRealtime;
+                _snapshotArrivalIntervals.Enqueue(interval);
+                while (_snapshotArrivalIntervals.Count > MaxSnapshotIntervalSamples)
+                {
+                    _snapshotArrivalIntervals.Dequeue();
+                }
+                
+                AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.ComputeAdaptiveDelay(_snapshotArrivalIntervals);
+            }
+            
+            _previousSnapshotArrivalRealtime = LastSnapshotArrivalRealtime;
+            LastSnapshotArrivalRealtime = now;
             Controller?.ApplyAuthoritativeSnapshot(snapshot);
         }
 

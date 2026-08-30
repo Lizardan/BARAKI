@@ -7,11 +7,52 @@ namespace Game.Gameplay.Networking
     {
         public const float DefaultCatchUpPerSecond = 14f;
 
-        /// <summary>Render-delay applied on clients before sampling the snapshot buffer (2 snapshots at 30 Hz).</summary>
-        public const float ClientInterpDelaySeconds = 2f / 30f;
+        /// <summary>Minimum interpolation delay: 3 snapshots at 30 Hz (~100ms).</summary>
+        public const float MinInterpDelaySeconds = 3f / 30f;
+        
+        /// <summary>Maximum interpolation delay to clamp adaptive jitter (~150ms, 4.5 snapshots at 30 Hz).</summary>
+        public const float MaxInterpDelaySeconds = 0.15f;
 
         /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
         public const float HostCatchUpPerSecond = 40f;
+        
+        /// <summary>
+        /// Compute adaptive interpolation delay based on recent snapshot arrival intervals.
+        /// Targets 3-4 snapshots delay, adapts to jitter, clamped to [MinInterpDelaySeconds, MaxInterpDelaySeconds].
+        /// </summary>
+        public static float ComputeAdaptiveDelay(IEnumerable<float> recentIntervals)
+        {
+            if (recentIntervals == null)
+            {
+                return MinInterpDelaySeconds;
+            }
+            
+            var count = 0;
+            var sum = 0f;
+            var maxInterval = 0f;
+            
+            foreach (var interval in recentIntervals)
+            {
+                sum += interval;
+                if (interval > maxInterval)
+                {
+                    maxInterval = interval;
+                }
+                count++;
+            }
+            
+            if (count == 0)
+            {
+                return MinInterpDelaySeconds;
+            }
+            
+            // Average interval + max jitter spike, clamped to min/max
+            var avgInterval = sum / count;
+            var jitterSpike = Mathf.Max(0f, maxInterval - avgInterval);
+            var targetDelay = avgInterval * 3f + jitterSpike;
+            
+            return Mathf.Clamp(targetDelay, MinInterpDelaySeconds, MaxInterpDelaySeconds);
+        }
 
         public static Vector3 StepToward(
             Vector3 current,

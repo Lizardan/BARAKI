@@ -610,6 +610,10 @@ namespace Game.Gameplay.Networking
             {
                 controller.Tick(MatchNetworkSimTickRules.FixedDeltaSeconds);
                 _matchRuntime.NotifyServerTick();
+                
+                // Record render samples from local sim for smooth host presentation
+                controller.Combat?.RecordLocalRenderSamples(controller.MatchTimeSeconds);
+                
                 if (controller.Phase == MatchPhase.End)
                 {
                     PublishMatchEndedIfNeeded(controller);
