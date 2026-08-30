@@ -237,13 +237,14 @@ namespace Game.Gameplay.Match
                     float renderTime;
                     if (_runtime.TickMode == MatchTickMode.Client)
                     {
-                        // Client: server time estimate minus adaptive delay
+                        // Client: server time estimate minus adaptive delay (n=3 or n=4 snapshots)
                         renderTime = ResolveClientRenderTime(controller);
                     }
                     else
                     {
-                        // Host: local sim time minus minimal delay for buffer
-                        renderTime = controller.MatchTimeSeconds - NetworkUnitVisualRules.MinInterpDelaySeconds;
+                        // Host: local sim time minus default delay (4 snapshots)
+                        var hostDelay = NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
+                        renderTime = controller.MatchTimeSeconds - hostDelay;
                     }
                     
                     if (combat.TryGetUnitRenderPair(
@@ -614,7 +615,7 @@ namespace Game.Gameplay.Match
 
             var delay = _runtime != null 
                 ? _runtime.AdaptiveInterpDelaySeconds 
-                : NetworkUnitVisualRules.MinInterpDelaySeconds;
+                : NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
             
             return serverTimeEstimate - delay;
         }

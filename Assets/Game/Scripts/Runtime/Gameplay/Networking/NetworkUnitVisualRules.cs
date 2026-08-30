@@ -7,33 +7,41 @@ namespace Game.Gameplay.Networking
     {
         public const float DefaultCatchUpPerSecond = 14f;
 
-        /// <summary>Minimum interpolation delay: 3 snapshots at 30 Hz (~100ms).</summary>
-        public const float MinInterpDelaySeconds = 3f / 30f;
+        /// <summary>Snapshot publish rate (must match MatchNetworkAuthority.SnapshotHz).</summary>
+        public const float SnapshotHz = 30f;
         
-        /// <summary>Maximum interpolation delay to clamp adaptive jitter (~150ms, 4.5 snapshots at 30 Hz).</summary>
-        public const float MaxInterpDelaySeconds = 0.15f;
+        /// <summary>Default interpolation delay: 4 snapshots at 30 Hz = 0.1333s exactly.</summary>
+        public const int DefaultInterpSnapshotCount = 4;
+        
+        /// <summary>Minimum interpolation delay: 3 snapshots at 30 Hz = 0.1s exactly.</summary>
+        public const int MinInterpSnapshotCount = 3;
+        
+        /// <summary>Hysteresis threshold: max interval above this triggers n=4, below this allows n=3.</summary>
+        public const float JitterThresholdSnapshotIntervals = 1.5f;
 
         /// <summary>StepToward catch-up for host/offline presentation driven by 30 Hz sim ticks.</summary>
         public const float HostCatchUpPerSecond = 40f;
         
         /// <summary>
-        /// Compute adaptive interpolation delay based on recent snapshot arrival intervals.
-        /// Targets 3-4 snapshots delay, adapts to jitter, clamped to [MinInterpDelaySeconds, MaxInterpDelaySeconds].
+        /// Compute adaptive interpolation delay (n snapshots at SnapshotHz).
+        /// Switches between n=3 and n=4 with hysteresis to avoid flicker.
+        /// Returns n/SnapshotHz where n is 3 or 4.
         /// </summary>
-        public static float ComputeAdaptiveDelay(IEnumerable<float> recentIntervals)
+        public static float ComputeAdaptiveDelay(
+            IEnumerable<float> recentIntervals,
+            int previousSnapshotCount)
         {
             if (recentIntervals == null)
             {
-                return MinInterpDelaySeconds;
+                return DefaultInterpSnapshotCount / SnapshotHz;
             }
             
             var count = 0;
-            var sum = 0f;
             var maxInterval = 0f;
+            var nominalInterval = 1f / SnapshotHz;
             
             foreach (var interval in recentIntervals)
             {
-                sum += interval;
                 if (interval > maxInterval)
                 {
                     maxInterval = interval;
@@ -43,15 +51,26 @@ namespace Game.Gameplay.Networking
             
             if (count == 0)
             {
-                return MinInterpDelaySeconds;
+                return DefaultInterpSnapshotCount / SnapshotHz;
             }
             
-            // Average interval + max jitter spike, clamped to min/max
-            var avgInterval = sum / count;
-            var jitterSpike = Mathf.Max(0f, maxInterval - avgInterval);
-            var targetDelay = avgInterval * 3f + jitterSpike;
+            // Hysteresis: if on n=4, need jitter clearly low to drop to n=3
+            // If on n=3, need jitter spike above threshold to bump to n=4
+            var threshold = nominalInterval * JitterThresholdSnapshotIntervals;
             
-            return Mathf.Clamp(targetDelay, MinInterpDelaySeconds, MaxInterpDelaySeconds);
+            int targetCount;
+            if (previousSnapshotCount >= DefaultInterpSnapshotCount)
+            {
+                // On n=4: drop to n=3 only if max jitter is clearly below threshold
+                targetCount = maxInterval < threshold * 0.8f ? MinInterpSnapshotCount : DefaultInterpSnapshotCount;
+            }
+            else
+            {
+                // On n=3: bump to n=4 if max jitter exceeds threshold
+                targetCount = maxInterval > threshold ? DefaultInterpSnapshotCount : MinInterpSnapshotCount;
+            }
+            
+            return targetCount / SnapshotHz;
         }
 
         public static Vector3 StepToward(

@@ -44,11 +44,16 @@ Capture для миграции: last-good bytes, иначе **локальны�
 - `MatchCombatSystem.ApplyAuthoritativeUnits(..., matchTimeSeconds)` пишет каждый снапшот юнита в
   `UnitRenderTrack` (кольцевой буфер до 8 сэмплов, дубликаты/обратные таймстампы отбрасываются).
   Один track на `unitId`, чистится при удалении юнита.
-- **Adaptive interpolation delay:** `MatchRuntime.AdaptiveInterpDelaySeconds` вычисляется из последних 16 snapshot arrival intervals. Целевой delay = 3× avg interval + jitter spike, clamped to [~100ms, 150ms] (3–4.5 snapshots at 30 Hz). Это защищает от underruns при Relay jitter.
+- **Interpolation delay = n / SnapshotHz** (целое число снапшотов):
+  - **Host:** фиксированные **4 snapshots** (4/30 = 0.1333 s).
+  - **Client adaptive:** **3 или 4 snapshots** (3/30 = 0.1 s или 4/30 = 0.1333 s) с hysteresis.
+    Переключение на n=4 при max jitter > 1.5× nominal interval (~50 ms spike), возврат к n=3 при jitter < 0.8× threshold.
+    Hysteresis предотвращает flicker между 3/4 на каждом пакете.
+  - Delay выравнивается по границам снапшотов — стабильная lerp между prev/next samples.
 - Презентер (`MatchCombatPresenter`) на **клиенте** семплирует пару по `renderTime`:
   `serverTimeEstimate = snapshot.MatchTimeSeconds + (Time.time - MatchRuntime.LastSnapshotArrivalRealtime)`,
   `renderTime = serverTimeEstimate - AdaptiveInterpDelaySeconds`.
-- Презентер на **хосте** семплирует по `renderTime = MatchTimeSeconds - MinInterpDelaySeconds` (~100ms) для буферизации.
+- Презентер на **хосте** семплирует по `renderTime = MatchTimeSeconds - (4 / SnapshotHz)` (4 snapshots для буферизации).
   Позиция — `Vector3.Lerp(prev, next, alpha)`, поворот — `ResolveRenderFacing` (анти-crossing по world-up),
   `BehaviorState` / `AttackSwingSerial` — из ближайшего по `alpha` сэмпла (анимации тоже плавные).
 - Первый спавн визуала всегда — мгновенный snap (без interpolation).

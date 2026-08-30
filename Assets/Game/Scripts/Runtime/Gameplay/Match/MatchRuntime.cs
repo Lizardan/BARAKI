@@ -33,6 +33,7 @@ namespace Game.Gameplay.Match
         private float _previousSnapshotArrivalRealtime = -1f;
         private readonly Queue<float> _snapshotArrivalIntervals = new();
         private const int MaxSnapshotIntervalSamples = 16;
+        private int _currentInterpSnapshotCount = NetworkUnitVisualRules.DefaultInterpSnapshotCount;
 
         private GameplayCameraPanController _panController;
         private MatchSelectionBridge _selectionBridge;
@@ -46,8 +47,8 @@ namespace Game.Gameplay.Match
         /// <summary>Local <see cref="Time.time"/> when the last network snapshot arrived (client render-time anchor).</summary>
         public float LastSnapshotArrivalRealtime { get; private set; } = -1f;
         
-        /// <summary>Adaptive interpolation delay based on recent snapshot arrival jitter (client only).</summary>
-        public float AdaptiveInterpDelaySeconds { get; private set; } = NetworkUnitVisualRules.MinInterpDelaySeconds;
+        /// <summary>Adaptive interpolation delay: n snapshots at SnapshotHz (n=3 or n=4, with hysteresis).</summary>
+        public float AdaptiveInterpDelaySeconds { get; private set; } = NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
         public MatchSelection Selection => _selectionBridge != null ? _selectionBridge.Selection : null;
         public MatchPickRegistry PickRegistry => _selectionBridge != null ? _selectionBridge.Registry : null;
         public MatchFogOfWar FogOfWar => GetComponent<MatchFogOfWar>();
@@ -94,7 +95,8 @@ namespace Game.Gameplay.Match
             LastSnapshotArrivalRealtime = -1f;
             _previousSnapshotArrivalRealtime = -1f;
             _snapshotArrivalIntervals.Clear();
-            AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.MinInterpDelaySeconds;
+            _currentInterpSnapshotCount = NetworkUnitVisualRules.DefaultInterpSnapshotCount;
+            AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.DefaultInterpSnapshotCount / NetworkUnitVisualRules.SnapshotHz;
             _startPhaseRealtime = -1f;
             PrepareArena();
         }
@@ -149,7 +151,13 @@ namespace Game.Gameplay.Match
                     _snapshotArrivalIntervals.Dequeue();
                 }
                 
-                AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.ComputeAdaptiveDelay(_snapshotArrivalIntervals);
+                AdaptiveInterpDelaySeconds = NetworkUnitVisualRules.ComputeAdaptiveDelay(
+                    _snapshotArrivalIntervals,
+                    _currentInterpSnapshotCount);
+                
+                // Update current count for hysteresis (derive from delay)
+                _currentInterpSnapshotCount = Mathf.RoundToInt(
+                    AdaptiveInterpDelaySeconds * NetworkUnitVisualRules.SnapshotHz);
             }
             
             _previousSnapshotArrivalRealtime = LastSnapshotArrivalRealtime;
