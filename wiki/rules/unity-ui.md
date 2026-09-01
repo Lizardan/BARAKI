@@ -109,7 +109,7 @@ origin **сверху слева**. Всегда конвертировать ч
 
 Разрешено (graphite, `border-radius: 0`, без «iOS glass»):
 
-- `backdrop-filter: blur(...) tint(...)` — оверлеи и диммы (`.ui-overlay__dim`, `.ui-bg-shade`, `.ui-overlay-frost`, pause / race-pick / bonus-pick / results). Не вешать blur на нижний док и миникарту.
+- `backdrop-filter: blur(...) tint(...)` — только поверх другого UITK (меню/лобби). **Не** на оверлеях Game-сцены (pause, race-pick, bonus-pick, results): фильтр не семплит 3D и даёт сплошной чёрный. Там обычный `rgba(8, 9, 8, 0.82)`. Не вешать blur на нижний док и миникарту.
 - `filter: drop-shadow(...)` — `.ui-dialog` и `.ui-chrome` для глубины панелей.
 
 Запрещено для chrome: кастомные UITK vertex Shader Graph / mesh modifiers (это отдельный VFX-HUD, не тема). Не скруглять панели ради frost.

@@ -80,7 +80,7 @@ Unity Editor → сервер `unityMCP` (мост `:6400`). MCP-first для ed
 
 ## Unity 6.6
 
-**Взяли:** UITK `backdrop-filter` / `drop-shadow` на оверлеях и панелях (`BarakiTheme.uss`);
+**Взяли:** UITK `drop-shadow` на панелях; `backdrop-filter` только поверх UITK (меню/лобби), не поверх 3D;
 managed-code defines вместо `DEVELOPMENT_BUILD`; Burst built-in; Cinemachine 6.6 как core
 package (API CM3). CI: `unityci/editor:windows-6000.6.0f1-windows-il2cpp-3`.
 

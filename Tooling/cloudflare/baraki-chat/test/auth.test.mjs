@@ -98,6 +98,43 @@ test("audience mismatch is rejected when project id is enforced", async () => {
   assert.ok(good);
 });
 
+test("Unity-style aud upid: prefix and project_id claim are accepted", async () => {
+  const { privateKey, jwk } = await makeKeyPair("k1");
+  const fetchJwks = async () => new Map([["k1", jwk]]);
+  const projectId = PAYLOAD.aud;
+  const unityPayload = {
+    ...PAYLOAD,
+    aud: [`upid:${projectId}`, "envName:production", "envId:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"],
+    project_id: projectId,
+  };
+  const token = await signJwt(privateKey, { alg: "RS256", kid: "k1", typ: "JWT" }, unityPayload);
+  const result = await verifyUgsJwt(token, {
+    fetchJwks,
+    nowSec: NOW,
+    expectedProjectId: projectId,
+  });
+  assert.ok(result);
+  assert.equal(result.sub, PAYLOAD.sub);
+});
+
+test("project_id claim matches even when aud has no project uuid", async () => {
+  const { privateKey, jwk } = await makeKeyPair("k1");
+  const fetchJwks = async () => new Map([["k1", jwk]]);
+  const projectId = PAYLOAD.aud;
+  const payload = {
+    ...PAYLOAD,
+    aud: ["envName:production"],
+    project_id: projectId,
+  };
+  const token = await signJwt(privateKey, { alg: "RS256", kid: "k1" }, payload);
+  const result = await verifyUgsJwt(token, {
+    fetchJwks,
+    nowSec: NOW,
+    expectedProjectId: projectId,
+  });
+  assert.ok(result);
+});
+
 test("non-RS256 algorithm is rejected without touching keys", async () => {
   const token = `${base64UrlEncode({ alg: "HS256" })}.${base64UrlEncode(PAYLOAD)}.c2ln`;
   const result = await verifyUgsJwt(token, {

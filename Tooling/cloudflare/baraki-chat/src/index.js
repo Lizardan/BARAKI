@@ -28,6 +28,19 @@ let s_jwksCache = { keys: null, fetchedAt: 0 };
  * JWKS. Returns the payload when valid, otherwise null.
  * Injectable deps keep this testable without network access.
  */
+
+/**
+ * Unity id tokens put the project id in `project_id` and as `upid:<uuid>`
+ * inside `aud` (plus envName:/envId: entries). Bare UUID in `aud` is still
+ * accepted for fixtures and older token shapes.
+ */
+function audienceMatchesProject(payload, expectedProjectId) {
+  if (!expectedProjectId) return true;
+  if (String(payload.project_id ?? "").trim() === expectedProjectId) return true;
+  const aud = Array.isArray(payload.aud) ? payload.aud.map(String) : [String(payload.aud ?? "")];
+  return aud.includes(expectedProjectId) || aud.includes(`upid:${expectedProjectId}`);
+}
+
 export async function verifyUgsJwt(token, opts = {}) {
   const fetchJwks = opts.fetchJwks || fetchUgsJwks;
   const nowSec = typeof opts.nowSec === "number" ? opts.nowSec : Math.floor(Date.now() / 1000);
@@ -45,10 +58,7 @@ export async function verifyUgsJwt(token, opts = {}) {
   if (typeof payload.nbf === "number" && payload.nbf > nowSec) return null;
   const sub = typeof payload.sub === "string" ? payload.sub.trim() : "";
   if (sub.length < 4 || sub.length > 128) return null;
-  if (expectedProjectId) {
-    const aud = Array.isArray(payload.aud) ? payload.aud.map(String) : [String(payload.aud ?? "")];
-    if (!aud.includes(expectedProjectId)) return null;
-  }
+  if (expectedProjectId && !audienceMatchesProject(payload, expectedProjectId)) return null;
   if (requiredIssuer && String(payload.iss || "") !== requiredIssuer) return null;
 
   let key = await importUgsKey(header.kid, await fetchJwks(false));

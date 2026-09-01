@@ -208,6 +208,11 @@ Caster не может быть 0 — `Unspecified = 0` значит «ещё н
 `Lana Studio/Hyper Casual FX/Prefabs`, **`Assets/Game/Prefabs/Fx/Custom`**. Первая ячейка — «нет».
 ObjectField не затирает префаб вне этих папок.
 
+Меши CFXR (`**/CFXR Assets/**/*.asset`) в паке должны быть Unity 6 (`serializedVersion` ≥ 10).
+Старый Cartoon FX Remaster приходит с version 9 — консоль пишет
+«Mesh object at version 9, below the supported minimum (10)». Лечится
+`AssetDatabase.ForceReserializeAssets` / Open+Save в Editor, YAML руками не трогать.
+
 | Kind | Способности | Типичные префабы |
 |------|-------------|------------------|
 | Aura | пассивные 13/23/33/43/50 | Hyper Casual Area/Shine; CFXR Magic Aura / LightGlow Loop |

@@ -69,8 +69,9 @@ npx wrangler deploy
 на WS-handshake (`GameChatSocket`, токен читается на главном потоке перед каждым
 коннектом) и все HTTP-запросы (`GameChatService.RequestJsonAsync`). Worker
 верифицирует RS256-подпись по JWKS Unity (`player-auth.services.api.unity.com/.well-known/jwks.json`,
-кэш 1 ч), проверяет `exp`/`aud` (= Unity project id, var `CHAT_JWT_PROJECT_ID` в
-`wrangler.jsonc`), игрок берётся из `sub`; расхождение с `X-Baraki-Player-Id` → 401.
+кэш 1 ч), проверяет `exp` и проект (`CHAT_JWT_PROJECT_ID` в `wrangler.jsonc`) по
+клейму `project_id` **или** `aud` (`upid:<uuid>` как в реальном UGS-токене, либо
+голый UUID). Игрок берётся из `sub`; расхождение с `X-Baraki-Player-Id` → 401.
 Легаси shared-secret фолбэк `X-Baraki-Key` удалён — запрос без валидного JWT
 получает 401 (старые билды клиента теряют меню-чат). Тесты воркера —
 `node --test "test/*.test.mjs"` в `Tooling/cloudflare/baraki-chat/test/`.

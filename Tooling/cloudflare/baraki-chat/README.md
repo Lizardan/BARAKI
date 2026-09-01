@@ -36,7 +36,8 @@ Headers: `Authorization: Bearer <UGS id token>`, `X-Baraki-Player-Id`,
 1. Worker верифицирует подпись по публичным ключам Unity
    (`https://player-auth.services.api.unity.com/.well-known/jwks.json`, кэш 1 ч,
    форс-обновление при неизвестном `kid`) и проверяет `exp`.
-2. `aud` должен содержать Unity project id (`CHAT_JWT_PROJECT_ID`, см. `wrangler.jsonc`).
+2. Проект сверяется с `CHAT_JWT_PROJECT_ID` (`wrangler.jsonc`) по клейму
+   `project_id` или `aud` (`upid:<uuid>` в реальных UGS-токенах, либо голый UUID).
 3. Игрок берётся из клейма `sub`; клиентский `X-Baraki-Player-Id`, если прислан,
    обязан совпадать с ним — иначе 401.
 
