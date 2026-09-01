@@ -71,6 +71,7 @@ Assets/Game/
 
 ## Пакеты
 
-- `Packages/manifest.json`: UniTask (git, pinned), Cinemachine, Input System, Netcode, UGS, MCP — **без `com.unity.ugui`**
+- `Packages/manifest.json`: UniTask (git, pinned), Cinemachine 6.6 (builtin, CM3 API), Input System, Netcode, UGS, MCP — **без `com.unity.ugui`** и без `com.unity.feature.2d`
+- `Packages/manifest.ci.json`: то же без MCP/Cursor/Pipeline/Project Auditor (`pwsh -File Packages/Sync-Packages.ps1`)
 - `Assets/Plugins/UniRx/`: vendored, trimmed (см. `TRIM_NOTES.md`) — после обновления с Asset Store переприменять trim
 - `Assets/Game/UI/Runtime/Extensions/`: UI Toolkit-мост для UniRx + UniTask

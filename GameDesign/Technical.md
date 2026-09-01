@@ -12,7 +12,7 @@ provides: [unity_architecture, assemblies, scenes, networking, data_pipeline, ag
 
 | Layer | Choice |
 |-------|--------|
-| Engine | Unity 6.5, URP 17.5 |
+| Engine | Unity 6.6, URP 17.6 |
 | **Ship client** | **Windows x64 Standalone** |
 | Async | UniTask |
 | UI | UI Toolkit |

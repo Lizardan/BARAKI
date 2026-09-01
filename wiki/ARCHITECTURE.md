@@ -7,9 +7,9 @@ listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friend
 
 | Слой | Стек |
 |------|------|
-| Unity | 6000.5.9f1 (`F:\Unity\Editor\6000.5.9f1`), C# 12 |
-| Rendering | URP 17.5 — `Settings/Rendering/RPAsset.asset`, `Renderer.asset`, `DefaultVolumeProfile.asset` |
-| Cameras | Cinemachine 3.1.7 — `Gameplay/Cameras/` |
+| Unity | 6000.6.0f1 (`F:\Unity\Editor\6000.6.0f1`), C# 12 |
+| Rendering | URP 17.6 — `Settings/Rendering/RPAsset.asset`, `Renderer.asset`, `DefaultVolumeProfile.asset` |
+| Cameras | Cinemachine 6.6 (CM3 API, builtin) — `Gameplay/Cameras/` |
 | UI | UI Toolkit only (UXML/USS/UIDocument) — **без** `com.unity.ugui` |
 | Reactive | UniRx (vendored, trimmed — `Assets/Plugins/UniRx/`) |
 | Async | UniTask (git, pinned); bootstrap `Game.Core` — `Awaitable` |
@@ -18,7 +18,7 @@ listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friend
 | Прочее | Clipper2Lib |
 
 **Не установлены** (не ссылаться в правилах и коде): ProBuilder, glTFast,
-Addressables, DOTween, Roslyn. VFX Graph **установлен** (17.5) — Adjustable Slash pack + тинт
+Addressables, DOTween, Roslyn. VFX Graph **установлен** (17.6) — Adjustable Slash pack + тинт
 `AbilityVfxTint`. Единственный MCP-optional-dep — Cinemachine.
 
 ## Асинхронность
@@ -56,7 +56,8 @@ Netcode, UGS, UniTask, UniRx, Clipper2Lib, Unity.VisualEffectGraph.Runtime. Де
 
 ## Cameras
 
-Все игровые камеры — Cinemachine 3 (`Unity.Cinemachine`), не ручная анимация `Camera.transform`.
+Все игровые камеры — Cinemachine 6.6 / CM3 API (`Unity.Cinemachine`: `CinemachineCamera`,
+`CinemachineFollow`, `CinemachineBrain`), не ручная анимация `Camera.transform`.
 Main Camera несёт `CinemachineBrain`. Runtime-привязка слежения — `GameplayCameraBinder`
 (`Scripts/Runtime/Gameplay/Cameras/GameplayCameraBinder.cs`); rig-префаб `Prefabs/Cameras/GameCameraRig.prefab`
 оставляет `_followTarget` null — сцена привязывает Player root. Не добавлять `CameraTarget`-ребёнка:
@@ -76,3 +77,16 @@ Main Camera несёт `CinemachineBrain`. Runtime-привязка слежен
 
 Unity Editor → сервер `unityMCP` (мост `:6400`). MCP-first для editor-операций.
 Воркфлоу и инструменты: `rules/unity-mcp.md`.
+
+## Unity 6.6
+
+**Взяли:** UITK `backdrop-filter` / `drop-shadow` на оверлеях и панелях (`BarakiTheme.uss`);
+managed-code defines вместо `DEVELOPMENT_BUILD`; Burst built-in; Cinemachine 6.6 как core
+package (API CM3). CI: `unityci/editor:windows-6000.6.0f1-windows-il2cpp-3`.
+
+**Backlog (не внедрять без нужды):** DXC для DX12 в Shader Build Settings; shader constants
+per Build Profile; `Unity.AI.Navigation.LowLevel` jobs; `NetworkTransportInterface`;
+`[SerializeField] Dictionary` на новых SO; UITK mesh modifiers / vertex Shader Graph для HUD.
+
+**Не использовать:** On-Tile / Tile-Only post (мобайл), `com.unity.feature.2d`, кастомные
+UITK-вершины для chrome, SafeArea uGUI, Content Directories / Addressables.

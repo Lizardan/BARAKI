@@ -2,7 +2,7 @@
 
 ## Проект
 - Мультиплеерная FFA-стратегия BARAKI: 2–5 игроков, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
-- Unity `6000.5.9f1` (`F:\Unity\Editor\6000.5.9f1`), C# 12, URP 17.5, Cinemachine 3, Input System 1.20.
+- Unity `6000.6.0f1` (`F:\Unity\Editor\6000.6.0f1`), C# 12, URP 17.6, Cinemachine 6.6 (CM3 API), Input System 1.20.
 - Асинхронность: `Awaitable` — только в bootstrap (`Game.Core`); Gameplay/UI — `UniTask`/`UniTaskVoid`. **Никогда** `Task`/`async void`.
 
 ## Коммуникация
@@ -33,7 +33,7 @@
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
 - Версия: Editor `bundleVersion` = последний GitHub tag + 1 patch. Смена линии (`0.1.*` → `0.2.*`) — выставить `X.Y.1`; CI снимет следующий релиз в `vX.Y.0`.
 - **Теги:** `v*` — полный клиент (единственный `/releases/latest`); `updater-v*` — апдейтер (prerelease, никогда не latest; release-prune их не трогает).
-- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor-пакетов). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
+- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor/Pipeline/Project Auditor). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
 - Билд: `Game.Editor.WindowsCiBuild.Build`. Задачи и подзадачи — в GitHub Issues (см. `wiki/rules/github-issues-workflow.md`).
 - `Tooling/` — вспомогательная инфраструктура вне Unity-проекта: `Tooling/docs/` (простые HTML privacy/terms, деплой as-is), `Tooling/cloudflare/baraki-landing/` (Pages + `functions/download.js` — редирект на `updater-v*/BARAKI-Setup.exe`), `Tooling/BuildSupport/` (скрипты CI + Inno Setup апдейтера).
 

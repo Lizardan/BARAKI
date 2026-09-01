@@ -105,6 +105,15 @@ origin **сверху слева**. Всегда конвертировать ч
 
 **BarakiTheme.uss** содержит общие `ui-*` классы и `:root` переменные палитры (фон `--bg-dark: rgb(8, 9, 8)`, панели `--panel-dark / --panel-mid`, рамки `--border-graphite: rgb(52, 56, 50)`, текст `--text-light: rgb(222, 219, 210)`, бронза `--bronze-accent / --bronze-muted`, шаг `--grid-step: 8px`). Переделанные экраны используют переменные вместо хардкоженных цветов старой палитры (cream `#EFE4CF`, rim `#7D7568`). Старые `ui-*` классы с 2px borders и старыми цветами могут ещё использоваться непеределанными экранами (например, Launcher UI), не удалять их без проверки консоли и EditMode тестов. Game-scene UI полностью переведён на graphite; локальные two-class overrides (`ui-dialog.match-hud__pause-panel`, `ui-btn.match-hud__debug-btn`) заменяют BarakiTheme defaults.
 
+## Unity 6.6 USS
+
+Разрешено (graphite, `border-radius: 0`, без «iOS glass»):
+
+- `backdrop-filter: blur(...) tint(...)` — оверлеи и диммы (`.ui-overlay__dim`, `.ui-bg-shade`, `.ui-overlay-frost`, pause / race-pick / bonus-pick / results). Не вешать blur на нижний док и миникарту.
+- `filter: drop-shadow(...)` — `.ui-dialog` и `.ui-chrome` для глубины панелей.
+
+Запрещено для chrome: кастомные UITK vertex Shader Graph / mesh modifiers (это отдельный VFX-HUD, не тема). Не скруглять панели ради frost.
+
 ## UXML / USS
 
 - Именовать элементы для `root.Q<T>("Name")`

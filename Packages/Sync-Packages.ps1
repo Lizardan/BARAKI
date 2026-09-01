@@ -2,7 +2,7 @@
 #
 # CI подменяет manifest.json на manifest.ci.json (без MCP/Cursor-пакетов).
 # Этот скрипт копирует все runtime-зависимости из manifest.json в manifest.ci.json,
-# сохраняя исключения (com.boxqkrtm.ide.cursor, com.coplaydev.unity-mcp).
+# сохраняя исключения (MCP, Cursor IDE, Unity Pipeline, Project Auditor).
 #
 # Запуск: pwsh -File Packages/Sync-Packages.ps1
 
@@ -15,7 +15,9 @@ $ErrorActionPreference = "Stop"
 
 $excludePrefixes = @(
     "com.boxqkrtm.ide.cursor",
-    "com.coplaydev.unity-mcp"
+    "com.coplaydev.unity-mcp",
+    "com.unity.pipeline",
+    "com.unity.project-auditor-rules"
 )
 
 $manifestJson = Get-Content $Manifest -Raw | ConvertFrom-Json
@@ -23,6 +25,11 @@ $ciJson = Get-Content $CiManifest -Raw | ConvertFrom-Json
 
 $ciDeps = @{}
 foreach ($prop in $ciJson.dependencies.PSObject.Properties) {
+    $skip = $false
+    foreach ($prefix in $excludePrefixes) {
+        if ($prop.Name.StartsWith($prefix)) { $skip = $true; break }
+    }
+    if ($skip) { continue }
     $ciDeps[$prop.Name] = $prop.Value
 }
 

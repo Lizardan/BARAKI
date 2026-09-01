@@ -1332,7 +1332,8 @@
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(8, 9, 8, 0.82);
+    background-color: rgba(8, 9, 8, 0.28);
+    backdrop-filter: blur(8px) tint(rgba(8, 9, 8, 0.22));
     z-index: 40;
 }
 
@@ -1926,7 +1927,8 @@
 }
 
 .mm .ui-overlay__dim {
-    background-color: rgba(8, 9, 8, 0.82);
+    background-color: rgba(8, 9, 8, 0.28);
+    backdrop-filter: blur(8px) tint(rgba(8, 9, 8, 0.22));
 }
 
 .mm .ui-panel-loading-overlay__text {

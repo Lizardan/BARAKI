@@ -24,6 +24,17 @@ Unity-клиент: сцена Bootstrap + define `BARAKI_UPDATER_ONLY`. Вер�
 Сборка: `Game.Editor.WindowsCiBuild.BuildUpdaterOnly` → `build/Updater` →
 `ISCC.exe` → `dist/BARAKI-Setup.exe`. `AppId` стабильный, ставит в `{autopf}\BARAKI`.
 
+## Unity CI image
+
+Воркфлоу `deploy-windows.yml` / `deploy-updater-windows.yml` используют
+`unityci/editor:windows-6000.6.0f1-windows-il2cpp-3` и `unityVersion: 6000.6.0f1`
+(`customParameters: -accept-apiupdate`). Тег `windows-mono` для этой версии на Windows
+runners нет — только il2cpp.
+
+Game-ci публикует образ в течение часов после релиза Editor. Если `docker pull` даёт 404 —
+не пушить релизный путь в `main`, пока тег не появится на Docker Hub. Cache `Library`
+завязан на `ProjectSettings/ProjectVersion.txt` и сам инвалидируется при смене Editor.
+
 ## Деплой лендинга
 
 Каталог: `Tooling/cloudflare/baraki-landing/`.

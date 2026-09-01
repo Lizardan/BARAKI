@@ -9,7 +9,7 @@ name: Deploy Windows (auto release)
 #
 # CI speed notes (GitHub-hosted Windows):
 # - Docker Unity image pull dominates (~10+ min); pre-pull overlaps Library cache restore.
-# - windows-mono image tag is not published for 6000.5.1f1 on Windows hosts — use il2cpp.
+# - windows-mono image tag is not published for 6000.6.0f1 on Windows hosts — use il2cpp.
 # - Packages/manifest.ci.json drops editor-only tooling (MCP / Cursor IDE) for faster resolve.
 
 on:
@@ -45,7 +45,7 @@ permissions:
 env:
   # Explicit image so background pre-pull matches game-ci/unity-builder customImage.
   # No windows-mono tag for this version on Windows runners (Docker Hub 2026-07).
-  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.9f1-windows-il2cpp-3
+  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.6.0f1-windows-il2cpp-3
 
 jobs:
   build:
@@ -331,11 +331,12 @@ jobs:
           BARAKI_BUILD_VERSION: ${{ steps.ver.outputs.version }}
         with:
           targetPlatform: StandaloneWindows64
-          unityVersion: 6000.5.9f1
+          unityVersion: 6000.6.0f1
           customImage: ${{ env.UNITY_DOCKER_IMAGE }}
           buildsPath: build
           buildName: Windows
           allowDirtyBuild: true
+          customParameters: -accept-apiupdate
           buildMethod: Game.Editor.WindowsCiBuild.Build
 
       - name: Clear partial build before Unity retry
@@ -359,11 +360,12 @@ jobs:
           BARAKI_BUILD_VERSION: ${{ steps.ver.outputs.version }}
         with:
           targetPlatform: StandaloneWindows64
-          unityVersion: 6000.5.9f1
+          unityVersion: 6000.6.0f1
           customImage: ${{ env.UNITY_DOCKER_IMAGE }}
           buildsPath: build
           buildName: Windows
           allowDirtyBuild: true
+          customParameters: -accept-apiupdate
           buildMethod: Game.Editor.WindowsCiBuild.Build
 
       - name: Zip build

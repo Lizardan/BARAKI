@@ -16,7 +16,7 @@ namespace Game.Editor
 {
     /// <summary>
     /// Applies Coplay MCP stdio prefs and the Windows hidden launcher during project bootstrap.
-    /// Avoids MCP For Unity HTTP UI on Unity 6.5 (SerializedProperty finalize crash).
+    /// Avoids MCP For Unity HTTP UI on Unity 6.6 (SerializedProperty finalize crash).
     /// </summary>
     public static class CoplayMcpSetupMenu
     {

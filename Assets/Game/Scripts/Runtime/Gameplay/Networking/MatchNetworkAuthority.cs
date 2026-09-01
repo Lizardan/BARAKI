@@ -683,7 +683,7 @@ namespace Game.Gameplay.Networking
 
             if (!MatchSnapshotChecksum.Matches(snapshot, snapshot.Checksum))
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG || UNITY_ENABLE_CHECKS
                 Debug.LogWarning(
                     $"MatchNetworkAuthority: snapshot checksum mismatch " +
                     $"(got={snapshot.Checksum}, local={MatchSnapshotChecksum.Compute(snapshot)}).");

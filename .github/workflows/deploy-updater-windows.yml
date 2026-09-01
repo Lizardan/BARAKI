@@ -24,7 +24,7 @@ permissions:
   actions: read
 
 env:
-  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.5.9f1-windows-il2cpp-3
+  UNITY_DOCKER_IMAGE: unityci/editor:windows-6000.6.0f1-windows-il2cpp-3
   CLOUDFLARE_PAGES_PROJECT: baraki
 
 jobs:
@@ -106,11 +106,12 @@ jobs:
           BARAKI_UPDATER_VERSION: ${{ steps.ver.outputs.version }}
         with:
           targetPlatform: StandaloneWindows64
-          unityVersion: 6000.5.9f1
+          unityVersion: 6000.6.0f1
           customImage: ${{ env.UNITY_DOCKER_IMAGE }}
           buildsPath: build
           buildName: Updater
           allowDirtyBuild: true
+          customParameters: -accept-apiupdate
           buildMethod: Game.Editor.WindowsCiBuild.BuildUpdaterOnly
 
       - name: Install Inno Setup

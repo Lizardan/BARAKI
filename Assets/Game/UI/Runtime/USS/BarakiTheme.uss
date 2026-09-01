@@ -52,7 +52,8 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: rgba(15, 15, 16, 0.35);
+    background-color: rgba(8, 9, 8, 0.28);
+    backdrop-filter: blur(8px) tint(rgba(8, 9, 8, 0.22));
 }
 
 .ui-vignette {
@@ -125,6 +126,7 @@
     border-bottom-width: 2px;
     border-color: rgba(125, 117, 104, 0.4);
     border-radius: 0;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.65));
 }
 
 /* ── Panels (CSS frames) ── */
@@ -200,6 +202,7 @@
     border-bottom-width: 2px;
     border-color: rgba(125, 117, 104, 0.75);
     border-radius: 0;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.65));
 }
 
 .ui-dialog__header {
@@ -429,13 +432,19 @@
     padding-left: 0;
 }
 
+.ui-overlay-frost {
+    background-color: rgba(8, 9, 8, 0.28);
+    backdrop-filter: blur(8px) tint(rgba(8, 9, 8, 0.22));
+}
+
 .ui-overlay__dim {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.78);
+    background-color: rgba(8, 9, 8, 0.28);
+    backdrop-filter: blur(8px) tint(rgba(8, 9, 8, 0.22));
 }
 
 .ui-footer {
