@@ -86,5 +86,6 @@ crashlytics-build.properties
 # Local work plans — never commit
 /Plans/
 
-# CursorTaskLauncher build artifacts — reinstallable via `npx @vscode/vsce package`
-/Tooling/CursorTaskLauncher/*.vsix
+# HacknPlan API key — never commit
+/Tooling/HacknPlan/.secrets.json
+/Tooling/HacknPlan/dump/

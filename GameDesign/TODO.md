@@ -8,17 +8,17 @@ provides: [backlog, priorities, acceptance_criteria]
 
 # TODO
 
-> **С 2026-08-25 задачи ведутся в GitHub Issues.** Этот файл — карта фаз и лог, не бэклог.
+> **С 2026-09-03 задачи ведутся в HacknPlan** ([проект 242091](https://app.hacknplan.com/p/242091/dashboards/project)). Этот файл — карта фаз и лог, не бэклог.
 >
-> - Что делать сейчас: [открытые issues](https://github.com/Lizardan/BARAKI/issues?q=is%3Aopen+is%3Aissue)
-> - История: [закрытые issues](https://github.com/Lizardan/BARAKI/issues?q=is%3Aclosed+is%3Aissue)
+> - Что делать сейчас: board **Now** в HacknPlan / панель UnioTasks
+> - История GitHub: [закрытые issues](https://github.com/Lizardan/BARAKI/issues?q=is%3Aclosed+is%3Aissue) (архив, не трогать)
 > - Правила: `wiki/rules/github-issues-workflow.md`
 >
-> Статус на GitHub: нет метки = очередь · `status/doing` = в работе · `status/review` = ждёт апрува · closed = готово.
+> Стадии HacknPlan: Planned = очередь · In progress = в работе · Testing = ждёт апрува · Completed = готово.
 
 **Для агента:** PvP-only, без ботов. Windows + Lobby/Relay. **TDD:** тесты → код → `run_tests` → done только при green.
 **Гейт расы #2:** PRE-001..007 (blessing abilities → бонусы → tower×9) → GATE playtest/checkup → только потом EA-001.
-Текущее состояние: PRE-001..006 done; **следующая — MAIN-001** (#50, способности главного здания, решение пользователя 2026-08-26); затем PRE-007 (#6); EA-001 заблокирован до PRE+GATE.
+Текущее состояние: PRE-001..007 и MAIN-001 **сделаны**. Открытая очередь: **GATE-001**, **GATE-002**, затем EA-*.
 
 ---
 
@@ -32,7 +32,7 @@ provides: [backlog, priorities, acceptance_criteria]
 
 | Date | Note |
 |------|------|
-| 2026-08-28 | Бэклог = только рабочие issues. #47 ROADMAP закрыт как индекс. Статусы на GitHub: `status/doing` / `status/review`. Карта фаз — этот файл. Правила: `wiki/rules/github-issues-workflow.md` |
+| 2026-09-03 | Задачи и GDM перенесены в HacknPlan 242091. GitHub Issues заморожены (не edit/close). UnioTasks 1.2 читает work items. |
 | 2026-08-26 | MAIN-001 (#50): способности главного здания — Ледяное кольцо (L1+, ground-target AoE ~5, ~300 dmg + freeze 3s, 50 mana, CD 60) и Волна света (L2+, волна от базы r~17, ~1500 dmg — плейсхолдеры, 150 mana, CD 180). Вне меню Divine Blessing, гейт по уровню здания. Вставлена до PRE-007 |
 | 2026-08-25 | Трекинг перенесён в GitHub Issues (мастер-issue #47, метки `todo-task` / `phase/*`). Правила: `wiki/rules/github-issues-workflow.md`. Пуш консольных логов в issues убран из дебаг-консоли |
 | 2026-08-25 | PRE-006b: слоты 7–12. Ветераны 7–10 (тот же кит ×1.35 + сигнатура: King's Command 56 / Aegis 57 / Sanctuary 58 / Greater Colossus 59; статы ×1.4/×1.35/+2 armor; morale +15%; флаг TT_RTS_Banner_plain на спине; префабы BonusHeroes/, портреты автопекутся) и уники 11–12 (March Discipline +10% скорости всем войскам; Stone Masonry +20% HP зданий ретро-пропорционально). UI оверлея: все 12 слотов активны. Правило контента: имя EN / описание RU. Следующий — PRE-007 |

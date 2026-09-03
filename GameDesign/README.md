@@ -31,7 +31,7 @@
 | [Balance.md](Balance.md) | Числа | Тюнинг |
 | [Technical.md](Technical.md) | Unity, netcode | Реализация |
 | [Platform.md](Platform.md) | Windows hub, UGS, GitHub Releases/Pages | Платформа / дистрибуция |
-| [TODO.md](TODO.md) | Backlog; гейт PRE→GATE→EA-001 | Планирование |
+| [TODO.md](TODO.md) | Карта фаз PRE→GATE→EA и лог; бэклог — HacknPlan | Планирование |
 
 ## MVP
 

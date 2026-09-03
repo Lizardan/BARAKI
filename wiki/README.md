@@ -27,7 +27,7 @@
 | `rules/tower-tracks.md` | PRE-007: 9 треков апгрейдов башен Людей, экономика, wire v22, эффекты |
 | `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |
 | `rules/distribution.md` | Установщик Inno, GitHub Releases, лендинг Cloudflare Pages |
-| `rules/github-issues-workflow.md` | Трекинг задач в GitHub Issues: язык, структура, метки, воркфлоу |
+| `rules/github-issues-workflow.md` | Трекинг: HacknPlan + UnioTasks (GitHub Issues — архив) |
 
 ## Что здесь не дублируется
 
