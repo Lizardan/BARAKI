@@ -23,6 +23,7 @@
 | `rules/runtime-debug-console.md` | Хоткеи runtime-консоли (`~` открыть, Esc закрыть) |
 | `rules/chat.md` | Чат: Cloudflare (общий / друзья / ЛС) + матч Netcode |
 | `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |
+| `rules/faceless-assets.md` | Раса Древние (Faceless): review 01–12, конвертер MDX, пока без ролей |
 | `rules/human-unit-bonuses.md` | PRE-006a: BonusSlot, 6 механик Людей, UI оверлея, контент-пайплайн |
 | `rules/tower-tracks.md` | PRE-007: 9 треков апгрейдов башен Людей, экономика, wire v22, эффекты |
 | `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |

@@ -1,0 +1,33 @@
+.faceless-review {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 24px;
+}
+
+.faceless-review__bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 16px;
+    border-width: 2px;
+    border-color: rgb(125, 117, 104);
+    background-color: rgba(16, 18, 17, 0.92);
+}
+
+.faceless-review__title {
+    margin-right: 16px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(239, 228, 207);
+}
+
+.faceless-review__btn {
+    width: 140px;
+    margin-bottom: 0;
+    margin-left: 8px;
+}

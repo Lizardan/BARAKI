@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="project://database/Assets/Game/UI/Runtime/USS/BarakiTheme.uss" />
+    <ui:Style src="project://database/Assets/Game/UI/Runtime/USS/FacelessReview.uss" />
+    <ui:VisualElement name="FacelessReviewHud" class="faceless-review" picking-mode="Ignore">
+        <ui:VisualElement class="faceless-review__bar ui-chrome" picking-mode="Position">
+            <ui:Label text="ДРЕВНИЕ — ПРОСМОТР" class="faceless-review__title" picking-mode="Ignore" />
+            <ui:Button name="IdleButton" text="Idle (1)" class="ui-btn ui-btn--primary faceless-review__btn" picking-mode="Position" />
+            <ui:Button name="RunButton" text="Бег (2)" class="ui-btn faceless-review__btn" picking-mode="Position" />
+            <ui:Button name="AttackButton" text="Удар (3)" class="ui-btn faceless-review__btn" picking-mode="Position" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

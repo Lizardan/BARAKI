@@ -59,7 +59,8 @@ Art/UI/UnitPortraits/Humans/
 ## Правила
 
 - Новая раса: `Races/<PluralRaceName>/` с категориями `Units/`, `BonusUnits/`, `Heroes/`
-  (и `BonusHeroes/` только когда появятся ассеты).
+  (и `BonusHeroes/` только когда появятся ассеты). Faceless (Древние) пока только
+  `_Review/01..12` — см. `faceless-assets.md`; категории как у людей — после маппинга.
 - Бонусные юниты — **соседняя** категория `BonusUnits/{Role}/`, не `Units/{Role}/Bonus/`.
 - Титан — в `Heroes/Titan/`, не в `Units/`.
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,
