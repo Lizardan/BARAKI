@@ -9,7 +9,8 @@
 - Общение с пользователем — **на русском** (код/команды/пути — как есть).
 - Коммиты — только по явной просьбе; сообщения **на русском**, первая строка — повелительное наклонение («Добавить», «Исправить», «Удалить»), ≤72 симв. Английский — только для имён файлов, API и идентификаторов.
 - Паттерн WIP: коммиты с сообщением `*` (плейсхолдер) — не амендить чужие/прошлые, при работе в открытой сессии сохранять локальные изменения без коммита.
-- **Документирование после работы:** после любой завершённой работы (новая фича / рефакторинг / фикс / смена механики) — если появилось что-то новое или что-то переделано, зафиксировать это на будущее: короткая запись в `wiki/` (`wiki/rules/*.md` для технических правил, `wiki/README.md` — индекс) или в `GameDesign/` для геймдизайна. Цель — чтобы другие агенты и разработчики могли понять устройство без реверс-инжиниринга.
+- **Документирование после работы:** после любой завершённой работы (новая фича / рефакторинг / фикс / смена механики) — если появилось что-то новое или что-то переделано, зафиксировать это на будущее: короткая запись в `wiki/` (`wiki/rules/*.md` для технических правил, `wiki/README.md` — единый справочник) или в `GameDesign/` для геймдизайна. Цель — чтобы другие агенты и разработчики могли понять устройство без реверс-инжиниринга.
+- **Загрузка документации:** в контекст автозагружается **только** единый справочник `wiki/README.md` (инструкция `opencode.json`). Файлы `wiki/rules/*.md` и `GameDesign/*.md` в контекст не грузятся — читать через `Read` по требованию по таблицам справочника, не предзагружать «на всякий случай».
 
 ## UI (критично)
 - **Только UI Toolkit** (UXML/USS/UIDocument). Не добавлять `com.unity.ugui`, Canvas, `UnityEngine.UI` — в кодовой базе их нет.
@@ -23,10 +24,10 @@
 - `Game.Input` — `Scripts/Runtime/Input/` (генерируется из `Assets/Game/Settings/Input/GameInputActions.inputactions`).
 - `Game.UI` — `Assets/Game/UI/Runtime/`; `Game.Editor` — `Scripts/Editor/` (в т.ч. `Mcp/`); `Game.Tests` — `Scripts/Tests/`.
 - Сцены: `Bootstrap` (build 0) → `MainMenu` (1) → `Lobby` → `Game`. Иерархия: `--- SYSTEMS ---` / `--- CAMERAS ---` / `--- LEVEL ---` / `--- UI ---` / `--- DYNAMIC ---`.
-- Принципы: композиция вместо синглтонов. Исключения — `GameManager` (persist) и Netcode `NetworkBehaviour`-синглтоны (`NetworkLobbyState`, `MatchNetworkAuthority`, `NetworkRacePickState`, `HostMigrationCoordinator`): `Instance` устанавливается в `OnNetworkSpawn`, снимается в `OnNetworkDespawn`. Сценарные объекты (`MatchRuntime` и др.) — через static `Current` (set `OnEnable`, clear `OnDisable`), не `FindAnyObjectByType`. Детальные правила — `wiki/rules/*.md` (индекс — `wiki/README.md`).
+- Принципы: композиция вместо синглтонов. Исключения — `GameManager` (persist) и Netcode `NetworkBehaviour`-синглтоны (`NetworkLobbyState`, `MatchNetworkAuthority`, `NetworkRacePickState`, `HostMigrationCoordinator`): `Instance` устанавливается в `OnNetworkSpawn`, снимается в `OnNetworkDespawn`. Сценарные объекты (`MatchRuntime` и др.) — через static `Current` (set `OnEnable`, clear `OnDisable`), не `FindAnyObjectByType`. Детальные правила — `wiki/rules/*.md` (справочник — `wiki/README.md`).
 
 ## GameDesign (GDD)
-- AI-ready формат: YAML front matter (`status`, `mvp`), сущности ` ```entity id=SCREAMING_SNAKE `. Индекс — `GameDesign/README.md`.
+- AI-ready формат: YAML front matter (`status`, `mvp`), сущности ` ```entity id=SCREAMING_SNAKE `. Индекс — `GameDesign/README.md` (выжимка и ссылки — в едином справочнике `wiki/README.md`).
 - **Не реализовывать** `status: deferred` / `mvp: false` без обновления `TODO.md`.
 
 ## CI / Release (не сломать)

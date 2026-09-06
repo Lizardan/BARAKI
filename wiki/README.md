@@ -1,41 +1,77 @@
-# BARAKI — Wiki
+# BARAKI — Wiki · единый справочник документации
 
-Справочные материалы проекта. Правила агентов подключены через `opencode.json`
-(`instructions: ["wiki/rules/*.md"]`) — загружаются в каждую сессию.
+В контекст сессии загружается **только этот файл-оглавление**
+(`instructions: ["wiki/README.md"]` в `opencode.json`). Ни `wiki/rules/*.md`,
+ни `wiki/ARCHITECTURE.md`, ни `GameDesign/*.md` в контекст **не загружаются** —
+читаются через `Read` по требованию.
 
-## Содержание
+## Как пользоваться справочником (обязательно)
 
-| Файл | Назначение |
-|------|-----------|
-| `ARCHITECTURE.md` | Тех-стек, сцены, карта модулей, Cameras/Input/MCP |
-| `rules/unity-async.md` | Awaitable vs UniTask по ассемблеям |
-| `rules/unity-core.md` | Нейминг C#/MonoBehaviour, сериализация |
-| `rules/code-organization.md` | Раскладка `Assets/Game/`, asmdef, сцены, пакеты |
-| `rules/unity-reactive.md` | UniRx — реактивные свойства, disposal |
-| `rules/unity-ui.md` | UI Toolkit, UIBindingScope, USS-стили |
-| `rules/unity-mcp.md` | Unity MCP — политика и воркфлоу |
-| `rules/abilities.md` | Система способностей: def-ы, поведения, каст, снапшот |
-| `rules/building-abilities.md` | MAIN-001: Ледяное кольцо (L1) и Волна света (L2), wire v23, прицел ground-target |
-| `rules/ability-fx.md` | BARAKI Studio: одно окно VFX+радиус, механика AoE, якоря, палитра |
-| `rules/fog.md` | Fog of War: симуляция, Divine Blessing, миникарта, cull презентации в тумане |
-| `rules/match-network.md` | Старт матча, снапшот-интерполяция, host migration, конец матча |
-| `rules/snapshot-wire.md` | Wire v21: секции, static/dynamic split, EventStream, контракт презентации |
-| `rules/runtime-debug-console.md` | Хоткеи runtime-консоли (`~` открыть, Esc закрыть) |
-| `rules/chat.md` | Чат: Cloudflare (общий / друзья / ЛС) + матч Netcode |
-| `rules/content-assets.md` | Контент по категории: Units / BonusUnits / Heroes(+Titan), портреты Humans/{Units\|BonusUnits\|Heroes}, Catalogs/Shared |
-| `rules/faceless-assets.md` | Раса Древние (Faceless): review 01–12, конвертер MDX, пока без ролей |
-| `rules/human-unit-bonuses.md` | PRE-006a: BonusSlot, 6 механик Людей, UI оверлея, контент-пайплайн |
-| `rules/tower-tracks.md` | PRE-007: 9 треков апгрейдов башен Людей, экономика, wire v22, эффекты |
-| `rules/arena-buildings.md` | Ориентация зданий на базе: main→дорога, barracks→выход крипов |
-| `rules/distribution.md` | Установщик Inno, GitHub Releases, лендинг Cloudflare Pages |
-| `rules/github-issues-workflow.md` | Трекинг: HacknPlan + UnioTasks (GitHub Issues — архив) |
+1. Определи область задачи по таблицам ниже (UI / Networking / Abilities / Snapshot / Chat / GDD…).
+2. **Перед работой** открой нужные файлы через `Read`. Не предзагружай всё и не читай «на всякий случай».
+3. Прочитанное правило — обязательная инструкция для этой задачи, читай целиком.
+4. Если файл ссылается на другие («Связанные правила») — читай и их, пока они относятся к задаче.
+5. Сводка верхнего уровня — корневой `AGENTS.md` (в контексте всегда) + `wiki/ARCHITECTURE.md`
+   (читай при незнакомой задаче).
+
+## wiki/rules — технические правила проекта
+
+| Файл | Когда читать |
+|------|--------------|
+| `wiki/ARCHITECTURE.md` | Любая незнакомая работа: тех-стек, сцены, карта модулей, Cameras/Input/MCP |
+| `rules/unity-async.md` | Async-код: где `Awaitable` (bootstrap), где `UniTask` (gameplay/UI) |
+| `rules/unity-core.md` | Любой новый/правленый C#: нейминг, MonoBehaviour, сериализация, lifecycle |
+| `rules/code-organization.md` | Новые файлы/папки/asmdef/пакеты, перенос ассетов |
+| `rules/unity-reactive.md` | UniRx: `ReactiveProperty`, disposal, UITK-биндинги |
+| `rules/unity-ui.md` | Любая UI-работа: UI Toolkit, UIBindingScope, UXML/USS, Controller/ViewModel, палитра |
+| `rules/unity-mcp.md` | Операции через Unity MCP: политика, группы инструментов, paging, чтение состояния |
+| `rules/abilities.md` | Система способностей: def-ы, поведения, каст, киты, снапшот, добавление/изменение |
+| `rules/building-abilities.md` | MAIN-001: Ледяное кольцо и Волна света, wire v23, ground-target прицел |
+| `rules/ability-fx.md` | BARAKI Studio, AbilityFx, радиусы, якоря, палитра, сид/rebuild |
+| `rules/fog.md` | Fog of War, Divine Blessing, миникарта, презентационный cull в тумане |
+| `rules/match-network.md` | Сеть матча: старт, снапшот-интерполяция, host migration, конец/реванш |
+| `rules/snapshot-wire.md` | Wire v22: секции, EventStream, контракт презентации, добавление нового визуала/данных |
+| `rules/runtime-debug-console.md` | Runtime-консоль и хоткеи |
+| `rules/chat.md` | Чат: Cloudflare (общий/друзья/ЛС) и матч-чат Netcode, сокет, композеры |
+| `rules/content-assets.md` | Контент: структура `ScriptableObjects/` и `Prefabs/`, портреты, правила папок |
+| `rules/faceless-assets.md` | Раса Древние (Faceless): review-сцена, конвертер MDX, материалы/шейдеры |
+| `rules/human-unit-bonuses.md` | Юнитовые бонусы/ветераны/уники Людей (PRE-006a/b): механики, ауры, UI |
+| `rules/tower-tracks.md` | Апгрейды башен Людей (PRE-007): 9 треков, экономика, wire v22 |
+| `rules/arena-buildings.md` | Ориентация зданий на базе, pick/клик-выбор, руины |
+| `rules/distribution.md` | Распространение клиента: апдейтер, GitHub Releases, лендинг Cloudflare |
+| `rules/github-issues-workflow.md` | Трекинг задач: HacknPlan + UnioTasks (GitHub Issues — архив) |
+
+## GameDesign — GDD (AI-ready)
+
+Полный формат и карта — `GameDesign/README.md` (front matter `status`/`mvp`, сущности
+` ```entity id=SCREAMING_SNAKE `, индекс — там же). Таблица-выжимка:
+
+| Файл | Когда читать |
+|------|--------------|
+| `GameDesign/Vision.md` | Пиллары, аудитория, scope — старт новых направлений |
+| `GameDesign/Core Gameplay.md` | Петля, lanes, автобой — любая геймплейная задача |
+| `GameDesign/Map Topology.md` | Карта 2–5 игроков, LaneGraph — карта/lanes |
+| `GameDesign/Match Flow.md` | Фазы матча, лобби, disconnect — GameSession |
+| `GameDesign/Bonuses.md` | Выбор бонуса после race pick — PRE-006 |
+| `GameDesign/Economy.md` | Золото, доход — экономика |
+| `GameDesign/Units.md` | Типы юнитов, статы — Combat |
+| `GameDesign/Heroes.md` | Герои, титан, summon — hero system |
+| `GameDesign/Races.md` | Расы, апгрейды башен, пайплайн — race select / PRE-007 |
+| `GameDesign/Buildings.md` | Структуры базы — buildings |
+| `GameDesign/Upgrades.md` | Дерево исследований / blessing abilities — tech tree |
+| `GameDesign/AI.md` | Автономия юнитов (не боты) — unit behavior |
+| `GameDesign/Balance.md` | Числа — тюнинг |
+| `GameDesign/Technical.md` | Unity, netcode — реализация |
+| `GameDesign/Platform.md` | Windows hub, UGS, GitHub Releases/Pages — платформа/дистрибуция |
+| `GameDesign/TODO.md` | Карта фаз PRE→GATE→EA и лог; бэклог — HacknPlan |
+
+**Гейт:** не реализовывать `status: deferred` / `mvp: false` без обновления `TODO.md`.
 
 ## Что здесь не дублируется
 
-Общие принципы живут вне wiki и попадают в контекст автоматически:
-
+Общие принципы попадают в контекст автоматически и не повторяются в справочнике:
 - язык общения (русский) — глобальный `~/.config/opencode/AGENTS.md`
-- коммиты, тесты, CI, GameDesign — корневой `AGENTS.md`
+- коммиты, тесты, CI, структура ассемблей, MCP/Pipeline — корневой `AGENTS.md`
 - описания MCP-инструментов — системный промпт сервера `unityMCP`
 
-Правила wiki содержат только проект-специфику, которую нельзя угадать.
+Правила wiki и доки GameDesign содержат только проект-специфику, которую нельзя угадать.
