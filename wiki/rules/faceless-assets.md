@@ -26,14 +26,22 @@ FACELESS-010 (юнит за юнитом с пользователем). Work it
 - **Titan**: SO-ассета нет ни у одной расы (у Human тоже) — титан = `CopyFrom(hero1,
   TitanRules.BaseStatMultiplier=3f, AttackRange=3f)`, это норма.
 
-Не создавать дерево `Units/BonusUnits/Heroes` как у людей. Сначала просмотр
-пронумерованных моделей.
+Раскладка — как у людей (единый шаблон расы): production-префабы в
+`Prefabs/Races/Faceless/{Units,Heroes}/{Role}/Faceless_{Role}.prefab`, контроллер
+лежит **рядом** с префабом (`Faceless_{Role}.controller`), клипы/меши/материалы —
+в `Art/Races/Faceless/Production/{Anim,Meshes,Mats}/`. Ревью-сборка — отдельно:
 
 ```text
 Art/Races/Faceless/          # OBJ + PNG из WC3 MDX/BLP
 Art/Races/Faceless/Meshes/   # skinned Mesh из MDX (review)
-Art/Races/Faceless/Anim/     # Stand/Walk/Attack .anim + .controller
-Prefabs/Races/Faceless/_Review/01_…12_….prefab
+Art/Races/Faceless/Anim/     # review Stand/Walk/Attack .anim + .controller (01_…12_)
+Art/Races/Faceless/Production/
+├── Anim/                    # production клипы (Stand/Walk/Attack/Death/Cast)
+├── Meshes/                  # production skinned Mesh
+└── Mats/                    # production материалы
+Prefabs/Races/Faceless/
+├── Units/{Role}/Faceless_{Role}.prefab + Faceless_{Role}.controller
+└── Heroes/{HeroN,Titan}/Faceless_{…}.prefab + .controller
 Scenes/Dev/FacelessReview.unity   # не в Build Settings
 ```
 
@@ -107,7 +115,11 @@ review, не класть в клиентский билд.
 | 11 | FacelessOneWorker_G | 11_FacelessOneWorker |
 | 12 | FacelessOneWorker_G_Portrait | 12_FacelessOneWorker_Portrait (WC3-голова) |
 
-После маппинга номер→роль: `AssetDatabase.MoveAsset` в категории как у людей,
-`_Review` удалить. Раса играбельна — раскладка сделана в `Prefabs/Races/Faceless/`
+Маппинг номер→роль выполнен (`AssetDatabase.MoveAsset` в категории как у людей,
+`_Review` удалён). Раса играбельна — раскладка сделана в `Prefabs/Races/Faceless/`
 (`Units/`, `Heroes/`; bonuses — позже в FACELESS-010), каталоги зарегистрированы,
-НЕ вносить правки в гейты без задачи.
+production-контроллеры лежат рядом с префабами.
+
+При пересборке production-префабов (`BARAKI/Faceless/Rebuild Unit Prefabs`) контроллеры
+создаются рядом с префабом (`Faceless_Melee.controller` и т.д.), а устаревшие
+`.controller` из `Art/Races/Faceless/Production/Anim/` удаляются — клипы не трогаются.

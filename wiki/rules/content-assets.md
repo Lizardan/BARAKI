@@ -42,9 +42,10 @@ ScriptableObjects/
 
 ```text
 Prefabs/Races/Humans/
-├── Units/{Role}/Human_{Role}.prefab (+ .controller рядом)
-├── BonusUnits/{Role}/Human_{Role}_BONUS.prefab
-├── Heroes/{HeroN|Titan}/Human_{HeroN|Titan}.prefab
+├── Units/{Role}/Human_{Role}.prefab (+ Human_{Role}.controller рядом)
+├── BonusUnits/{Role}/Human_{Role}_BONUS.prefab (+ .controller рядом)
+├── Heroes/{HeroN|Titan}/Human_{HeroN|Titan}.prefab (+ .controller рядом)
+│   └── BonusHeroes/{HeroN|Titan}/Human_{HeroN|Titan}_BONUS.prefab
 └── Buildings/
 
 Prefabs/Fx/Custom/                             # BARAKI Studio, чип «Кастом»
@@ -56,11 +57,24 @@ Art/UI/UnitPortraits/Humans/
 └── Heroes/{Hero1|Hero2|Hero3|Titan}.png
 ```
 
+**Единый шаблон расы** (все расы — одинаково, в т.ч. Faceless):
+префаб и его `AnimatorController` лежат рядом, имя контроллера = имя префаба.
+Арт-ассеты (клипы, меши, материалы) — централизованно в `Art/Races/<Race>/`
+(у самого арта из внешнего пакета — клипы не кладутся в `Assets/Game`).
+
+```text
+Prefabs/Races/<Race>/                         # только префабы + контроллеры
+└── {Units|BonusUnits|Heroes|BonusHeroes}/{Role}/<Race>_{Role}[_BONUS].prefab
+
+Art/Races/<Race>/                             # клипы/меши/материалы расы
+└── Production/{Anim,Meshes,Mats}/            # рабочие ассеты (клипы Stand/Walk/Attack/Death/Cast)
+```
+
 ## Правила
 
 - Новая раса: `Races/<PluralRaceName>/` с категориями `Units/`, `BonusUnits/`, `Heroes/`
-  (и `BonusHeroes/` только когда появятся ассеты). Faceless (Древние) пока только
-  `_Review/01..12` — см. `faceless-assets.md`; категории как у людей — после маппинга.
+  (и `BonusHeroes/` только когда появятся ассеты). Контроллеры — рядом с префабами
+  (имя = имя префаба); клипы/меши/материалы — в `Art/Races/<Race>/Production/`.
 - Бонусные юниты — **соседняя** категория `BonusUnits/{Role}/`, не `Units/{Role}/Bonus/`.
 - Титан — в `Heroes/Titan/`, не в `Units/`.
 - Папка существует только если в ней есть ассеты. Пустой scaffold (`Enhanced`, `Bonuses`,

@@ -124,6 +124,7 @@ namespace Game.Editor
             EnsureFolder(ProductionMeshFolder);
             EnsureFolder(ProductionMatFolder);
             UnitVisualPrefabBuilder.EnsureFacelessPrefabFolders();
+            DeleteAssetsInFolder(ProductionAnimFolder, "t:AnimatorController");
 
             ConfigureAlbedo(SkinTexPath);
             if (Directory.Exists(Wc3TexFolder))
@@ -206,7 +207,7 @@ namespace Game.Editor
                     : null;
 
                 var controller = BuildProductionController(
-                    stem,
+                    System.IO.Path.ChangeExtension(prefabPath, ".controller"),
                     standClip,
                     walkClip,
                     attackClip,
@@ -239,14 +240,14 @@ namespace Game.Editor
         }
 
         static AnimatorController BuildProductionController(
-            string stem,
+            string controllerPath,
             AnimationClip stand,
             AnimationClip walk,
             AnimationClip attack,
             AnimationClip death,
             AnimationClip cast)
         {
-            var path = ProductionAnimFolder + "/" + stem + "_Unit.controller";
+            var path = controllerPath;
             if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null)
             {
                 AssetDatabase.DeleteAsset(path);
