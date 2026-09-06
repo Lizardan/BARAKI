@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Gameplay.Data;
 using Game.Gameplay.Dev;
 using Game.Gameplay.Match;
 using Game.UI.Controllers;
@@ -22,6 +23,10 @@ namespace Game.Editor
         const string AnimFolder = "Assets/Game/Art/Races/Faceless/Anim";
         const string MeshFolder = "Assets/Game/Art/Races/Faceless/Meshes";
         const string MatFolder = "Assets/Game/Art/Races/Faceless/Mats";
+        const string ProductionFolder = "Assets/Game/Art/Races/Faceless/Production";
+        const string ProductionAnimFolder = ProductionFolder + "/Anim";
+        const string ProductionMeshFolder = ProductionFolder + "/Meshes";
+        const string ProductionMatFolder = ProductionFolder + "/Mats";
         const string SkinTexPath = "Assets/Game/Art/Races/Faceless/FacelessOneUnbrokenV2.png";
         const string Wc3TexFolder = "Assets/Game/Art/Races/Faceless/Wc3";
         const string ScenePath = "Assets/Game/Scenes/Dev/FacelessReview.unity";
@@ -45,6 +50,26 @@ namespace Game.Editor
             ("11_FacelessOneWorker", "FacelessOneWorker_G.mdx"),
             ("12_FacelessOneWorker_Portrait", "FacelessOneWorker_G_Portrait.mdx"),
         };
+
+        /// <summary>Production role → MDX stem used to seed combat unit prefabs for the Faceless race.</summary>
+        static readonly (string Role, string Stem, string PrefabName, string Folder)[] ProductionUnits =
+        {
+            ("Melee", "11_FacelessOneWorker", "Faceless_Melee", UnitVisualPrefabBuilder.FacelessPath + "/Melee"),
+            ("Ranged", "03_RangedFacelessone", "Faceless_Ranged", UnitVisualPrefabBuilder.FacelessPath + "/Ranged"),
+            ("Caster", "05_FacelessOneSorcerer_G1", "Faceless_Caster", UnitVisualPrefabBuilder.FacelessPath + "/Caster"),
+            ("Siege", "01_FacelessOne", "Faceless_Siege", UnitVisualPrefabBuilder.FacelessPath + "/Siege"),
+            ("Flying", "09_FacelessThanatos", "Faceless_Flying", UnitVisualPrefabBuilder.FacelessPath + "/Flying"),
+            ("Super", "04_FacelessOneReaper", "Faceless_Super", UnitVisualPrefabBuilder.FacelessPath + "/Super"),
+            (Hero1, "08_FacelessKing", "Faceless_Hero1", UnitVisualPrefabBuilder.FacelessHeroesPath + "/Hero1"),
+            (Hero2, "07_FacelessOneSorcerer_G3", "Faceless_Hero2", UnitVisualPrefabBuilder.FacelessHeroesPath + "/Hero2"),
+            (Hero3, "02_FacelessOneBerserker", "Faceless_Hero3", UnitVisualPrefabBuilder.FacelessHeroesPath + "/Hero3"),
+            (Titan, "10_Unbroken_Izual", "Faceless_Titan", UnitVisualPrefabBuilder.FacelessHeroesPath + "/Titan"),
+        };
+
+        const string Hero1 = "Hero1";
+        const string Hero2 = "Hero2";
+        const string Hero3 = "Hero3";
+        const string Titan = "Titan";
 
         [MenuItem("BARAKI/Faceless/Rebuild Review Anims")]
         public static void RebuildFromMenu()
@@ -91,6 +116,241 @@ namespace Game.Editor
             return string.Join("\n", log);
         }
 
+        [MenuItem("BARAKI/Faceless/Rebuild Unit Prefabs")]
+        public static string RebuildProductionPrefabs()
+        {
+            EnsureFolder(ProductionFolder);
+            EnsureFolder(ProductionAnimFolder);
+            EnsureFolder(ProductionMeshFolder);
+            EnsureFolder(ProductionMatFolder);
+            UnitVisualPrefabBuilder.EnsureFacelessPrefabFolders();
+
+            ConfigureAlbedo(SkinTexPath);
+            if (Directory.Exists(Wc3TexFolder))
+            {
+                foreach (var texPath in Directory.GetFiles(Wc3TexFolder, "*.png"))
+                {
+                    ConfigureAlbedo(texPath.Replace('\\', '/'));
+                }
+            }
+
+            RecolorForgottenOneTip();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+
+            var log = new List<string>();
+            foreach (var (role, stem, prefabName, folder) in ProductionUnits)
+            {
+                var src = Path.Combine(SourceFolder, FindModel(stem).FileName).Replace('\\', '/');
+                var doc = FacelessMdxDocument.Load(src);
+                var prefabPath = folder + "/" + prefabName + ".prefab";
+                BuildProductionPrefab(stem, role, doc, prefabPath, log);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("FacelessUnitPrefabBuilder:\n" + string.Join("\n", log));
+            return string.Join("\n", log);
+        }
+
+        static (string Stem, string FileName) FindModel(string stem)
+        {
+            foreach (var model in Models)
+            {
+                if (model.Stem == stem)
+                {
+                    return model;
+                }
+            }
+
+            throw new InvalidOperationException("Unknown Faceless stem: " + stem);
+        }
+
+        static void BuildProductionPrefab(
+            string stem,
+            string role,
+            FacelessMdxDocument doc,
+            string prefabPath,
+            List<string> log)
+        {
+            var prefabName = System.IO.Path.GetFileNameWithoutExtension(prefabPath);
+            var root = new GameObject(prefabName);
+            try
+            {
+                var bones = CreateSkeleton(root.transform, doc);
+                var (mesh, materials) = BuildMesh(stem, doc, bones, ProductionMeshFolder, ProductionMatFolder);
+                if (mesh.vertexCount == 0)
+                {
+                    log.Add($"{prefabName}: empty mesh");
+                    return;
+                }
+
+                var smr = root.AddComponent<SkinnedMeshRenderer>();
+                smr.sharedMesh = mesh;
+                smr.sharedMaterials = materials;
+                smr.bones = bones;
+                smr.rootBone = FindRootBone(bones);
+                smr.updateWhenOffscreen = true;
+
+                var stand = doc.FindSequence("stand", "portrait") ?? doc.FindSequence();
+                var walk = doc.FindSequence("walk") ?? stand;
+                var attack = doc.FindSequence("attack") ?? stand;
+                var death = doc.FindSequence("death") ?? doc.FindSequence();
+                var spell = doc.FindSequence("spell", "channeling");
+
+                var standClip = BakeClip(stem, UnitCombatAnimatorDriver.StandState, doc, bones, stand, ProductionAnimFolder);
+                var walkClip = BakeClip(stem, UnitCombatAnimatorDriver.WalkState, doc, bones, walk, ProductionAnimFolder);
+                var attackClip = BakeClip(stem, UnitCombatAnimatorDriver.AttackState, doc, bones, attack, ProductionAnimFolder);
+                var deathClip = BakeClip(stem, UnitCombatAnimatorDriver.DeathState, doc, bones, death, ProductionAnimFolder, loop: false);
+                var castClip = spell.HasValue
+                    ? BakeClip(stem, UnitCombatAnimatorDriver.CastState, doc, bones, spell, ProductionAnimFolder)
+                    : null;
+
+                var controller = BuildProductionController(
+                    stem,
+                    standClip,
+                    walkClip,
+                    attackClip,
+                    deathClip,
+                    castClip);
+
+                var animator = root.AddComponent<Animator>();
+                animator.runtimeAnimatorController = controller;
+                animator.applyRootMotion = false;
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+                root.AddComponent<FacelessUnitTeamColor>();
+                root.AddComponent<UnitCombatSettings>();
+
+                smr.sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(ProductionMeshFolder + "/" + stem + ".asset");
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+                {
+                    AssetDatabase.DeleteAsset(prefabPath);
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                log.Add($"{prefabName} [{role}]: bones={doc.Nodes.Count} geos={doc.Geosets.Count} " +
+                        $"stand={stand?.Name} walk={walk?.Name} attack={attack?.Name} " +
+                        $"death={death?.Name} cast={spell?.Name ?? "(none)"}");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        static AnimatorController BuildProductionController(
+            string stem,
+            AnimationClip stand,
+            AnimationClip walk,
+            AnimationClip attack,
+            AnimationClip death,
+            AnimationClip cast)
+        {
+            var path = ProductionAnimFolder + "/" + stem + "_Unit.controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null)
+            {
+                AssetDatabase.DeleteAsset(path);
+            }
+
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            controller.AddParameter(UnitCombatAnimatorDriver.SpeedParam, AnimatorControllerParameterType.Float);
+            controller.AddParameter(UnitCombatAnimatorDriver.AttackParam, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(UnitCombatAnimatorDriver.DeathParam, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(UnitCombatAnimatorDriver.AttackVariantParam, AnimatorControllerParameterType.Float);
+            if (cast != null)
+            {
+                controller.AddParameter(UnitCombatAnimatorDriver.CastVariantParam, AnimatorControllerParameterType.Float);
+            }
+
+            var sm = controller.layers[0].stateMachine;
+            var standState = AddState(sm, UnitCombatAnimatorDriver.StandState, stand);
+            var walkState = AddState(sm, UnitCombatAnimatorDriver.WalkState, walk);
+            var attackState = AddState(sm, UnitCombatAnimatorDriver.AttackState, attack);
+            var deathState = AddState(sm, UnitCombatAnimatorDriver.DeathState, death);
+            sm.defaultState = standState;
+
+            AddSpeedTransition(standState, walkState, AnimatorConditionMode.Greater, 0.1f);
+            AddSpeedTransition(walkState, standState, AnimatorConditionMode.Less, 0.1f);
+            AddTriggerTransition(standState, attackState, UnitCombatAnimatorDriver.AttackParam, UnitCombatAnimatorDriver.AttackState);
+            AddTriggerTransition(walkState, attackState, UnitCombatAnimatorDriver.AttackParam, UnitCombatAnimatorDriver.AttackState);
+            AddTriggerTransition(standState, deathState, UnitCombatAnimatorDriver.DeathParam, UnitCombatAnimatorDriver.DeathState);
+            AddTriggerTransition(walkState, deathState, UnitCombatAnimatorDriver.DeathParam, UnitCombatAnimatorDriver.DeathState);
+            AddTriggerTransition(attackState, deathState, UnitCombatAnimatorDriver.DeathParam, UnitCombatAnimatorDriver.DeathState);
+
+            AnimatorState castState = null;
+            if (cast != null)
+            {
+                castState = AddState(sm, UnitCombatAnimatorDriver.CastState, cast);
+                AddTriggerTransition(castState, deathState, UnitCombatAnimatorDriver.DeathParam, UnitCombatAnimatorDriver.DeathState);
+            }
+
+            EditorUtility.SetDirty(controller);
+            return controller;
+        }
+
+        static AnimatorState AddState(AnimatorStateMachine sm, string name, AnimationClip clip)
+        {
+            var state = sm.AddState(name);
+            state.motion = clip;
+            return state;
+        }
+
+        static void AddSpeedTransition(
+            AnimatorState from,
+            AnimatorState to,
+            AnimatorConditionMode mode,
+            float threshold)
+        {
+            var transition = from.AddTransition(to);
+            transition.hasExitTime = false;
+            transition.duration = UnitCombatAnimatorDriver.LocomotionCrossFadeDuration;
+            transition.conditions = new[]
+            {
+                new AnimatorCondition
+                {
+                    mode = mode,
+                    parameter = UnitCombatAnimatorDriver.SpeedParam,
+                    threshold = threshold,
+                },
+            };
+        }
+
+        static void AddTriggerTransition(
+            AnimatorState from,
+            AnimatorState to,
+            string parameter,
+            string destinationState)
+        {
+            var transition = from.AddTransition(to);
+            transition.hasExitTime = false;
+            transition.duration = UnitCombatAnimatorDriver.ResolveCrossFadeDuration(destinationState);
+            transition.conditions = new[]
+            {
+                new AnimatorCondition
+                {
+                    mode = AnimatorConditionMode.If,
+                    parameter = parameter,
+                    threshold = 0f,
+                },
+            };
+        }
+
+        static void EnsureFolder(string folder)
+        {
+            if (AssetDatabase.IsValidFolder(folder))
+            {
+                return;
+            }
+
+            var parent = System.IO.Path.GetDirectoryName(folder)?.Replace('\\', '/');
+            if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent))
+            {
+                EnsureFolder(parent);
+            }
+
+            AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
+        }
+
         static void BuildPrefab(
             string stem,
             FacelessMdxDocument doc,
@@ -101,7 +361,7 @@ namespace Game.Editor
             try
             {
                 var bones = CreateSkeleton(root.transform, doc);
-                var (mesh, materials) = BuildMesh(stem, doc, bones);
+                var (mesh, materials) = BuildMesh(stem, doc, bones, MeshFolder, MatFolder);
                 if (mesh.vertexCount == 0)
                 {
                     log.Add($"{stem}: bones={doc.Nodes.Count} geos=0 (empty mesh)");
@@ -118,9 +378,9 @@ namespace Game.Editor
                 var stand = doc.FindSequence("stand", "portrait") ?? doc.FindSequence();
                 var walk = doc.FindSequence("walk") ?? stand;
                 var attack = doc.FindSequence("attack") ?? stand;
-                var standClip = BakeClip(stem, "Stand", doc, bones, stand);
-                var walkClip = BakeClip(stem, "Walk", doc, bones, walk);
-                var attackClip = BakeClip(stem, "Attack", doc, bones, attack);
+                var standClip = BakeClip(stem, "Stand", doc, bones, stand, AnimFolder);
+                var walkClip = BakeClip(stem, "Walk", doc, bones, walk, AnimFolder);
+                var attackClip = BakeClip(stem, "Attack", doc, bones, attack, AnimFolder);
                 var controller = BuildController(stem, standClip, walkClip, attackClip);
 
                 var animator = root.AddComponent<Animator>();
@@ -403,7 +663,9 @@ namespace Game.Editor
         static (Mesh mesh, Material[] materials) BuildMesh(
             string stem,
             FacelessMdxDocument doc,
-            Transform[] bones)
+            Transform[] bones,
+            string meshFolder,
+            string matFolder)
         {
             var groups = new List<(string Stem, List<FacelessMdxDocument.Geoset> Geosets, bool TwoSided, bool HasTeamColor, bool ClipBlack, bool AlphaBlend)>();
             var index = new Dictionary<string, int>();
@@ -444,7 +706,7 @@ namespace Game.Editor
             for (var s = 0; s < groups.Count; s++)
             {
                 var (texStem, list, twoSided, hasTeamColor, clipBlack, alphaBlend) = groups[s];
-                materials[s] = EnsureUnlitMaterial(texStem, twoSided, hasTeamColor, clipBlack, alphaBlend);
+                materials[s] = EnsureUnlitMaterial(texStem, twoSided, hasTeamColor, clipBlack, alphaBlend, matFolder);
                 var tris = new List<int>();
                 foreach (var g in list)
                 {
@@ -483,7 +745,7 @@ namespace Game.Editor
 
             mesh.bindposes = bind;
             mesh.RecalculateBounds();
-            var meshPath = MeshFolder + "/" + stem + ".asset";
+            var meshPath = meshFolder + "/" + stem + ".asset";
             return (SaveAsset(mesh, meshPath), materials);
         }
 
@@ -492,7 +754,8 @@ namespace Game.Editor
             bool twoSided,
             bool hasTeamColor,
             bool clipBlack,
-            bool alphaBlend)
+            bool alphaBlend,
+            string matFolder)
         {
             var assetName = textureStem
                             + (twoSided ? "_2S" : "")
@@ -500,7 +763,7 @@ namespace Game.Editor
                             + (clipBlack ? "_Clip" : "")
                             + (alphaBlend ? "_Blend" : "")
                             + "_Unlit";
-            var assetPath = MatFolder + "/" + assetName + ".mat";
+            var assetPath = matFolder + "/" + assetName + ".mat";
             var shader = Shader.Find("Game/Faceless/ReviewUnlit");
             if (shader == null)
             {
@@ -646,7 +909,9 @@ namespace Game.Editor
             string clipName,
             FacelessMdxDocument doc,
             Transform[] bones,
-            FacelessMdxDocument.Sequence? sequence)
+            FacelessMdxDocument.Sequence? sequence,
+            string animFolder,
+            bool loop = true)
         {
             var clip = new AnimationClip
             {
@@ -655,7 +920,7 @@ namespace Game.Editor
                 legacy = false,
             };
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
-            settings.loopTime = true;
+            settings.loopTime = loop;
             AnimationUtility.SetAnimationClipSettings(clip, settings);
 
             var start = sequence?.StartMs ?? 0;
@@ -679,7 +944,7 @@ namespace Game.Editor
                 }
             }
 
-            var clipPath = AnimFolder + "/" + stem + "_" + clipName + ".anim";
+            var clipPath = animFolder + "/" + stem + "_" + clipName + ".anim";
             return SaveAsset(clip, clipPath);
         }
 

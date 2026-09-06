@@ -3087,7 +3087,11 @@ namespace Game.Gameplay.Combat
 
             if (!TryCopyAbilitiesFromPrefab(unit))
             {
-                unit.Abilities = AbilityKitDefaults.CreateForSpawn(unit.Role, unit.HeroSlot, unit.BonusSlot);
+                unit.Abilities = AbilityKitDefaults.CreateForSpawn(
+                    GetPlayerRaceId(unit.OwnerSlot),
+                    unit.Role,
+                    unit.HeroSlot,
+                    unit.BonusSlot);
             }
 
             var count = unit.Abilities?.Length ?? 0;
@@ -3358,7 +3362,13 @@ namespace Game.Gameplay.Combat
                 return null;
             }
 
-            var kit = AbilityKitDefaults.CreateForSpawn(unit.Role, unit.HeroSlot, unit.BonusSlot);
+            var kit = unit == null
+                ? null
+                : AbilityKitDefaults.CreateForSpawn(
+                    GetPlayerRaceId(unit.OwnerSlot),
+                    unit.Role,
+                    unit.HeroSlot,
+                    unit.BonusSlot);
             if (kit == null)
             {
                 return null;

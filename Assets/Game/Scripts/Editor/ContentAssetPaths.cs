@@ -1,4 +1,5 @@
 using System.IO;
+using Game.Core;
 using Game.Gameplay.Data;
 using UnityEditor;
 
@@ -71,6 +72,23 @@ namespace Game.Editor
         public const string HumanBonusHero3Abilities = HumanBonusHero3 + "/Abilities";
         public const string HumanBonusTitanAbilities = HumanBonusTitan + "/Abilities";
 
+        public const string Faceless = Races + "/Faceless";
+        public const string FacelessRace = Faceless + "/RACE_FACELESS.asset";
+
+        public const string FacelessUnits = Faceless + "/Units";
+        public const string FacelessMelee = FacelessUnits + "/Melee";
+        public const string FacelessRanged = FacelessUnits + "/Ranged";
+        public const string FacelessCaster = FacelessUnits + "/Caster";
+        public const string FacelessSiege = FacelessUnits + "/Siege";
+        public const string FacelessFlying = FacelessUnits + "/Flying";
+        public const string FacelessSuper = FacelessUnits + "/Super";
+
+        public const string FacelessHeroes = Faceless + "/Heroes";
+        public const string FacelessTitan = FacelessHeroes + "/Titan";
+        public const string FacelessHero1 = FacelessHeroes + "/Hero1";
+        public const string FacelessHero2 = FacelessHeroes + "/Hero2";
+        public const string FacelessHero3 = FacelessHeroes + "/Hero3";
+
         public const string Shared = Root + "/Shared";
         public const string SharedSquads = Shared + "/Squads";
         public const string SharedUpgrades = Shared + "/Upgrades";
@@ -81,6 +99,10 @@ namespace Game.Editor
         public const string HumanPortraitHeroes = HumanPortraits + "/Heroes";
         public const string HumanPortraitBonusUnits = HumanPortraits + "/BonusUnits";
         public const string HumanPortraitBonusHeroes = HumanPortraits + "/BonusHeroes";
+
+        public const string FacelessPortraits = PortraitRoot + "/Faceless";
+        public const string FacelessPortraitUnits = FacelessPortraits + "/Units";
+        public const string FacelessPortraitHeroes = FacelessPortraits + "/Heroes";
 
         public static string HumanHeroFolder(int slot) =>
             slot switch
@@ -130,6 +152,59 @@ namespace Game.Editor
             var isBonus = unitId.EndsWith("_BONUS");
             var folder = isBonus ? HumanUnitBonusFolder(role) : HumanUnitRoleFolder(role);
             return $"{folder}/{unitId}.asset";
+        }
+
+        /// <summary>Race-agnostic variant — derives race from the unit id prefix.</summary>
+        public static string UnitDefinitionPath(string unitId)
+        {
+            var raceId = unitId.StartsWith("UNIT_FACELESS_") ? GameIds.Races.Faceless : GameIds.Races.Human;
+            var role = RoleFromUnitId(unitId);
+            var folder = unitId.EndsWith("_BONUS")
+                ? HumanUnitBonusFolder(role)
+                : RaceUnitRoleFolder(raceId, role);
+            return $"{folder}/{unitId}.asset";
+        }
+
+        public static string RaceFolder(string raceId) =>
+            raceId == GameIds.Races.Faceless ? Faceless : Humans;
+
+        public static string RaceDefinitionPath(string raceId) =>
+            raceId == GameIds.Races.Faceless ? FacelessRace : HumanRace;
+
+        public static string RaceUnitRoleFolder(string raceId, UnitRole role)
+        {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return role switch
+                {
+                    UnitRole.Melee => FacelessMelee,
+                    UnitRole.Ranged => FacelessRanged,
+                    UnitRole.Caster => FacelessCaster,
+                    UnitRole.Siege => FacelessSiege,
+                    UnitRole.Flying => FacelessFlying,
+                    UnitRole.Super => FacelessSuper,
+                    UnitRole.Titan => FacelessTitan,
+                    _ => FacelessUnits,
+                };
+            }
+
+            return HumanUnitRoleFolder(role);
+        }
+
+        public static string RaceHeroFolder(string raceId, int slot)
+        {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return slot switch
+                {
+                    1 => FacelessHero1,
+                    2 => FacelessHero2,
+                    3 => FacelessHero3,
+                    _ => FacelessHeroes,
+                };
+            }
+
+            return HumanHeroFolder(slot);
         }
 
         static UnitRole RoleFromUnitId(string unitId)
@@ -202,6 +277,30 @@ namespace Game.Editor
             EnsureFolder(HumanBonusHero3Abilities);
             EnsureFolder(HumanBonusTitanAbilities);
             EnsureFolder(HumanPortraitBonusHeroes);
+        }
+
+        /// <summary>
+        /// Faceless unit/hero folders. No bonus units nor buildings exist for the race yet —
+        /// only folders that will hold real assets are created.
+        /// </summary>
+        public static void EnsureFacelessUnitFolders()
+        {
+            EnsureFolder(Faceless);
+            EnsureFolder(FacelessUnits);
+            EnsureFolder(FacelessMelee);
+            EnsureFolder(FacelessRanged);
+            EnsureFolder(FacelessCaster);
+            EnsureFolder(FacelessSiege);
+            EnsureFolder(FacelessFlying);
+            EnsureFolder(FacelessSuper);
+            EnsureFolder(FacelessHeroes);
+            EnsureFolder(FacelessTitan);
+            EnsureFolder(FacelessHero1);
+            EnsureFolder(FacelessHero2);
+            EnsureFolder(FacelessHero3);
+            EnsureFolder(FacelessPortraits);
+            EnsureFolder(FacelessPortraitUnits);
+            EnsureFolder(FacelessPortraitHeroes);
         }
     }
 }

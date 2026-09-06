@@ -1,9 +1,30 @@
-# Faceless (Древние) — review-ассеты
+# Faceless (Древние) — review-ассеты и runtime-гейты
 
-Раса в UI — **Древние**. Папки и id — **Faceless** (`RACE_FACELESS`). Пока раса не
-зафиналена, work items в HacknPlan — Urgent («Горит»).
+Раса в UI — **Древние**. Папки и id — **Faceless** (`RACE_FACELESS`).
 
-## Пока нет маппинга на роли
+## Статус (Фаза 1–2 завершены)
+
+Раса **играбельна** в playtest-гите: `PlayableRaceIds`/`SelectableRaceIds` содержат
+`RACE_FACELESS` (`RacePickRules`), контент (SO, префабы, каталоги, портреты) собран.
+ХакnPlan-задача FACELESS-009 фиксирует runtime-гейты; дизайн бонусов вынесен в
+FACELESS-010 (юнит за юнитом с пользователем). Work items в HacknPlan — Urgent.
+
+### Runtime-гейты Фазы 1 (закрыты)
+
+- **Кастер-кит**: `AbilityKitDefaults.CreateForSpawn(string raceId, ...)` для
+  `RACE_FACELESS` возвращает **пустой кит** (способностей у расы нет). Оба вызова в
+  `MatchCombatSystem` — race-aware через `GetPlayerRaceId(unit.OwnerSlot)`, иначе
+  Faceless-кастер унаследовал бы Human-кит из fallback `CreateForSpawn`.
+- **Бонус-пик**: Faceless не имеет бонус-кита. `HumanBonusUnitRules.HasBonusKit(raceId)`
+  = false для `RACE_FACELESS` (список `NoBonusKitRaceIds`). Race-aware
+  `EffectiveBonusSlotForRole/Hero/Titan(string raceId, ...)` всегда дают 0; 7 вызовов в
+  `MatchController` прокидывают `player.RaceId`; `UnitStatsResolver.ResolveBase`
+  охраняет bonus/veteran-ветки. Иначе юнит-бонус давал базового юнита, а veteran —
+  Human-множители.
+- **Tower-треки** (`TowerTrackRules`): глобальные стат-эффекты по ролям, способностей
+  не дают — работают для Faceless без изменений (не блокер).
+- **Titan**: SO-ассета нет ни у одной расы (у Human тоже) — титан = `CopyFrom(hero1,
+  TitanRules.BaseStatMultiplier=3f, AttackRange=3f)`, это норма.
 
 Не создавать дерево `Units/BonusUnits/Heroes` как у людей. Сначала просмотр
 пронумерованных моделей.
@@ -87,5 +108,6 @@ review, не класть в клиентский билд.
 | 12 | FacelessOneWorker_G_Portrait | 12_FacelessOneWorker_Portrait (WC3-голова) |
 
 После маппинга номер→роль: `AssetDatabase.MoveAsset` в категории как у людей,
-`_Review` удалить. Не регистрировать в `UnitVisualCatalog`, пока нет раскладки.
-`SelectableRaceIds` остаётся только Люди.
+`_Review` удалить. Раса играбельна — раскладка сделана в `Prefabs/Races/Faceless/`
+(`Units/`, `Heroes/`; bonuses — позже в FACELESS-010), каталоги зарегистрированы,
+НЕ вносить правки в гейты без задачи.

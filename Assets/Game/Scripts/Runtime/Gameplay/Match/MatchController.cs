@@ -888,7 +888,7 @@ namespace Game.Gameplay.Match
                 isHero: true,
                 heroSlot: heroSlot,
                 level: slotState.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot));
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
 
             player.Gold -= HeroRules.DeployGold;
             slotState.State = HeroLifecycleState.Deployed;
@@ -943,7 +943,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Titan,
                 stats,
                 level: titan.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot));
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
 
             player.Gold -= TitanRules.DeployGold;
             titan.State = TitanLifecycleState.Deployed;
@@ -1034,7 +1034,7 @@ namespace Game.Gameplay.Match
             }
 
             player.Gold = remaining;
-            var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role);
+            var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(player.RaceId, player.BonusPickSlot, role);
             var stats = ResolveUnitStats(player, role, bonusSlot);
             // Same forward clearance band as auto-wave creeps (not barracks center / inside mesh).
             var spawnDistance = CombatFormationRules.BarracksSpawnForwardClearance;
@@ -2116,7 +2116,7 @@ namespace Game.Gameplay.Match
                 isHero: true,
                 heroSlot: heroSlot,
                 level: roster.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot));
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -2174,7 +2174,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Titan,
                 stats,
                 level: titan.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot));
+                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -2206,7 +2206,7 @@ namespace Game.Gameplay.Match
         UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
             var bonusSlot = player != null
-                ? HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot)
+                ? HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot)
                 : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,
@@ -2222,7 +2222,7 @@ namespace Game.Gameplay.Match
         UnitCombatStats ResolveTitanStats(MatchPlayerState player, int level = HeroLevelRules.StartingLevel)
         {
             var bonusSlot = player != null
-                ? HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot)
+                ? HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot)
                 : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,

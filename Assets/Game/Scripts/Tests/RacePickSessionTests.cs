@@ -102,7 +102,8 @@ namespace Game.Tests
 
             Assert.IsTrue(RacePickNetworkRules.FillLocalStandInPicks(picks, localStandInSlots));
             Assert.IsNull(picks[0]);
-            Assert.AreEqual(GameIds.Races.Human, picks[1]);
+            var expected = RacePickRules.SelectableRaceIds[1 % RacePickRules.SelectableRaceIds.Length];
+            Assert.AreEqual(expected, picks[1]);
             Assert.IsNull(picks[2]);
         }
 

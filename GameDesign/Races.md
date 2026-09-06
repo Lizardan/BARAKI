@@ -276,6 +276,34 @@ tower_tracks:                     # PRE-007; порядок = слоты 4–12 
 magic_spells: [SPELL_HUMAN_1, SPELL_HUMAN_2, SPELL_HUMAN_3]
 ```
 
+## RACE_FACELESS (Древние) — играбельный контент-кэтчеп (PRE-RACE2)
+
+```entity
+id: RACE_FACELESS
+display_name: Древние
+display_name_en: Faceless
+fantasy_hook: Древние богоподобные сущности; бирюзовый ретекстур WC3-пака
+start_passives: {}            # TBD — нет кастер-кита и пассивов в Фазе 1 (FACELESS-008/010)
+start_gold: 250               # как Human
+units:
+  melee: UNIT_FACELESS_MELEE
+  ranged: UNIT_FACELESS_RANGED
+  caster: UNIT_FACELESS_CASTER   # без заклинаний: пустой кит (гейт FACELESS-009)
+  siege: UNIT_FACELESS_SIEGE
+  flying: UNIT_FACELESS_FLYING
+  super: UNIT_FACELESS_SUPER
+heroes: [HERO_FACELESS_1, HERO_FACELESS_2, HERO_FACELESS_3]
+bonus_slots: 12            # только Human; Faceless без бонус-кита (FACELESS-010 — дизайн юнит за юнитом)
+buildings: BUILDING_SET_HUMAN   # зданий Faceless нет (FACELESS-007) — текущий общий скин
+upgrades: UPGRADE_TREE_HUMAN    # tower-треки глобальные (TowerTrackRules), работают на Faceless
+tower_tracks: [...]             # наследует треки Human? Нет — глобальны, стат-эффекты на роли
+magic_spells: []                # магии/кастер-заклинаний нет (Фаза 1)
+mvp: true
+note: Контент (SO/prefabs/каталоги) и runtime-гейты готовы (FACELESS-001..009). Полный kit asymmetry — FACELESS-008; бонусы — FACELESS-010.
+```
+
+Статы юнитов Faceless = **копия Human роль→роль** (по решению пользователя). Титан = `hero1 ×3` (`TitanRules.BaseStatMultiplier`), как у Human. `_Review`-префабы удалены после сверки маппинга.
+
 ## Будущие расы (слоты)
 
 ```entity
@@ -323,6 +351,7 @@ mvp: false
 | Match bonus | **12** слотов per race; см. `Bonuses.md` |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
 | MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
+| Раса #2 (Faceless) | Играбельна на стартовых гейтах (статы Human, без kit/бонусов, без магии); полная асимметрия — `FACELESS-008`, бонусы — `FACELESS-010` |
 
 ```entity
 id: UPG_MAIN_MAGIC_ECONOMY
@@ -340,4 +369,6 @@ mvp: true
 - [x] Gold/time за **tower** upgrades — **500/800/1200g**, **45/90/135s**
 - [x] Gold/time за **magic** upgrades — **500/750/1000g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)
-- [ ] Раса #2 — только после PRE-001..007 + GATE (`TODO.md`)
+- [x] Раса #2 (Faceless) — контент-кэтчеп играбелен (FACELESS-001..009); `RACE_FACELESS` в каталоге
+- [ ] Полный asymmetry kit Faceless — **FACELESS-008** (`TODO.md`)
+- [ ] Бонусы Древних юнит за юнитом — **FACELESS-010** (`TODO.md`)

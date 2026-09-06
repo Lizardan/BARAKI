@@ -1,4 +1,5 @@
 using Game.Gameplay.Data;
+using Game.Core;
 using UnityEngine;
 
 namespace Game.Gameplay.Combat
@@ -540,6 +541,24 @@ namespace Game.Gameplay.Combat
             }
 
             return Create(role, heroSlot);
+        }
+
+        /// <summary>
+        /// Race-aware spawn kit. Races flagged as having no abilities return an empty kit so their
+        /// caster/hero/titan units never inherit the Human default abilities.
+        /// </summary>
+        public static UnitAbilityDef[] CreateForSpawn(
+            string raceId,
+            UnitRole role,
+            int heroSlot,
+            int bonusSlot)
+        {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return System.Array.Empty<UnitAbilityDef>();
+            }
+
+            return CreateForSpawn(role, heroSlot, bonusSlot);
         }
 
         public static UnitAbilityDef[] CreateCaster() => new[]

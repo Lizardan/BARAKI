@@ -30,7 +30,10 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitHeroes);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusUnits);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusHeroes);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitUnits);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitHeroes);
             BakeRace(catalog, GameIds.Races.Human);
+            BakeRace(catalog, GameIds.Races.Faceless);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -44,6 +47,13 @@ namespace Game.Editor
             {
                 return;
             }
+
+            var unitPortraitFolder = raceId == GameIds.Races.Faceless
+                ? ContentAssetPaths.FacelessPortraitUnits
+                : ContentAssetPaths.HumanPortraitUnits;
+            var heroPortraitFolder = raceId == GameIds.Races.Faceless
+                ? ContentAssetPaths.FacelessPortraitHeroes
+                : ContentAssetPaths.HumanPortraitHeroes;
 
             var roles = new[]
             {
@@ -71,19 +81,25 @@ namespace Game.Editor
                     continue;
                 }
 
-                var path = $"{ContentAssetPaths.HumanPortraitUnits}/{roles[i]}.png";
+                var path = $"{unitPortraitFolder}/{roles[i]}.png";
                 var texture = RenderPrefabThumbnail(prefab, path);
                 set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
             }
 
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1Portrait",
-                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero1.png");
+                $"{heroPortraitFolder}/Hero1.png");
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2Portrait",
-                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero2.png");
+                $"{heroPortraitFolder}/Hero2.png");
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3Portrait",
-                $"{ContentAssetPaths.HumanPortraitHeroes}/Hero3.png");
+                $"{heroPortraitFolder}/Hero3.png");
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait",
-                $"{ContentAssetPaths.HumanPortraitHeroes}/Titan.png");
+                $"{heroPortraitFolder}/Titan.png");
+
+            if (raceId != GameIds.Races.Human)
+            {
+                so.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
 
             BakeBonusPortraits(catalog, set, raceId);
 

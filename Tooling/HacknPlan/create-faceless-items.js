@@ -101,7 +101,7 @@ const ITEMS = [
   },
   {
     key: "FACELESS-005",
-    title: "[FACELESS-005] ScriptableObjects и каталоги Faceless (pick скрыт)",
+    title: "[FACELESS-005] ScriptableObjects и каталоги Faceless (раса играбельна)",
     categoryId: ids.categories.Programming,
     dependsOn: ["FACELESS-003", "FACELESS-004"],
     description: body([
@@ -180,6 +180,29 @@ const ITEMS = [
       "",
       "## Agent context (EN)",
       "Pipeline in GameDesign/Races.md «Контент-пайплайн новой расы». Do not add to SelectableRaceIds in this card.",
+    ]),
+  },
+  {
+    key: "FACELESS-010",
+    title: "[FACELESS-010] Бонусы Древних: дизайн юнит за юнитом",
+    categoryId: ids.categories.Design,
+    dependsOn: ["FACELESS-009"],
+    description: body([
+      "## Суть",
+      "Совместная дизайн-сессия: по каждому бонусному юниту Faceless (Melee/Ranged/Caster/Siege/Flying/Super, 3 героя, Titan) придумать и зафиксировать бонус, логичный для расы Древних и для этого юнита. Задача создана по явной просьбе пользователя — делать ПОСЛЕ завершения FACELESS-009.",
+      "",
+      "## Правила/Ограничения",
+      "- Агент спрашивает пользователя по одному юниту и предлагает варианты, не угадывает.",
+      "- Пока задача в работе — в `HumanBonusUnitRules` сохраняется нейтральная заглушка: Faceless без бонус-кита (`NoBonusKitRaceIds`) и без veteran-множителей humans.",
+      "- Реализация бонусов — отдельные follow-up карточки после утверждения дизайна.",
+      "",
+      "## Acceptance criteria",
+      "- [ ] Таблица юнит → бонус утверждена пользователем (все роли + 3 героя + Titan)",
+      "- [ ] Записано в GDD (`GameDesign/Bonuses.md` или `GameDesign/Races.md`) и/или `wiki/rules/human-unit-bonuses.md`",
+      "- [ ] Расовый бонус-деф в игре применяет свои множители, а не Human",
+      "",
+      "## Agent context (EN)",
+      "Design session with the user, 1 unit at a time. Do not enable selection before visual+kit ready. Existing gate: HasBonusKit(raceId) returns false for RACE_FACELESS.",
     ]),
   },
 ];

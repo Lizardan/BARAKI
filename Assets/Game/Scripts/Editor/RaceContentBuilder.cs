@@ -14,6 +14,13 @@ namespace Game.Editor
         public const string RootPath = ContentAssetPaths.Root;
         public const string CatalogPath = ContentAssetPaths.RaceCatalog;
 
+        [MenuItem("BARAKI/Faceless/Build Race Content")]
+        public static void BuildFromMenu()
+        {
+            EnsureContent();
+            AssetDatabase.SaveAssets();
+        }
+
         public static void EnsureContent()
         {
             EnsureFolder(ContentAssetPaths.HumanUnits);
@@ -24,12 +31,14 @@ namespace Game.Editor
             EnsureFolder(ContentAssetPaths.Humans);
             EnsureFolder(ContentAssetPaths.SharedSquads);
             EnsureFolder(ContentAssetPaths.SharedUpgrades);
+            ContentAssetPaths.EnsureFacelessUnitFolders();
 
             var humanUnits = CreateHumanUnits();
             var humanBonusUnits = CreateHumanBonusUnits();
             var humanHeroes = CreateHeroes();
 
             var human = CreateRace(
+                ContentAssetPaths.HumanRace,
                 GameIds.Races.Human,
                 "Люди",
                 humanUnits,
@@ -37,6 +46,19 @@ namespace Game.Editor
                 humanHeroes,
                 new[] { GameIds.Passives.HumanSteelArms, GameIds.Passives.HumanFortifiedLine },
                 GameIds.Passives.HumanLevyTax);
+
+            var facelessUnits = CreateFacelessUnits();
+            var facelessHeroes = CreateFacelessHeroes();
+
+            var faceless = CreateRace(
+                ContentAssetPaths.FacelessRace,
+                GameIds.Races.Faceless,
+                "Древние",
+                facelessUnits,
+                null,
+                facelessHeroes,
+                System.Array.Empty<string>(),
+                string.Empty);
 
             var squads = new[]
             {
@@ -59,7 +81,7 @@ namespace Game.Editor
                     new[] { 6f, 8f, 10f, 12f, 14f, 16f, 18f, 20f, 22f }),
             };
 
-            CreateOrUpdateCatalog(human, squads, statTracks);
+            CreateOrUpdateCatalog(new[] { human, faceless }, squads, statTracks);
             AssetDatabase.SaveAssets();
         }
 
@@ -80,6 +102,45 @@ namespace Game.Editor
                 CreateUnit(GameIds.Units.HumanSuper, GameIds.Races.Human, UnitRole.Super,
                     500f, 2f, 30f, 40f, 0.5f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
             };
+        }
+
+        /// <summary>Faceless units mirror Human role stats — role → role copy (GATE: no abilities).</summary>
+        private static UnitDefinition[] CreateFacelessUnits()
+        {
+            return new[]
+            {
+                CreateUnit(GameIds.Units.FacelessMelee, GameIds.Races.Faceless, UnitRole.Melee,
+                    120f, 1f, 8f, 10f, 1f, 1.5f, 4f, 8),
+                CreateUnit(GameIds.Units.FacelessRanged, GameIds.Races.Faceless, UnitRole.Ranged,
+                    70f, 0f, 6f, 8f, 1f, 8f, RaceMarchSpeedRules.BaseMarchSpeed, 6),
+                CreateUnit(GameIds.Units.FacelessCaster, GameIds.Races.Faceless, UnitRole.Caster,
+                    60f, 0f, 4f, 5f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 7),
+                CreateUnit(GameIds.Units.FacelessSiege, GameIds.Races.Faceless, UnitRole.Siege,
+                    200f, 0f, 12f, 16f, 1f, 1.5f, RaceMarchSpeedRules.BaseMarchSpeed, 15),
+                CreateUnit(GameIds.Units.FacelessFlying, GameIds.Races.Faceless, UnitRole.Flying,
+                    90f, 0f, 8f, 10f, 1f, 6f, RaceMarchSpeedRules.BaseMarchSpeed, 10),
+                CreateUnit(GameIds.Units.FacelessSuper, GameIds.Races.Faceless, UnitRole.Super,
+                    500f, 2f, 30f, 40f, 0.5f, 10f, RaceMarchSpeedRules.BaseMarchSpeed, 50),
+            };
+        }
+
+        private static HeroDefinition[] CreateFacelessHeroes()
+        {
+            var ids = new[]
+            {
+                GameIds.Heroes.Faceless1,
+                GameIds.Heroes.Faceless2,
+                GameIds.Heroes.Faceless3,
+            };
+
+            var heroes = new HeroDefinition[3];
+            for (var i = 0; i < 3; i++)
+            {
+                // No morale passive for Faceless (no race passives) — keep _idleMoraleId empty.
+                heroes[i] = CreateHero(ids[i], GameIds.Races.Faceless, i + 1, string.Empty);
+            }
+
+            return heroes;
         }
 
         /// <summary>PRE-006a enhanced defs (stats from Plans/PRE-006a-unit-bonuses.md).</summary>
@@ -129,7 +190,7 @@ namespace Game.Editor
             float moveSpeed,
             int bounty)
         {
-            var path = ContentAssetPaths.HumanUnitDefinitionPath(id);
+            var path = ContentAssetPaths.UnitDefinitionPath(id);
             var unit = LoadOrCreate<UnitDefinition>(path);
             var so = new SerializedObject(unit);
             so.FindProperty("_id").stringValue = id;
@@ -152,7 +213,7 @@ namespace Game.Editor
 
         private static HeroDefinition CreateHero(string id, string raceId, int slot, string moraleId)
         {
-            var path = $"{ContentAssetPaths.HumanHeroFolder(slot)}/{id}.asset";
+            var path = $"{ContentAssetPaths.RaceHeroFolder(raceId, slot)}/{id}.asset";
             var hero = LoadOrCreate<HeroDefinition>(path);
             var so = new SerializedObject(hero);
             so.FindProperty("_id").stringValue = id;
@@ -173,6 +234,7 @@ namespace Game.Editor
         }
 
         private static RaceDefinition CreateRace(
+            string path,
             string id,
             string displayName,
             UnitDefinition[] units,
@@ -181,7 +243,6 @@ namespace Game.Editor
             string[] positivePassives,
             string negativePassive)
         {
-            var path = ContentAssetPaths.HumanRace;
             var race = LoadOrCreate<RaceDefinition>(path);
             var so = new SerializedObject(race);
             so.FindProperty("_id").stringValue = id;
@@ -272,29 +333,37 @@ namespace Game.Editor
         }
 
         private static void CreateOrUpdateCatalog(
-            RaceDefinition human,
+            RaceDefinition[] races,
             SquadCompositionDefinition[] squads,
             StatUpgradeTrackDefinition[] statTracks)
         {
             var catalog = LoadOrCreate<RaceCatalog>(CatalogPath);
             var so = new SerializedObject(catalog);
-            var races = new List<RaceDefinition> { human };
+            var list = new List<RaceDefinition>();
+            for (var i = 0; i < races.Length; i++)
+            {
+                if (!list.Contains(races[i]))
+                {
+                    list.Add(races[i]);
+                }
+            }
+
             if (catalog.Races != null)
             {
                 foreach (var existing in catalog.Races)
                 {
-                    if (existing != null && existing.Id != human.Id)
+                    if (existing != null && !list.Contains(existing))
                     {
-                        races.Add(existing);
+                        list.Add(existing);
                     }
                 }
             }
 
             var racesProperty = so.FindProperty("_races");
-            racesProperty.arraySize = races.Count;
-            for (var i = 0; i < races.Count; i++)
+            racesProperty.arraySize = list.Count;
+            for (var i = 0; i < list.Count; i++)
             {
-                racesProperty.GetArrayElementAtIndex(i).objectReferenceValue = races[i];
+                racesProperty.GetArrayElementAtIndex(i).objectReferenceValue = list[i];
             }
             so.FindProperty("_squadCompositions").arraySize = squads.Length;
             for (var i = 0; i < squads.Length; i++)

@@ -8,6 +8,7 @@ namespace Game.Gameplay.Match
         public const string TeamAccentTransformName = "TeamAccent";
         public const string TeamTintTransformName = "TeamTint";
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int FacelessUseTeamId = Shader.PropertyToID("_UseTeam");
 
         public static void ApplyTeamColor(Transform visualRoot, Color slotColor)
         {
@@ -20,6 +21,13 @@ namespace Game.Gameplay.Match
             if (tt != null)
             {
                 tt.ApplyTeamColor(slotColor);
+                return;
+            }
+
+            var faceless = visualRoot.GetComponentInChildren<FacelessUnitTeamColor>(true);
+            if (faceless != null)
+            {
+                faceless.ApplyTeamColor(slotColor);
                 return;
             }
 
@@ -39,8 +47,42 @@ namespace Game.Gameplay.Match
                 return tt.TeamTextures != null ? tt.TeamTextures.Length : 0;
             }
 
+            var faceless = visualRoot.GetComponentInChildren<FacelessUnitTeamColor>(true);
+            if (faceless != null)
+            {
+                return CountFacelessAccents(faceless);
+            }
+
             var count = 0;
             CountRecursive(visualRoot, ref count);
+            return count;
+        }
+
+        static int CountFacelessAccents(FacelessUnitTeamColor faceless)
+        {
+            var count = 0;
+            foreach (var renderer in faceless.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                foreach (var material in renderer.sharedMaterials)
+                {
+                    if (material == null || !material.HasProperty(FacelessUseTeamId))
+                    {
+                        continue;
+                    }
+
+                    if (material.GetFloat(FacelessUseTeamId) > 0.5f)
+                    {
+                        count++;
+                        break;
+                    }
+                }
+            }
+
             return count;
         }
 

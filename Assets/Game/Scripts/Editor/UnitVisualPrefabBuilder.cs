@@ -22,6 +22,22 @@ namespace Game.Editor
         public const string HumanHeroesPath = HumanRoot + "/Heroes";
         public const string CatalogPath = ContentAssetPaths.UnitVisualCatalog;
 
+        public const string FacelessRoot = RootPath + "/Faceless";
+        public const string FacelessPath = FacelessRoot + "/Units";
+        public const string FacelessHeroesPath = FacelessRoot + "/Heroes";
+
+        public const string FacelessMeleePath = FacelessPath + "/Melee/Faceless_Melee.prefab";
+        public const string FacelessRangedPath = FacelessPath + "/Ranged/Faceless_Ranged.prefab";
+        public const string FacelessCasterPath = FacelessPath + "/Caster/Faceless_Caster.prefab";
+        public const string FacelessSiegePath = FacelessPath + "/Siege/Faceless_Siege.prefab";
+        public const string FacelessFlyingPath = FacelessPath + "/Flying/Faceless_Flying.prefab";
+        public const string FacelessSuperPath = FacelessPath + "/Super/Faceless_Super.prefab";
+        public const string FacelessTitanPath = FacelessHeroesPath + "/Titan/Faceless_Titan.prefab";
+
+        public const string FacelessHero1Path = FacelessHeroesPath + "/Hero1/Faceless_Hero1.prefab";
+        public const string FacelessHero2Path = FacelessHeroesPath + "/Hero2/Faceless_Hero2.prefab";
+        public const string FacelessHero3Path = FacelessHeroesPath + "/Hero3/Faceless_Hero3.prefab";
+
         public const string HumanMeleePath = HumanPath + "/Melee/Human_Melee.prefab";
         public const string HumanRangedPath = HumanPath + "/Ranged/Human_Ranged.prefab";
         public const string HumanCasterPath = HumanPath + "/Caster/Human_Caster.prefab";
@@ -67,9 +83,20 @@ namespace Game.Editor
             HumanSuperBonusPath,
         };
 
+        static readonly string[] FacelessPrefabPaths =
+        {
+            FacelessMeleePath,
+            FacelessRangedPath,
+            FacelessCasterPath,
+            FacelessSiegePath,
+            FacelessFlyingPath,
+            FacelessSuperPath,
+        };
+
         public static void EnsureContent()
         {
             EnsureHumanPrefabFolders();
+            EnsureFacelessPrefabFolders();
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.Catalogs);
 
             var humanPrefabs = LoadAnimatedHumanPrefabs();
@@ -83,6 +110,7 @@ namespace Game.Editor
             var veteran3 = LoadOptionalPrefab(HumanHero3BonusPath);
             var veteranTitan = LoadOptionalPrefab(HumanTitanBonusPath);
             UpdateCatalogFromPrefabs(
+                GameIds.Races.Human,
                 humanPrefabs,
                 bonusPrefabs,
                 hero1,
@@ -93,8 +121,65 @@ namespace Game.Editor
                 veteran2,
                 veteran3,
                 veteranTitan);
+
+            var facelessUnits = LoadOptionalFacelessPrefabs();
+            if (AllPresent(facelessUnits))
+            {
+                var fHero1 = LoadRequiredPrefab(FacelessHero1Path);
+                var fHero2 = LoadRequiredPrefab(FacelessHero2Path);
+                var fHero3 = LoadRequiredPrefab(FacelessHero3Path);
+                var fTitan = LoadRequiredPrefab(FacelessTitanPath);
+                UpdateCatalogFromPrefabs(
+                    GameIds.Races.Faceless,
+                    facelessUnits,
+                    null,
+                    fHero1,
+                    fHero2,
+                    fHero3,
+                    fTitan,
+                    clearBonus: true);
+            }
+
             UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("BARAKI/Faceless/Update Visual Catalog")]
+        public static void UpdateFacelessCatalogFromMenu()
+        {
+            UpdateFacelessCatalog();
+            AssetDatabase.SaveAssets();
+            Debug.Log("UnitVisualPrefabBuilder: Faceless catalog updated.");
+        }
+
+        /// <summary>Registers Faceless unit/hero/titan prefabs into the shared visual catalog.</summary>
+        public static void UpdateFacelessCatalog()
+        {
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.Catalogs);
+            var facelessUnits = LoadOptionalFacelessPrefabs();
+            if (!AllPresent(facelessUnits))
+            {
+                Debug.LogWarning(
+                    "UnitVisualPrefabBuilder: not all Faceless unit prefabs present — run " +
+                    "'BARAKI/Faceless/Rebuild Unit Prefabs' first.");
+                return;
+            }
+
+            var fHero1 = LoadRequiredPrefab(FacelessHero1Path);
+            var fHero2 = LoadRequiredPrefab(FacelessHero2Path);
+            var fHero3 = LoadRequiredPrefab(FacelessHero3Path);
+            var fTitan = LoadRequiredPrefab(FacelessTitanPath);
+            UpdateCatalogFromPrefabs(
+                GameIds.Races.Faceless,
+                facelessUnits,
+                null,
+                fHero1,
+                fHero2,
+                fHero3,
+                fTitan,
+                clearBonus: true);
+
+            UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
         }
 
         public static void EnsureHumanPrefabFolders()
@@ -122,6 +207,24 @@ namespace Game.Editor
             EnsureFolder(HumanHeroesPath + "/Titan");
         }
 
+        public static void EnsureFacelessPrefabFolders()
+        {
+            EnsureFolder(RootPath);
+            EnsureFolder(FacelessRoot);
+            EnsureFolder(FacelessPath);
+            EnsureFolder(FacelessHeroesPath);
+            EnsureFolder(FacelessPath + "/Melee");
+            EnsureFolder(FacelessPath + "/Ranged");
+            EnsureFolder(FacelessPath + "/Caster");
+            EnsureFolder(FacelessPath + "/Siege");
+            EnsureFolder(FacelessPath + "/Flying");
+            EnsureFolder(FacelessPath + "/Super");
+            EnsureFolder(FacelessHeroesPath + "/Hero1");
+            EnsureFolder(FacelessHeroesPath + "/Hero2");
+            EnsureFolder(FacelessHeroesPath + "/Hero3");
+            EnsureFolder(FacelessHeroesPath + "/Titan");
+        }
+
         static GameObject[] LoadAnimatedHumanPrefabs()
         {
             var prefabs = new GameObject[HumanAnimatedPrefabPaths.Length];
@@ -144,6 +247,30 @@ namespace Game.Editor
             return prefabs;
         }
 
+        static GameObject[] LoadOptionalFacelessPrefabs()
+        {
+            var prefabs = new GameObject[FacelessPrefabPaths.Length];
+            for (var i = 0; i < FacelessPrefabPaths.Length; i++)
+            {
+                prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(FacelessPrefabPaths[i]);
+            }
+
+            return prefabs;
+        }
+
+        static bool AllPresent(GameObject[] prefabs)
+        {
+            for (var i = 0; i < prefabs.Length; i++)
+            {
+                if (prefabs[i] == null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         static GameObject LoadOptionalPrefab(string path) =>
             AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
@@ -161,7 +288,8 @@ namespace Game.Editor
         }
 
         static void UpdateCatalogFromPrefabs(
-            GameObject[] humanPrefabs,
+            string raceId,
+            GameObject[] prefabs,
             GameObject[] bonusPrefabs,
             GameObject hero1,
             GameObject hero2,
@@ -170,15 +298,16 @@ namespace Game.Editor
             GameObject hero1Bonus = null,
             GameObject hero2Bonus = null,
             GameObject hero3Bonus = null,
-            GameObject titanBonus = null)
+            GameObject titanBonus = null,
+            bool clearBonus = false)
         {
             var catalog = LoadOrCreateCatalog();
             var so = new SerializedObject(catalog);
             var races = so.FindProperty("_races");
-            var entry = FindOrAddRace(races, GameIds.Races.Human);
+            var entry = FindOrAddRace(races, raceId);
             AssignSet(
                 entry.FindPropertyRelative("_visuals"),
-                humanPrefabs,
+                prefabs,
                 bonusPrefabs,
                 hero1,
                 hero2,
@@ -187,7 +316,8 @@ namespace Game.Editor
                 hero1Bonus,
                 hero2Bonus,
                 hero3Bonus,
-                titanBonus);
+                titanBonus,
+                clearBonus);
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
         }
@@ -210,7 +340,7 @@ namespace Game.Editor
             return created;
         }
 
-        static void AssignSet(
+static void AssignSet(
             SerializedProperty setProperty,
             GameObject[] prefabs,
             GameObject[] bonusPrefabs,
@@ -221,7 +351,8 @@ namespace Game.Editor
             GameObject hero1Bonus = null,
             GameObject hero2Bonus = null,
             GameObject hero3Bonus = null,
-            GameObject titanBonus = null)
+            GameObject titanBonus = null,
+            bool clearBonus = false)
         {
             setProperty.FindPropertyRelative("_melee").objectReferenceValue = prefabs[0];
             setProperty.FindPropertyRelative("_ranged").objectReferenceValue = prefabs[1];
@@ -238,29 +369,49 @@ namespace Game.Editor
                 setProperty.FindPropertyRelative("_flyingBonus").objectReferenceValue = bonusPrefabs[4];
                 setProperty.FindPropertyRelative("_superBonus").objectReferenceValue = bonusPrefabs[5];
             }
+            else if (clearBonus)
+            {
+                setProperty.FindPropertyRelative("_meleeBonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_rangedBonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_casterBonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_siegeBonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_flyingBonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_superBonus").objectReferenceValue = null;
+            }
 
             setProperty.FindPropertyRelative("_hero1").objectReferenceValue = hero1;
             setProperty.FindPropertyRelative("_hero2").objectReferenceValue = hero2;
             setProperty.FindPropertyRelative("_hero3").objectReferenceValue = hero3;
             setProperty.FindPropertyRelative("_titan").objectReferenceValue = titan;
-            if (hero1Bonus != null)
-            {
-                setProperty.FindPropertyRelative("_hero1Bonus").objectReferenceValue = hero1Bonus;
-            }
 
-            if (hero2Bonus != null)
+            if (clearBonus)
             {
-                setProperty.FindPropertyRelative("_hero2Bonus").objectReferenceValue = hero2Bonus;
+                setProperty.FindPropertyRelative("_hero1Bonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_hero2Bonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_hero3Bonus").objectReferenceValue = null;
+                setProperty.FindPropertyRelative("_titanBonus").objectReferenceValue = null;
             }
-
-            if (hero3Bonus != null)
+            else
             {
-                setProperty.FindPropertyRelative("_hero3Bonus").objectReferenceValue = hero3Bonus;
-            }
+                if (hero1Bonus != null)
+                {
+                    setProperty.FindPropertyRelative("_hero1Bonus").objectReferenceValue = hero1Bonus;
+                }
 
-            if (titanBonus != null)
-            {
-                setProperty.FindPropertyRelative("_titanBonus").objectReferenceValue = titanBonus;
+                if (hero2Bonus != null)
+                {
+                    setProperty.FindPropertyRelative("_hero2Bonus").objectReferenceValue = hero2Bonus;
+                }
+
+                if (hero3Bonus != null)
+                {
+                    setProperty.FindPropertyRelative("_hero3Bonus").objectReferenceValue = hero3Bonus;
+                }
+
+                if (titanBonus != null)
+                {
+                    setProperty.FindPropertyRelative("_titanBonus").objectReferenceValue = titanBonus;
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 using UnityEngine;
@@ -56,6 +57,31 @@ namespace Game.Gameplay.Combat
         /// <summary>Stone Masonry (slot 12): max HP multiplier for all owner buildings.</summary>
         public const float StoneMasonryHpMultiplier = 1.2f;
 
+        /// <summary>
+        /// Races that currently have no bonus kit (GATE: Faceless Fase 1). Their bonus pick is
+        /// neutralized so they never inherit Human veteran multipliers or enhanced units.
+        /// </summary>
+        public static readonly string[] NoBonusKitRaceIds = { GameIds.Races.Faceless };
+
+        /// <summary>True when a race has an authored bonus kit (unit 1–6 + veteran 7–10 + uniques 11–12).</summary>
+        public static bool HasBonusKit(string raceId)
+        {
+            if (string.IsNullOrEmpty(raceId))
+            {
+                return true;
+            }
+
+            for (var i = 0; i < NoBonusKitRaceIds.Length; i++)
+            {
+                if (NoBonusKitRaceIds[i] == raceId)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public static bool IsBonusSlot(int slot) => slot >= MinBonusSlot && slot <= MaxBonusSlot;
 
         /// <summary>Slots 7–9: veteran heroes; the value maps to hero slot via <see cref="HeroSlotForBonusSlot"/>.</summary>
@@ -79,10 +105,20 @@ namespace Game.Gameplay.Combat
 
         /// <summary>Effective bonus slot for a hero spawn: pick must match this hero's slot, else 0.</summary>
         public static int EffectiveBonusSlotForHero(int playerBonusPickSlot, int heroSlot) =>
+            EffectiveBonusSlotForHero(null, playerBonusPickSlot, heroSlot);
+
+        /// <summary>Race-aware hero bonus slot; races without a bonus kit always resolve to 0.</summary>
+        public static int EffectiveBonusSlotForHero(string raceId, int playerBonusPickSlot, int heroSlot) =>
+            !HasBonusKit(raceId) ? 0 :
             playerBonusPickSlot == BonusSlotForHeroSlot(heroSlot) ? playerBonusPickSlot : 0;
 
         /// <summary>Effective bonus slot for a titan spawn: pick must be the titan slot, else 0.</summary>
         public static int EffectiveBonusSlotForTitan(int playerBonusPickSlot) =>
+            EffectiveBonusSlotForTitan(null, playerBonusPickSlot);
+
+        /// <summary>Race-aware titan bonus slot; races without a bonus kit always resolve to 0.</summary>
+        public static int EffectiveBonusSlotForTitan(string raceId, int playerBonusPickSlot) =>
+            !HasBonusKit(raceId) ? 0 :
             playerBonusPickSlot == TitanBonusSlot ? playerBonusPickSlot : 0;
 
         /// <summary>
@@ -138,6 +174,11 @@ namespace Game.Gameplay.Combat
         /// Player pick applies only to the matching role (manual call / wave). Otherwise 0 = base unit.
         /// </summary>
         public static int EffectiveBonusSlotForRole(int playerBonusPickSlot, UnitRole role) =>
+            EffectiveBonusSlotForRole(null, playerBonusPickSlot, role);
+
+        /// <summary>Race-aware role bonus slot; races without a bonus kit always resolve to 0.</summary>
+        public static int EffectiveBonusSlotForRole(string raceId, int playerBonusPickSlot, UnitRole role) =>
+            !HasBonusKit(raceId) ? 0 :
             IsBonusSlot(playerBonusPickSlot) && RoleForBonusSlot(playerBonusPickSlot) == role
                 ? playerBonusPickSlot
                 : 0;

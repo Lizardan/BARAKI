@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Core;
 using Game.Editor;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
@@ -121,6 +122,38 @@ namespace Game.Tests
 
             var baseKit = AbilityKitDefaults.CreateForSpawn(UnitRole.Ranged, 0, bonusSlot: 0);
             Assert.AreEqual(0, baseKit.Length);
+        }
+
+        [Test]
+        public void CreateForSpawn_Faceless_ReturnsEmptyKit()
+        {
+            Assert.IsFalse(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Faceless));
+
+            foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged, UnitRole.Caster, UnitRole.Titan })
+            {
+                var kit = AbilityKitDefaults.CreateForSpawn(
+                    GameIds.Races.Faceless, role, heroSlot: 1, bonusSlot: 0);
+                Assert.AreEqual(0, kit.Length, $"Faceless {role} must not inherit Human kit.");
+            }
+
+            var casterKit = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Caster, 0, 0);
+            Assert.AreEqual(0, casterKit.Length);
+        }
+
+        [Test]
+        public void EffectiveBonusSlots_Faceless_AlwaysZero()
+        {
+            Assert.IsFalse(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Faceless));
+            Assert.IsTrue(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Human));
+
+            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(
+                GameIds.Races.Faceless, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
+            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForHero(GameIds.Races.Faceless, 8, 2));
+            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForTitan(GameIds.Races.Faceless, 10));
+
+            Assert.AreEqual(HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee),
+                HumanBonusUnitRules.EffectiveBonusSlotForRole(
+                    GameIds.Races.Human, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
         }
 
         [Test]

@@ -38,26 +38,62 @@ namespace Game.Editor
                 return;
             }
 
-            var race = raceCatalog.GetRace(GameIds.Races.Human);
+            var synced = new List<string>();
+            SyncRace(raceCatalog, visualCatalog, GameIds.Races.Human, includeHumanExtras: true, synced);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"UnitBalanceSetup: synced {synced.Count} prefab(s).\n{string.Join("\n", synced)}");
+        }
+
+        [MenuItem("BARAKI/Faceless/Sync Balance to Prefabs")]
+        public static void SyncFaceless()
+        {
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceCatalogPath);
+            var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(UnitVisualPrefabBuilder.CatalogPath);
+            if (raceCatalog == null || visualCatalog == null)
+            {
+                Debug.LogError($"UnitBalanceSetup: catalogs not found (race={raceCatalog} visual={visualCatalog}).");
+                return;
+            }
+
+            var race = raceCatalog.GetRace(GameIds.Races.Faceless);
             if (race == null)
             {
-                Debug.LogError($"UnitBalanceSetup: race '{GameIds.Races.Human}' not found in {RaceCatalogPath}.");
+                Debug.LogError($"UnitBalanceSetup: race '{GameIds.Races.Faceless}' not found in {RaceCatalogPath}.");
                 return;
             }
 
             var synced = new List<string>();
+            SyncRace(raceCatalog, visualCatalog, GameIds.Races.Faceless, includeHumanExtras: false, synced);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"UnitBalanceSetup: synced {synced.Count} Faceless prefab(s).\n{string.Join("\n", synced)}");
+        }
+
+        static void SyncRace(
+            RaceCatalog raceCatalog,
+            UnitVisualCatalog visualCatalog,
+            string raceId,
+            bool includeHumanExtras,
+            List<string> synced)
+        {
+            var race = raceCatalog.GetRace(raceId);
+            if (race == null)
+            {
+                Debug.LogError($"UnitBalanceSetup: race '{raceId}' not found in {RaceCatalogPath}.");
+                return;
+            }
+
             foreach (var role in Roles)
             {
                 var definition = race.GetUnit(role);
                 if (definition == null)
                 {
-                    Debug.LogWarning($"UnitBalanceSetup: no UnitDefinition for role {role}.");
+                    Debug.LogWarning($"UnitBalanceSetup: no UnitDefinition for role {role} ({raceId}).");
                     continue;
                 }
 
                 if (!TrySyncPrefab(
                         visualCatalog,
-                        GameIds.Races.Human,
+                        raceId,
                         role,
                         heroSlot: 0,
                         settings => settings.CopyFrom(definition),
@@ -66,7 +102,54 @@ namespace Game.Editor
                     continue;
                 }
 
-                synced.Add($"{role}: {path}");
+                synced.Add($"{raceId} {role}: {path}");
+            }
+
+            if (!includeHumanExtras)
+            {
+                for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+                {
+                    var hero = race.GetHeroBySlot(slot);
+                    if (hero == null)
+                    {
+                        Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for slot {slot} ({raceId}).");
+                        continue;
+                    }
+
+                    if (!TrySyncPrefab(
+                            visualCatalog,
+                            raceId,
+                            UnitRole.Hero,
+                            slot,
+                            settings => settings.CopyFrom(hero),
+                            out var path))
+                    {
+                        continue;
+                    }
+
+                    synced.Add($"Hero{slot} ({raceId}): {path}");
+                }
+
+                var titanBase = race.GetHeroBySlot(1);
+                if (titanBase == null)
+                {
+                    Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for titan seed (slot 1, {raceId}).");
+                }
+                else if (TrySyncPrefab(
+                             visualCatalog,
+                             raceId,
+                             UnitRole.Titan,
+                             heroSlot: 0,
+                             settings => settings.CopyFrom(
+                                 titanBase,
+                                 TitanRules.BaseStatMultiplier,
+                                 TitanRules.AttackRange),
+                             out var titanPath))
+                {
+                    synced.Add($"Titan ({raceId}): {titanPath}");
+                }
+
+                return;
             }
 
             for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
@@ -80,7 +163,7 @@ namespace Game.Editor
 
                 if (!TrySyncPrefab(
                         visualCatalog,
-                        GameIds.Races.Human,
+                        raceId,
                         role,
                         heroSlot: 0,
                         settings => settings.CopyFrom(definition),
@@ -90,7 +173,7 @@ namespace Game.Editor
                     continue;
                 }
 
-                synced.Add($"{role} BONUS: {path}");
+                synced.Add($"{role} BONUS ({raceId}): {path}");
             }
 
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
@@ -98,13 +181,13 @@ namespace Game.Editor
                 var hero = race.GetHeroBySlot(slot);
                 if (hero == null)
                 {
-                    Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for slot {slot}.");
+                    Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for slot {slot} ({raceId}).");
                     continue;
                 }
 
                 if (!TrySyncPrefab(
                         visualCatalog,
-                        GameIds.Races.Human,
+                        raceId,
                         UnitRole.Hero,
                         slot,
                         settings => settings.CopyFrom(hero),
@@ -113,26 +196,26 @@ namespace Game.Editor
                     continue;
                 }
 
-                synced.Add($"Hero{slot}: {path}");
+                synced.Add($"Hero{slot} ({raceId}): {path}");
             }
 
-            var titanBase = race.GetHeroBySlot(1);
-            if (titanBase == null)
+            var titan = race.GetHeroBySlot(1);
+            if (titan == null)
             {
-                Debug.LogWarning("UnitBalanceSetup: no HeroDefinition for titan seed (slot 1).");
+                Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for titan seed (slot 1, {raceId}).");
             }
             else if (TrySyncPrefab(
                          visualCatalog,
-                         GameIds.Races.Human,
+                         raceId,
                          UnitRole.Titan,
                          heroSlot: 0,
                          settings => settings.CopyFrom(
-                             titanBase,
+                             titan,
                              TitanRules.BaseStatMultiplier,
                              TitanRules.AttackRange),
                          out var titanPath))
             {
-                synced.Add($"Titan: {titanPath}");
+                synced.Add($"Titan ({raceId}): {titanPath}");
             }
 
             // Veteran champions (bonus slots 7–10, PRE-006b).
@@ -153,7 +236,7 @@ namespace Game.Editor
                 var hpMultiplier = (isTitan ? TitanRules.BaseStatMultiplier : 1f) * HumanBonusUnitRules.VeteranHpMultiplier;
                 if (!TrySyncPrefab(
                         visualCatalog,
-                        GameIds.Races.Human,
+                        raceId,
                         isTitan ? UnitRole.Titan : UnitRole.Hero,
                         isTitan ? 0 : heroSlot,
                         settings => settings.CopyFromVeteran(
@@ -168,11 +251,8 @@ namespace Game.Editor
                     continue;
                 }
 
-                synced.Add($"Veteran slot {bonusSlot}: {veteranPath}");
+                synced.Add($"Veteran slot {bonusSlot} ({raceId}): {veteranPath}");
             }
-
-            AssetDatabase.SaveAssets();
-            Debug.Log($"UnitBalanceSetup: synced {synced.Count} prefab(s).\n{string.Join("\n", synced)}");
         }
 
         static bool TrySyncPrefab(

@@ -14,6 +14,7 @@ namespace Game.Core
         public static class Races
         {
             public const string Human = "RACE_HUMAN";
+            public const string Faceless = "RACE_FACELESS";
             public const string Slot3 = "RACE_SLOT_3";
             public const string Slot4 = "RACE_SLOT_4";
         }
@@ -61,6 +62,13 @@ namespace Game.Core
             public const string HumanSiegeBonus = "UNIT_HUMAN_SIEGE_BONUS";
             public const string HumanFlyingBonus = "UNIT_HUMAN_FLYING_BONUS";
             public const string HumanSuperBonus = "UNIT_HUMAN_SUPER_BONUS";
+
+            public const string FacelessMelee = "UNIT_FACELESS_MELEE";
+            public const string FacelessRanged = "UNIT_FACELESS_RANGED";
+            public const string FacelessCaster = "UNIT_FACELESS_CASTER";
+            public const string FacelessSiege = "UNIT_FACELESS_SIEGE";
+            public const string FacelessFlying = "UNIT_FACELESS_FLYING";
+            public const string FacelessSuper = "UNIT_FACELESS_SUPER";
         }
 
         public static class Squads
@@ -76,6 +84,10 @@ namespace Game.Core
             public const string Human1 = "HERO_HUMAN_1";
             public const string Human2 = "HERO_HUMAN_2";
             public const string Human3 = "HERO_HUMAN_3";
+
+            public const string Faceless1 = "HERO_FACELESS_1";
+            public const string Faceless2 = "HERO_FACELESS_2";
+            public const string Faceless3 = "HERO_FACELESS_3";
         }
 
         public static class Bonuses

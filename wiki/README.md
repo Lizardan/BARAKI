@@ -34,7 +34,7 @@
 | `rules/runtime-debug-console.md` | Runtime-консоль и хоткеи |
 | `rules/chat.md` | Чат: Cloudflare (общий/друзья/ЛС) и матч-чат Netcode, сокет, композеры |
 | `rules/content-assets.md` | Контент: структура `ScriptableObjects/` и `Prefabs/`, портреты, правила папок |
-| `rules/faceless-assets.md` | Раса Древние (Faceless): review-сцена, конвертер MDX, материалы/шейдеры |
+| `rules/faceless-assets.md` | Раса Древние (Faceless): review-сцена, конвертер MDX, материалы/шейдеры, runtime-гейты Фазы 1 (кастер-кит, бонус-пик) |
 | `rules/human-unit-bonuses.md` | Юнитовые бонусы/ветераны/уники Людей (PRE-006a/b): механики, ауры, UI |
 | `rules/tower-tracks.md` | Апгрейды башен Людей (PRE-007): 9 треков, экономика, wire v22 |
 | `rules/arena-buildings.md` | Ориентация зданий на базе, pick/клик-выбор, руины |

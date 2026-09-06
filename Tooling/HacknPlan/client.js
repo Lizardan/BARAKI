@@ -159,7 +159,7 @@ class HacknPlanClient {
   patchSubtask(workItemId, subTaskId, values) {
     return this.patch(this.p(`/workitems/${workItemId}/subtasks/${subTaskId}`), values);
   }
-  addComment(id, text) { return this.post(this.p(`/workitems/${id}/comments`), { text }); }
+  addComment(id, text) { return this.post(this.p(`/workitems/${id}/comments`), JSON.stringify(text)); }
   addTag(id, tagId) { return this.post(this.p(`/workitems/${id}/tags`), { tagId }); }
   removeTag(id, tagId) { return this.del(this.p(`/workitems/${id}/tags/${tagId}`)); }
 

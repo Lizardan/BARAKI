@@ -9,12 +9,14 @@ namespace Game.Core
         public static readonly string[] PlayableRaceIds =
         {
             GameIds.Races.Human,
+            GameIds.Races.Faceless,
         };
 
         /// <summary>Races allowed in race pick UI and bot fill (playtest gate).</summary>
         public static readonly string[] SelectableRaceIds =
         {
             GameIds.Races.Human,
+            GameIds.Races.Faceless,
         };
 
         public static bool IsPlayable(string raceId)
@@ -62,6 +64,7 @@ namespace Game.Core
         public static string GetDisplayName(string raceId) => raceId switch
         {
             GameIds.Races.Human => "Люди",
+            GameIds.Races.Faceless => "Древние",
             _ => raceId,
         };
     }

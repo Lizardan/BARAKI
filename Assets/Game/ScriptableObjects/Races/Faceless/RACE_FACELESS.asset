@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6aa8de6ec80d93c47bd5956b28b6d44d, type: 3}
+  m_Name: RACE_FACELESS
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.RaceDefinition
+  _id: RACE_FACELESS
+  _displayName: "\u0414\u0440\u0435\u0432\u043D\u0438\u0435"
+  _melee: {fileID: 11400000, guid: a45556e8a5e76bc41a40512c6dd7bace, type: 2}
+  _ranged: {fileID: 11400000, guid: 443d09f2242d94843a2dacb307e6574c, type: 2}
+  _caster: {fileID: 11400000, guid: edd993ea54417274dafe5149d7c62e8e, type: 2}
+  _siege: {fileID: 11400000, guid: 52ed199b9a7cffe4f8ee274b01657396, type: 2}
+  _flying: {fileID: 11400000, guid: a6c50fd08bbacd041a566eb0ec09e76b, type: 2}
+  _super: {fileID: 11400000, guid: 6628396a167a27e40997d7a8cea55eff, type: 2}
+  _meleeBonus: {fileID: 0}
+  _rangedBonus: {fileID: 0}
+  _casterBonus: {fileID: 0}
+  _siegeBonus: {fileID: 0}
+  _flyingBonus: {fileID: 0}
+  _superBonus: {fileID: 0}
+  _heroes:
+  - {fileID: 11400000, guid: 2ccb2c548bdee1549ac90641a7b26779, type: 2}
+  - {fileID: 11400000, guid: a5b973fd5146dc34bb8785f64974652a, type: 2}
+  - {fileID: 11400000, guid: 2657193066267df46b3b7c6bfc085ef7, type: 2}
+  _positivePassiveIds: []
+  _negativePassiveId: 
