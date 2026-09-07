@@ -293,13 +293,13 @@ units:
   flying: UNIT_FACELESS_FLYING
   super: UNIT_FACELESS_SUPER
 heroes: [HERO_FACELESS_1, HERO_FACELESS_2, HERO_FACELESS_3]
-bonus_slots: 12            # только Human; Faceless без бонус-кита (FACELESS-010 — дизайн юнит за юнитом)
-buildings: BUILDING_SET_HUMAN   # зданий Faceless нет (FACELESS-007) — текущий общий скин
+bonus_slots: 12            # все 12 слотов: дизайн утверждён (FACELESS-010); реализация + снятие гейта — follow-up
+buildings: BUILDING_SET_FACELESS   # здания Nazjatar Houses by Ageron (FACELESS-007); race-keyed каталог, fallback на Human-скин
 upgrades: UPGRADE_TREE_HUMAN    # tower-треки глобальные (TowerTrackRules), работают на Faceless
 tower_tracks: [...]             # наследует треки Human? Нет — глобальны, стат-эффекты на роли
 magic_spells: []                # магии/кастер-заклинаний нет (Фаза 1)
 mvp: true
-note: Контент (SO/prefabs/каталоги) и runtime-гейты готовы (FACELESS-001..009). Полный kit asymmetry — FACELESS-008; бонусы — FACELESS-010.
+note: Контент (SO/prefabs/каталоги) и runtime-гейты готовы (FACELESS-001..009). Все 12 бонус-слотов (юниты 1–6, ветераны 7–10, уники 11–12) — дизайн утверждён (FACELESS-010, канон wiki/rules/faceless-unit-bonuses.md); реализация и снятие гейта HasBonusKit=false — follow-up карточки. Полный kit asymmetry (пассивы, кастер-кит, magic upgrades, tower-треки) — FACELESS-008.
 ```
 
 Статы юнитов Faceless = **копия Human роль→роль** (по решению пользователя). Титан = `hero1 ×3` (`TitanRules.BaseStatMultiplier`), как у Human. `_Review`-префабы удалены после сверки маппинга.
@@ -351,7 +351,7 @@ mvp: false
 | Match bonus | **12** слотов per race; см. `Bonuses.md` |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
 | MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
-| Раса #2 (Faceless) | Играбельна на стартовых гейтах (статы Human, без kit/бонусов, без магии); полная асимметрия — `FACELESS-008`, бонусы — `FACELESS-010` |
+| Раса #2 (Faceless) | Играбельна на стартовых гейтах (статы Human, без kit/бонусов, без магии); здания свои (FACELESS-007); полная асимметрия — `FACELESS-008`, бонусы — `FACELESS-010` |
 
 ```entity
 id: UPG_MAIN_MAGIC_ECONOMY
@@ -370,5 +370,6 @@ mvp: true
 - [x] Gold/time за **magic** upgrades — **500/750/1000g**, **60/90/135s**
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)
 - [x] Раса #2 (Faceless) — контент-кэтчеп играбелен (FACELESS-001..009); `RACE_FACELESS` в каталоге
+- [x] Здания Древних (FACELESS-007): Nazjatar Houses by Ageron, 3 префаба `Prefabs/Races/Faceless/Buildings/` (04=TownHall, 05=Tower, 03=Barracks), race-keyed `BuildingVisualCatalog` с fallback на Human
 - [ ] Полный asymmetry kit Faceless — **FACELESS-008** (`TODO.md`)
-- [ ] Бонусы Древних юнит за юнитом — **FACELESS-010** (`TODO.md`)
+- [x] Бонусы Древних: дизайн всех 12 слотов утверждён — **FACELESS-010** (2026-09-08; канон `wiki/rules/faceless-unit-bonuses.md`; реализация — follow-up)

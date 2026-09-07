@@ -36,6 +36,7 @@
 | `rules/content-assets.md` | Контент: структура `ScriptableObjects/` и `Prefabs/`, портреты, правила папок |
 | `rules/faceless-assets.md` | Раса Древние (Faceless): review-сцена, конвертер MDX, материалы/шейдеры, runtime-гейты Фазы 1 (кастер-кит, бонус-пик) |
 | `rules/human-unit-bonuses.md` | Юнитовые бонусы/ветераны/уники Людей (PRE-006a/b): механики, ауры, UI |
+| `rules/faceless-unit-bonuses.md` | Бонусы Древних (FACELESS-010): слоты 1–10, дизайн, механики, статус гейта |
 | `rules/tower-tracks.md` | Апгрейды башен Людей (PRE-007): 9 треков, экономика, wire v22 |
 | `rules/arena-buildings.md` | Ориентация зданий на базе, pick/клик-выбор, руины |
 | `rules/distribution.md` | Распространение клиента: апдейтер, GitHub Releases, лендинг Cloudflare |

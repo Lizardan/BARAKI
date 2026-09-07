@@ -80,6 +80,21 @@ User story (`isStory`) — только если кусок реально др�
 
 Агент **не** закрывает work item и **не** трогает GitHub Issues.
 
+## Обязанности агента (opencode) по stage
+
+Кодагент обязан вести stage карточки **сам**, не дожидаясь напоминания:
+
+- **Взял задачу в работу** → `PATCH stageId: 2` (In progress).
+- **Завершил работу** (тесты green, доки записаны) → `PATCH stageId: 3` (Testing) +
+  комментарий с итогом (что сделано, тесты, пути, открытые вопросы).
+- **Completed (stageId 4)** — только пользователь (UnioTasks ✔/❌ после апрува).
+
+Инструменты: `Tooling/HacknPlan/client.js` (`HacknPlanClient.fromEnv()`, ключ в
+`Tooling/HacknPlan/.secrets.json`). Поиск карточки — `listAllWorkItems()` по префиксу
+в заголовке (`[FACELESS-007]`), смена stage — `patchWorkItem(id, { stageId })`,
+итог — `addComment(id, "## Agent summary ...")`. Rate limit — клиент сам держит
+очередь/ретраи.
+
 ## Коммиты
 
 По корневому `AGENTS.md`. Если нужен след в HacknPlan — префикс `hnp-{id}` в

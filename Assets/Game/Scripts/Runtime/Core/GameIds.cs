@@ -46,6 +46,7 @@ namespace Game.Core
             public const string TowerSe = "BUILDING_TOWER_SE";
 
             public const string SetHuman = "BUILDING_SET_HUMAN";
+            public const string SetFaceless = "BUILDING_SET_FACELESS";
         }
 
         public static class Units

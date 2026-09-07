@@ -6,8 +6,9 @@
 
 Раса **играбельна** в playtest-гите: `PlayableRaceIds`/`SelectableRaceIds` содержат
 `RACE_FACELESS` (`RacePickRules`), контент (SO, префабы, каталоги, портреты) собран.
-ХакnPlan-задача FACELESS-009 фиксирует runtime-гейты; дизайн бонусов вынесен в
-FACELESS-010 (юнит за юнитом с пользователем). Work items в HacknPlan — Urgent.
+ХакnPlan-задача FACELESS-009 фиксирует runtime-гейты; дизайн бонусов — FACELESS-010
+(юнит за юнитом с пользователем, **завершён** — канон `wiki/rules/faceless-unit-bonuses.md`;
+реализация — follow-up карточки). Work items в HacknPlan — Urgent.
 
 ### Runtime-гейты Фазы 1 (закрыты)
 
@@ -117,7 +118,8 @@ review, не класть в клиентский билд.
 
 Маппинг номер→роль выполнен (`AssetDatabase.MoveAsset` в категории как у людей,
 `_Review` удалён). Раса играбельна — раскладка сделана в `Prefabs/Races/Faceless/`
-(`Units/`, `Heroes/`; bonuses — позже в FACELESS-010), каталоги зарегистрированы,
+(`Units/`, `Heroes/`; bonuses — дизайн в FACELESS-010, канон `wiki/rules/faceless-unit-bonuses.md`,
+реализация follow-up), каталоги зарегистрированы,
 production-контроллеры лежат рядом с префабами.
 
 При пересборке production-префабов (`BARAKI/Faceless/Rebuild Unit Prefabs`) контроллеры
@@ -256,3 +258,49 @@ wire/снапшот-контракты):
 
 > ⚠️ Faceless Super — **наземный** меле: летающие цели не атакует (это правило).
 > Снаряды/аммо-объекты для него не создаются (`AmmoObjects` = null).
+
+### FACELESS-007 — здания Древних (Nazjatar Houses, done)
+
+Исходники — `Assets/Nazjatar_Houses_By_Ageron/` (5 MDX v800 статик-зданий + 35 BLP1;
+вложенная папка «Сжатые … текстуры» — дубликаты меньшего размера, **не используются**).
+Зданий в Faceless-паке юнитов не было — раса #2 использует собственный building set.
+
+Пайплайн:
+
+- **Текстуры:** `Tooling/MdxReview/convert_nazjatar_buildings_textures.py` (BLP1→PNG по
+  TEXS-ссылкам MDX) → `Art/Races/Faceless/Buildings/Review/Textures/` (35 PNG, 512²).
+- **Review:** меню `BARAKI/Faceless/Rebuild Building Review` (`FacelessBuildingReviewSetup`) —
+  статик-меши через `FacelessMdxDocument` (геосеты без скиннинга, submesh на материал,
+  flip winding), материалы `Game/Faceless/ReviewUnlit`, review-префабы
+  `Prefabs/Races/Faceless/_ReviewBuildings/01..05_FacelessBuilding`.
+- **Production:** меню `BARAKI/Faceless/Rebuild Building Prefabs` (`FacelessBuildingPrefabSetup`)
+  → `Art/Races/Faceless/Buildings/Production/{Meshes,Mats}/` + префабы
+  `Prefabs/Races/Faceless/Buildings/{Faceless_TownHall,Faceless_Tower,Faceless_Barracks}.prefab`.
+
+Маппинг (решение пользователя по нумерованной review-сцене): **04 = Main (TownHall),
+05 = Tower, 03 = Barracks**; 01/02 не используются. Масштаб/высота выверены пользователем
+на сцене `Scenes/Dev/TestBuildings.unity` и запечены в билдер: TownHall (4, 2.5, 4),
+Tower (3, 2.5, 3), Barracks (6, 4, 6); yaw модели **270°** (как у юнитов Faceless — WC3
+фронт совпадает с Human после поворота).
+
+Контракт префаба — как у TT-зданий: корень + `Model` (MeshFilter/MeshRenderer, скейл/yaw
+запечены, скейл корня 1) + `Foundation` (**процедурный каменный цоколь** — Cube по
+`MatchPickFootprint.GetBuildingDiameter(id, margin:1)×0.72`, inactive; **не Cylinder** —
+иначе `BuildingRuinsVisual.RemoveLegacyCylinderFoundation` удалит его) +
+`FacelessUnitTeamColor` (командный цвет через MPB `_TeamColor` в review-материалах).
+Руины: `ApplyRuins` прячет `Model`, показывает `Foundation`; скейл корня 1 — серые
+`CreateBuildingMarker`-мутации не трогают запечённый масштаб.
+
+**Race-keyed каталог:** `BuildingVisualCatalog.TryGetPrefab(buildingId, raceId)` — race set
+`RACE_FACELESS` в `Resources/Buildings/BuildingVisualCatalog.asset`
+(меню `BARAKI/Faceless/Register Building Catalog`); раса без set'а или с пустым слотом —
+**fallback на Human** (default set `_main/_tower/_barracks`). Прокидка: `MatchRuntime.StartMatch`
+(`config.RaceIds`) → `MatchArenaGreybox.Configure(playerCount, raceIds, radius)` →
+`MatchArenaGreyboxBuilder.Populate(+raceIds, +catalog)` → `CreateBuildingMarker(raceId)`.
+До `StartMatch` (Awake greybox, preview) — Human. `GameIds.Buildings.SetFaceless =
+"BUILDING_SET_FACELESS"`.
+
+Тесты: `BuildingVisualCatalogRaceTests` (6 кейсов: race set / fallback / routing / Populate).
+EditMode **1278 passed**. Скрин production vs Human:
+`Assets/Screenshots/faceless_production_vs_human.png` (Tower Faceless парит ~0.4 — глянуть
+при тюнинге; значения — константы в `FacelessBuildingPrefabSetup.Buildings`).

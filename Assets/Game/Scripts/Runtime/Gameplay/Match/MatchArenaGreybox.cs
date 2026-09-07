@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -16,10 +17,12 @@ namespace Game.Gameplay.Match
         [SerializeField] private bool _buildOnAwake = true;
 
         private Transform _visualRoot;
+        private IReadOnlyList<string> _raceIds;
 
         public int PlayerCount => _playerCount;
         public MatchArenaLayout Layout { get; private set; }
         public LaneGraph Graph { get; private set; }
+        public IReadOnlyList<string> RaceIds => _raceIds;
 
         /// <summary>
         /// Building marker under <c>GreyboxVisual/Bases/Player_{slot}/{buildingId}</c>
@@ -74,10 +77,17 @@ namespace Game.Gameplay.Match
             return null;
         }
 
-        public void Configure(int playerCount, float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius)
+        public void Configure(int playerCount, float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius) =>
+            Configure(playerCount, null, centerArenaRadius);
+
+        public void Configure(
+            int playerCount,
+            IReadOnlyList<string> raceIds,
+            float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius)
         {
             _playerCount = Mathf.Clamp(playerCount, MatchModeRules.MinPlayers, MatchModeRules.MaxPlayers);
             _centerArenaRadius = Mathf.Max(5f, centerArenaRadius);
+            _raceIds = raceIds;
             Rebuild();
         }
 
@@ -116,7 +126,7 @@ namespace Game.Gameplay.Match
 
             _visualRoot = new GameObject("GreyboxVisual").transform;
             _visualRoot.SetParent(transform, false);
-            MatchArenaGreyboxBuilder.Populate(_visualRoot, Layout, Graph);
+            MatchArenaGreyboxBuilder.Populate(_visualRoot, Layout, Graph, _raceIds);
 
             MatchArenaEnvironmentDecorator.Populate(
                 transform,

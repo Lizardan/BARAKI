@@ -215,7 +215,7 @@ namespace Game.Gameplay.Match
 
             if (_greybox != null)
             {
-                _greybox.Configure(config.PlayerCount, config.CenterArenaRadius);
+                _greybox.Configure(config.PlayerCount, config.RaceIds, config.CenterArenaRadius);
             }
 
             var buildingPickPresenter = GetComponent<MatchBuildingPickPresenter>();
@@ -306,7 +306,7 @@ namespace Game.Gameplay.Match
             }
 
             var previewConfig = MatchConfig.MvpDefault(setup.PlayerCount);
-            _greybox.Configure(previewConfig.PlayerCount, previewConfig.CenterArenaRadius);
+            _greybox.Configure(previewConfig.PlayerCount, previewConfig.RaceIds, previewConfig.CenterArenaRadius);
         }
 
         void EnsureSelectionBridge()

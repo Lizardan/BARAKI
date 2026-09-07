@@ -55,10 +55,18 @@ namespace Game.Gameplay.Match
             PopulateRoadNetwork(root, layout, graph, roadMaterial);
         }
 
-        public static void Populate(Transform root, MatchArenaLayout layout, LaneGraph graph)
+        public static void Populate(Transform root, MatchArenaLayout layout, LaneGraph graph) =>
+            Populate(root, layout, graph, null, null);
+
+        public static void Populate(
+            Transform root,
+            MatchArenaLayout layout,
+            LaneGraph graph,
+            IReadOnlyList<string> raceIds,
+            BuildingVisualCatalog buildingCatalog = null)
         {
             var basesRoot = PopulateRoadNetwork(root, layout, graph);
-            var buildingCatalog = LoadBuildingCatalog();
+            var catalog = buildingCatalog ?? LoadBuildingCatalog();
 
             foreach (var slot in layout.Slots)
             {
@@ -68,9 +76,13 @@ namespace Game.Gameplay.Match
                     continue;
                 }
 
+                var raceId = raceIds != null && slot.SlotIndex >= 0 && slot.SlotIndex < raceIds.Count
+                    ? raceIds[slot.SlotIndex]
+                    : null;
+
                 foreach (var pair in slot.BuildingLocalOffsets)
                 {
-                    CreateBuildingMarker(slotRoot, pair.Key, pair.Value, slot.SlotIndex, buildingCatalog);
+                    CreateBuildingMarker(slotRoot, pair.Key, pair.Value, slot.SlotIndex, catalog, raceId);
                 }
             }
 
@@ -512,11 +524,12 @@ namespace Game.Gameplay.Match
             string buildingId,
             Vector3 localPosition,
             int ownerSlot,
-            BuildingVisualCatalog buildingCatalog)
+            BuildingVisualCatalog buildingCatalog,
+            string raceId)
         {
             var localRotation = BaseLayoutDefinition.GetLocalRotation(buildingId);
 
-            if (buildingCatalog != null && buildingCatalog.TryGetPrefab(buildingId, out var prefab))
+            if (buildingCatalog != null && buildingCatalog.TryGetPrefab(buildingId, raceId, out var prefab))
             {
                 var instance = Object.Instantiate(prefab, slotRoot, false);
                 instance.name = buildingId;

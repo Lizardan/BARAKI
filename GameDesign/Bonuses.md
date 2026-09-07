@@ -9,6 +9,8 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 # Bonuses
 
 > **Статус:** все **12 слотов реализованы** (Люди). PRE-006a: слоты 1–6 (юнитовые бонусы). PRE-006b: слоты 7–12 — ветераны (герои ×3, титан) и расовые уники (March Discipline / Stone Masonry). Канон: `wiki/rules/human-unit-bonuses.md`. См. `TODO.md`.
+>
+> **Faceless (Древние):** дизайн всех **12 слотов** утверждён (FACELESS-010, 2026-09-08) — канон `wiki/rules/faceless-unit-bonuses.md`. Реализация — follow-up карточки; runtime-гейт (`HasBonusKit=false`) активен. Полный asymmetry kit (пассивы/магия/треки) — FACELESS-008.
 
 ## Обзор
 
@@ -161,6 +163,29 @@ replacement_type: race_unique
 effect: tbd
 mvp: false
 ```
+
+## Faceless (Древние) — слоты 1–10 (FACELESS-010, дизайн)
+
+Дизайн утверждён пользователем (2026-09-08), юнит за юнитом. Канон с механиками и числами —
+`wiki/rules/faceless-unit-bonuses.md`. Реализация и снятие гейта `HasBonusKit(RACE_FACELESS)` —
+отдельные follow-up карточки. Замена одной сигнатуры у ветеранов (7–10) — по Human-формату PRE-006b.
+
+| # | Слот | Юнит Древних | Бонус (EN) | Эффект |
+|---|------|--------------|------------|--------|
+| 1 | Melee | Faceless One | Hunger of the Old One | On-hit 15%: лечение = 50% урона удара (вампиризм) |
+| 2 | Ranged | Ranged Faceless One | Tainting Bolt | On-hit 15%: дот 3 dmg/с × 3 с |
+| 3 | Caster | Faceless Sorcerer | Call of the Abyss | On-kill 100%: спавн мини-меле (×0.5 статов Melee, масштаб ×0.67) |
+| 4 | Siege | Faceless One | Death Explosion | При смерти: 10% max HP урона, радиус 3, вражеские юниты (не здания) |
+| 5 | Flying | FacelessThanatos | Hungering Flight | On-kill: +15% AS 3 с, стаки до 3 |
+| 6 | Super | FacelessOneReaper | Feast on the Fallen | On-kill: +80 HP, +10% AS 3 с, стаки до 3 |
+| 7 | Hero1 | Король | Ancient Mantle | Ульт: сам +50% dmg / +2 брони 8 с, AoE-удар +30%; ветеран, morale +15% dmg |
+| 8 | Hero2 | Колдун | Area of Miss | Зона: враги в радиусе 5 на 4 с промахиваются (100%); ветеран, morale +15% AS |
+| 9 | Hero3 | Берсерк | Feast Zone | Зона 10 с: союзники лечатся 30% от своего урона; ветеран, morale +15% брони |
+| 10 | Titan | Unbroken Izual | Aura of Hunger | Пока жив: армия лечится 15% от нанесённого урона; статы поверх 3× |
+| 11 | Уник 1 | — | Shadow of the Void | Все войска владельца: 8% избегают атаки (при спавне) |
+| 12 | Уник 2 | — | Void Bastion | Здания владельца: атаки по ним промахиваются на 20% |
+
+Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — **FACELESS-008**.
 
 ## Flow
 
