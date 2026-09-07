@@ -34,7 +34,7 @@
 - Push в `main` по путям `Assets/**`, `Packages/**`, `ProjectSettings/**`, `Tooling/BuildSupport/**` → сборка + авто-bump + GitHub Release. `[skip release]` в сообщении — пропуск.
 - Версия: Editor `bundleVersion` = последний GitHub tag + 1 patch. Смена линии (`0.1.*` → `0.2.*`) — выставить `X.Y.1`; CI снимет следующий релиз в `vX.Y.0`.
 - **Теги:** `v*` — полный клиент (единственный `/releases/latest`); `updater-v*` — апдейтер (prerelease, никогда не latest; release-prune их не трогает).
-- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Cursor/Pipeline/Project Auditor). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
+- CI подменяет `Packages/manifest.json` на `Packages/manifest.ci.json` (без MCP/Project Auditor). **При добавлении рантайм-зависимости править оба файла** или запустить `pwsh -File Packages/Sync-Packages.ps1`.
 - Билд: `Game.Editor.WindowsCiBuild.Build`. Задачи — HacknPlan (проект 242091) + UnioTasks; см. `wiki/rules/github-issues-workflow.md`. GitHub Issues не редактировать.
 - `Tooling/` — вспомогательная инфраструктура вне Unity-проекта: `Tooling/docs/` (простые HTML privacy/terms, деплой as-is), `Tooling/cloudflare/baraki-landing/` (Pages + `functions/download.js` — редирект на `updater-v*/BARAKI-Setup.exe`), `Tooling/BuildSupport/` (скрипты CI + Inno Setup апдейтера).
 
@@ -47,9 +47,3 @@
 - Сервер `unityMCP` (мост на `:6400`). Пути — относительно `Assets/`. Перед мутацией редактора читать `mcpforunity://editor/state`, ждать `isCompiling: false`.
 - Unity API проверять через `unity_reflect`/`unity_docs`, не полагаться на память модели.
 
-## Unity Pipeline (HTTP API)
-- Параллельный HTTP API Unity Editor (`com.unity.pipeline`). **Не конфликтует** с MCP (разные порты, протоколы, transports).
-- Доступ: `unity command --project-path "F:\Unity Projects\BARAKI" <cmd>` через bash. Токен и порт автоматически через descriptor `Library/Pipeline/.unity-pipeline-port`.
-- Использовать для команд, которых нет в MCP: `audit` (Project Auditor), `capture_game_view source=screen` (скриншот с Overlay UI), `get_performance_stats`, `set_autotick`.
-- Не дублировать MCP-команды через Pipeline (manage_gameobject, manage_scene и т.д. — MCP быстрее и удобнее).
-- Аудит: `audit` → сканирование ~30–60 с → `audit_status` → CSV в `Temp/pipeline-audit/`.

@@ -149,6 +149,20 @@ namespace Game.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+
+            // DeleteAsset + SaveAsPrefabAsset above recreate the prefabs with new GUIDs, which
+            // breaks the references held by UnitVisualCatalog. Re-point the catalog at the fresh
+            // prefabs before re-syncing balance, otherwise SyncFaceless finds no prefabs.
+            UnitVisualPrefabBuilder.UpdateFacelessCatalog();
+            log.Add("UnitVisualPrefabBuilder.UpdateFacelessCatalog: catalog re-pointed to the rebuilt prefabs");
+
+            // Rebuilding the prefab replaces UnitCombatSettings with a fresh default snapshot,
+            // wiping attack range/hp/etc. Re-sync from the RaceCatalog definitions.
+            UnitBalanceSetup.SyncFaceless();
+            log.Add($"UnitBalanceSetup.SyncFaceless: restored UnitCombatSettings from race catalog");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
             Debug.Log("FacelessUnitPrefabBuilder:\n" + string.Join("\n", log));
             return string.Join("\n", log);
         }
@@ -178,7 +192,7 @@ namespace Game.Editor
             try
             {
                 var bones = CreateSkeleton(root.transform, doc);
-                root.transform.rotation = ResolveModelCorrection(bones);
+                root.transform.rotation = Quaternion.Euler(0f, 270f, 0f);
                 var (mesh, materials) = BuildMesh(stem, doc, bones, ProductionMeshFolder, ProductionMatFolder);
                 if (mesh.vertexCount == 0)
                 {
@@ -192,7 +206,7 @@ namespace Game.Editor
                 smr.bones = bones;
                 smr.rootBone = FindRootBone(bones);
                 smr.updateWhenOffscreen = true;
-                root.transform.localScale = ResolveFacelessHeightScale(role, smr) * Vector3.one;
+                root.transform.localScale = ResolveFacelessRoleScale(role) * Vector3.one;
 
                 var stand = doc.FindSequence("stand", "portrait") ?? doc.FindSequence();
                 var walk = doc.FindSequence("walk") ?? stand;
@@ -557,80 +571,20 @@ namespace Game.Editor
         }
 
         /// <summary>
-        /// Rotates the rig so the skeleton's own spine (pelvis→head) maps to world +Y and the authored
-        /// face (perpendicular to the shoulder axis) maps to world +Z. Mirrors the Human prefab yaw
-        /// (GetAnimatedHumanModelEuler) that MDX models lack. Idempotent: returns near-identity when
-        /// the model is already upright and facing +Z.
+        /// Uniform root scale per role so produced prefabs match the Faceless_ScaleTest reference:
+        /// values tuned by hand on the scene (Human_Melee = 1.0, yaw 270 = faces +Z like Human).
+        /// The runtime multiplies instance.localScale = prefab.localScale * presenterScale uniformly,
+        /// so these relative multipliers carry over into the match.
         /// </summary>
-        static Quaternion ResolveModelCorrection(Transform[] bones)
-        {
-            var pelvis = FindSkeletonBone(bones, "pelvis", "hips");
-            var head = FindSkeletonBone(bones, "head") ?? FindSkeletonBone(bones, "neck");
-            var spine = Vector3.up;
-            if (pelvis != null && head != null)
-            {
-                var delta = head.position - pelvis.position;
-                if (delta.sqrMagnitude > 1e-4f)
-                {
-                    spine = delta.normalized;
-                }
-            }
-
-            var (left, right) = FindSymmetryPair(bones);
-            var face = Vector3.right;
-            if (left != null && right != null)
-            {
-                var shoulderAxis = right.position - left.position;
-                var flat = shoulderAxis - spine * Vector3.Dot(shoulderAxis, spine);
-                if (flat.sqrMagnitude > 1e-4f)
-                {
-                    face = Vector3.Cross(flat.normalized, spine).normalized;
-                    if (Vector3.SqrMagnitude(face) > 1e-4f && Vector3.Dot(face, spine) < 0.2f)
-                    {
-                        face = Vector3.right;
-                    }
-                }
-            }
-
-            var qUpright = Quaternion.FromToRotation(spine, Vector3.up);
-            var faceAfterUp = Vector3.ProjectOnPlane(qUpright * face, Vector3.up);
-            var qYaw = faceAfterUp.sqrMagnitude > 1e-4f
-                ? Quaternion.FromToRotation(faceAfterUp.normalized, Vector3.forward)
-                : Quaternion.identity;
-            return qYaw * qUpright;
-        }
-
-        /// <summary>Target produced-prefab height per role (Human reference, localScale=1).</summary>
-        static float ResolveTargetHeight(string role) =>
+        static float ResolveFacelessRoleScale(string role) =>
             role switch
             {
-                _ when role == "Melee" || role == "Ranged" || role == "Caster" => 1.03f,
-                _ when role == "Siege" || role == "Flying" => 1.02f,
-                _ when role == "Hero2" || role == "Hero3" => 1.02f,
-                _ when role == "Hero1" => 1.03f,
-                _ when role == "Titan" => 1.03f,
-                _ when role == "Super" => 0.37f,
-                _ => 1.03f,
+                _ when role == "Melee" => 1.75f,
+                _ when role == "Ranged" || role == "Caster" || role == "Siege" || role == "Super" => 1.5f,
+                _ when role == "Flying" => 1f,
+                _ when role == "Hero1" || role == "Hero2" || role == "Hero3" || role == "Titan" => 2f,
+                _ => 1f,
             };
-
-        /// <summary>
-        /// Uniform root scale so the finished prefab height matches the Human reference:
-        /// <c>targetHeight / visiblePrefabHeight</c>. Applied on top of ResolveModelCorrection.
-        /// </summary>
-        static float ResolveFacelessHeightScale(string role, SkinnedMeshRenderer smr)
-        {
-            var h = smr.bounds.size.y;
-            if (h <= 1e-4f)
-            {
-                return 1f;
-            }
-
-            var target = ResolveTargetHeight(role);
-            var k = target / h;
-
-            // Guard against pathological scaling (typo / bad mesh read)
-            return Mathf.Clamp(k, 0.2f, 5f);
-        }
 
         static int IndexOf(FacelessMdxDocument doc, int objectId)
         {
@@ -1120,9 +1074,20 @@ namespace Game.Editor
             var cx = new AnimationCurve();
             var cy = new AnimationCurve();
             var cz = new AnimationCurve();
+            var intervalKeys = new List<FacelessMdxDocument.Vec3Key>();
+            foreach (var k in keys)
+            {
+                if (k.TimeMs >= start && k.TimeMs <= end)
+                {
+                    intervalKeys.Add(k);
+                }
+            }
+
             for (var t = start; t <= end; t += SampleStepMs)
             {
-                var sampled = FacelessMdxDocument.SampleVec3(keys, t, addRest ? Vector3.zero : fallback);
+                var sampled = intervalKeys.Count == 0
+                    ? (addRest ? Vector3.zero : fallback)
+                    : FacelessMdxDocument.SampleVec3(intervalKeys, t, addRest ? Vector3.zero : fallback);
                 var v = addRest ? fallback + sampled : sampled;
                 var time = (t - start) / 1000f;
                 cx.AddKey(time, v.x);
@@ -1151,9 +1116,23 @@ namespace Game.Editor
             var cw = new AnimationCurve();
             var prev = Quaternion.identity;
             var havePrev = false;
+            // Only keys within the sequence interval belong to this clip. Sampling the global
+            // key list would extrapolate from surrounding sequences (e.g. Death 131° roll
+            // bleeding into Walk) and lay the model down.
+            var intervalKeys = new List<FacelessMdxDocument.QuatKey>();
+            foreach (var k in keys)
+            {
+                if (k.TimeMs >= start && k.TimeMs <= end)
+                {
+                    intervalKeys.Add(k);
+                }
+            }
+
             for (var t = start; t <= end; t += SampleStepMs)
             {
-                var q = FacelessMdxDocument.SampleQuat(keys, t);
+                var q = intervalKeys.Count == 0
+                    ? Quaternion.identity
+                    : FacelessMdxDocument.SampleQuat(intervalKeys, t);
                 if (havePrev && Quaternion.Dot(prev, q) < 0f)
                 {
                     q = new Quaternion(-q.x, -q.y, -q.z, -q.w);

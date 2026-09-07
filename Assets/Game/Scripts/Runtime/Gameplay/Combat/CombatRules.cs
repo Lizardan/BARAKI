@@ -98,6 +98,18 @@ namespace Game.Gameplay.Combat
             return distance >= min && distance <= max;
         }
 
+        /// <summary>Race-aware fireable band (Faceless Super drops its dead-zone).</summary>
+        public static bool IsWithinAttackBand(
+            float distance,
+            float attackRange,
+            Data.UnitCombatIdentity identity,
+            UnitRole targetRole)
+        {
+            var min = identity.GetMinAttackRange();
+            var max = GetUnitAttackReach(attackRange, targetRole);
+            return distance >= min && distance <= max;
+        }
+
         /// <summary>Building attack band using surface distance vs building reach.</summary>
         public static bool IsWithinBuildingAttackBand(
             float surfaceDistance,
@@ -105,6 +117,17 @@ namespace Game.Gameplay.Combat
             UnitRole attackerRole)
         {
             var min = GetMinAttackRange(attackerRole);
+            var max = GetBuildingAttackReach(attackRange);
+            return surfaceDistance >= min && surfaceDistance <= max;
+        }
+
+        /// <summary>Building attack band for a race-aware identity (Faceless Super drops its dead-zone).</summary>
+        public static bool IsWithinBuildingAttackBand(
+            float surfaceDistance,
+            float attackRange,
+            Data.UnitCombatIdentity identity)
+        {
+            var min = identity.GetMinAttackRange();
             var max = GetBuildingAttackReach(attackRange);
             return surfaceDistance >= min && surfaceDistance <= max;
         }

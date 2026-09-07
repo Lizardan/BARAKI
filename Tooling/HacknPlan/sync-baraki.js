@@ -383,8 +383,8 @@ async function main() {
     {
       name: "MCP and AI agents", parentId: roots.Technical, typeId: tid(T, "Technical", "System"),
       description: wrapDoc({
-        purpose: "Unity MCP + UnioTasks (Cursor extension, РЅРµ РІ git) РїРѕРІРµСЂС… HacknPlan.",
-        status: "unityMCP :6400. UnioTasks Р¶РёРІС‘С‚ С‚РѕР»СЊРєРѕ РєР°Рє СЂР°СЃС€РёСЂРµРЅРёРµ Cursor.",
+        purpose: "Unity MCP + UnioTasks (VS Code extension, не в git) поверх HacknPlan."
+        status: "unityMCP :6400. UnioTasks — для агентов на базе VS Code, поддерживающих расширения VS Code."
         conflict: "wiki/rules/unity-mcp.md РіРѕРІРѕСЂРёС‚ В«VFX Graph РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅВ»; wiki/ARCHITECTURE.md вЂ” VFX Graph 17.6 СѓСЃС‚Р°РЅРѕРІР»РµРЅ.",
         source: "wiki/rules/unity-mcp.md",
         body: readMd("wiki/rules/unity-mcp.md") + "\n\n" + readMd("AGENTS.md"),

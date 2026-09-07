@@ -35,6 +35,7 @@ namespace Game.Gameplay.Match
             public Renderer[] CachedRenderers;
             public ParticleSystem[] CachedParticleSystems;
             public UnitRole Role;
+            public string RaceId;
             public bool IsParkedAtBase;
             /// <summary>World model scale relative to melee creep (titan ≈ 3).</summary>
             public float LocomotionScaleVsCreep = 1f;
@@ -529,12 +530,18 @@ namespace Game.Gameplay.Match
                 authoredCast,
                 stateOverride);
 
+            var identity = UnitCombatIdentityFactory.Of(
+                unitRaceId,
+                unit.Role,
+                unit.IsHero,
+                unit.HeroSlot,
+                unit.BonusSlot);
             if (fireAttack
                 && (hybridMelee
-                    || CombatAttackRules.UsesMeleeStrike(unit.Role, unit.IsHero, unit.HeroSlot)))
+                    || identity.UsesMeleeStrike))
             {
                 visual.PendingImpactFxSeconds =
-                    CombatAttackRules.ResolveSwingImpactDelay(attackInterval, unit.Role);
+                    CombatAttackRules.ResolveSwingImpactDelay(attackInterval, identity);
             }
         }
 
@@ -704,7 +711,7 @@ namespace Game.Gameplay.Match
                 return;
             }
 
-            if (visual.Role == UnitRole.Super)
+            if (visual.Role == UnitRole.Super && visual.RaceId != GameIds.Races.Faceless)
             {
                 SpawnFx(_fxCatalog.MachineDestroyed, visual.Root.position, MachineFxLifetimeSeconds);
             }
@@ -794,6 +801,7 @@ namespace Game.Gameplay.Match
                 StatusBars = statusBars,
                 GroundRingDiameter = MatchPickFootprint.GetModelFootprintDiameter(model),
                 Role = unit.Role,
+                RaceId = raceId,
                 IsParkedAtBase = unit.IsParkedAtBase,
                 LocomotionScaleVsCreep = ResolveLocomotionScaleVsCreep(unit.Role),
                 AmmoObjects = CacheSuperAmmoObjects(model, unit.Role),

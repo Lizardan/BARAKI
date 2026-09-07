@@ -39,6 +39,17 @@ namespace Game.Gameplay.Combat
                 0.05f,
                 attackIntervalSeconds * ResolveSwingImpactNormalizedTime(role));
 
+        /// <summary>
+        /// Melee-delivery units strike at the standard mid-swing point, even when their base role
+        /// (Faceless Super/Flying) would otherwise release a projectile early.
+        /// </summary>
+        public static float ResolveSwingImpactDelay(
+            float attackIntervalSeconds,
+            Data.UnitCombatIdentity identity) =>
+            ResolveSwingImpactDelay(
+                attackIntervalSeconds,
+                identity.UsesMeleeStrike ? UnitRole.Melee : identity.Role);
+
         public static bool UsesMeleeStrike(UnitRole role) =>
             role is UnitRole.Melee or UnitRole.Siege or UnitRole.Titan;
 

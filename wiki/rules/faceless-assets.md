@@ -159,36 +159,100 @@ production-контроллеры лежат рядом с префабами.
 Иначе `Animator.speed = len/interval` гнал бы клип за ~2/3 интервала и рассинхронизировал
 `ResolveSwingImpactDelay`.
 
-### FACELESS-006b — ориентация и масштаб в бою (baked в префаб)
+### FACELESS-006b — размер и ориентация в бою (baked в префаб, эталон со сцены)
 
-Проблема: production-префабы стояли «боком» к врагу (модели MDX смотрят «лицом» в +X,
-Human смотрят в +Z — у них yaw запечён в скелет `Bip001` rot=(270,90,0), а Faceless
-имели identity-скелет), часть моделей лежала (Titan 68° к вертикали, Super 18°).
-Runtime-поворота Faceless нет (`MatchCombatPresenter` крутит только Root, не инстанс).
+Проблема: production-префабы Древних по габаритам/позе не совпадали с Human и модель
+могла стоять с наклоном. Размер выверен вручную на тестовой сцене
+`Scenes/Dev/Faceless_ScaleTest.unity` (эталон: `Human_Melee` scale 1.0/rot 0, рядом
+все Faceless), значения запечены в префаб на сборке — рантайм не трогали.
 
-Решение — **запечь в префаб на сборке** (`FacelessReviewAnimBuilder`, production-ветка),
-рантайм не трогали:
-- `ResolveModelCorrection(bones)` — индемпотентный поворот корня:
-  `qYaw * qUpright`, где `qUpright` = FromToRotation(spine→+Y), `qYaw` =
-  FromToRotation(проекция «лица»→+Z). «Лицо» = `Cross(проекция оси плеч, spine)`
-  (для симметричной пары `FindSymmetryPair`, фоллбэк +X). Вызывается в
-  `BuildProductionPrefab` сразу после `CreateSkeleton` (до BuildMesh — bindPose корректен).
-- `ResolveFacelessHeightScale(role, smr)` — единый скейл корня `localScale =
-  targetHeight / smr.bounds.size.y`, чтобы prefab-высота совпала с Human (target:
-  1.03 Melee/Ranged/Caster/Hero1/Titan, 1.02 Siege/Flying/Hero2/Hero3, 0.37 Super —
-  Human Super это маленький механизм 0.37×0.37×2.5). Human имеет ролевые факторы уже
-  в меше, Faceless — нормируются тут. Clamp [0.2, 5].
+- **Масштаб** — `ResolveFacelessRoleScale(role)` в `FacelessReviewAnimBuilder`
+  (вместо прежней нормировки `ResolveFacelessHeightScale` к Human-высоте):
 
-Измерено после пересборки (инстанс префаба, bindpose): у всех префабов
-`rootRotation.Euler` = (≈0, 270, ≈0), спина |pelvis→head| pitch ≤ 13° (было: Titan 68°),
-«лицо» (Cross оси плеч) в мире = +Z (az 000°). Высоты prefab 1.02–1.03 (Super 0.41
-из-за clamp).
+  | Роль | prefab localScale |
+  |------|-------------------|
+  | Melee | 1.75 |
+  | Ranged / Caster / Siege / Super | 1.5 |
+  | Flying | 1.0 |
+  | Hero1 / Hero2 / Hero3 / Titan | 2.0 |
 
-Контроллеры, клипы и материалы не менялись; инстанс-скейл в бою прежний
-(`instance.localScale = prefab.localScale * presenterScale`). Rebuild:
-`BARAKI/Faceless/Rebuild Unit Prefabs` (`RebuildProductionPrefabs`). Консоль чистая;
-тесты — 1263 passed (`Game.Tests`, EditMode).
+  `instance.localScale = prefab.localScale * presenterScale` (равно для обеих рас) —
+  множители сохраняются и в бою.
+- **Ориентация** — `root.transform.rotation = Quaternion.Euler(0, 270, 0)` в
+  `BuildProductionPrefab` (сразу после `CreateSkeleton`, до BuildMesh — bindPose
+  корректен). Вместо прежнего `ResolveModelCorrection` (спина→+Y + лицо→+Z):
+  теперь модель просто стоит ровно и смотрит в ту же сторону, что и Human
+  (`GetAnimatedHumanModelEuler`-yaw). `ResolveModelCorrection`/`ResolveTargetHeight`/
+  `ResolveFacelessHeightScale` удалены как неиспользуемые.
+
+Верифицировано после пересборки (инстанс префаба): у всех ролей euler = (≈0, 270, ≈0),
+localScale = таблице, высоты 1.6 (Melee)…4.3 (Titan). Консоль чистая; тесты —
+1263 passed (`Game.Tests`, EditMode). Тестовая сцена после фикса удалена.
+
+Контроллеры, клипы и материалы не менялись. Rebuild: `BARAKI/Faceless/Rebuild Unit
+Prefabs` (`RebuildProductionPrefabs`).
+
+### FACELESS-006c — кастер «лежал» в Walk + сброс статов при пересборке (fixed)
+
+Два бага, найденные после пересборки production-префабов:
+
+- **Кастер лежал в анимации бега**: у `FacelessOneSorcerer_G1.mdx` кость `Bone_Root`
+  (в префабе `Bone_Root_26`) не имеет ключей поворота внутри Walk-интервала
+  (23900–24567 мс). `BakeQuatCurves` сэмплил **глобальный** список ключей кости
+  (Death roll 131°…Decay Flesh 131°), получая постоянный наклон ~131° на всех
+  кадрах walk-клипа. Фикс (`BakeQuatCurves` в `FacelessReviewAnimBuilder`):
+  ключи фильтруются по `[start,end]` последовательности; пустой интервал →
+  `Quaternion.identity`. Аналогично `BakeVectorCurves` (пусто → restPos/fallback).
+  У Ranged (`RangedFacelessone_G.mdx`) ключи корня в walk-интервале **есть** — его
+  ~30° наклон это данные модели, не баг.
+- **Ренджер/кастер/flying не стреляли на дистанции**: `BuildProductionPrefab`
+  пересоздаёт префаб через `DeleteAsset` + `SaveAsPrefabAsset`, что меняет GUID и
+  **рвёт ссылки `UnitVisualCatalog`** (NULL) на эти префабы. Поэтому
+  `UnitBalanceSetup.SyncFaceless()` не находил префабы и статы оставались
+  дефолтными (range=1.5). Фикс: в конце `RebuildProductionPrefabs` перед
+  `SyncFaceless()` вызывается `UnitVisualPrefabBuilder.UpdateFacelessCatalog()`
+  (пере-привязка каталога + переснапка портретов). После пересборки статы
+  префабов = `RaceCatalog` (Ranged range=8, Caster range=6/mana=200, Flying range=6,
+  Super range=10, Hero3 range=12, Titan hp=1800/range=3).
+
+Верифицировано: walk-клип кастера — корень identity (`maxAbs Z-roll=0`), каталог
+ссылается на все 10 префабов, консоль чистая, тесты 1263 passed (EditMode).
 
 Play-скриншот review-раскладки: `Assets/Screenshots/screenshot-20260907-030915.png`
 (в `FacelessReview` **нет Animator** — это статичная раскладка мешей, runtime-прогон
 боевых анимаций там не применим; верификация по данным выше).
+
+### FACELESS-006d — Super и Flying Древних = ближний бой (mechanica via `UnitCombatIdentity`)
+
+Решение: **полностью ближний бой без арт-лимитов** для Faceless Super (крип) и Flying.
+Атака — меле-удар (`CombatMeleeStrikeState`, без снаряда), минимальная дистанция Super
+сброшена (0, бьёт вплотную), Flying по-прежнему может атаковать **летающие** цели.
+
+Реализация — новая модель «роль+раса», `UnitRole` не тронут (не сломать
+wire/снапшот-контракты):
+
+- `Data/UnitCombatIdentity.cs` — readonly struct `{RaceId, Role, IsHero, HeroSlot,
+  BonusSlot}` + методы правил: `UsesMeleeStrike`, `UsesProjectile`,
+  `GetMinAttackRange()`, `CanAttackTarget(targetRole)`.
+  Faceless Super/Flying → melee delivery, min-range Super = 0, Faceless Flying бьёт
+  по летающим. Human роли — без изменений (делегирование в `CombatRules`/`CombatAttackRules`).
+- `Combat/UnitCombatIdentityFactory.cs` — построение из `MatchUnitState` + raceId.
+- `MatchCombatSystem.IdentityOf(unit)` — единый хелпер (race через
+  `GetPlayerRaceId(ownerSlot)`); все проверки `UsesMeleeStrike`/`UsesProjectile`/
+  `CanAttackTarget`/`IsWithinAttackBand`/building-band переведены на identity.
+- `MatchCombatPresenter` — `UnitVisual.RaceId` (из `ResolveRaceId`); swing-impact
+  тайминг меле (`ResolveSwingImpactDelay(interval, identity)` — Faceless Super не
+  release-0.1, а mid-swing 0.5); `SpawnDeathFx` для Faceless Super — Blood
+  (не `MachineDestroyed`).
+- Статы `UNIT_FACELESS_SUPER` / `UNIT_FACELESS_FLYING`: `_attackRange` 10/6 → **1.5**
+  (меле). Правка вносится **в UnitDefinition-ассеты** (`ScriptableObjects/Races/Faceless/…`),
+  затем запускать `BARAKI/Faceless/Sync Balance to Prefabs` (переносит в
+  `UnitCombatSettings` префабов). Боевые статы рантайма берёт
+  `UnitStatsResolver` из **префабов** (приоритет), определения — fallback;
+  консистентность обоих источников обязательна (при сбое каталога Super не должен
+  вернуться в артиллерию range=10).
+
+Тесты: `UnitCombatIdentityTests` (9 кейсов). Тесты EditMode: **1272 passed**.
+
+> ⚠️ Faceless Super — **наземный** меле: летающие цели не атакует (это правило).
+> Снаряды/аммо-объекты для него не создаются (`AmmoObjects` = null).

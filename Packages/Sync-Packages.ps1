@@ -1,8 +1,8 @@
 # Sync-Packages.ps1 — синхронизирует runtime-зависимости между manifest.json и manifest.ci.json
 #
-# CI подменяет manifest.json на manifest.ci.json (без MCP/Cursor-пакетов).
+# CI подменяет manifest.json на manifest.ci.json (без MCP-пакетов).
 # Этот скрипт копирует все runtime-зависимости из manifest.json в manifest.ci.json,
-# сохраняя исключения (MCP, Cursor IDE, Unity Pipeline, Project Auditor).
+# сохраняя исключения (MCP, Project Auditor).
 #
 # Запуск: pwsh -File Packages/Sync-Packages.ps1
 
@@ -14,9 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $excludePrefixes = @(
-    "com.boxqkrtm.ide.cursor",
     "com.coplaydev.unity-mcp",
-    "com.unity.pipeline",
     "com.unity.project-auditor-rules"
 )
 

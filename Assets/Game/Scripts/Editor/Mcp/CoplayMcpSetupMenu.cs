@@ -1,9 +1,5 @@
 using System;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Services;
@@ -15,7 +11,7 @@ using UnityEngine;
 namespace Game.Editor
 {
     /// <summary>
-    /// Applies Coplay MCP stdio prefs and the Windows hidden launcher during project bootstrap.
+    /// Applies Coplay MCP stdio prefs during project bootstrap.
     /// Avoids MCP For Unity HTTP UI on Unity 6.6 (SerializedProperty finalize crash).
     /// </summary>
     public static class CoplayMcpSetupMenu
@@ -24,77 +20,9 @@ namespace Game.Editor
         private const string AutoRegisterKey = "MCPForUnity.AutoRegisterEnabled";
         private const string AutoStartOnLoadKey = "MCPForUnity.AutoStartOnLoad";
         private const string LockCursorConfigKey = "MCPForUnity.LockCursorConfig";
-        private const string HiddenLauncherFileName = "unity-mcp-hidden.ps1";
-        private const string UnityMcpServerKey = "unityMCP";
-        private const string McpPackageName = "com.coplaydev.unity-mcp";
-        private const string McpServerFromPlaceholder = "__MCP_SERVER_FROM__";
         private const string UnitySocketPortKey = "MCPForUnity.UnitySocketPort";
         private const string McpEnsureSessionKey = "Game.Editor.McpEnsureRanThisSession";
         private const int PreferredUnityMcpPort = 6400;
-
-        private static string ResolveUvxExecutable(string userProfile)
-        {
-            var candidates = new[]
-            {
-                Path.Combine(userProfile, ".local", "bin", "uvx.exe"),
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Programs",
-                    "uv",
-                    "uvx.exe")
-            };
-
-            foreach (var candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            return null;
-        }
-
-        private static string ResolveMcpServerFromPackage()
-        {
-            var package = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages()
-                .FirstOrDefault(p => p.name == McpPackageName);
-
-            if (package == null || string.IsNullOrEmpty(package.version))
-            {
-                return "mcpforunityserver";
-            }
-
-            return FormatMcpServerFromArg(package.version);
-        }
-
-        private static string FormatMcpServerFromArg(string version)
-        {
-            if (version == "unknown")
-            {
-                return "mcpforunityserver";
-            }
-
-            // Semver prerelease (e.g. 9.4.5-beta.1) is not a valid uvx pin — match Coplay defaults.
-            if (version.IndexOf('-', StringComparison.Ordinal) >= 0)
-            {
-                return "mcpforunityserver>=0.0.0a0";
-            }
-
-            return $"mcpforunityserver=={version}";
-        }
-
-        private static JsonArray BuildUvxStdioArgs(string serverFrom)
-        {
-            return new JsonArray
-            {
-                "--from",
-                serverFrom,
-                "mcp-for-unity",
-                "--transport",
-                "stdio"
-            };
-        }
 
         public static void ApplyStdioTransport()
         {
@@ -132,7 +60,7 @@ namespace Game.Editor
         }
 
         /// <summary>
-        /// Sync Cursor config and stdio session UI once per Editor session. Never restarts the bridge.
+        /// Apply stdio transport prefs and register the stdio session once per Editor session. Never restarts the bridge.
         /// </summary>
         public static void EnsureOnEditorLoad()
         {
@@ -161,7 +89,6 @@ namespace Game.Editor
 
             SessionState.SetBool(McpEnsureSessionKey, true);
             SyncUnitySocketPortPref();
-            SyncCursorMcpConfigIfNeeded(logSuccess: false);
             _ = RegisterStdioSessionAsync();
         }
 
@@ -177,31 +104,6 @@ namespace Game.Editor
             }
 
             EditorPrefs.SetInt(UnitySocketPortKey, expectedPort);
-        }
-
-        public static bool SyncCursorMcpConfigIfNeeded(bool logSuccess)
-        {
-            var expectedServerFrom = ResolveMcpServerFromPackage();
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var mcpPath = Path.Combine(userProfile, ".cursor", "mcp.json");
-
-            if (File.Exists(mcpPath))
-            {
-                try
-                {
-                    var json = File.ReadAllText(mcpPath);
-                    if (json.Contains(expectedServerFrom, StringComparison.Ordinal))
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[Template] Could not read Cursor MCP config: {ex.Message}");
-                }
-            }
-
-            return ApplyHiddenConsoleLauncher(logSuccess);
         }
 
         /// <summary>
@@ -270,110 +172,6 @@ namespace Game.Editor
                 "RequestHealthVerification",
                 BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             request?.Invoke(null, null);
-        }
-
-        public static bool ApplyHiddenConsoleLauncher(bool logSuccess)
-        {
-#if !UNITY_EDITOR_WIN
-            return false;
-#else
-            try
-            {
-                var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                var projectRoot = Directory.GetParent(Application.dataPath)?.FullName
-                                  ?? throw new InvalidOperationException("Could not resolve project root.");
-
-                var embeddedScript = Path.Combine(
-                    projectRoot,
-                    ".cursor",
-                    "scripts",
-                    HiddenLauncherFileName);
-
-                if (!File.Exists(embeddedScript))
-                {
-                    Debug.LogWarning($"[BARAKI] Hidden MCP launcher script missing: {embeddedScript}");
-                    return false;
-                }
-
-                var scriptsDir = Path.Combine(userProfile, ".cursor", "scripts");
-                Directory.CreateDirectory(scriptsDir);
-
-                var targetScript = Path.Combine(scriptsDir, HiddenLauncherFileName);
-                var serverFrom = ResolveMcpServerFromPackage();
-                var scriptContent = File.ReadAllText(embeddedScript);
-                if (scriptContent.Contains(McpServerFromPlaceholder, StringComparison.Ordinal))
-                {
-                    scriptContent = scriptContent.Replace(McpServerFromPlaceholder, serverFrom);
-                }
-
-                File.WriteAllText(targetScript, scriptContent);
-
-                var mcpPath = Path.Combine(userProfile, ".cursor", "mcp.json");
-                Directory.CreateDirectory(Path.GetDirectoryName(mcpPath) ?? userProfile);
-
-                JsonObject root;
-                if (File.Exists(mcpPath))
-                {
-                    root = JsonNode.Parse(File.ReadAllText(mcpPath))?.AsObject() ?? new JsonObject();
-                }
-                else
-                {
-                    root = new JsonObject();
-                }
-
-                if (root["mcpServers"] is not JsonObject servers)
-                {
-                    servers = new JsonObject();
-                    root["mcpServers"] = servers;
-                }
-
-                var uvxExecutable = ResolveUvxExecutable(userProfile);
-                if (!string.IsNullOrEmpty(uvxExecutable))
-                {
-                    servers[UnityMcpServerKey] = new JsonObject
-                    {
-                        ["command"] = uvxExecutable,
-                        ["args"] = BuildUvxStdioArgs(serverFrom)
-                    };
-                }
-                else
-                {
-                    servers[UnityMcpServerKey] = new JsonObject
-                    {
-                        ["command"] = "powershell.exe",
-                        ["args"] = new JsonArray
-                        {
-                            "-NoProfile",
-                            "-ExecutionPolicy",
-                            "Bypass",
-                            "-WindowStyle",
-                            "Hidden",
-                            "-File",
-                            targetScript
-                        }
-                    };
-                }
-
-                var jsonOptions = new JsonSerializerOptions(JsonSerializerOptions.Default)
-                {
-                    WriteIndented = true
-                };
-                File.WriteAllText(mcpPath, root.ToJsonString(jsonOptions));
-
-                if (logSuccess)
-                {
-                    Debug.Log(
-                        "[Template] Coplay MCP: hidden console launcher applied to ~/.cursor/mcp.json. Restart Cursor.");
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[Template] Could not apply hidden MCP console launcher: {ex.Message}");
-                return false;
-            }
-#endif
         }
     }
 }

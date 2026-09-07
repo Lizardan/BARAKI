@@ -1494,18 +1494,18 @@ namespace Game.Gameplay.Combat
             if (buildingTarget != null)
             {
                 var buildingDistance = GetBuildingSurfaceDistance(unit.WorldPosition, buildingTarget);
-                var buildingMin = CombatRules.GetMinAttackRange(unit.Role);
+                var buildingIdentity = IdentityOf(unit);
                 if (CombatRules.IsWithinBuildingAttackBand(
                         buildingDistance,
                         unit.Stats.AttackRange,
-                        unit.Role))
+                        buildingIdentity))
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
                     TickBuildingAttack(unit, buildingTarget, deltaTime);
                     return;
                 }
 
-                if (buildingDistance < buildingMin)
+                if (buildingDistance < buildingIdentity.GetMinAttackRange())
                 {
                     unit.BehaviorState = UnitBehaviorState.Chase;
                     TickRetreatFromPoint(unit, route, buildingTarget.WorldPosition, deltaTime);
@@ -1518,14 +1518,14 @@ namespace Game.Gameplay.Combat
             }
 
             var target = GetUnitById(unit.CurrentTargetId);
-            if (target != null && CombatRules.CanAttackTarget(unit.Role, target.Role))
+            var unitIdentity = IdentityOf(unit);
+            if (target != null && unitIdentity.CanAttackTarget(target.Role))
             {
                 var distance = HorizontalDistance(unit.WorldPosition, target.WorldPosition);
-                var minRange = CombatRules.GetMinAttackRange(unit.Role);
                 if (CombatRules.IsWithinAttackBand(
                         distance,
                         unit.Stats.AttackRange,
-                        unit.Role,
+                        unitIdentity,
                         target.Role))
                 {
                     unit.BehaviorState = UnitBehaviorState.Attack;
@@ -1533,7 +1533,7 @@ namespace Game.Gameplay.Combat
                     return;
                 }
 
-                if (distance < minRange)
+                if (distance < unitIdentity.GetMinAttackRange())
                 {
                     unit.BehaviorState = UnitBehaviorState.Chase;
                     TickRetreatFromPoint(unit, route, target.WorldPosition, deltaTime);
@@ -1596,7 +1596,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            if (!CombatRules.CanAttackTarget(unit.Role, target.Role))
+            if (!IdentityOf(unit).CanAttackTarget(target.Role))
             {
                 ClearTarget(unit);
                 return;
@@ -1637,7 +1637,8 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            if (!CombatRules.CanAttackTarget(unit.Role, target.Role))
+            var unitIdentity = IdentityOf(unit);
+            if (!unitIdentity.CanAttackTarget(target.Role))
             {
                 ClearTarget(unit);
                 return;
@@ -1647,7 +1648,7 @@ namespace Game.Gameplay.Combat
             if (!CombatRules.IsWithinAttackBand(
                     distance,
                     unit.Stats.AttackRange,
-                    unit.Role,
+                    unitIdentity,
                     target.Role))
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
@@ -1696,7 +1697,7 @@ namespace Game.Gameplay.Combat
             }
 
             if (!CombatLaneRules.CanEngage(unit, target, _graph)
-                || !CombatRules.CanAttackTarget(unit.Role, target.Role))
+                || !IdentityOf(unit).CanAttackTarget(target.Role))
             {
                 ClearTarget(unit);
             }
@@ -1719,7 +1720,8 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                if (!CombatRules.CanAttackTarget(unit.Role, other.Role))
+                var identity = IdentityOf(unit);
+                if (!identity.CanAttackTarget(other.Role))
                 {
                     continue;
                 }
@@ -1730,8 +1732,9 @@ namespace Game.Gameplay.Combat
                     continue;
                 }
 
-                // Super artillery ignores targets inside min range (cannot fire there).
-                if (distance < CombatRules.GetMinAttackRange(unit.Role))
+                // Super artillery ignores targets inside min range (cannot fire there);
+                // Faceless Super is melee, so its minimum band is zero (fights point-blank).
+                if (distance < identity.GetMinAttackRange())
                 {
                     continue;
                 }
@@ -2065,7 +2068,7 @@ namespace Game.Gameplay.Combat
             }
 
             var distance = GetBuildingSurfaceDistance(unit.WorldPosition, building);
-            if (!CombatRules.IsWithinBuildingAttackBand(distance, unit.Stats.AttackRange, unit.Role))
+            if (!CombatRules.IsWithinBuildingAttackBand(distance, unit.Stats.AttackRange, IdentityOf(unit)))
             {
                 unit.BehaviorState = UnitBehaviorState.Chase;
                 return;
@@ -2093,12 +2096,12 @@ namespace Game.Gameplay.Combat
                 attacker.Stats.DamageMin,
                 attacker.Stats.DamageMax,
                 _random);
+            var identity = IdentityOf(attacker);
             var impactDelay = CombatAttackRules.ResolveSwingImpactDelay(
                 GetUnitAttackInterval(attacker),
-                attacker.Role);
+                identity);
 
-            if (CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot)
-                || !CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
+            if (identity.UsesMeleeStrike || !identity.UsesProjectile)
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -2309,6 +2312,7 @@ namespace Game.Gameplay.Combat
                 attacker,
                 attacker.WorldPosition,
                 target.WorldPosition);
+            var identity = IdentityOf(attacker);
 
             float rawDamage;
             if (useHybridMelee)
@@ -2328,10 +2332,10 @@ namespace Game.Gameplay.Combat
 
             var impactDelay = CombatAttackRules.ResolveSwingImpactDelay(
                 GetUnitAttackInterval(attacker),
-                attacker.Role);
+                identity);
 
             if (useHybridMelee
-                || CombatAttackRules.UsesMeleeStrike(attacker.Role, attacker.IsHero, attacker.HeroSlot))
+                || identity.UsesMeleeStrike)
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -2341,7 +2345,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            if (!CombatAttackRules.UsesProjectile(attacker.Role, attacker.IsHero, attacker.HeroSlot))
+            if (!identity.UsesProjectile)
             {
                 _meleeStrikes.Spawn(new CombatMeleeStrikeState(
                     attacker.UnitId,
@@ -3050,6 +3054,10 @@ namespace Game.Gameplay.Combat
 
             return GameIds.Races.Human;
         }
+
+        /// <summary>Race-aware combat identity for a unit (race of the owning player).</summary>
+        UnitCombatIdentity IdentityOf(MatchUnitState unit) =>
+            UnitCombatIdentityFactory.From(unit, GetPlayerRaceId(unit.OwnerSlot));
 
         public int GetMagicLevel(int ownerSlot)
         {
