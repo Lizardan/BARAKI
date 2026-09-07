@@ -95,6 +95,18 @@ User story (`isStory`) — только если кусок реально др�
 итог — `addComment(id, "## Agent summary ...")`. Rate limit — клиент сам держит
 очередь/ретраи.
 
+Просмотр бэклога: `node Tooling/HacknPlan/list-open.js` (read-only) — печатает
+открытые карточки (stage ≠ Completed) по группам панели UnioTasks.
+Флаги: `--all` (включая Completed), `--json` (машиночитаемый вывод).
+
+### Формат ответа API v0 (важно)
+
+`/workitems` отдаёт **вложенные объекты**, а не плоские id: `item.stage.stageId`,
+`item.importanceLevel.importanceLevelId`, `item.category.categoryId`, `item.board.boardId`.
+Плоских `stageId` / `categoryId` в ответе **нет** — код, который их читает, молча
+получает `undefined`. Id этапов: 1 Planned, 2 In progress, 3 Testing, 4 Completed.
+Importance: 1 Urgent, 2 High, 3 Normal, 4 Low.
+
 ## Коммиты
 
 По корневому `AGENTS.md`. Если нужен след в HacknPlan — префикс `hnp-{id}` в

@@ -1,6 +1,6 @@
 # Faceless (Древние) — бонусы юнитов (FACELESS-010)
 
-Дизайн утверждён пользователем **2026-09-08** (сессия 1 юнит за юнитом + слоты 11–12). Все **12 слотов**. Полный asymmetry kit (пассивы/магия/треки башен) — отдельно, FACELESS-008.
+Дизайн утверждён пользователем **2026-09-08** (сессия 1 юнит за юнитом + слоты 11–12). Все **12 слотов**. Полный asymmetry kit (пассивы/магия/треки башен) — **FACELESS-008**, дизайн 2026-09-08: `GameDesign/Races.md` § Древние.
 
 > **Runtime-гейт Фазы 1 активен:** `HumanBonusUnitRules.HasBonusKit(raceId)` = false для
 > `RACE_FACELESS` (`NoBonusKitRaceIds`); race-aware `EffectiveBonusSlotForRole/Hero/Titan`
@@ -77,7 +77,7 @@ Player-level модификаторы (как March Discipline / Stone Masonry �
       визуала и китов (критерий «Do not enable selection before visual+kit ready»).
 - [ ] Реализация (ability defs, префабы `BonusUnits/`, кит ветеранов, уники 11–12, баланс) —
       follow-up карточки (аналог Human PRE-006a/b).
-- [ ] Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — FACELESS-008.
+- [x] Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — FACELESS-008, дизайн 2026-09-08 (`GameDesign/Races.md`).
 
 Связанные правила: `wiki/rules/human-unit-bonuses.md` (формат ветеранов/китов/UI как Люди),
 `wiki/rules/faceless-assets.md`, `wiki/rules/abilities.md`.

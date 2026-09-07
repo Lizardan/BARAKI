@@ -122,6 +122,41 @@ mvp: true
 | **+** | `PASSIVE_HUMAN_FORTIFIED_LINE` | **+10% защита** юнитов и **зданий** |
 | **−** | `PASSIVE_HUMAN_LEVY_TAX` | **−250g** к старту (250) |
 
+### Древние (FACELESS-008)
+
+```entity
+id: PASSIVE_FACELESS_ABYSSAL_HUNGER
+effect: lifesteal 10% of damage dealt
+applies_to: [units]                 # не герои, не титан, не здания, не башни
+scope: race_wide
+apply: match_start
+mvp: false
+
+id: PASSIVE_FACELESS_RELENTLESS_TIDE
+effect: +10% attack speed
+applies_to: [units]
+scope: race_wide
+apply: match_start
+mvp: false
+
+id: PASSIVE_FACELESS_BLEAK_FOUNDATIONS
+effect: -10% max HP
+applies_to: [buildings]             # все здания, включая башни; как Stone Masonry, но ×0.9
+scope: race_wide
+apply: match_start_and_on_building_level_change
+mvp: false
+```
+
+| | Пассив | Эффект |
+|---|--------|--------|
+| **+** | `PASSIVE_FACELESS_ABYSSAL_HUNGER` | **Вампиризм 10%**: юниты лечатся на 10% от нанесённого урона (после брони цели) |
+| **+** | `PASSIVE_FACELESS_RELENTLESS_TIDE` | **+10% скорость атаки** юнитам |
+| **−** | `PASSIVE_FACELESS_BLEAK_FOUNDATIONS` | **−10% max HP** всем **зданиям** (ретро + новые, по уровням) |
+
+**Идентичность:** Люди — **сырые статы и оборона** (урон/защита, штраф по золоту).
+Древние — **темп и самоподпитка** (вампиризм + скорость атаки) ценой **хрупкой базы**.
+Ось урона/защиты Древние не трогают — отличие другого рода, не «зеркало» Human-пассивов.
+
 ## Magic — заклинания магов (confirmed)
 
 Открываются **UPG_MAIN_MAGIC** в main (slot 1/2/3 = main level 1/2/3). Кастуют **UNIT_TYPE_CASTER** автоматически (см. `AI.md`).
@@ -173,6 +208,62 @@ mvp: true
 | 1 | `SPELL_HUMAN_1` | **Хил** 1 союзника | **80 HP**, range **6**, CD **10s** |
 | 2 | `SPELL_HUMAN_2` | **Ледяной взрыв** | radius **5**, **40** dmg, CD **14s** |
 | 3 | `SPELL_HUMAN_3` | **Воскрешение** | corpse **≤20s**, CD **30s** |
+
+### Древние (FACELESS-008)
+
+Открываются тем же `UPG_MAIN_MAGIC` (slot 1/2/3 = main level 1/2/3); каждый слот — **+3 dmg**
+к автоатаке кастера, как у Людей. Экономика магии **общая** (500/750/1000g, 60/90/135s).
+
+```entity
+id: SPELL_FACELESS_1
+name: Гниющий взор / Blighting Gaze
+unlock: UPG_MAIN_MAGIC slot_1
+target: single_enemy_unit
+effect: magic_damage + damage_over_time
+damage: 30
+dot: 4 dmg/s x 4 s
+cast_range: 6.0
+cooldown: 10.0
+priority: highest_hp_enemy_in_range
+mvp: false
+
+id: SPELL_FACELESS_2
+name: Вытягивание жизни / Void Drain
+unlock: UPG_MAIN_MAGIC slot_2
+target: ground_aoe
+effect: magic_damage + lifesteal_to_caster
+damage: 40
+radius: 5.0
+lifesteal: 30% of damage dealt
+cast_range: 6.0
+cooldown: 14.0
+priority: densest_enemy_cluster
+mvp: false
+
+id: SPELL_FACELESS_3
+name: Поднять павшего / Raise the Drowned
+unlock: UPG_MAIN_MAGIC slot_3
+target: single_corpse_any_side
+effect: summon
+summons: 1 minion (role Melee, stats x0.5 of UNIT_FACELESS_MELEE, prefab scale x0.67)
+owner: caster owner
+cast_range: 6.0
+corpse_max_age: 15.0
+cooldown: 30.0
+priority: highest_value_recent_corpse
+mvp: false
+```
+
+| Slot | ID | Эффект | Числа |
+|------|-----|--------|-------|
+| 1 | `SPELL_FACELESS_1` | **Урон + дот** по одной цели | **30** dmg + **4** dmg/с × **4 с**, range **6**, CD **10s** |
+| 2 | `SPELL_FACELESS_2` | **AoE-урон + вампиризм кастеру** | radius **5**, **40** dmg, лечение **30%** урона, CD **14s** |
+| 3 | `SPELL_FACELESS_3` | **Призыв из трупа** (любая сторона) | corpse **≤15s**, мини-меле ×0.5 статов / ×0.67 масштаб, CD **30s** |
+
+**Асимметрия к Людям:** Люди **сохраняют своих** (хил, воскрешение союзника в полном HP).
+Древние **питаются чужим** (дот, вытягивание жизни, подъём **любого** трупа — включая вражеский —
+в подконтрольного мини-меле). Мини-меле — те же статы, что у бонуса `Call of the Abyss`
+(слот 3, FACELESS-010): HP 60, dmg 4–5, броня 0.
 
 ## Tower upgrades — прокачка в башне
 
@@ -240,6 +331,62 @@ mvp: true
 
 > **4 башни** — до **4 параллельных** исследований (разные треки; очередь 1 на башню). **9** треков → выбор, что качать за матч.
 
+### Древние — 9 треков (FACELESS-008)
+
+Правила те же: **только юниты** (не герои, не титан, не DPS башен), **L1–L3** последовательно,
+экономика **500/800/1200g**, **45/90/135s**, UI-слоты **4–12**. Порядок = порядок слотов.
+Экономика tower/magic — **общая** с Людьми (см. `RACE_TOWER_UPGRADES`).
+
+**Главное ограничение: трек не повторяет механику бонуса.** Бонусы Древних (FACELESS-010)
+дают **вампиризм, дот on-hit, призыв мини-меле, взрыв при смерти, on-kill бафы и уклонение** —
+ничего из этого в треках нет. Проверка при изменении: новый эффект сверять с таблицей
+`wiki/rules/faceless-unit-bonuses.md`.
+
+| # | Track id | Имя | Роли | L1 / L2 / L3 |
+|---|----------|-----|------|--------------|
+| 1 | `UPG_TOWER_FACELESS_CHITINOUS_HIDE` | Chitinous Hide / Панцирь глубин | Melee + Super | **+1 / +2 / +3** брони; на L3 ещё **+15% max HP** при спавне |
+| 2 | `UPG_TOWER_FACELESS_HOLLOW_BARBS` | Hollow Barbs / Полые жала | Ranged + Flying | Пробитие: атаки игнорируют **1 / 2 / 3** брони цели |
+| 3 | `UPG_TOWER_FACELESS_VACUUM_COLLAPSE` | Vacuum Collapse / Вакуумное схлопывание | Melee + Flying | При смерти: враги в r=3 получают **−15% / −25% / −35%** скорости на 3 с |
+| 4 | `UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP` | Ritual of the Deep / Ритуал глубин | Caster | Пока кастер жив: союзники в r=8 получают **−6% / −10% / −15%** урона от **юнитов и героев** |
+| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Unnerving Aim / Нервирующий прицел | Ranged + Caster | Атаки снижают броню цели на **1 / 2 / 3** на 4 с (дебаф, обновляется, не стакается) |
+| 6 | `UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP` | Frenzy of the Deep | Melee + Siege | **+10% / +15% / +20%** скорости атаки |
+| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Splash of the Deep / Сплеш глубин | Caster + Super | Атаки получают сплеш радиусом **0.5 / 1.0 / 1.5** |
+| 8 | `UPG_TOWER_FACELESS_HOLLOW_BONES` | Hollow Bones | Siege + Flying | **+8% / +16% / +24%** скорости движения |
+| 9 | `UPG_TOWER_FACELESS_VOID_HARDENING` | Void Hardening / Закалка пустотой | все юниты | **−10% / −15% / −20%** урона от **зданий и башен** |
+
+**Покрытие ролей:** Melee (1, 3, 6) · Ranged (2, 5) · Caster (4, 5, 7) · Siege (6, 8) ·
+Flying (2, 3, 8) · Super (1, 7) · все юниты (9). Пары ролей не повторяются.
+
+**Разграничение срезов урона:** #4 режет урон от **юнитов и героев** (аура, пока кастер жив),
+#9 — только от **зданий и башен** (пассивно). Это разные источники, стакаются.
+
+**Асимметрия к Людям:** у Людей треки — **про статы и выживаемость** (броня, дальность, реген,
+урон при низком HP, поджог). У Древних — **про пробитие и контроль**: своя броня, пробитие
+брони, дебаф брони, облако замедления на месте смерти, защитная аура кастера, сплеш,
+стойкость к осаде. С бонусами слотов 1–12 (FACELESS-010) треки **не пересекаются по механикам**.
+
+**Новые механики** (в коде пока нет, потребуют хуков в FACELESS-017): пробитие брони (#2),
+дебаф брони (#5), замедление (#3), сплеш у Caster/Super (#7), +max HP при спавне (#1 L3),
+аура среза входящего урона (#4), множитель урона от зданий/башен (#9).
+
+Авоспособности без маны: Vacuum Collapse (#3, по смерти), Unnerving Aim (#5, on-hit),
+Splash of the Deep (#7, по атаке). Остальное — спавн-статы и пассивные множители.
+
+### Расовые уники — Древние (слоты 11–12)
+
+Player-level модификаторы, без замены юнитов. Утверждены в **FACELESS-010** и входят в kit
+FACELESS-008; канон с числами — `wiki/rules/faceless-unit-bonuses.md`.
+
+| # | Слот | Имя (EN) | Эффект |
+|---|------|----------|--------|
+| 11 | `BONUS_SLOT_RACE_UNIQUE_1` | **Shadow of the Void** | Все войска владельца (юниты+герои+титан): **8%** шанс полностью избежать атаки (при спавне) |
+| 12 | `BONUS_SLOT_RACE_UNIQUE_2` | **Void Bastion** | Все здания владельца: атаки по ним **промахиваются 20%** (ретро + новые) |
+
+Асимметрия к Людям: March Discipline (+10% скорости) → Shadow of the Void (уклонение);
+Stone Masonry (+20% HP зданий) → Void Bastion (промах по зданиям). Древние **не получают**
+сырой прочности — они делают цели **неуловимыми**; это компенсирует пассив
+`PASSIVE_FACELESS_BLEAK_FOUNDATIONS` (−10% HP зданий).
+
 ## Roster — старт (1 раса)
 
 ```entity
@@ -283,8 +430,10 @@ id: RACE_FACELESS
 display_name: Древние
 display_name_en: Faceless
 fantasy_hook: Древние богоподобные сущности; бирюзовый ретекстур WC3-пака
-start_passives: {}            # TBD — нет кастер-кита и пассивов в Фазе 1 (FACELESS-008/010)
-start_gold: 250               # как Human
+start_passives:               # FACELESS-008; игровой unlock после GATE
+  positive: [PASSIVE_FACELESS_ABYSSAL_HUNGER, PASSIVE_FACELESS_RELENTLESS_TIDE]
+  negative: PASSIVE_FACELESS_BLEAK_FOUNDATIONS
+start_gold: 250               # как Human (штраф по золоту — только у Людей)
 units:
   melee: UNIT_FACELESS_MELEE
   ranged: UNIT_FACELESS_RANGED
@@ -295,11 +444,23 @@ units:
 heroes: [HERO_FACELESS_1, HERO_FACELESS_2, HERO_FACELESS_3]
 bonus_slots: 12            # все 12 слотов: дизайн утверждён (FACELESS-010); реализация + снятие гейта — follow-up
 buildings: BUILDING_SET_FACELESS   # здания Nazjatar Houses by Ageron (FACELESS-007); race-keyed каталог, fallback на Human-скин
-upgrades: UPGRADE_TREE_HUMAN    # tower-треки глобальные (TowerTrackRules), работают на Faceless
-tower_tracks: [...]             # наследует треки Human? Нет — глобальны, стат-эффекты на роли
-magic_spells: []                # магии/кастер-заклинаний нет (Фаза 1)
+upgrades: UPGRADE_TREE_FACELESS # stat-дерево как у Human (статы = Human роль→роль); tower/magic — свои треки
+tower_tracks:                     # FACELESS-008; порядок = слоты 4–12 UI башни; механики не дублируют бонусы
+  - UPG_TOWER_FACELESS_CHITINOUS_HIDE       # Melee+Super: броня +1/2/3; L3 +15% max HP
+  - UPG_TOWER_FACELESS_HOLLOW_BARBS         # Ranged+Flying: пробитие брони 1/2/3
+  - UPG_TOWER_FACELESS_VACUUM_COLLAPSE      # Melee+Flying: при смерти враги r3 −15/25/35% скорости 3 с
+  - UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP   # Caster: аура r8 −6/10/15% урона от юнитов и героев
+  - UPG_TOWER_FACELESS_UNNERVING_AIM        # Ranged+Caster: дебаф брони цели −1/2/3 на 4 с
+  - UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP   # Melee+Siege: скорость атаки +10/15/20%
+  - UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP   # Caster+Super: сплеш r0.5/1.0/1.5
+  - UPG_TOWER_FACELESS_HOLLOW_BONES         # Siege+Flying: скорость движения +8/16/24%
+  - UPG_TOWER_FACELESS_VOID_HARDENING       # все юниты: −10/15/20% урона от зданий и башен
+magic_spells:                     # FACELESS-008
+  - SPELL_FACELESS_1
+  - SPELL_FACELESS_2
+  - SPELL_FACELESS_3
 mvp: true
-note: Контент (SO/prefabs/каталоги) и runtime-гейты готовы (FACELESS-001..009). Все 12 бонус-слотов (юниты 1–6, ветераны 7–10, уники 11–12) — дизайн утверждён (FACELESS-010, канон wiki/rules/faceless-unit-bonuses.md); реализация и снятие гейта HasBonusKit=false — follow-up карточки. Полный kit asymmetry (пассивы, кастер-кит, magic upgrades, tower-треки) — FACELESS-008.
+note: Контент (SO/prefabs/каталоги) и runtime-гейты готовы (FACELESS-001..009). Все 12 бонус-слотов (юниты 1–6, ветераны 7–10, уники 11–12) — дизайн утверждён (FACELESS-010, канон wiki/rules/faceless-unit-bonuses.md); реализация и снятие гейта HasBonusKit=false — follow-up карточки FACELESS-011..014. Полный asymmetry kit (пассивы 2+/1−, кастер-кит ×3, tower-треки ×9, уники 11–12) — FACELESS-008 (2026-09-08, дизайн). Игровой unlock — только после GATE; `SelectableRaceIds` этой карточкой не менялся.
 ```
 
 Статы юнитов Faceless = **копия Human роль→роль** (по решению пользователя). Титан = `hero1 ×3` (`TitanRules.BaseStatMultiplier`), как у Human. `_Review`-префабы удалены после сверки маппинга.
@@ -351,7 +512,7 @@ mvp: false
 | Match bonus | **12** слотов per race; см. `Bonuses.md` |
 | Squad structure | **Одинакова** по составу — `SQUAD_BARRACKS_L1..L4` |
 | MVP asymmetry | **Passives + magic + tower tracks** (1 раса; асимметрия — с добавлением рас) |
-| Раса #2 (Faceless) | Играбельна на стартовых гейтах (статы Human, без kit/бонусов, без магии); здания свои (FACELESS-007); полная асимметрия — `FACELESS-008`, бонусы — `FACELESS-010` |
+| Раса #2 (Faceless) | Играбельна на стартовых гейтах (статы Human, без kit/бонусов, без магии); здания свои (FACELESS-007); бонусы 1–12 — `FACELESS-010`; **asymmetry kit (пассивы 2+/1−, магия ×3, tower-треки ×9, уники 11–12) — `FACELESS-008`, дизайн 2026-09-08**. Игровой unlock после GATE; `SelectableRaceIds` не менялся |
 
 ```entity
 id: UPG_MAIN_MAGIC_ECONOMY
@@ -371,5 +532,5 @@ mvp: true
 - [x] Числа заклинаний (heal, frost, CD, egg HP, resurrect window)
 - [x] Раса #2 (Faceless) — контент-кэтчеп играбелен (FACELESS-001..009); `RACE_FACELESS` в каталоге
 - [x] Здания Древних (FACELESS-007): Nazjatar Houses by Ageron, 3 префаба `Prefabs/Races/Faceless/Buildings/` (04=TownHall, 05=Tower, 03=Barracks), race-keyed `BuildingVisualCatalog` с fallback на Human
-- [ ] Полный asymmetry kit Faceless — **FACELESS-008** (`TODO.md`)
+- [x] Полный asymmetry kit Faceless — **FACELESS-008** (2026-09-08): пассивы 2+/1−, кастер-кит ×3, tower-треки ×9, уники 11–12 записаны выше; реализация — follow-up после GATE
 - [x] Бонусы Древних: дизайн всех 12 слотов утверждён — **FACELESS-010** (2026-09-08; канон `wiki/rules/faceless-unit-bonuses.md`; реализация — follow-up)

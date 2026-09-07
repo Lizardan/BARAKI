@@ -10,7 +10,7 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 
 > **Статус:** все **12 слотов реализованы** (Люди). PRE-006a: слоты 1–6 (юнитовые бонусы). PRE-006b: слоты 7–12 — ветераны (герои ×3, титан) и расовые уники (March Discipline / Stone Masonry). Канон: `wiki/rules/human-unit-bonuses.md`. См. `TODO.md`.
 >
-> **Faceless (Древние):** дизайн всех **12 слотов** утверждён (FACELESS-010, 2026-09-08) — канон `wiki/rules/faceless-unit-bonuses.md`. Реализация — follow-up карточки; runtime-гейт (`HasBonusKit=false`) активен. Полный asymmetry kit (пассивы/магия/треки) — FACELESS-008.
+> **Faceless (Древние):** дизайн всех **12 слотов** утверждён (FACELESS-010, 2026-09-08) — канон `wiki/rules/faceless-unit-bonuses.md`. Реализация — follow-up карточки; runtime-гейт (`HasBonusKit=false`) активен. Полный asymmetry kit (пассивы/магия/треки) — **FACELESS-008, дизайн 2026-09-08**, см. `Races.md`.
 
 ## Обзор
 
@@ -185,7 +185,7 @@ mvp: false
 | 11 | Уник 1 | — | Shadow of the Void | Все войска владельца: 8% избегают атаки (при спавне) |
 | 12 | Уник 2 | — | Void Bastion | Здания владельца: атаки по ним промахиваются на 20% |
 
-Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — **FACELESS-008**.
+Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — **FACELESS-008** (дизайн утверждён 2026-09-08; см. `Races.md` § Древние).
 
 ## Flow
 
