@@ -29,15 +29,11 @@ namespace Game.Tests
         }
 
         [Test]
-        public void NormalizedToPanel_InsetKeepsCornersInsidePanel()
+        public void NormalizedToPanel_CornerMapsToPanelBoundary()
         {
             var corner = MatchMinimapProjection.NormalizedToPanel(new Vector2(1f, 0f), 350f, 350f);
-            Assert.Less(corner.x, 350f);
-            Assert.Greater(corner.x, 300f);
-            Assert.Less(corner.y, 350f);
-            Assert.Greater(corner.y, 0f);
-            Assert.AreEqual(336f, corner.x, 0.001f);
-            Assert.AreEqual(14f, corner.y, 0.001f);
+            Assert.AreEqual(350f, corner.x, 0.001f);
+            Assert.AreEqual(0f, corner.y, 0.001f);
         }
 
         [Test]

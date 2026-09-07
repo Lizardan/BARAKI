@@ -310,7 +310,7 @@ namespace Game.Gameplay.Match
 
                 SyncAuraDisc(visual, unit, combat);
                 SyncSuperAmmoVisibility(visual, unit);
-                DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing);
+                DriveAnimator(visual, unit, combat, renderBehavior, renderAttackSwing, ResolveRaceId(unit, controller));
                 TickPendingImpactFx(visual, unit, combat, Time.deltaTime);
 
                 visual.StatusBars.SetHealth(unit.CurrentHp / unit.Stats.MaxHp);
@@ -439,7 +439,8 @@ namespace Game.Gameplay.Match
             MatchUnitState unit,
             MatchCombatSystem combat,
             UnitBehaviorState behaviorState,
-            int attackSwingSerial)
+            int attackSwingSerial,
+            string unitRaceId)
         {
             if (visual.Animator == null)
             {
@@ -511,7 +512,8 @@ namespace Game.Gameplay.Match
             var attackClipLength = AbilityAnimRules.ResolveAttackClipSeconds(
                 unit.Role,
                 unit.HeroSlot,
-                unit.BonusSlot);
+                unit.BonusSlot,
+                unitRaceId);
             UnitCombatAnimatorDriver.Tick(
                 visual.Animator,
                 visual.AnimPlayback,

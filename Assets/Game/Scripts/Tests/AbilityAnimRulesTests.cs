@@ -69,6 +69,22 @@ namespace Game.Tests
         }
 
         [Test]
+        public void ResolveAttackClipSeconds_FacelessUsesBakedClipLengths()
+        {
+            const string faceless = Game.Core.GameIds.Races.Faceless;
+            Assert.AreEqual(0.99f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Melee, raceId: faceless), 0.001f);
+            Assert.AreEqual(1.49f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Ranged, raceId: faceless), 0.001f);
+            Assert.AreEqual(1.06f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Caster, raceId: faceless), 0.001f);
+            Assert.AreEqual(0.96f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Siege, raceId: faceless), 0.001f);
+            Assert.AreEqual(0.99f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Flying, raceId: faceless), 0.001f);
+            Assert.AreEqual(0.99f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Super, raceId: faceless), 0.001f);
+            Assert.AreEqual(0.96f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Hero, heroSlot: 1, raceId: faceless), 0.001f);
+            Assert.AreEqual(1.06f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Hero, heroSlot: 2, raceId: faceless), 0.001f);
+            Assert.AreEqual(1.16f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Hero, heroSlot: 3, raceId: faceless), 0.001f);
+            Assert.AreEqual(1.32f, AbilityAnimRules.ResolveAttackClipSeconds(UnitRole.Titan, raceId: faceless), 0.001f);
+        }
+
+        [Test]
         public void ResolveAttackPlaybackSpeed_BallistaStretchesOneSecondClipOverTwoSecondInterval()
         {
             const float interval = 2f; // Super AS 0.5

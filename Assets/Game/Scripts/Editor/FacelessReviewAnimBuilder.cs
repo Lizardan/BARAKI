@@ -178,6 +178,7 @@ namespace Game.Editor
             try
             {
                 var bones = CreateSkeleton(root.transform, doc);
+                root.transform.rotation = ResolveModelCorrection(bones);
                 var (mesh, materials) = BuildMesh(stem, doc, bones, ProductionMeshFolder, ProductionMatFolder);
                 if (mesh.vertexCount == 0)
                 {
@@ -191,6 +192,7 @@ namespace Game.Editor
                 smr.bones = bones;
                 smr.rootBone = FindRootBone(bones);
                 smr.updateWhenOffscreen = true;
+                root.transform.localScale = ResolveFacelessHeightScale(role, smr) * Vector3.one;
 
                 var stand = doc.FindSequence("stand", "portrait") ?? doc.FindSequence();
                 var walk = doc.FindSequence("walk") ?? stand;
@@ -472,6 +474,162 @@ namespace Game.Editor
             }
 
             return bones.Length > 0 ? bones[0] : null;
+        }
+
+        static Transform FindSkeletonBone(Transform[] bones, params string[] nameTokens)
+        {
+            foreach (var bone in bones)
+            {
+                if (bone == null)
+                {
+                    continue;
+                }
+
+                var name = bone.name.ToLowerInvariant();
+                foreach (var token in nameTokens)
+                {
+                    if (name.IndexOf(token.ToLowerInvariant(), StringComparison.Ordinal) >= 0)
+                    {
+                        return bone;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        static (Transform Left, Transform Right) FindSymmetryPair(Transform[] bones)
+        {
+            foreach (var prefix in new[] { "arm1", "arm", "shoulder", "hand" })
+            {
+                Transform left = null;
+                Transform right = null;
+                foreach (var bone in bones)
+                {
+                    if (bone == null || bone.name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        continue;
+                    }
+
+                    var side = ResolveSide(bone.name);
+                    if (side == -1)
+                    {
+                        continue;
+                    }
+
+                    if (side == 0 && left == null)
+                    {
+                        left = bone;
+                    }
+                    else if (side == 1 && right == null)
+                    {
+                        right = bone;
+                    }
+                }
+
+                if (left != null && right != null)
+                {
+                    return (left, right);
+                }
+            }
+
+            return (null, null);
+        }
+
+        /// <summary>Returns 0 = left, 1 = right, -1 = unknown (parses "_L/_R/Left/Right" tokens).</summary>
+        static int ResolveSide(string name)
+        {
+            foreach (var token in name.Split('_'))
+            {
+                var t = token.ToLowerInvariant();
+                if (t == "l" || t == "left" || t == "handl")
+                {
+                    return 0;
+                }
+
+                if (t == "r" || t == "right" || t == "handr")
+                {
+                    return 1;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Rotates the rig so the skeleton's own spine (pelvis→head) maps to world +Y and the authored
+        /// face (perpendicular to the shoulder axis) maps to world +Z. Mirrors the Human prefab yaw
+        /// (GetAnimatedHumanModelEuler) that MDX models lack. Idempotent: returns near-identity when
+        /// the model is already upright and facing +Z.
+        /// </summary>
+        static Quaternion ResolveModelCorrection(Transform[] bones)
+        {
+            var pelvis = FindSkeletonBone(bones, "pelvis", "hips");
+            var head = FindSkeletonBone(bones, "head") ?? FindSkeletonBone(bones, "neck");
+            var spine = Vector3.up;
+            if (pelvis != null && head != null)
+            {
+                var delta = head.position - pelvis.position;
+                if (delta.sqrMagnitude > 1e-4f)
+                {
+                    spine = delta.normalized;
+                }
+            }
+
+            var (left, right) = FindSymmetryPair(bones);
+            var face = Vector3.right;
+            if (left != null && right != null)
+            {
+                var shoulderAxis = right.position - left.position;
+                var flat = shoulderAxis - spine * Vector3.Dot(shoulderAxis, spine);
+                if (flat.sqrMagnitude > 1e-4f)
+                {
+                    face = Vector3.Cross(flat.normalized, spine).normalized;
+                    if (Vector3.SqrMagnitude(face) > 1e-4f && Vector3.Dot(face, spine) < 0.2f)
+                    {
+                        face = Vector3.right;
+                    }
+                }
+            }
+
+            var qUpright = Quaternion.FromToRotation(spine, Vector3.up);
+            var faceAfterUp = Vector3.ProjectOnPlane(qUpright * face, Vector3.up);
+            var qYaw = faceAfterUp.sqrMagnitude > 1e-4f
+                ? Quaternion.FromToRotation(faceAfterUp.normalized, Vector3.forward)
+                : Quaternion.identity;
+            return qYaw * qUpright;
+        }
+
+        /// <summary>Target produced-prefab height per role (Human reference, localScale=1).</summary>
+        static float ResolveTargetHeight(string role) =>
+            role switch
+            {
+                _ when role == "Melee" || role == "Ranged" || role == "Caster" => 1.03f,
+                _ when role == "Siege" || role == "Flying" => 1.02f,
+                _ when role == "Hero2" || role == "Hero3" => 1.02f,
+                _ when role == "Hero1" => 1.03f,
+                _ when role == "Titan" => 1.03f,
+                _ when role == "Super" => 0.37f,
+                _ => 1.03f,
+            };
+
+        /// <summary>
+        /// Uniform root scale so the finished prefab height matches the Human reference:
+        /// <c>targetHeight / visiblePrefabHeight</c>. Applied on top of ResolveModelCorrection.
+        /// </summary>
+        static float ResolveFacelessHeightScale(string role, SkinnedMeshRenderer smr)
+        {
+            var h = smr.bounds.size.y;
+            if (h <= 1e-4f)
+            {
+                return 1f;
+            }
+
+            var target = ResolveTargetHeight(role);
+            var k = target / h;
+
+            // Guard against pathological scaling (typo / bad mesh read)
+            return Mathf.Clamp(k, 0.2f, 5f);
         }
 
         static int IndexOf(FacelessMdxDocument doc, int objectId)

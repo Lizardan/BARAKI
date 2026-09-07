@@ -123,3 +123,72 @@ production-контроллеры лежат рядом с префабами.
 При пересборке production-префабов (`BARAKI/Faceless/Rebuild Unit Prefabs`) контроллеры
 создаются рядом с префабом (`Faceless_Melee.controller` и т.д.), а устаревшие
 `.controller` из `Art/Races/Faceless/Production/Anim/` удаляются — клипы не трогаются.
+
+### FACELESS-006 — верификация анимаций и тайминги (done)
+
+Все 10 production-префабов верифицированы (Edit mode, Editor-замер): у каждого
+`Animator` → свой `Faceless_{Role}.controller` **рядом** с префабом, `applyRootMotion=false`,
+`SkinnedMeshRenderer.sharedMesh` загружен, на корне `FacelessUnitTeamColor` +
+`UnitCombatSettings`. Состояния всех контроллеров непустые и привязаны к production-клипам:
+`Stand / Walk / Attack / Death / Cast` (`Production/Anim/{Model}_{State}`).
+
+Поликаунт — приемлемо для RTS-камеры, декimation не требуется (max — Titan/`10`):
+`10_Unbroken_Izual` 2843 verts / 2312 tris, остальные 0.37–1.15k verts
+(самый лёгкий — `03_RangedFacelessone` 369 / 295).
+
+Длительности Attack-клипов (факт, из `Production/Anim`, 30 fps):
+
+| Роль | Модель | Attack |
+|------|--------|--------|
+| Melee | 11 | 0.99s |
+| Ranged | 03 | 1.49s |
+| Caster | 05 | 1.06s |
+| Siege | 01 | 0.96s |
+| Flying | 09 | 0.99s |
+| Super | 04 | 0.99s |
+| Hero1 (King) | 08 | 0.96s |
+| Hero2 | 07 | 1.06s |
+| Hero3 | 02 | 1.16s |
+| Titan | 10 | 1.32s |
+
+**Race-aware тайминги удара:** клипы Faceless из MDX v800 короче TT_RTS (1.5s/1s),
+поэтому `AbilityAnimRules.ResolveAttackClipSeconds(role, heroSlot, bonusSlot, raceId)` для
+`raceId == RACE_FACELESS` возвращает **фактическую** длину клипа (таблица выше), не
+изменяя Human-результат. `MatchCombatPresenter.DriveAnimator` прокидывает raceId через
+`ResolveRaceId(unit, controller)` (`players[ownerSlot].RaceId`, fallback `RACE_HUMAN`).
+Иначе `Animator.speed = len/interval` гнал бы клип за ~2/3 интервала и рассинхронизировал
+`ResolveSwingImpactDelay`.
+
+### FACELESS-006b — ориентация и масштаб в бою (baked в префаб)
+
+Проблема: production-префабы стояли «боком» к врагу (модели MDX смотрят «лицом» в +X,
+Human смотрят в +Z — у них yaw запечён в скелет `Bip001` rot=(270,90,0), а Faceless
+имели identity-скелет), часть моделей лежала (Titan 68° к вертикали, Super 18°).
+Runtime-поворота Faceless нет (`MatchCombatPresenter` крутит только Root, не инстанс).
+
+Решение — **запечь в префаб на сборке** (`FacelessReviewAnimBuilder`, production-ветка),
+рантайм не трогали:
+- `ResolveModelCorrection(bones)` — индемпотентный поворот корня:
+  `qYaw * qUpright`, где `qUpright` = FromToRotation(spine→+Y), `qYaw` =
+  FromToRotation(проекция «лица»→+Z). «Лицо» = `Cross(проекция оси плеч, spine)`
+  (для симметричной пары `FindSymmetryPair`, фоллбэк +X). Вызывается в
+  `BuildProductionPrefab` сразу после `CreateSkeleton` (до BuildMesh — bindPose корректен).
+- `ResolveFacelessHeightScale(role, smr)` — единый скейл корня `localScale =
+  targetHeight / smr.bounds.size.y`, чтобы prefab-высота совпала с Human (target:
+  1.03 Melee/Ranged/Caster/Hero1/Titan, 1.02 Siege/Flying/Hero2/Hero3, 0.37 Super —
+  Human Super это маленький механизм 0.37×0.37×2.5). Human имеет ролевые факторы уже
+  в меше, Faceless — нормируются тут. Clamp [0.2, 5].
+
+Измерено после пересборки (инстанс префаба, bindpose): у всех префабов
+`rootRotation.Euler` = (≈0, 270, ≈0), спина |pelvis→head| pitch ≤ 13° (было: Titan 68°),
+«лицо» (Cross оси плеч) в мире = +Z (az 000°). Высоты prefab 1.02–1.03 (Super 0.41
+из-за clamp).
+
+Контроллеры, клипы и материалы не менялись; инстанс-скейл в бою прежний
+(`instance.localScale = prefab.localScale * presenterScale`). Rebuild:
+`BARAKI/Faceless/Rebuild Unit Prefabs` (`RebuildProductionPrefabs`). Консоль чистая;
+тесты — 1263 passed (`Game.Tests`, EditMode).
+
+Play-скриншот review-раскладки: `Assets/Screenshots/screenshot-20260907-030915.png`
+(в `FacelessReview` **нет Animator** — это статичная раскладка мешей, runtime-прогон
+боевых анимаций там не применим; верификация по данным выше).

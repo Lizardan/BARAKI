@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Data;
 using UnityEngine;
 
@@ -109,9 +110,36 @@ namespace Game.Gameplay.Combat
         /// Authored Attack clip length for this unit. Used as
         /// <c>Animator.speed = clipLength / attackInterval</c> so mid-clip impact stays mid-clip
         /// when attack speed (and Haste Aura) change.
+        /// Faceless cannot reuse TT_RTS lengths: their Attack clips were baked from MDX v800
+        /// sequences and differ per role (measured in Editor from Production/Anim).
         /// </summary>
-        public static float ResolveAttackClipSeconds(UnitRole role, int heroSlot = 0, int bonusSlot = 0)
+        public static float ResolveAttackClipSeconds(
+            UnitRole role,
+            int heroSlot = 0,
+            int bonusSlot = 0,
+            string raceId = null)
         {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return role switch
+                {
+                    UnitRole.Melee => 0.99f,
+                    UnitRole.Ranged => 1.49f,
+                    UnitRole.Caster => 1.06f,
+                    UnitRole.Siege => 0.96f,
+                    UnitRole.Flying => 0.99f,
+                    UnitRole.Super => 0.99f,
+                    UnitRole.Hero => heroSlot switch
+                    {
+                        1 => 0.96f,
+                        2 => 1.06f,
+                        _ => 1.16f,
+                    },
+                    UnitRole.Titan => 1.32f,
+                    _ => CavalryOrMachineAttackClipSeconds,
+                };
+            }
+
             if (role == UnitRole.Hero && heroSlot == HeroAbilityRules.KingSlot)
             {
                 return InfantryAttackClipSeconds;
