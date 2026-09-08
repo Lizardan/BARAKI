@@ -54,15 +54,15 @@ namespace Game.Gameplay.Vfx
 
             AbilityIds.KingsCommand =>
                 new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.KingSlot,
-                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.KingSlot), "Король-ветеран"),
+                    BonusKitRules.BonusSlotForHeroSlot(HeroAbilityRules.KingSlot), "Король-ветеран"),
             AbilityIds.Aegis =>
                 new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.PaladinSlot,
-                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.PaladinSlot), "Паладин-ветеран"),
+                    BonusKitRules.BonusSlotForHeroSlot(HeroAbilityRules.PaladinSlot), "Паладин-ветеран"),
             AbilityIds.Sanctuary =>
                 new AbilityFxPreviewCaster(UnitRole.Hero, HeroAbilityRules.PriestSlot,
-                    HumanBonusUnitRules.BonusSlotForHeroSlot(HeroAbilityRules.PriestSlot), "Жрец-ветеран"),
+                    BonusKitRules.BonusSlotForHeroSlot(HeroAbilityRules.PriestSlot), "Жрец-ветеран"),
             AbilityIds.GreaterColossus =>
-                new AbilityFxPreviewCaster(UnitRole.Titan, 0, HumanBonusUnitRules.TitanBonusSlot, "Титан-ветеран"),
+                new AbilityFxPreviewCaster(UnitRole.Titan, 0, BonusKitRules.TitanBonusSlot, "Титан-ветеран"),
 
             AbilityIds.CasterHeal or AbilityIds.Frost or AbilityIds.Resurrect =>
                 new AbilityFxPreviewCaster(UnitRole.Caster, 0, 0, "Кастер"),
@@ -84,6 +84,6 @@ namespace Game.Gameplay.Vfx
             new(UnitRole.Hero, heroSlot, 0, displayName);
 
         static AbilityFxPreviewCaster Bonus(UnitRole role, string displayName) =>
-            new(role, 0, HumanBonusUnitRules.BonusSlotForRole(role), displayName);
+            new(role, 0, BonusKitRules.BonusSlotForRole(role), displayName);
     }
 }

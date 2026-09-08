@@ -749,14 +749,8 @@ namespace Game.Gameplay.Match
             root.SetParent(_root, false);
             Transform model = null;
             Animator animator = null;
-            if (_visualCatalog != null
-                && _visualCatalog.TryGetPrefab(
-                    raceId,
-                    unit.Role,
-                    unit.HeroSlot,
-                    unit.BonusSlot,
-                    out var prefab)
-                && prefab != null)
+            var prefab = ResolveModelPrefab(raceId, unit);
+            if (prefab != null)
             {
                 var instance = Instantiate(prefab, root);
                 instance.name = prefab.name;
@@ -779,12 +773,20 @@ namespace Game.Gameplay.Match
             }
 
             // Measure mesh height from the model only — ignore VFX under root (titan aura, etc.).
-            var barHeight = ComputeVisualHeight(root, model) + _statusBarClearance;
+            var visualHeight = ComputeVisualHeight(root, model);
+            var barHeight = visualHeight + _statusBarClearance;
             var statusBars = UnitWorldStatusBars.Create(root, barHeight, unit.Stats.HasMana);
 
             if (unit.Role == UnitRole.Titan)
             {
                 AttachTitanBodyRays(root);
+            }
+
+            // Faceless has no dedicated bonus models yet — keep the regular model and mark the
+            // enhanced (bonus / veteran hero) variant with a small blue flame above the head.
+            if (unit.BonusSlot > 0 && raceId == GameIds.Races.Faceless)
+            {
+                AttachBonusFlame(root, visualHeight);
             }
 
             statusBars.SetHealth(1f);
@@ -1599,6 +1601,55 @@ namespace Game.Gameplay.Match
             }
 
             return body.transform;
+        }
+
+        void AttachBonusFlame(Transform host, float visualHeight)
+        {
+            if (host == null)
+            {
+                return;
+            }
+
+            // The Faceless bonus / veteran prefab now bakes a BonusFlameMarker above the head
+            // (see FacelessBonusPrefabBuilder). Don't stack a second runtime flame on top of it.
+            if (host.GetComponentInChildren<BonusFlameMarker>() != null)
+            {
+                return;
+            }
+
+            var flame = new GameObject("BonusFlame");
+            flame.transform.SetParent(host, false);
+            flame.transform.localPosition = new Vector3(0f, visualHeight + 0.15f, 0f);
+            flame.AddComponent<BonusFlameMarker>();
+        }
+
+        /// <summary>
+        /// Resolves the prefab to instantiate for a unit. Tries the enhanced (bonus / veteran)
+        /// variant first, then falls back to the base model for the race+role. The red fallback
+        /// capsule is only used when no base model exists at all — so a race whose bonus model is
+        /// not authored yet (e.g. Faceless) still renders its normal unit instead of a capsule,
+        /// and is then marked with the blue flame by the caller.
+        /// </summary>
+        GameObject ResolveModelPrefab(string raceId, MatchUnitState unit)
+        {
+            if (_visualCatalog == null)
+            {
+                return null;
+            }
+
+            if (_visualCatalog.TryGetPrefab(raceId, unit.Role, unit.HeroSlot, unit.BonusSlot, out var bonusPrefab)
+                && bonusPrefab != null)
+            {
+                return bonusPrefab;
+            }
+
+            if (_visualCatalog.TryGetPrefab(raceId, unit.Role, unit.HeroSlot, 0, out var basePrefab)
+                && basePrefab != null)
+            {
+                return basePrefab;
+            }
+
+            return null;
         }
 
         void AttachTitanBodyRays(Transform host)

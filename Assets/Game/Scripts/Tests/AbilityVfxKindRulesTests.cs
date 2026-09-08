@@ -14,6 +14,7 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxKind.Aura, AbilityVfxKindRules.Resolve(AbilityIds.AuraArmorPercent));
             Assert.AreEqual(AbilityVfxKind.Aura, AbilityVfxKindRules.Resolve(AbilityIds.AuraMaxHpPercent));
             Assert.AreEqual(AbilityVfxKind.Aura, AbilityVfxKindRules.Resolve(AbilityIds.AuraHpRegen));
+            Assert.AreEqual(AbilityVfxKind.Aura, AbilityVfxKindRules.Resolve(AbilityIds.AuraOfHunger));
         }
 
         [Test]
@@ -23,6 +24,9 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.MeleeCleave));
             Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.Smite));
             Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.SuperCatapult));
+            Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.BlightingGaze));
+            Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.VoidDrain));
+            Assert.AreEqual(AbilityVfxKind.Hit, AbilityVfxKindRules.Resolve(AbilityIds.AncientMantle));
         }
 
         [Test]
@@ -33,6 +37,9 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.FlyingSpawn));
             Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.MainBuildingSmite));
             Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.MainUnitSmite));
+            Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.RaiseDrowned));
+            Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.AreaOfMiss));
+            Assert.AreEqual(AbilityVfxKind.Cast, AbilityVfxKindRules.Resolve(AbilityIds.FeastZone));
         }
 
         [Test]
@@ -41,6 +48,10 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.AuraDamagePercent));
             Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.Strike));
             Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.Slam));
+            Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.RaiseDrowned));
+            Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.AncientMantle));
+            Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.FeastZone));
+            Assert.AreEqual(AbilityVfxAnchor.Caster, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.AuraOfHunger));
         }
 
         [Test]
@@ -50,6 +61,7 @@ namespace Game.Tests
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.CasterHeal));
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.RangedCrit));
             Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.MainUnitSmite));
+            Assert.AreEqual(AbilityVfxAnchor.Target, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.BlightingGaze));
             Assert.AreEqual(
                 AbilityVfxAnchor.Target,
                 AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.MainBuildingSmite));
@@ -60,6 +72,8 @@ namespace Game.Tests
         {
             Assert.AreEqual(AbilityVfxAnchor.Ground, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.Frost));
             Assert.AreEqual(AbilityVfxAnchor.Ground, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.Consecration));
+            Assert.AreEqual(AbilityVfxAnchor.Ground, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.VoidDrain));
+            Assert.AreEqual(AbilityVfxAnchor.Ground, AbilityVfxKindRules.ResolveDefaultAnchor(AbilityIds.AreaOfMiss));
         }
 
         [Test]
@@ -78,6 +92,18 @@ namespace Game.Tests
             Assert.AreEqual(
                 AbilityVfxAnchor.Ground,
                 AbilityVfxKindRules.ResolveAnchor(AbilityIds.Smite, AbilityVfxAnchor.Ground));
+        }
+
+        [Test]
+        public void KitLabel_Faceless_MatchesOwner()
+        {
+            Assert.AreEqual("Faceless Caster", AbilityVfxKindRules.KitLabel(AbilityIds.BlightingGaze));
+            Assert.AreEqual("Faceless Caster", AbilityVfxKindRules.KitLabel(AbilityIds.VoidDrain));
+            Assert.AreEqual("Faceless Caster", AbilityVfxKindRules.KitLabel(AbilityIds.RaiseDrowned));
+            Assert.AreEqual("Faceless King", AbilityVfxKindRules.KitLabel(AbilityIds.AncientMantle));
+            Assert.AreEqual("Faceless Warlock", AbilityVfxKindRules.KitLabel(AbilityIds.AreaOfMiss));
+            Assert.AreEqual("Faceless Berserker", AbilityVfxKindRules.KitLabel(AbilityIds.FeastZone));
+            Assert.AreEqual("Faceless Titan", AbilityVfxKindRules.KitLabel(AbilityIds.AuraOfHunger));
         }
     }
 }

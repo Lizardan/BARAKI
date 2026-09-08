@@ -1057,17 +1057,17 @@ namespace Game.UI.Controllers
             var player = FindLocalPlayer(_matchRuntime?.Controller);
             var raceId = player != null ? player.RaceId : GameIds.Races.Human;
             var bonusSlot = player != null
-                ? HumanBonusUnitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role)
+                ? BonusKitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role)
                 : 0;
             if (bonusSlot == 0 && player != null)
             {
                 if (role == UnitRole.Hero && heroSlot >= 1)
                 {
-                    bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot);
+                    bonusSlot = BonusKitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot);
                 }
                 else if (role == UnitRole.Titan)
                 {
-                    bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot);
+                    bonusSlot = BonusKitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot);
                 }
             }
 

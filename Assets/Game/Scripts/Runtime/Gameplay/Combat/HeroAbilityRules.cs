@@ -334,5 +334,10 @@ namespace Game.Gameplay.Combat
         public float HealPerSecond;
         /// <summary>Non-zero: the zone follows this living unit's position each tick (Sanctuary).</summary>
         public int FollowUnitId;
+        /// <summary>
+        /// When &gt; 0, allies inside heal this fraction of the damage they personally deal
+        /// (Feast Zone, FACELESS-012). Overrides the flat <see cref="HealPerSecond"/> tick healing.
+        /// </summary>
+        public float HealFractionOfDamageDealt;
     }
 }

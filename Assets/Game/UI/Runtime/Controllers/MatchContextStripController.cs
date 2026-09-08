@@ -282,7 +282,7 @@ namespace Game.UI.Controllers
             Texture2D portrait = null;
             if (_visualCatalog != null)
             {
-                if (HumanBonusUnitRules.MatchesUnit(unit.BonusSlot, unit.Role, unit.HeroSlot))
+                if (BonusKitRules.MatchesUnit(unit.BonusSlot, unit.Role, unit.HeroSlot))
                 {
                     _visualCatalog.TryGetBonusPortrait(raceId, unit.BonusSlot, out portrait);
                 }

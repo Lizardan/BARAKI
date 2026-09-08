@@ -329,7 +329,7 @@ namespace Game.Gameplay.Combat
                 4,
                 HealArea(),
                 fx: new AbilityFx { Color = AbilityFxColors.Heal },
-                heal: HeroAbilityRules.HealAmount * HumanBonusUnitRules.VeteranDamageMultiplier,
+                heal: HeroAbilityRules.HealAmount * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.HealRadius,
                 cooldownSeconds: HeroAbilityRules.HealCooldownSeconds),
             Active(
@@ -350,7 +350,7 @@ namespace Game.Gameplay.Combat
                 1,
                 GroundAoe(),
                 fx: new AbilityFx { Color = AbilityFxColors.Strike },
-                damage: HeroAbilityRules.StrikeDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.StrikeDamage * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.StrikeRadius,
                 cooldownSeconds: HeroAbilityRules.StrikeCooldownSeconds),
             Passive(
@@ -385,7 +385,7 @@ namespace Game.Gameplay.Combat
                 10,
                 GroundAoe(),
                 fx: new AbilityFx { Color = AbilityFxColors.Paladin },
-                damage: HeroAbilityRules.ConsecrationDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.ConsecrationDamage * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.ConsecrationRadius,
                 cooldownSeconds: HeroAbilityRules.ConsecrationCooldownSeconds,
                 stunSeconds: HeroAbilityRules.ConsecrationStunSeconds),
@@ -396,7 +396,7 @@ namespace Game.Gameplay.Combat
                 1,
                 DamageBurst(),
                 fx: new AbilityFx { Color = AbilityFxColors.Paladin },
-                damage: HeroAbilityRules.SmiteDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.SmiteDamage * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.SmiteRadius,
                 cooldownSeconds: HeroAbilityRules.SmiteCooldownSeconds),
             Passive(
@@ -420,7 +420,7 @@ namespace Game.Gameplay.Combat
                 4,
                 SanctuaryZone(),
                 fx: new AbilityFx { Color = AbilityFxColors.Priest },
-                healPerSecond: HeroAbilityRules.GreaterHealHealPerSecond * HumanBonusUnitRules.VeteranDamageMultiplier,
+                healPerSecond: HeroAbilityRules.GreaterHealHealPerSecond * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.GreaterHealRadius,
                 cooldownSeconds: HeroAbilityRules.GreaterHealCooldownSeconds,
                 durationSeconds: HeroAbilityRules.GreaterHealDurationSeconds),
@@ -431,11 +431,11 @@ namespace Game.Gameplay.Combat
                 10,
                 Revive(),
                 fx: new AbilityFx { Color = AbilityFxColors.Priest },
-                heal: HeroAbilityRules.ReviveHealAmount * HumanBonusUnitRules.VeteranDamageMultiplier,
+                heal: HeroAbilityRules.ReviveHealAmount * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.ReviveRadius,
                 cooldownSeconds: HeroAbilityRules.ReviveCooldownSeconds,
                 secondaryRadius: HeroAbilityRules.ReviveHealRadius,
-                secondaryHeal: HeroAbilityRules.ReviveHealAmount * HumanBonusUnitRules.VeteranDamageMultiplier),
+                secondaryHeal: HeroAbilityRules.ReviveHealAmount * BonusKitRules.VeteranDamageMultiplier),
             Active(
                 AbilityIds.HolyNova,
                 "Holy Nova",
@@ -443,8 +443,8 @@ namespace Game.Gameplay.Combat
                 1,
                 Nova(),
                 fx: new AbilityFx { Color = AbilityFxColors.Priest },
-                damage: HeroAbilityRules.NovaDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
-                heal: HeroAbilityRules.NovaHealAmount * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.NovaDamage * BonusKitRules.VeteranDamageMultiplier,
+                heal: HeroAbilityRules.NovaHealAmount * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.NovaRadius,
                 castRange: HeroAbilityRules.NovaCastRange,
                 cooldownSeconds: HeroAbilityRules.NovaCooldownSeconds),
@@ -480,7 +480,7 @@ namespace Game.Gameplay.Combat
                 10,
                 GroundAoe(),
                 fx: new AbilityFx { Color = AbilityFxColors.Paladin },
-                damage: HeroAbilityRules.StompDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.StompDamage * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.StompRadius,
                 cooldownSeconds: HeroAbilityRules.StompCooldownSeconds,
                 stunSeconds: HeroAbilityRules.StompStunSeconds),
@@ -491,7 +491,7 @@ namespace Game.Gameplay.Combat
                 1,
                 GroundAoe(),
                 fx: new AbilityFx { Color = AbilityFxColors.Strike },
-                damage: HeroAbilityRules.SlamDamage * HumanBonusUnitRules.VeteranDamageMultiplier,
+                damage: HeroAbilityRules.SlamDamage * BonusKitRules.VeteranDamageMultiplier,
                 radius: HeroAbilityRules.SlamRadius,
                 cooldownSeconds: HeroAbilityRules.SlamCooldownSeconds),
             Passive(
@@ -515,6 +515,211 @@ namespace Game.Gameplay.Combat
             _ => System.Array.Empty<UnitAbilityDef>(),
         };
 
+        /// <summary>Veteran kit for a champion bonus slot (7–9 hero, 10 titan). Race-aware. Empty otherwise.</summary>
+        public static UnitAbilityDef[] CreateVeteranKit(string raceId, int bonusSlot)
+        {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return bonusSlot switch
+                {
+                    7 => CreateAncientMantle(),
+                    8 => CreateAreaOfMiss(),
+                    9 => CreateFeastZone(),
+                    10 => CreateAuraOfHunger(),
+                    _ => System.Array.Empty<UnitAbilityDef>(),
+                };
+            }
+
+            return CreateVeteranKit(bonusSlot);
+        }
+
+        // --- FACELESS-012: champion veteran kits (bonus slots 7–10) ---
+        // Same kit as the base hero/titan with ~×1.35 ability numbers, a +15% morale aura
+        // (the base hero aura is 10%) and one signature ability replacing its base counterpart.
+
+        /// <summary>Faceless King veteran (bonus slot 7): Ultimate → Ancient Mantle (self +50% dmg, AoE +30%).</summary>
+        public static UnitAbilityDef[] CreateAncientMantle() => new[]
+        {
+            Active(
+                AbilityIds.Heal,
+                "Group Heal",
+                "Лечение героя и союзников вокруг.",
+                4,
+                HealArea(),
+                fx: new AbilityFx { Color = AbilityFxColors.Heal },
+                heal: HeroAbilityRules.HealAmount,
+                radius: HeroAbilityRules.HealRadius,
+                cooldownSeconds: HeroAbilityRules.HealCooldownSeconds),
+            Active(
+                AbilityIds.AncientMantle,
+                "Ancient Mantle",
+                "Древняя мантия: герой усиливает себя (+50% урона на 8 с) и бьёт вокруг, нанося +30% урона.",
+                10,
+                GroundAoe(applyUltimateSelfBuff: true),
+                fx: new AbilityFx { Color = AbilityFxColors.Ultimate },
+                damage: HeroAbilityRules.UltimateDamage * FacelessBonusUnitRules.AncientMantleAoeDamageMultiplier,
+                radius: HeroAbilityRules.UltimateRadius,
+                cooldownSeconds: HeroAbilityRules.UltimateCooldownSeconds,
+                durationSeconds: FacelessBonusUnitRules.AncientMantleSelfBuffSeconds,
+                percent: FacelessBonusUnitRules.AncientMantleSelfDamageBonusPercent),
+            Active(
+                AbilityIds.Strike,
+                "Strike",
+                "Урон по всем врагам вокруг героя.",
+                1,
+                GroundAoe(),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike },
+                damage: HeroAbilityRules.StrikeDamage * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.StrikeRadius,
+                cooldownSeconds: HeroAbilityRules.StrikeCooldownSeconds),
+            Passive(
+                AbilityIds.AuraDamagePercent,
+                "Attack Aura",
+                "Пока герой жив, армия владельца рядом с ним наносит больше урона.",
+                7,
+                Aura(AuraStat.Damage),
+                percent: FacelessBonusUnitRules.VeteranMoraleAuraPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: new AbilityFx { Color = AbilityFxColors.AuraDamage }),
+        };
+
+        /// <summary>Faceless Warlock veteran (bonus slot 8): Shield → Area of Miss (enemies miss).</summary>
+        public static UnitAbilityDef[] CreateAreaOfMiss() => new[]
+        {
+            Active(
+                AbilityIds.AreaOfMiss,
+                "Area of Miss",
+                "Сфера небытия: враги в радиусе 5 на 4 с промахиваются (атаки не наносят урона).",
+                4,
+                AreaOfMiss(),
+                fx: new AbilityFx { Color = AbilityFxColors.Blight },
+                radius: FacelessBonusUnitRules.AreaOfMissRadius,
+                cooldownSeconds: HeroAbilityRules.ShieldCooldownSeconds,
+                durationSeconds: FacelessBonusUnitRules.AreaOfMissSeconds),
+            Active(
+                AbilityIds.Consecration,
+                "Consecration",
+                "Освящение: урон и краткое оглушение врагов вокруг.",
+                10,
+                GroundAoe(),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
+                damage: HeroAbilityRules.ConsecrationDamage * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.ConsecrationRadius,
+                cooldownSeconds: HeroAbilityRules.ConsecrationCooldownSeconds,
+                stunSeconds: HeroAbilityRules.ConsecrationStunSeconds),
+            Active(
+                AbilityIds.Smite,
+                "Smite",
+                "Кара: высокий урон по ближайшему врагу.",
+                1,
+                DamageBurst(),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
+                damage: HeroAbilityRules.SmiteDamage * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.SmiteRadius,
+                cooldownSeconds: HeroAbilityRules.SmiteCooldownSeconds),
+            Passive(
+                AbilityIds.AuraAttackSpeedPercent,
+                "Haste Aura",
+                "Пока герой жив, армия владельца рядом с ним атакует быстрее.",
+                7,
+                Aura(AuraStat.AttackSpeed),
+                percent: FacelessBonusUnitRules.VeteranMoraleAuraPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: new AbilityFx { Color = AbilityFxColors.AuraAttackSpeed }),
+        };
+
+        /// <summary>Faceless Berserker veteran (bonus slot 9): Greater Heal → Feast Zone (follow-heal on damage).</summary>
+        public static UnitAbilityDef[] CreateFeastZone() => new[]
+        {
+            Active(
+                AbilityIds.FeastZone,
+                "Feast Zone",
+                "Зона пира: следует за берсерком, союзники внутри лечатся на 30% от нанесённого ими урона.",
+                4,
+                FeastZone(),
+                fx: new AbilityFx { Color = AbilityFxColors.Blight },
+                radius: FacelessBonusUnitRules.FeastZoneRadius,
+                cooldownSeconds: HeroAbilityRules.GreaterHealCooldownSeconds,
+                durationSeconds: FacelessBonusUnitRules.FeastZoneSeconds),
+            Active(
+                AbilityIds.Revive,
+                "Revive",
+                "Возрождает ближайший союзный труп и лечит союзников вокруг.",
+                10,
+                Revive(),
+                fx: new AbilityFx { Color = AbilityFxColors.Priest },
+                heal: HeroAbilityRules.ReviveHealAmount * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.ReviveRadius,
+                cooldownSeconds: HeroAbilityRules.ReviveCooldownSeconds,
+                secondaryRadius: HeroAbilityRules.ReviveHealRadius,
+                secondaryHeal: HeroAbilityRules.ReviveHealAmount * BonusKitRules.VeteranDamageMultiplier),
+            Active(
+                AbilityIds.HolyNova,
+                "Holy Nova",
+                "Вспышка вокруг выбранного союзника: лечит своих и бьёт врагов рядом с ним.",
+                1,
+                Nova(),
+                fx: new AbilityFx { Color = AbilityFxColors.Priest },
+                damage: HeroAbilityRules.NovaDamage * BonusKitRules.VeteranDamageMultiplier,
+                heal: HeroAbilityRules.NovaHealAmount * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.NovaRadius,
+                castRange: HeroAbilityRules.NovaCastRange,
+                cooldownSeconds: HeroAbilityRules.NovaCooldownSeconds),
+            Passive(
+                AbilityIds.AuraArmorPercent,
+                "Iron Aura",
+                "Пока герой жив, армия владельца рядом с ним получает больше брони.",
+                7,
+                Aura(AuraStat.Armor),
+                percent: FacelessBonusUnitRules.VeteranMoraleAuraPercent,
+                radius: HeroAbilityRules.AuraRadius,
+                fx: new AbilityFx { Color = AbilityFxColors.AuraArmor }),
+        };
+
+        /// <summary>Faceless Titan veteran (bonus slot 10): Colossus → Aura of Hunger (army lifesteal).</summary>
+        public static UnitAbilityDef[] CreateAuraOfHunger() => new[]
+        {
+            Active(
+                AbilityIds.Rally,
+                "Rally",
+                "Клич: герой и союзники рядом получают броню.",
+                4,
+                ArmorShout(),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
+                radius: HeroAbilityRules.RallyRadius,
+                cooldownSeconds: HeroAbilityRules.RallyCooldownSeconds,
+                durationSeconds: HeroAbilityRules.RallyDurationSeconds,
+                flatBonus: HeroAbilityRules.RallyArmorBonus),
+            Active(
+                AbilityIds.Stomp,
+                "Stomp",
+                "Топот: урон и оглушение врагов вокруг.",
+                10,
+                GroundAoe(),
+                fx: new AbilityFx { Color = AbilityFxColors.Paladin },
+                damage: HeroAbilityRules.StompDamage * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.StompRadius,
+                cooldownSeconds: HeroAbilityRules.StompCooldownSeconds,
+                stunSeconds: HeroAbilityRules.StompStunSeconds),
+            Active(
+                AbilityIds.Slam,
+                "Slam",
+                "Мощный удар по всем врагам вокруг.",
+                1,
+                GroundAoe(),
+                fx: new AbilityFx { Color = AbilityFxColors.Strike },
+                damage: HeroAbilityRules.SlamDamage * BonusKitRules.VeteranDamageMultiplier,
+                radius: HeroAbilityRules.SlamRadius,
+                cooldownSeconds: HeroAbilityRules.SlamCooldownSeconds),
+            Passive(
+                AbilityIds.AuraOfHunger,
+                "Aura of Hunger",
+                "Пока титан жив, вся армия владельца лечится на 15% от нанесённого урона.",
+                7,
+                AuraOfHunger(),
+                fx: new AbilityFx { Color = AbilityFxColors.Blight }),
+        };
+
         /// <summary>Bonus-unit kit for a role (slots 1–6). Empty for non-bonus roles.</summary>
         public static UnitAbilityDef[] CreateBonus(UnitRole role) => role switch
         {
@@ -530,9 +735,9 @@ namespace Game.Gameplay.Combat
         /// <summary>Prefab / spawn kit: bonus slot wins over base role kit.</summary>
         public static UnitAbilityDef[] CreateForSpawn(UnitRole role, int heroSlot, int bonusSlot)
         {
-            if (HumanBonusUnitRules.MatchesUnit(bonusSlot, role, heroSlot))
+            if (BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot))
             {
-                if (HumanBonusUnitRules.IsChampionBonusSlot(bonusSlot))
+                if (BonusKitRules.IsChampionBonusSlot(bonusSlot))
                 {
                     return CreateVeteranKit(bonusSlot);
                 }
@@ -555,8 +760,16 @@ namespace Game.Gameplay.Combat
         {
             if (raceId == GameIds.Races.Faceless)
             {
-                // FACELESS-016: the caster kit is authored. Other roles stay gated — the bonus/veteran
-                // kits are separate cards (FACELESS-011, FACELESS-012).
+                // FACELESS-012: a champion veteran (slots 7–10) gets its Faceless-flavoured kit when
+                // the pick matches this hero/titan slot.
+                if (BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot)
+                    && BonusKitRules.IsChampionBonusSlot(bonusSlot))
+                {
+                    return CreateVeteranKit(raceId, bonusSlot);
+                }
+
+                // FACELESS-016: the caster kit is authored. Other roles stay gated — the unit
+                // (1–6) and base hero/veteran (non-bonus) kits are separate cards.
                 if (role == UnitRole.Caster)
                 {
                     return CreateFacelessCaster();
@@ -745,6 +958,12 @@ namespace Game.Gameplay.Combat
         static VoidDrainBehaviour VoidDrain() => ScriptableObject.CreateInstance<VoidDrainBehaviour>();
 
         static RaiseDrownedBehaviour RaiseDrowned() => ScriptableObject.CreateInstance<RaiseDrownedBehaviour>();
+
+        static AreaOfMissBehaviour AreaOfMiss() => ScriptableObject.CreateInstance<AreaOfMissBehaviour>();
+
+        static FeastZoneBehaviour FeastZone() => ScriptableObject.CreateInstance<FeastZoneBehaviour>();
+
+        static AuraOfHungerBehaviour AuraOfHunger() => ScriptableObject.CreateInstance<AuraOfHungerBehaviour>();
 
         static DamageBurstBehaviour DamageBurst()
         {

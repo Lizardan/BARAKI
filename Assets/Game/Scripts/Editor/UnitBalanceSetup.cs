@@ -154,7 +154,7 @@ namespace Game.Editor
 
             for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
             {
-                var role = HumanBonusUnitRules.RoleForBonusSlot(bonusSlot);
+                var role = BonusKitRules.RoleForBonusSlot(bonusSlot);
                 var definition = race.GetUnitBonus(role);
                 if (definition == null)
                 {
@@ -219,12 +219,12 @@ namespace Game.Editor
             }
 
             // Veteran champions (bonus slots 7–10, PRE-006b).
-            for (var bonusSlot = HumanBonusUnitRules.Hero1BonusSlot;
-                 bonusSlot <= HumanBonusUnitRules.TitanBonusSlot;
+            for (var bonusSlot = BonusKitRules.Hero1BonusSlot;
+                 bonusSlot <= BonusKitRules.TitanBonusSlot;
                  bonusSlot++)
             {
-                var isTitan = HumanBonusUnitRules.IsTitanBonusSlot(bonusSlot);
-                var heroSlot = isTitan ? 1 : HumanBonusUnitRules.HeroSlotForBonusSlot(bonusSlot);
+                var isTitan = BonusKitRules.IsTitanBonusSlot(bonusSlot);
+                var heroSlot = isTitan ? 1 : BonusKitRules.HeroSlotForBonusSlot(bonusSlot);
                 var baseHero = race.GetHeroBySlot(heroSlot);
                 if (baseHero == null)
                 {
@@ -233,7 +233,7 @@ namespace Game.Editor
                 }
 
                 float? rangeOverride = isTitan ? TitanRules.AttackRange : null;
-                var hpMultiplier = (isTitan ? TitanRules.BaseStatMultiplier : 1f) * HumanBonusUnitRules.VeteranHpMultiplier;
+                var hpMultiplier = (isTitan ? TitanRules.BaseStatMultiplier : 1f) * BonusKitRules.VeteranHpMultiplier;
                 if (!TrySyncPrefab(
                         visualCatalog,
                         raceId,
@@ -242,8 +242,8 @@ namespace Game.Editor
                         settings => settings.CopyFromVeteran(
                             baseHero,
                             hpMultiplier,
-                            HumanBonusUnitRules.VeteranDamageMultiplier,
-                            HumanBonusUnitRules.VeteranArmorBonus,
+                            BonusKitRules.VeteranDamageMultiplier,
+                            BonusKitRules.VeteranArmorBonus,
                             rangeOverride),
                         out var veteranPath,
                         bonusSlot))

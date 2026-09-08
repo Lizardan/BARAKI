@@ -26,6 +26,8 @@ namespace Game.Gameplay.Match
         private int[] _bonusPicks = Array.Empty<int>();
         private float _bonusPickDeadlineSeconds;
         private readonly Random _bonusRandom = new();
+        /// <summary>Per-slot race ids captured at match start (timeout picks must respect race kits).</summary>
+        private IReadOnlyList<string> _raceIds = Array.Empty<string>();
         private readonly List<ActiveBuildingWave> _buildingWaves = new();
 
         /// <summary>Host-only transient: one expanding Wave of Light cast (MAIN-001).</summary>
@@ -119,6 +121,7 @@ namespace Game.Gameplay.Match
 
             _bonusPicks = new int[config.PlayerCount];
             _bonusPickDeadlineSeconds = BonusPickRules.OverlayDurationSeconds;
+            _raceIds = config.RaceIds;
 
             _waveScheduler.WaveFired -= OnWaveFired;
             _combat.UnitKilled -= OnUnitKilled;
@@ -229,6 +232,15 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
+            // Authoritative guard: a race may only pick slots that actually have mechanics
+            // (Faceless currently ships 1–6; 7–12 are greyed out until FACELESS-012/013).
+            if (playerSlot >= 0
+                && playerSlot < _players.Count
+                && !BonusPickRules.IsSlotAvailable(bonusSlot, _players[playerSlot].RaceId))
+            {
+                return false;
+            }
+
             if (!BonusPickNetworkRules.TryApplyPick(_bonusPicks, playerSlot, bonusSlot))
             {
                 return false;
@@ -237,7 +249,7 @@ namespace Game.Gameplay.Match
             if (playerSlot >= 0 && playerSlot < _players.Count)
             {
                 _players[playerSlot].BonusPickSlot = bonusSlot;
-                if (bonusSlot == HumanBonusUnitRules.RaceUnique2Slot)
+                if (bonusSlot == BonusKitRules.RaceUnique2Slot)
                 {
                     // Stone Masonry: retroactively scale every standing building of this owner.
                     SyncAllBuildingMaxHpFromLevels();
@@ -888,7 +900,7 @@ namespace Game.Gameplay.Match
                 isHero: true,
                 heroSlot: heroSlot,
                 level: slotState.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
+                bonusSlot: BonusKitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
 
             player.Gold -= HeroRules.DeployGold;
             slotState.State = HeroLifecycleState.Deployed;
@@ -943,7 +955,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Titan,
                 stats,
                 level: titan.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
+                bonusSlot: BonusKitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
 
             player.Gold -= TitanRules.DeployGold;
             titan.State = TitanLifecycleState.Deployed;
@@ -1034,7 +1046,11 @@ namespace Game.Gameplay.Match
             }
 
             player.Gold = remaining;
-            var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(player.RaceId, player.BonusPickSlot, role);
+            // Flow the player's bonus pick the same way the auto-wave spawn does, so the enhanced
+            // variant (and the Faceless blue-flame placeholder) appears consistently via both the
+            // barracks button and waves. Bonus *stats* stay gated per-race in the stats resolver,
+            // so Faceless still receives base stats with the flame marker — never a red capsule.
+            var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role);
             var stats = ResolveUnitStats(player, role, bonusSlot);
             // Same forward clearance band as auto-wave creeps (not barracks center / inside mesh).
             var spawnDistance = CombatFormationRules.BarracksSpawnForwardClearance;
@@ -1779,7 +1795,7 @@ namespace Game.Gameplay.Match
             _bonusPickDeadlineSeconds = Math.Max(0f, _bonusPickDeadlineSeconds - deltaTime);
             if (_bonusPickDeadlineSeconds <= 0f)
             {
-                BonusPickNetworkRules.FillTimeoutPicks(_bonusPicks, _bonusRandom);
+                BonusPickNetworkRules.FillTimeoutPicks(_bonusPicks, _bonusRandom, _raceIds);
             }
         }
 
@@ -1870,7 +1886,7 @@ namespace Game.Gameplay.Match
             if (building.OwnerSlot >= 0
                 && building.OwnerSlot < _players.Count
                 && _players[building.OwnerSlot].BonusPickSlot
-                    == HumanBonusUnitRules.RaceUnique2Slot)
+                    == BonusKitRules.RaceUnique2Slot)
             {
                 maxHp *= HumanBonusUnitRules.StoneMasonryHpMultiplier;
             }
@@ -2116,7 +2132,7 @@ namespace Game.Gameplay.Match
                 isHero: true,
                 heroSlot: heroSlot,
                 level: roster.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
+                bonusSlot: BonusKitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -2174,7 +2190,7 @@ namespace Game.Gameplay.Match
                 UnitRole.Titan,
                 stats,
                 level: titan.Level,
-                bonusSlot: HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
+                bonusSlot: BonusKitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot));
             unit.WorldPosition = park;
             unit.IsParkedAtBase = true;
             unit.BehaviorState = UnitBehaviorState.Move;
@@ -2206,7 +2222,7 @@ namespace Game.Gameplay.Match
         UnitCombatStats ResolveHeroStats(MatchPlayerState player, int heroSlot, int level = HeroLevelRules.StartingLevel)
         {
             var bonusSlot = player != null
-                ? HumanBonusUnitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot)
+                ? BonusKitRules.EffectiveBonusSlotForHero(player.RaceId, player.BonusPickSlot, heroSlot)
                 : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,
@@ -2222,7 +2238,7 @@ namespace Game.Gameplay.Match
         UnitCombatStats ResolveTitanStats(MatchPlayerState player, int level = HeroLevelRules.StartingLevel)
         {
             var bonusSlot = player != null
-                ? HumanBonusUnitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot)
+                ? BonusKitRules.EffectiveBonusSlotForTitan(player.RaceId, player.BonusPickSlot)
                 : 0;
             var stats = UnitStatsResolver.ResolveBase(
                 CombatCatalog,

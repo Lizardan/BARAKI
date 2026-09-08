@@ -48,11 +48,11 @@ namespace Game.Tests
         {
             var melee = AbilityFxPreviewCasterRules.Resolve(AbilityIds.MeleeCleave);
             Assert.AreEqual(UnitRole.Melee, melee.Role);
-            Assert.AreEqual(HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee), melee.BonusSlot);
+            Assert.AreEqual(BonusKitRules.BonusSlotForRole(UnitRole.Melee), melee.BonusSlot);
 
             var siege = AbilityFxPreviewCasterRules.Resolve(AbilityIds.AuraHpRegen);
             Assert.AreEqual(UnitRole.Siege, siege.Role);
-            Assert.AreEqual(HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege), siege.BonusSlot);
+            Assert.AreEqual(BonusKitRules.BonusSlotForRole(UnitRole.Siege), siege.BonusSlot);
         }
 
         [Test]

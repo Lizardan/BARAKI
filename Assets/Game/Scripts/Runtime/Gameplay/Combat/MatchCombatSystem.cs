@@ -644,7 +644,7 @@ namespace Game.Gameplay.Combat
                 var player = wave.OwnerSlot >= 0 && wave.OwnerSlot < _players.Count
                     ? _players[wave.OwnerSlot]
                     : null;
-                var bonusSlot = HumanBonusUnitRules.EffectiveBonusSlotForRole(
+                var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(
                     player?.BonusPickSlot ?? 0,
                     slot.Role);
                 var stats = UnitStatsResolver.Resolve(
@@ -1271,6 +1271,16 @@ namespace Game.Gameplay.Combat
                 }
             }
 
+            if (unit.FeastRemainingSeconds > 0f)
+            {
+                unit.FeastRemainingSeconds = Mathf.Max(0f, unit.FeastRemainingSeconds - deltaTime);
+                if (unit.FeastRemainingSeconds <= 0f)
+                {
+                    unit.FeastStacks = 0;
+                    unit.FeastAttackSpeedPerStack = 0f;
+                }
+            }
+
             if (unit.BurnSecondsRemaining <= 0f || unit.BurnDamagePerSecond <= 0f || !unit.IsAlive)
             {
                 return;
@@ -1444,6 +1454,11 @@ namespace Game.Gameplay.Combat
                 {
                     unit.AbsorbRemaining = 0f;
                 }
+            }
+
+            if (unit.EvadeRemainingSeconds > 0f)
+            {
+                unit.EvadeRemainingSeconds = Mathf.Max(0f, unit.EvadeRemainingSeconds - deltaTime);
             }
 
             if (unit.IsParkedAtBase)
@@ -2508,8 +2523,8 @@ namespace Game.Gameplay.Combat
             var rawDamage = projectile.RawDamage;
             var rangedCrit = false;
             if (attacker != null
-                && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged)
-                && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
+                && attacker.BonusSlot == BonusKitRules.BonusSlotForRole(UnitRole.Ranged)
+                && BonusKitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
             {
                 rawDamage *= HumanBonusUnitRules.RangedCritMultiplier;
                 rangedCrit = true;
@@ -2525,6 +2540,7 @@ namespace Game.Gameplay.Combat
                 }
                 ApplyDamage(attacker, target, effectiveDamage, projectile.AttackerOwnerSlot);
                 TryApplyFlamingArrowsBurn(projectile, target);
+                TryApplyTaintingBolt(attacker, target);
                 TryApplyUnnervingAimDebuff(attacker, target);
                 TryApplyFacelessSplash(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
             }
@@ -2605,7 +2621,12 @@ namespace Game.Gameplay.Combat
             if (target != null && target.IsAlive)
             {
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
-                ApplyDamage(attacker, target, ApplyBulwarkBlock(target, strike.RawDamage), killerSlot);
+                var meleeDealt = ApplyDamage(
+                    attacker,
+                    target,
+                    ApplyBulwarkBlock(target, strike.RawDamage),
+                    killerSlot);
+                TryApplyHungerOfTheOldOne(attacker, meleeDealt);
                 TryApplyUnnervingAimDebuff(attacker, target);
                 TryApplyFacelessSplash(attacker, target, strike.RawDamage, killerSlot);
 
@@ -2619,8 +2640,8 @@ namespace Game.Gameplay.Combat
                 }
 
                 if (attacker != null
-                    && attacker.BonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee)
-                    && HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
+                    && attacker.BonusSlot == BonusKitRules.BonusSlotForRole(UnitRole.Melee)
+                    && BonusKitRules.RollProc(_random, HumanBonusUnitRules.OnHitProcChance))
                 {
                     ApplySplashDamage(
                         attacker,
@@ -2679,11 +2700,21 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        public void ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
+        /// <summary>
+        /// Applies damage to <paramref name="target"/> and returns the damage actually dealt
+        /// (after armor, attacker multipliers and absorb). Zero when the target is dead/missing.
+        /// </summary>
+        public float ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
         {
             if (target == null || !target.IsAlive)
             {
-                return;
+                return 0f;
+            }
+
+            // FACELESS-012: Area of Miss — an evading target avoids all incoming attacks.
+            if (target.EvadeRemainingSeconds > 0f)
+            {
+                return 0f;
             }
 
             var armor = Mathf.Max(0f, GetEffectiveArmor(target) - GetFacelessArmorPen(attacker));
@@ -2709,9 +2740,17 @@ namespace Game.Gameplay.Combat
 
             target.CurrentHp -= damage;
 
+            // FACELESS-012: army lifesteal from the veteran signatures (Aura of Hunger, Feast Zone).
+            var dealt = damage;
+            if (attacker != null)
+            {
+                TryApplyAuraOfHunger(attacker, dealt);
+                TryApplyFeastZone(attacker, dealt);
+            }
+
             if (target.IsAlive)
             {
-                return;
+                return damage;
             }
 
             if (attacker != null && attacker.CurrentTargetId == target.UnitId)
@@ -2727,12 +2766,17 @@ namespace Game.Gameplay.Combat
             var deathPosition = target.WorldPosition;
             var deathBonusSlot = target.BonusSlot;
             var deathMarchFocus = target.MarchFocusOpponentSlot;
+            var deathMaxHp = target.Stats.MaxHp;
 
             _corpses.Add(new CombatCorpseState(target));
             RemoveUnit(target);
             TrySpawnFlyingBonusOnDeath(deathOwnerSlot, deathLaneId, deathPosition, deathBonusSlot, deathMarchFocus);
             TryApplyBloodrageOnKill(attacker);
             TryApplyVacuumCollapseOnDeath(deathOwnerSlot, deathPosition);
+            TryApplyCallOfTheAbyss(attacker);
+            TryApplyHungeringFlight(attacker);
+            TryApplyFeastOnTheFallen(attacker);
+            TryApplyDeathExplosion(deathOwnerSlot, deathPosition, deathBonusSlot, deathMaxHp);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
                 deathOwnerSlot,
@@ -2740,6 +2784,7 @@ namespace Game.Gameplay.Combat
                 bounty,
                 target.Role,
                 attacker?.UnitId ?? 0));
+            return damage;
         }
 
         void TrySpawnFlyingBonusOnDeath(
@@ -2749,8 +2794,8 @@ namespace Game.Gameplay.Combat
             int bonusSlot,
             int marchFocusOpponentSlot)
         {
-            if (bonusSlot != HumanBonusUnitRules.BonusSlotForRole(UnitRole.Flying)
-                || !HumanBonusUnitRules.RollProc(_random, HumanBonusUnitRules.OnDeathSpawnChance))
+            if (bonusSlot != BonusKitRules.BonusSlotForRole(UnitRole.Flying)
+                || !BonusKitRules.RollProc(_random, HumanBonusUnitRules.OnDeathSpawnChance))
             {
                 return;
             }
@@ -3167,6 +3212,300 @@ namespace Game.Gameplay.Combat
             ApplySplashDamage(attacker, target.WorldPosition, rawDamage * damagePercent, radius, killerOwnerSlot, excludeUnitId: target.UnitId);
         }
 
+        // === Faceless Unit Bonus Helpers (FACELESS-011) ===
+
+        /// <summary>Slot 1 Melee — Hunger of the Old One: 15% on-hit heal for 50% of the damage dealt.</summary>
+        void TryApplyHungerOfTheOldOne(MatchUnitState attacker, float dealtDamage)
+        {
+            if (attacker == null || !attacker.IsAlive || dealtDamage <= 0f)
+            {
+                return;
+            }
+
+            if (attacker.BonusSlot != BonusKitRules.BonusSlotForRole(UnitRole.Melee))
+            {
+                return;
+            }
+
+            if (!FacelessBonusUnitRules.IsFacelessBonus(
+                    attacker.BonusSlot,
+                    attacker.Role,
+                    GetPlayerRaceId(attacker.OwnerSlot)))
+            {
+                return;
+            }
+
+            if (!BonusKitRules.RollProc(_random, FacelessBonusUnitRules.VampiricProcChance))
+            {
+                return;
+            }
+
+            HealUnit(attacker, dealtDamage * FacelessBonusUnitRules.VampiricHealPercent);
+        }
+
+        /// <summary>Slot 2 Ranged — Tainting Bolt: 15% on-hit dot (3 dmg/s for 3 s). Reuses the burn timers.</summary>
+        void TryApplyTaintingBolt(MatchUnitState attacker, MatchUnitState target)
+        {
+            if (attacker == null || !attacker.IsAlive || target == null || !target.IsAlive)
+            {
+                return;
+            }
+
+            if (attacker.OwnerSlot == target.OwnerSlot)
+            {
+                return;
+            }
+
+            if (attacker.BonusSlot != BonusKitRules.BonusSlotForRole(UnitRole.Ranged))
+            {
+                return;
+            }
+
+            if (!FacelessBonusUnitRules.IsFacelessBonus(
+                    attacker.BonusSlot,
+                    attacker.Role,
+                    GetPlayerRaceId(attacker.OwnerSlot)))
+            {
+                return;
+            }
+
+            if (!BonusKitRules.RollProc(_random, FacelessBonusUnitRules.TaintingBoltProcChance))
+            {
+                return;
+            }
+
+            target.BurnSourceOwnerSlot = attacker.OwnerSlot;
+            target.BurnDamagePerSecond = FacelessBonusUnitRules.TaintingBoltDamagePerSecond;
+            target.BurnSecondsRemaining = FacelessBonusUnitRules.TaintingBoltDurationSeconds;
+        }
+
+        /// <summary>Slot 3 Caster — Call of the Abyss: on kill spawn one ×0.5 mini-melee.</summary>
+        void TryApplyCallOfTheAbyss(MatchUnitState attacker)
+        {
+            if (attacker == null || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            if (attacker.BonusSlot != BonusKitRules.BonusSlotForRole(UnitRole.Caster))
+            {
+                return;
+            }
+
+            if (!FacelessBonusUnitRules.IsFacelessBonus(
+                    attacker.BonusSlot,
+                    attacker.Role,
+                    GetPlayerRaceId(attacker.OwnerSlot)))
+            {
+                return;
+            }
+
+            // Stat baseline resolution lives in SummonMinion (living friendly Melee, else the anchor).
+            SummonMinion(
+                attacker.OwnerSlot,
+                attacker,
+                UnitRole.Melee,
+                FacelessBonusUnitRules.MiniMeleeStatScale);
+        }
+
+        /// <summary>
+        /// Slots 5–6 — on-kill attack-speed stacks (and the slot 6 flat heal).
+        /// Fires only for the mechanic-specific slot so a Flying (5) unit never
+        /// double-stacks via the Super (6) helper and vice versa.
+        /// </summary>
+        void TryApplyFeastStacks(MatchUnitState attacker, float healAmount, int expectedBonusSlot)
+        {
+            if (attacker == null || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            if (!FacelessBonusUnitRules.IsFacelessBonus(
+                    attacker.BonusSlot,
+                    attacker.Role,
+                    GetPlayerRaceId(attacker.OwnerSlot)))
+            {
+                return;
+            }
+
+            if (attacker.BonusSlot != expectedBonusSlot)
+            {
+                return;
+            }
+
+            var perStack = FacelessBonusUnitRules.AttackSpeedPerStackForSlot(attacker.BonusSlot);
+            if (perStack <= 0f)
+            {
+                return;
+            }
+
+            if (healAmount > 0f)
+            {
+                HealUnit(attacker, healAmount);
+            }
+
+            attacker.FeastAttackSpeedPerStack = perStack;
+            attacker.FeastStacks = Mathf.Min(FacelessBonusUnitRules.MaxFeastStacks, attacker.FeastStacks + 1);
+            attacker.FeastRemainingSeconds = FacelessBonusUnitRules.FeastBuffDurationSeconds;
+        }
+
+        /// <summary>Slot 5 Flying — Hungering Flight: on kill +15% attack speed, stacks up to 3.</summary>
+        void TryApplyHungeringFlight(MatchUnitState attacker) =>
+            TryApplyFeastStacks(attacker, 0f, BonusKitRules.BonusSlotForRole(UnitRole.Flying));
+
+        /// <summary>Slot 6 Super — Feast on the Fallen: on kill +80 HP and +10% attack speed, stacks up to 3.</summary>
+        void TryApplyFeastOnTheFallen(MatchUnitState attacker) =>
+            TryApplyFeastStacks(attacker, FacelessBonusUnitRules.FeastHealFlat, BonusKitRules.BonusSlotForRole(UnitRole.Super));
+
+        /// <summary>
+        /// Slot 4 Siege — Death Explosion: on death deal 10% of the owner's max HP to enemy
+        /// units within radius 3. Buildings are never hit (splash only iterates units).
+        /// </summary>
+        void TryApplyDeathExplosion(
+            int deathOwnerSlot,
+            Vector3 deathPosition,
+            int deathBonusSlot,
+            float deathMaxHp)
+        {
+            if (!FacelessBonusUnitRules.IsFacelessBonus(
+                    deathBonusSlot,
+                    UnitRole.Siege,
+                    GetPlayerRaceId(deathOwnerSlot)))
+            {
+                return;
+            }
+
+            ApplySplashDamage(
+                attacker: null,
+                deathPosition,
+                deathMaxHp * FacelessBonusUnitRules.DeathExplosionMaxHpPercent,
+                FacelessBonusUnitRules.DeathExplosionRadius,
+                deathOwnerSlot,
+                excludeUnitId: -1);
+        }
+
+        // === Faceless Champion Veteran Helpers (FACELESS-012) ===
+
+        /// <summary>Slot 10 Titan — Aura of Hunger: each owner unit lifesteals a fraction of the damage it deals.</summary>
+        void TryApplyAuraOfHunger(MatchUnitState attacker, float dealtDamage)
+        {
+            if (attacker == null || !attacker.IsAlive || dealtDamage <= 0f)
+            {
+                return;
+            }
+
+            if (GetPlayerRaceId(attacker.OwnerSlot) != GameIds.Races.Faceless)
+            {
+                return;
+            }
+
+            if (!HasLivingChampionWithBonus(attacker.OwnerSlot, BonusKitRules.TitanBonusSlot))
+            {
+                return;
+            }
+
+            HealUnit(attacker, dealtDamage * FacelessBonusUnitRules.AuraOfHungerHealFraction);
+        }
+
+        /// <summary>Slot 9 Berserker — Feast Zone: allies inside the following zone heal a fraction of damage dealt.</summary>
+        void TryApplyFeastZone(MatchUnitState attacker, float dealtDamage)
+        {
+            if (attacker == null || !attacker.IsAlive || dealtDamage <= 0f)
+            {
+                return;
+            }
+
+            if (GetPlayerRaceId(attacker.OwnerSlot) != GameIds.Races.Faceless)
+            {
+                return;
+            }
+
+            var zone = GetActiveFeastZone(attacker.OwnerSlot, attacker);
+            if (zone == null)
+            {
+                return;
+            }
+
+            HealUnit(attacker, dealtDamage * zone.HealFractionOfDamageDealt);
+        }
+
+        bool HasLivingChampionWithBonus(int ownerSlot, int bonusSlot)
+        {
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (unit == null
+                    || !unit.IsAlive
+                    || unit.OwnerSlot != ownerSlot
+                    || unit.BonusSlot != bonusSlot)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        HeroHealZoneState GetActiveFeastZone(int ownerSlot, MatchUnitState unit)
+        {
+            if (unit == null || _healZones == null)
+            {
+                return null;
+            }
+
+            for (var i = _healZones.Count - 1; i >= 0; i--)
+            {
+                var zone = _healZones[i];
+                if (zone.OwnerSlot != ownerSlot || zone.HealFractionOfDamageDealt <= 0f)
+                {
+                    continue;
+                }
+
+                var radiusSq = zone.Radius * zone.Radius;
+                var dx = zone.Center.x - unit.WorldPosition.x;
+                var dz = zone.Center.z - unit.WorldPosition.z;
+                if (dx * dx + dz * dz <= radiusSq)
+                {
+                    return zone;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Heals a living unit, clamped to its effective max HP.</summary>
+        public void HealUnit(MatchUnitState unit, float amount)
+        {
+            if (unit == null || !unit.IsAlive || amount <= 0f)
+            {
+                return;
+            }
+
+            var maxHp = GetEffectiveMaxHp(unit);
+            if (unit.CurrentHp >= maxHp)
+            {
+                return;
+            }
+
+            unit.CurrentHp = Mathf.Min(maxHp, unit.CurrentHp + amount);
+        }
+
+        /// <summary>Attack-speed multiplier from Faceless on-kill stacks (slots 5–6).</summary>
+        float GetFacelessFeastAsMultiplier(MatchUnitState unit)
+        {
+            if (unit == null
+                || unit.FeastRemainingSeconds <= 0f
+                || unit.FeastStacks <= 0
+                || unit.FeastAttackSpeedPerStack <= 0f)
+            {
+                return 1f;
+            }
+
+            return 1f + unit.FeastAttackSpeedPerStack * unit.FeastStacks;
+        }
+
         /// <summary>
         /// Strongest unlocked passive-aura contribution for <paramref name="stat"/> among the owner's
         /// living aura bearers within <paramref name="position"/>'s aura radius (radius 0 = whole army).
@@ -3273,7 +3612,8 @@ namespace Game.Gameplay.Combat
         float GetUnitAttackInterval(MatchUnitState unit) =>
             CombatRules.GetAttackIntervalSeconds(
                 unit.Stats.AttackSpeed * GetArmyAttackSpeedMultiplier(unit))
-            / GetBloodrageMultiplier(unit);
+            / GetBloodrageMultiplier(unit)
+            / GetFacelessFeastAsMultiplier(unit);
 
         /// <summary>Effective attack interval including Haste Aura (presenter / anim speed).</summary>
         public float GetAttackIntervalSeconds(MatchUnitState unit) =>
@@ -3773,7 +4113,9 @@ namespace Game.Gameplay.Combat
                 }
 
                 var heal = zone.HealPerSecond * deltaTime;
-                if (heal <= 0f)
+                // FACELESS-012: Feast Zone heals allies on damage dealt (handled in ApplyDamage),
+                // so it carries no flat per-tick heal of its own.
+                if (heal <= 0f || zone.HealFractionOfDamageDealt > 0f)
                 {
                     continue;
                 }

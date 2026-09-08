@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7201465483809163692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13c88c053b3140c4db1c80166b499f34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.AuraOfHungerBehaviour
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: aura-of-hunger
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 63
+  _displayName: Aura of Hunger
+  _description: "\u041F\u043E\u043A\u0430 \u0442\u0438\u0442\u0430\u043D \u0436\u0438\u0432, \u0432\u0441\u044F \u0430\u0440\u043C\u0438\u044F \u0432\u043B\u0430\u0434\u0435\u043B\u044C\u0446\u0430 \u043B\u0435\u0447\u0438\u0442\u0441\u044F \u043D\u0430 15% \u043E\u0442 \u043D\u0430\u043D\u0435\u0441\u0451\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430."
+  _kind: 1
+  _unlock: 1
+  _unlockValue: 7
+  _damage: 0
+  _heal: 0
+  _healPerSecond: 0
+  _radius: 0
+  _castRange: 0
+  _cooldownSeconds: 0
+  _durationSeconds: 0
+  _percent: 0
+  _manaCost: 0
+  _stunSeconds: 0
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Color: {r: 0.45, g: 0.85, b: 0.35, a: 1}
+    VfxPrefab: {fileID: 8846737274113074935, guid: 81a74a0aefeb7674ca32535d1a269b4a, type: 3}
+    Anchor: 2
+    AnimKind: 1
+    AnimState: 
+    AnimVariant: 0
+    Scale: 0
+    Euler: {x: 0, y: 0, z: 0}
+  _behaviour: {fileID: -7201465483809163692}

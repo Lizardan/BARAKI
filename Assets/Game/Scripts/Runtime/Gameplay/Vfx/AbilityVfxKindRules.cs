@@ -10,9 +10,10 @@ namespace Game.Gameplay.Vfx
             AbilityIds.AuraDamagePercent
                 or AbilityIds.AuraAttackSpeedPercent
                 or AbilityIds.AuraArmorPercent
-                or AbilityIds.AuraMaxHpPercent
+                or             AbilityIds.AuraMaxHpPercent
                 or AbilityIds.GreaterColossus
-                or AbilityIds.AuraHpRegen => AbilityVfxKind.Aura,
+                or AbilityIds.AuraHpRegen
+                or AbilityIds.AuraOfHunger => AbilityVfxKind.Aura,
 
             AbilityIds.Strike
                 or AbilityIds.Ultimate
@@ -24,7 +25,10 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.MeleeCleave
                 or AbilityIds.RangedCrit
                 or AbilityIds.CasterHybrid
-                or AbilityIds.SuperCatapult => AbilityVfxKind.Hit,
+                or AbilityIds.SuperCatapult
+                or AbilityIds.BlightingGaze
+                or AbilityIds.VoidDrain
+                or AbilityIds.AncientMantle => AbilityVfxKind.Hit,
 
             _ => AbilityVfxKind.Cast,
         };
@@ -48,6 +52,12 @@ namespace Game.Gameplay.Vfx
             AbilityIds.SuperCatapult => "Super BONUS",
             AbilityIds.KingsCommand or AbilityIds.Aegis or AbilityIds.Sanctuary
                 or AbilityIds.GreaterColossus => "Veteran BONUS",
+            AbilityIds.BlightingGaze or AbilityIds.VoidDrain
+                or AbilityIds.RaiseDrowned => "Faceless Caster",
+            AbilityIds.AncientMantle => "Faceless King",
+            AbilityIds.AreaOfMiss => "Faceless Warlock",
+            AbilityIds.FeastZone => "Faceless Berserker",
+            AbilityIds.AuraOfHunger => "Faceless Titan",
             AbilityIds.MainBuildingSmite or AbilityIds.MainUnitSmite => "Divine Blessing",
             AbilityIds.MainIceRing or AbilityIds.MainWaveOfLight => "Main Building",
             _ => "Ability",
@@ -74,13 +84,19 @@ namespace Game.Gameplay.Vfx
                 or AbilityIds.Stomp
                 or AbilityIds.MeleeCleave
                 or AbilityIds.Shield
-                or AbilityIds.Rally => AbilityVfxAnchor.Caster,
+                or AbilityIds.Rally
+                or AbilityIds.RaiseDrowned
+                or AbilityIds.AncientMantle
+                or AbilityIds.FeastZone
+                or AbilityIds.AuraOfHunger => AbilityVfxAnchor.Caster,
 
             AbilityIds.Frost
                 or AbilityIds.Consecration
                 or AbilityIds.Sanctuary
                 or AbilityIds.MainIceRing
-                or AbilityIds.MainWaveOfLight => AbilityVfxAnchor.Ground,
+                or AbilityIds.MainWaveOfLight
+                or AbilityIds.VoidDrain
+                or AbilityIds.AreaOfMiss => AbilityVfxAnchor.Ground,
 
             AbilityIds.SuperCatapult
                 or AbilityIds.FlyingSpawn => AbilityVfxAnchor.Impact,

@@ -65,7 +65,7 @@ namespace Game.Tests
                 AbilityAnimRules.InfantryAttackClipSeconds,
                 AbilityAnimRules.ResolveAttackClipSeconds(
                     UnitRole.Siege,
-                    bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege)));
+                    bonusSlot: BonusKitRules.BonusSlotForRole(UnitRole.Siege)));
         }
 
         [Test]

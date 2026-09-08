@@ -78,8 +78,8 @@ namespace Game.UI
         public static string FormatUnitTitle(UnitRole role, int bonusSlot)
         {
             var baseName = FormatRole(role);
-            if (!HumanBonusUnitRules.IsBonusSlot(bonusSlot)
-                || HumanBonusUnitRules.RoleForBonusSlot(bonusSlot) != role)
+            if (!BonusKitRules.IsBonusSlot(bonusSlot)
+                || BonusKitRules.RoleForBonusSlot(bonusSlot) != role)
             {
                 return baseName;
             }

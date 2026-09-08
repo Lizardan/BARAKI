@@ -89,6 +89,12 @@ namespace Game.Editor
         public const string FacelessHero2 = FacelessHeroes + "/Hero2";
         public const string FacelessHero3 = FacelessHeroes + "/Hero3";
 
+        public const string FacelessCasterAbilities = FacelessCaster + "/Abilities";
+        public const string FacelessHero1Abilities = FacelessHero1 + "/Abilities";
+        public const string FacelessHero2Abilities = FacelessHero2 + "/Abilities";
+        public const string FacelessHero3Abilities = FacelessHero3 + "/Abilities";
+        public const string FacelessTitanAbilities = FacelessTitan + "/Abilities";
+
         public const string Shared = Root + "/Shared";
         public const string SharedSquads = Shared + "/Squads";
         public const string SharedUpgrades = Shared + "/Upgrades";
@@ -298,6 +304,11 @@ namespace Game.Editor
             EnsureFolder(FacelessHero1);
             EnsureFolder(FacelessHero2);
             EnsureFolder(FacelessHero3);
+            EnsureFolder(FacelessCasterAbilities);
+            EnsureFolder(FacelessHero1Abilities);
+            EnsureFolder(FacelessHero2Abilities);
+            EnsureFolder(FacelessHero3Abilities);
+            EnsureFolder(FacelessTitanAbilities);
             EnsureFolder(FacelessPortraits);
             EnsureFolder(FacelessPortraitUnits);
             EnsureFolder(FacelessPortraitHeroes);

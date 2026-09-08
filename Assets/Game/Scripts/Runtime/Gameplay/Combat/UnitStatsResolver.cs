@@ -36,10 +36,10 @@ namespace Game.Gameplay.Combat
             int heroSlot = 0,
             int bonusSlot = 0)
         {
-            var hasBonusKit = HumanBonusUnitRules.HasBonusKit(raceId);
+            var hasBonusKit = BonusKitRules.HasBonusKit(raceId);
             if (hasBonusKit
-                && HumanBonusUnitRules.IsChampionBonusSlot(bonusSlot)
-                && HumanBonusUnitRules.MatchesUnit(bonusSlot, role, heroSlot))
+                && BonusKitRules.IsChampionBonusSlot(bonusSlot)
+                && BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot))
             {
                 if (visualCatalog != null
                     && visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var veteranPrefab)
@@ -52,11 +52,11 @@ namespace Game.Gameplay.Combat
                     }
                 }
 
-                return HumanBonusUnitRules.ApplyVeteranMultipliers(
+                return BonusKitRules.ApplyVeteranMultipliers(
                     ResolveBase(catalog, visualCatalog, raceId, role, heroSlot));
             }
 
-            if (hasBonusKit && HumanBonusUnitRules.BonusSlotForRole(role) == bonusSlot)
+            if (hasBonusKit && BonusKitRules.BonusSlotForRole(role) == bonusSlot)
             {
                 if (visualCatalog != null
                     && visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var bonusPrefab)

@@ -105,6 +105,8 @@ namespace Game.Gameplay.Combat
         public float AbsorbRemaining { get; set; }
         /// <summary>Host-only: seconds until the Aegis absorb pool expires.</summary>
         public float AbsorbSecondsRemaining { get; set; }
+        /// <summary>Host-only: remaining seconds the unit evades all incoming attacks (Area of Miss).</summary>
+        public float EvadeRemainingSeconds { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>
@@ -154,6 +156,12 @@ namespace Game.Gameplay.Combat
         public float ArmorDebuffRemainingSeconds { get; set; }
         /// <summary>Host-only: flat armor reduction from Unnerving Aim (1–3).</summary>
         public float ArmorDebuffAmount { get; set; }
+        /// <summary>Host-only: remaining seconds of the Faceless on-kill attack-speed buff (slots 5–6).</summary>
+        public float FeastRemainingSeconds { get; set; }
+        /// <summary>Host-only: stacks of the Faceless on-kill attack-speed buff (1–3).</summary>
+        public int FeastStacks { get; set; }
+        /// <summary>Host-only: attack-speed percent per stack (slot 5 = 0.15, slot 6 = 0.10).</summary>
+        public float FeastAttackSpeedPerStack { get; set; }
         public bool IsAlive => CurrentHp > 0f;
     }
 }

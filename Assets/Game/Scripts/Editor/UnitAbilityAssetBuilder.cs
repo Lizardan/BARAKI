@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
 using Game.Gameplay.Vfx;
@@ -110,6 +111,13 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreatePaladinBonus();
             yield return AbilityKitDefaults.CreatePriestBonus();
             yield return AbilityKitDefaults.CreateTitanBonus();
+
+            // --- Faceless kits (FACELESS-012 / FACELESS-016): caster + champion veterans 7–10 ---
+            yield return AbilityKitDefaults.CreateFacelessCaster();
+            yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero1BonusSlot);
+            yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero2BonusSlot);
+            yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero3BonusSlot);
+            yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.TitanBonusSlot);
         }
 
         static void EnsureFolder()
@@ -122,6 +130,11 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanTitanAbilities);
             ContentAssetPaths.EnsureHumanUnitFolders();
             ContentAssetPaths.EnsureHumanBonusHeroFolders();
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessCasterAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessHero1Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessHero2Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessHero3Abilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessTitanAbilities);
         }
 
         /// <summary>"Holy Nova" -> "holy-nova" (ASCII, kebab-case).</summary>
@@ -237,6 +250,15 @@ namespace Game.Editor
 
         static string GetAbilityDirectory(int abilityId) => abilityId switch
         {
+            // --- Faceless kits (kept under the Faceless race folder for a uniform structure) ---
+            AbilityIds.BlightingGaze => ContentAssetPaths.FacelessCasterAbilities,
+            AbilityIds.VoidDrain => ContentAssetPaths.FacelessCasterAbilities,
+            AbilityIds.RaiseDrowned => ContentAssetPaths.FacelessCasterAbilities,
+            AbilityIds.AncientMantle => ContentAssetPaths.FacelessHero1Abilities,
+            AbilityIds.AreaOfMiss => ContentAssetPaths.FacelessHero2Abilities,
+            AbilityIds.FeastZone => ContentAssetPaths.FacelessHero3Abilities,
+            AbilityIds.AuraOfHunger => ContentAssetPaths.FacelessTitanAbilities,
+
             AbilityIds.AuraHpRegen => ContentAssetPaths.HumanSiegeAbilities,
             AbilityIds.MeleeCleave => ContentAssetPaths.HumanMeleeAbilities,
             AbilityIds.RangedCrit => ContentAssetPaths.HumanRangedAbilities,
@@ -258,7 +280,7 @@ namespace Game.Editor
         static UnitAbilityDef FindByAbilityId(int abilityId)
         {
             foreach (var guid in AssetDatabase.FindAssets(
-                         "t:UnitAbilityDef", new[] { ContentAssetPaths.Humans }))
+                         "t:UnitAbilityDef", new[] { ContentAssetPaths.Humans, ContentAssetPaths.Faceless }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var def = AssetDatabase.LoadAssetAtPath<UnitAbilityDef>(path);

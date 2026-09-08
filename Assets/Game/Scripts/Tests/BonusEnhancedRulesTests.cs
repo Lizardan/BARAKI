@@ -14,22 +14,22 @@ namespace Game.Tests
         [Test]
         public void BonusSlotMapping_IsSymmetricForUnitRoles()
         {
-            Assert.AreEqual(1, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee));
-            Assert.AreEqual(2, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged));
-            Assert.AreEqual(3, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster));
-            Assert.AreEqual(4, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege));
-            Assert.AreEqual(5, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Flying));
-            Assert.AreEqual(6, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Super));
-            Assert.AreEqual(0, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Hero));
+            Assert.AreEqual(1, BonusKitRules.BonusSlotForRole(UnitRole.Melee));
+            Assert.AreEqual(2, BonusKitRules.BonusSlotForRole(UnitRole.Ranged));
+            Assert.AreEqual(3, BonusKitRules.BonusSlotForRole(UnitRole.Caster));
+            Assert.AreEqual(4, BonusKitRules.BonusSlotForRole(UnitRole.Siege));
+            Assert.AreEqual(5, BonusKitRules.BonusSlotForRole(UnitRole.Flying));
+            Assert.AreEqual(6, BonusKitRules.BonusSlotForRole(UnitRole.Super));
+            Assert.AreEqual(0, BonusKitRules.BonusSlotForRole(UnitRole.Hero));
 
             for (var slot = 1; slot <= 6; slot++)
             {
-                Assert.IsTrue(HumanBonusUnitRules.IsBonusSlot(slot));
-                Assert.AreEqual(slot, HumanBonusUnitRules.BonusSlotForRole(HumanBonusUnitRules.RoleForBonusSlot(slot)));
+                Assert.IsTrue(BonusKitRules.IsBonusSlot(slot));
+                Assert.AreEqual(slot, BonusKitRules.BonusSlotForRole(BonusKitRules.RoleForBonusSlot(slot)));
             }
 
-            Assert.IsFalse(HumanBonusUnitRules.IsBonusSlot(0));
-            Assert.IsFalse(HumanBonusUnitRules.IsBonusSlot(7));
+            Assert.IsFalse(BonusKitRules.IsBonusSlot(0));
+            Assert.IsFalse(BonusKitRules.IsBonusSlot(7));
         }
 
         [Test]
@@ -85,6 +85,6 @@ namespace Game.Tests
                 visualCatalog: null,
                 GameIds.Races.Human,
                 role,
-                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(role));
+                bonusSlot: BonusKitRules.BonusSlotForRole(role));
     }
 }

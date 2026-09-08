@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: raise-the-drowned
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 6
+  _displayName: Raise the Drowned
+  _description: "\u041F\u043E\u0434\u043D\u044F\u0442\u044C \u043F\u0430\u0432\u0448\u0435\u0433\u043E: \u043B\u044E\u0431\u043E\u0439 \u043D\u0435\u0434\u0430\u0432\u043D\u0438\u0439 \u0442\u0440\u0443\u043F (\u0432\u043A\u043B\u044E\u0447\u0430\u044F \u0432\u0440\u0430\u0436\u0435\u0441\u043A\u0438\u0439) \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u043C\u0438\u043D\u0438-\u043C\u0435\u043B\u0435 \u043A\u0430\u0441\u0442\u0435\u0440\u0430."
+  _kind: 0
+  _unlock: 2
+  _unlockValue: 3
+  _damage: 0
+  _heal: 0
+  _healPerSecond: 0
+  _radius: 0
+  _castRange: 6
+  _cooldownSeconds: 30
+  _durationSeconds: 15
+  _percent: 0
+  _manaCost: 150
+  _stunSeconds: 0
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Color: {r: 0.25, g: 0.9, b: 0.85, a: 1}
+    VfxPrefab: {fileID: 4772634663576830964, guid: e1385af346f4e624eb313ec1ea4fcd7e, type: 3}
+    Anchor: 2
+    AnimKind: 3
+    AnimState: 
+    AnimVariant: 0
+    Scale: 0
+    Euler: {x: 0, y: 0, z: 0}
+  _behaviour: {fileID: 137005883989785711}
+--- !u!114 &137005883989785711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cce719ad1db54b64fa0c33023541ce55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.RaiseDrownedBehaviour

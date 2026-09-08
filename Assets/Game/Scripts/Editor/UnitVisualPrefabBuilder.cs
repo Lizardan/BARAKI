@@ -38,6 +38,22 @@ namespace Game.Editor
         public const string FacelessHero2Path = FacelessHeroesPath + "/Hero2/Faceless_Hero2.prefab";
         public const string FacelessHero3Path = FacelessHeroesPath + "/Hero3/Faceless_Hero3.prefab";
 
+        // --- Faceless bonus / veteran prefabs (slots 1–10), mirroring Humans' BonusUnits / BonusHeroes ---
+        public const string FacelessBonusUnitsPath = FacelessRoot + "/BonusUnits";
+        public const string FacelessBonusHeroesPath = FacelessRoot + "/BonusHeroes";
+
+        public const string FacelessMeleeBonusPath = FacelessBonusUnitsPath + "/Melee/Faceless_Melee_BONUS.prefab";
+        public const string FacelessRangedBonusPath = FacelessBonusUnitsPath + "/Ranged/Faceless_Ranged_BONUS.prefab";
+        public const string FacelessCasterBonusPath = FacelessBonusUnitsPath + "/Caster/Faceless_Caster_BONUS.prefab";
+        public const string FacelessSiegeBonusPath = FacelessBonusUnitsPath + "/Siege/Faceless_Siege_BONUS.prefab";
+        public const string FacelessFlyingBonusPath = FacelessBonusUnitsPath + "/Flying/Faceless_Flying_BONUS.prefab";
+        public const string FacelessSuperBonusPath = FacelessBonusUnitsPath + "/Super/Faceless_Super_BONUS.prefab";
+
+        public const string FacelessHero1BonusPath = FacelessBonusHeroesPath + "/Hero1/Faceless_Hero1_BONUS.prefab";
+        public const string FacelessHero2BonusPath = FacelessBonusHeroesPath + "/Hero2/Faceless_Hero2_BONUS.prefab";
+        public const string FacelessHero3BonusPath = FacelessBonusHeroesPath + "/Hero3/Faceless_Hero3_BONUS.prefab";
+        public const string FacelessTitanBonusPath = FacelessBonusHeroesPath + "/Titan/Faceless_Titan_BONUS.prefab";
+
         public const string HumanMeleePath = HumanPath + "/Melee/Human_Melee.prefab";
         public const string HumanRangedPath = HumanPath + "/Ranged/Human_Ranged.prefab";
         public const string HumanCasterPath = HumanPath + "/Caster/Human_Caster.prefab";
@@ -93,10 +109,21 @@ namespace Game.Editor
             FacelessSuperPath,
         };
 
+        static readonly string[] FacelessBonusPrefabPaths =
+        {
+            FacelessMeleeBonusPath,
+            FacelessRangedBonusPath,
+            FacelessCasterBonusPath,
+            FacelessSiegeBonusPath,
+            FacelessFlyingBonusPath,
+            FacelessSuperBonusPath,
+        };
+
         public static void EnsureContent()
         {
             EnsureHumanPrefabFolders();
             EnsureFacelessPrefabFolders();
+            EnsureFacelessBonusFolders();
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.Catalogs);
 
             var humanPrefabs = LoadAnimatedHumanPrefabs();
@@ -129,15 +156,24 @@ namespace Game.Editor
                 var fHero2 = LoadRequiredPrefab(FacelessHero2Path);
                 var fHero3 = LoadRequiredPrefab(FacelessHero3Path);
                 var fTitan = LoadRequiredPrefab(FacelessTitanPath);
+                var facelessBonusUnits = LoadOptionalFacelessBonusPrefabs();
+                var fHero1Bonus = LoadOptionalPrefab(FacelessHero1BonusPath);
+                var fHero2Bonus = LoadOptionalPrefab(FacelessHero2BonusPath);
+                var fHero3Bonus = LoadOptionalPrefab(FacelessHero3BonusPath);
+                var fTitanBonus = LoadOptionalPrefab(FacelessTitanBonusPath);
                 UpdateCatalogFromPrefabs(
                     GameIds.Races.Faceless,
                     facelessUnits,
-                    null,
+                    facelessBonusUnits,
                     fHero1,
                     fHero2,
                     fHero3,
                     fTitan,
-                    clearBonus: true);
+                    fHero1Bonus,
+                    fHero2Bonus,
+                    fHero3Bonus,
+                    fTitanBonus,
+                    clearBonus: false);
             }
 
             UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
@@ -169,17 +205,44 @@ namespace Game.Editor
             var fHero2 = LoadRequiredPrefab(FacelessHero2Path);
             var fHero3 = LoadRequiredPrefab(FacelessHero3Path);
             var fTitan = LoadRequiredPrefab(FacelessTitanPath);
+            var facelessBonusUnits = LoadOptionalFacelessBonusPrefabs();
+            var fHero1Bonus = LoadOptionalPrefab(FacelessHero1BonusPath);
+            var fHero2Bonus = LoadOptionalPrefab(FacelessHero2BonusPath);
+            var fHero3Bonus = LoadOptionalPrefab(FacelessHero3BonusPath);
+            var fTitanBonus = LoadOptionalPrefab(FacelessTitanBonusPath);
             UpdateCatalogFromPrefabs(
                 GameIds.Races.Faceless,
                 facelessUnits,
-                null,
+                facelessBonusUnits,
                 fHero1,
                 fHero2,
                 fHero3,
                 fTitan,
-                clearBonus: true);
+                fHero1Bonus,
+                fHero2Bonus,
+                fHero3Bonus,
+                fTitanBonus,
+                clearBonus: false);
 
             UnitPortraitBaker.BakeIntoCatalog(AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(CatalogPath));
+        }
+
+        /// <summary>Creates the Faceless <c>BonusUnits</c> / <c>BonusHeroes</c> folder tree so the
+        /// bonus prefab builder and catalog can register enhanced-variant prefabs.</summary>
+        public static void EnsureFacelessBonusFolders()
+        {
+            EnsureFolder(FacelessBonusUnitsPath);
+            EnsureFolder(FacelessBonusUnitsPath + "/Melee");
+            EnsureFolder(FacelessBonusUnitsPath + "/Ranged");
+            EnsureFolder(FacelessBonusUnitsPath + "/Caster");
+            EnsureFolder(FacelessBonusUnitsPath + "/Siege");
+            EnsureFolder(FacelessBonusUnitsPath + "/Flying");
+            EnsureFolder(FacelessBonusUnitsPath + "/Super");
+            EnsureFolder(FacelessBonusHeroesPath);
+            EnsureFolder(FacelessBonusHeroesPath + "/Hero1");
+            EnsureFolder(FacelessBonusHeroesPath + "/Hero2");
+            EnsureFolder(FacelessBonusHeroesPath + "/Hero3");
+            EnsureFolder(FacelessBonusHeroesPath + "/Titan");
         }
 
         public static void EnsureHumanPrefabFolders()
@@ -253,6 +316,17 @@ namespace Game.Editor
             for (var i = 0; i < FacelessPrefabPaths.Length; i++)
             {
                 prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(FacelessPrefabPaths[i]);
+            }
+
+            return prefabs;
+        }
+
+        static GameObject[] LoadOptionalFacelessBonusPrefabs()
+        {
+            var prefabs = new GameObject[FacelessBonusPrefabPaths.Length];
+            for (var i = 0; i < FacelessBonusPrefabPaths.Length; i++)
+            {
+                prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(FacelessBonusPrefabPaths[i]);
             }
 
             return prefabs;
@@ -362,12 +436,12 @@ static void AssignSet(
             setProperty.FindPropertyRelative("_super").objectReferenceValue = prefabs[5];
             if (bonusPrefabs != null && bonusPrefabs.Length >= 6)
             {
-                setProperty.FindPropertyRelative("_meleeBonus").objectReferenceValue = bonusPrefabs[0];
-                setProperty.FindPropertyRelative("_rangedBonus").objectReferenceValue = bonusPrefabs[1];
-                setProperty.FindPropertyRelative("_casterBonus").objectReferenceValue = bonusPrefabs[2];
-                setProperty.FindPropertyRelative("_siegeBonus").objectReferenceValue = bonusPrefabs[3];
-                setProperty.FindPropertyRelative("_flyingBonus").objectReferenceValue = bonusPrefabs[4];
-                setProperty.FindPropertyRelative("_superBonus").objectReferenceValue = bonusPrefabs[5];
+                AssignIfPresent(setProperty, "_meleeBonus", bonusPrefabs[0]);
+                AssignIfPresent(setProperty, "_rangedBonus", bonusPrefabs[1]);
+                AssignIfPresent(setProperty, "_casterBonus", bonusPrefabs[2]);
+                AssignIfPresent(setProperty, "_siegeBonus", bonusPrefabs[3]);
+                AssignIfPresent(setProperty, "_flyingBonus", bonusPrefabs[4]);
+                AssignIfPresent(setProperty, "_superBonus", bonusPrefabs[5]);
             }
             else if (clearBonus)
             {
@@ -412,6 +486,14 @@ static void AssignSet(
                 {
                     setProperty.FindPropertyRelative("_titanBonus").objectReferenceValue = titanBonus;
                 }
+            }
+        }
+
+        static void AssignIfPresent(SerializedProperty setProperty, string field, GameObject value)
+        {
+            if (value != null)
+            {
+                setProperty.FindPropertyRelative(field).objectReferenceValue = value;
             }
         }
 

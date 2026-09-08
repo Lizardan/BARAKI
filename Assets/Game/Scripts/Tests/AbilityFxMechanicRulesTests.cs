@@ -118,6 +118,47 @@ namespace Game.Tests
         }
 
         [Test]
+        public void FacelessCaster_Spells_HaveTheirShapes()
+        {
+            Assert.AreEqual(
+                AbilityFxMechanicShape.PointOnTarget,
+                AbilityFxMechanicRules.ResolveShape(AbilityIds.BlightingGaze));
+
+            var drain = AbilityFxMechanicRules.Resolve(AbilityIds.VoidDrain);
+            Assert.AreEqual(AbilityFxMechanicShape.AreaOnGround, drain.Shape);
+            Assert.IsTrue(drain.FlatOnGround);
+            Assert.AreEqual(AbilityVfxAnchor.Ground, drain.RingHost);
+
+            var raise = AbilityFxMechanicRules.Resolve(AbilityIds.RaiseDrowned);
+            Assert.AreEqual(AbilityFxMechanicShape.PointOnSelf, raise.Shape);
+            Assert.IsFalse(raise.ShowRing);
+            Assert.AreEqual(AbilityVfxAnchor.Unspecified, raise.RingHost);
+        }
+
+        [Test]
+        public void FacelessVeterans_HaveTheirShapes()
+        {
+            var mantle = AbilityFxMechanicRules.Resolve(AbilityIds.AncientMantle);
+            Assert.AreEqual(AbilityFxMechanicShape.BurstAroundSelf, mantle.Shape);
+            Assert.AreEqual(AbilityVfxAnchor.Caster, mantle.RingHost);
+
+            var miss = AbilityFxMechanicRules.Resolve(AbilityIds.AreaOfMiss);
+            Assert.AreEqual(AbilityFxMechanicShape.AreaOnGround, miss.Shape);
+            Assert.AreEqual(AbilityVfxAnchor.Ground, miss.RingHost);
+
+            var feast = AbilityFxMechanicRules.Resolve(AbilityIds.FeastZone);
+            Assert.AreEqual(AbilityFxMechanicShape.AuraAroundSelf, feast.Shape);
+            Assert.IsTrue(feast.FollowsHost);
+            Assert.AreEqual(AbilityVfxAnchor.Caster, feast.RingHost);
+
+            var hunger = AbilityFxMechanicRules.Resolve(AbilityIds.AuraOfHunger);
+            Assert.AreEqual(AbilityFxMechanicShape.AuraAroundSelf, hunger.Shape);
+            Assert.IsTrue(hunger.FollowsHost);
+            Assert.AreEqual(AbilityVfxAnchor.Caster, hunger.RingHost);
+            Assert.AreEqual(HeroAbilityRules.AuraRadius, hunger.Radius);
+        }
+
+        [Test]
         public void PreviewRingRadius_IsCombatMetres()
         {
             Assert.AreEqual(

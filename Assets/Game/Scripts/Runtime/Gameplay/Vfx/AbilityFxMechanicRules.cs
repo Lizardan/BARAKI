@@ -153,7 +153,16 @@ namespace Game.Gameplay.Vfx
 
             AbilityIds.SuperCatapult => AbilityFxMechanicShape.BurstAtImpact,
 
-            AbilityIds.FlyingSpawn => AbilityFxMechanicShape.PointOnSelf,
+            AbilityIds.FlyingSpawn
+                or AbilityIds.RaiseDrowned => AbilityFxMechanicShape.PointOnSelf,
+
+            AbilityIds.VoidDrain
+                or AbilityIds.AreaOfMiss => AbilityFxMechanicShape.AreaOnGround,
+
+            AbilityIds.AncientMantle => AbilityFxMechanicShape.BurstAroundSelf,
+
+            AbilityIds.FeastZone
+                or AbilityIds.AuraOfHunger => AbilityFxMechanicShape.AuraAroundSelf,
 
             _ => AbilityFxMechanicShape.PointOnTarget,
         };
@@ -172,7 +181,8 @@ namespace Game.Gameplay.Vfx
                     or AbilityIds.AuraArmorPercent
                     or AbilityIds.AuraMaxHpPercent
                     or AbilityIds.GreaterColossus
-                    or AbilityIds.AuraHpRegen => HeroAbilityRules.AuraRadius,
+                    or                 AbilityIds.AuraHpRegen
+                    or AbilityIds.AuraOfHunger => HeroAbilityRules.AuraRadius,
                 AbilityIds.Strike => HeroAbilityRules.StrikeRadius,
                 AbilityIds.Ultimate => HeroAbilityRules.UltimateRadius,
                 AbilityIds.KingsCommand => HeroAbilityRules.UltimateRadius,

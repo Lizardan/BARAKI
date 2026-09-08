@@ -16,12 +16,12 @@
   `RACE_FACELESS` возвращает **пустой кит** (способностей у расы нет). Оба вызова в
   `MatchCombatSystem` — race-aware через `GetPlayerRaceId(unit.OwnerSlot)`, иначе
   Faceless-кастер унаследовал бы Human-кит из fallback `CreateForSpawn`.
-- **Бонус-пик**: Faceless не имеет бонус-кита. `HumanBonusUnitRules.HasBonusKit(raceId)`
+- **Бонус-пик**: Faceless не имеет бонус-кита. `BonusKitRules.HasBonusKit(raceId)`
   = false для `RACE_FACELESS` (список `NoBonusKitRaceIds`). Race-aware
   `EffectiveBonusSlotForRole/Hero/Titan(string raceId, ...)` всегда дают 0; 7 вызовов в
   `MatchController` прокидывают `player.RaceId`; `UnitStatsResolver.ResolveBase`
   охраняет bonus/veteran-ветки. Иначе юнит-бонус давал базового юнита, а veteran —
-  Human-множители.
+  множители (×1.4/×1.35/+2).
 - **Tower-треки** (`TowerTrackRules`): глобальные стат-эффекты по ролям, способностей
   не дают — работают для Faceless без изменений (не блокер).
 - **Titan**: SO-ассета нет ни у одной расы (у Human тоже) — титан = `CopyFrom(hero1,

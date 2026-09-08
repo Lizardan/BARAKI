@@ -81,10 +81,10 @@ namespace Game.Tests
         [Test]
         public void EffectiveBonusSlotForRole_OnlyMatchesOwnRole()
         {
-            Assert.AreEqual(1, HumanBonusUnitRules.EffectiveBonusSlotForRole(1, UnitRole.Melee));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(1, UnitRole.Ranged));
-            Assert.AreEqual(3, HumanBonusUnitRules.EffectiveBonusSlotForRole(3, UnitRole.Caster));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(0, UnitRole.Melee));
+            Assert.AreEqual(1, BonusKitRules.EffectiveBonusSlotForRole(1, UnitRole.Melee));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForRole(1, UnitRole.Ranged));
+            Assert.AreEqual(3, BonusKitRules.EffectiveBonusSlotForRole(3, UnitRole.Caster));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForRole(0, UnitRole.Melee));
         }
 
         [Test]
@@ -393,7 +393,7 @@ namespace Game.Tests
         {
             for (var seed = 0; seed < 10_000; seed++)
             {
-                if (HumanBonusUnitRules.RollProc(new System.Random(seed), chance))
+                if (BonusKitRules.RollProc(new System.Random(seed), chance))
                 {
                     return seed;
                 }

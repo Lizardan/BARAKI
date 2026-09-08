@@ -104,13 +104,13 @@ namespace Game.Editor
             BakeBonusPortraits(catalog, set, raceId);
 
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero1.png", HumanBonusUnitRules.BonusSlotForHeroSlot(1));
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero1.png", BonusKitRules.BonusSlotForHeroSlot(1));
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero2.png", HumanBonusUnitRules.BonusSlotForHeroSlot(2));
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero2.png", BonusKitRules.BonusSlotForHeroSlot(2));
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero3.png", HumanBonusUnitRules.BonusSlotForHeroSlot(3));
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero3.png", BonusKitRules.BonusSlotForHeroSlot(3));
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanBonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Titan.png", HumanBonusUnitRules.TitanBonusSlot);
+                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Titan.png", BonusKitRules.TitanBonusSlot);
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }

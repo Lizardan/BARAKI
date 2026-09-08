@@ -138,8 +138,8 @@ namespace Game.UI.Controllers
             var anyApplied = false;
             foreach (var (button, slot) in _slotButtons)
             {
-                if (!HumanBonusUnitRules.IsBonusSlot(slot)
-                    && !HumanBonusUnitRules.IsChampionBonusSlot(slot))
+                if (!BonusKitRules.IsBonusSlot(slot)
+                    && !BonusKitRules.IsChampionBonusSlot(slot))
                 {
                     continue;
                 }
@@ -170,7 +170,7 @@ namespace Game.UI.Controllers
 
         private void OnSlotClicked(int bonusSlot)
         {
-            if (!BonusPickRules.IsValidSlot(bonusSlot))
+            if (!BonusPickRules.IsSlotAvailable(bonusSlot, ResolveLocalRaceId()))
             {
                 return;
             }
@@ -191,10 +191,13 @@ namespace Game.UI.Controllers
 
         private void UpdateSlotButtons(int ownPick)
         {
+            var raceId = ResolveLocalRaceId();
             var locked = ownPick != BonusPickRules.NoneSlot;
             foreach (var (button, bonusSlot) in _slotButtons)
             {
-                var selectable = BonusPickRules.IsValidSlot(bonusSlot);
+                // Slots without mechanics for this race (Faceless 7–12) stay greyed out.
+                var selectable = BonusPickRules.IsSlotAvailable(bonusSlot, raceId);
+                button.text = BonusPickRules.GetSlotDisplayName(bonusSlot, raceId);
                 button.SetEnabled(selectable && !locked);
                 button.EnableInClassList(PickedClass, ownPick == bonusSlot);
                 button.EnableInClassList(LockedClass, !selectable || locked);
@@ -208,18 +211,19 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            var raceId = ResolveLocalRaceId();
             foreach (var slot in BonusPickRules.DisplayOrderSlots)
             {
                 var button = new Button(() => OnSlotClicked(slot))
                 {
                     name = $"BonusSlot{slot}",
-                    text = BonusPickRules.GetSlotDisplayName(slot),
+                    text = BonusPickRules.GetSlotDisplayName(slot, raceId),
                 };
                 button.AddToClassList("ui-btn");
                 button.AddToClassList("ui-btn--square");
                 button.AddToClassList("bonus-pick__slot");
 
-                if (!BonusPickRules.IsValidSlot(slot))
+                if (!BonusPickRules.IsSlotAvailable(slot, raceId))
                 {
                     button.SetEnabled(false);
                     button.AddToClassList(LockedClass);
@@ -237,11 +241,17 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var description = BonusPickRules.GetSlotDescription(bonusSlot);
+            var raceId = ResolveLocalRaceId();
+            var description = BonusPickRules.GetSlotDescription(bonusSlot, raceId);
             if (string.IsNullOrEmpty(description))
             {
                 HideTooltip();
                 return;
+            }
+
+            if (!BonusPickRules.IsSlotImplemented(bonusSlot, raceId))
+            {
+                description += "\n(в разработке)";
             }
 
             _hoveredSlot = bonusSlot;

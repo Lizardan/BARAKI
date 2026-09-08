@@ -15,25 +15,25 @@ namespace Game.Tests
         [Test]
         public void VeteranSlotMapping_MatchesOnlyOwnChampion()
         {
-            Assert.AreEqual(7, HumanBonusUnitRules.EffectiveBonusSlotForHero(7, 1));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForHero(7, 2));
-            Assert.AreEqual(9, HumanBonusUnitRules.EffectiveBonusSlotForHero(9, 3));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForHero(10, 1));
-            Assert.AreEqual(10, HumanBonusUnitRules.EffectiveBonusSlotForTitan(10));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForTitan(7));
+            Assert.AreEqual(7, BonusKitRules.EffectiveBonusSlotForHero(7, 1));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(7, 2));
+            Assert.AreEqual(9, BonusKitRules.EffectiveBonusSlotForHero(9, 3));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(10, 1));
+            Assert.AreEqual(10, BonusKitRules.EffectiveBonusSlotForTitan(10));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForTitan(7));
 
-            Assert.IsTrue(HumanBonusUnitRules.MatchesUnit(7, UnitRole.Hero, 1));
-            Assert.IsFalse(HumanBonusUnitRules.MatchesUnit(7, UnitRole.Hero, 2));
-            Assert.IsTrue(HumanBonusUnitRules.MatchesUnit(10, UnitRole.Titan, 0));
-            Assert.IsFalse(HumanBonusUnitRules.MatchesUnit(10, UnitRole.Hero, 1));
-            Assert.IsFalse(HumanBonusUnitRules.MatchesUnit(11, UnitRole.Melee, 0));
+            Assert.IsTrue(BonusKitRules.MatchesUnit(7, UnitRole.Hero, 1));
+            Assert.IsFalse(BonusKitRules.MatchesUnit(7, UnitRole.Hero, 2));
+            Assert.IsTrue(BonusKitRules.MatchesUnit(10, UnitRole.Titan, 0));
+            Assert.IsFalse(BonusKitRules.MatchesUnit(10, UnitRole.Hero, 1));
+            Assert.IsFalse(BonusKitRules.MatchesUnit(11, UnitRole.Melee, 0));
 
-            Assert.IsTrue(HumanBonusUnitRules.IsChampionBonusSlot(7));
-            Assert.IsTrue(HumanBonusUnitRules.IsTitanBonusSlot(10));
-            Assert.IsTrue(HumanBonusUnitRules.IsRaceUniqueSlot(11));
-            Assert.IsTrue(HumanBonusUnitRules.IsRaceUniqueSlot(12));
-            Assert.IsFalse(HumanBonusUnitRules.IsChampionBonusSlot(6));
-            Assert.IsFalse(HumanBonusUnitRules.IsRaceUniqueSlot(10));
+            Assert.IsTrue(BonusKitRules.IsChampionBonusSlot(7));
+            Assert.IsTrue(BonusKitRules.IsTitanBonusSlot(10));
+            Assert.IsTrue(BonusKitRules.IsRaceUniqueSlot(11));
+            Assert.IsTrue(BonusKitRules.IsRaceUniqueSlot(12));
+            Assert.IsFalse(BonusKitRules.IsChampionBonusSlot(6));
+            Assert.IsFalse(BonusKitRules.IsRaceUniqueSlot(10));
         }
 
         // ------------------------------------------------------------------ kits
@@ -94,10 +94,10 @@ namespace Game.Tests
         {
             var stats = UnitStatsResolver.ResolveBase(
                 null, null, GameIds.Races.Human, UnitRole.Hero, heroSlot: 1, bonusSlot: 7);
-            Assert.AreEqual(600f * HumanBonusUnitRules.VeteranHpMultiplier, stats.MaxHp, 0.01f);
-            Assert.AreEqual(4f + HumanBonusUnitRules.VeteranArmorBonus, stats.Armor, 0.01f);
-            Assert.AreEqual(35f * HumanBonusUnitRules.VeteranDamageMultiplier, stats.DamageMin, 0.01f);
-            Assert.AreEqual(45f * HumanBonusUnitRules.VeteranDamageMultiplier, stats.DamageMax, 0.01f);
+            Assert.AreEqual(600f * BonusKitRules.VeteranHpMultiplier, stats.MaxHp, 0.01f);
+            Assert.AreEqual(4f + BonusKitRules.VeteranArmorBonus, stats.Armor, 0.01f);
+            Assert.AreEqual(35f * BonusKitRules.VeteranDamageMultiplier, stats.DamageMin, 0.01f);
+            Assert.AreEqual(45f * BonusKitRules.VeteranDamageMultiplier, stats.DamageMax, 0.01f);
         }
 
         [Test]
@@ -107,8 +107,8 @@ namespace Game.Tests
                 null, null, GameIds.Races.Human, UnitRole.Titan, heroSlot: 0, bonusSlot: 0);
             var veteran = UnitStatsResolver.ResolveBase(
                 null, null, GameIds.Races.Human, UnitRole.Titan, heroSlot: 0, bonusSlot: 10);
-            Assert.AreEqual(baseTitan.MaxHp * HumanBonusUnitRules.VeteranHpMultiplier, veteran.MaxHp, 0.01f);
-            Assert.AreEqual(baseTitan.DamageMax * HumanBonusUnitRules.VeteranDamageMultiplier, veteran.DamageMax, 0.01f);
+            Assert.AreEqual(baseTitan.MaxHp * BonusKitRules.VeteranHpMultiplier, veteran.MaxHp, 0.01f);
+            Assert.AreEqual(baseTitan.DamageMax * BonusKitRules.VeteranDamageMultiplier, veteran.DamageMax, 0.01f);
         }
 
         // ------------------------------------------------------------------ King's Command
@@ -300,7 +300,7 @@ namespace Game.Tests
             main.ApplyDamage(main.CurrentHp * 0.5f);
             var damagedFraction = main.CurrentHp / main.MaxHp;
 
-            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.RaceUnique2Slot));
+            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.RaceUnique2Slot));
 
             Assert.AreEqual(baseMaxHp * HumanBonusUnitRules.StoneMasonryHpMultiplier, main.MaxHp, 0.01f);
             Assert.AreEqual(
@@ -330,7 +330,7 @@ namespace Game.Tests
             var controller = CreateEarlyMatch();
             var player = controller.Players[0];
             player.Gold = 10_000;
-            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.BonusSlotForHeroSlot(1)));
+            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForHeroSlot(1)));
             Assert.IsTrue(controller.TryHireHero(0, 1));
             controller.DebugCompleteResearchForOwner(0);
 
@@ -349,7 +349,7 @@ namespace Game.Tests
             Assert.IsNotNull(deployed);
             Assert.AreEqual(7, deployed.BonusSlot, "deployed hero must carry the veteran bonus slot");
             Assert.AreEqual(
-                600f * HumanBonusUnitRules.VeteranHpMultiplier,
+                600f * BonusKitRules.VeteranHpMultiplier,
                 deployed.Stats.MaxHp,
                 0.01f);
         }

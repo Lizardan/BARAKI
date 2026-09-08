@@ -34,7 +34,7 @@ namespace Game.Tests
         public void TryManualCallUnit_WithMatchingBonusPick_SpawnsBonusUnit()
         {
             var controller = CreateControllerWithCatalogs();
-            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee)));
+            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Melee)));
             controller.BeginEarlyPhase();
             controller.Players[0].Gold = 200;
 
@@ -54,7 +54,7 @@ namespace Game.Tests
             var controller = CreateControllerWithCatalogs();
             Assert.IsNotNull(controller.CombatCatalog);
             Assert.IsNotNull(controller.UnitVisualCatalog);
-            Assert.IsTrue(controller.TrySetBonusPick(0, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Caster)));
+            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Caster)));
             controller.BeginEarlyPhase();
             controller.Players[0].Gold = 200;
 
@@ -65,6 +65,38 @@ namespace Game.Tests
             Assert.IsNotNull(spawned);
             Assert.AreEqual(0, spawned.BonusSlot);
             Assert.AreEqual(1.5f, spawned.Stats.AttackRange, 0.01f);
+        }
+
+        [Test]
+        public void TryManualCallUnit_FacelessBonusPick_FlowsSlotKeepsBaseStats()
+        {
+            // Regression: a Faceless bonus pick must spawn the base model (marked with the blue
+            // flame placeholder by the presenter) — never a red capsule — and must NOT apply bonus
+            // stats, because Faceless has no bonus kit yet (gated in the stats resolver).
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            Assume.That(raceCatalog != null, "RaceCatalog missing.");
+            var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(
+                UnitVisualPrefabBuilder.CatalogPath);
+            Assume.That(visualCatalog != null, "UnitVisualCatalog missing.");
+
+            var controller = new MatchController();
+            controller.CombatCatalog = new RaceCatalogCombatCatalog(raceCatalog);
+            controller.UnitVisualCatalog = visualCatalog;
+            controller.StartMatch(new MatchConfig(2, new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }));
+            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Melee)));
+            controller.BeginEarlyPhase();
+            controller.Players[0].Gold = 200;
+
+            var barracksBuilding = FindBarracks(controller, 0);
+            Assert.IsTrue(controller.TryManualCallUnit(0, barracksBuilding.InstanceId, UnitRole.Melee));
+
+            var spawned = FindOwnedMelee(controller, 0);
+            Assert.IsNotNull(spawned);
+            // Slot flows through so the presenter can attach the blue flame marker.
+            Assert.AreEqual(1, spawned.BonusSlot);
+            // No bonus kit yet — stats stay at plain base melee values.
+            Assert.AreEqual(1.5f, spawned.Stats.AttackRange, 0.01f, "Faceless bonus pick must not apply bonus stats.");
+            Assert.AreEqual(120f, spawned.Stats.MaxHp, 0.01f, "Faceless bonus pick must not apply bonus HP.");
         }
 
         static MatchUnitState FindOwnedMelee(MatchController controller, int ownerSlot)

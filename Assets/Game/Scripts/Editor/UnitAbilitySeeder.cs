@@ -40,16 +40,16 @@ namespace Game.Editor
             seeded += Seed(visualCatalog, catalog, UnitRole.Caster, 0, AbilityKitDefaults.CreateCaster()) ? 1 : 0;
             seeded += Seed(visualCatalog, catalog, UnitRole.Titan, 0, AbilityKitDefaults.CreateTitan()) ? 1 : 0;
 
-            for (var bonusSlot = HumanBonusUnitRules.Hero1BonusSlot;
-                 bonusSlot <= HumanBonusUnitRules.TitanBonusSlot;
+            for (var bonusSlot = BonusKitRules.Hero1BonusSlot;
+                 bonusSlot <= BonusKitRules.TitanBonusSlot;
                  bonusSlot++)
             {
-                var isTitan = HumanBonusUnitRules.IsTitanBonusSlot(bonusSlot);
+                var isTitan = BonusKitRules.IsTitanBonusSlot(bonusSlot);
                 seeded += Seed(
                     visualCatalog,
                     catalog,
                     isTitan ? UnitRole.Titan : UnitRole.Hero,
-                    isTitan ? 0 : HumanBonusUnitRules.HeroSlotForBonusSlot(bonusSlot),
+                    isTitan ? 0 : BonusKitRules.HeroSlotForBonusSlot(bonusSlot),
                     AbilityKitDefaults.CreateVeteranKit(bonusSlot),
                     bonusSlot)
                     ? 1
@@ -72,13 +72,114 @@ namespace Game.Editor
                     role,
                     0,
                     AbilityKitDefaults.CreateBonus(role),
-                    bonusSlot: HumanBonusUnitRules.BonusSlotForRole(role))
+                    bonusSlot: BonusKitRules.BonusSlotForRole(role))
                     ? 1
                     : 0;
             }
 
+            // Faceless: mirror Humans — seed readable spells onto the (now existing) Faceless prefabs.
+            seeded += SeedFaceless(visualCatalog, catalog);
+
             AssetDatabase.SaveAssets();
             Debug.Log($"UnitAbilitySeeder: seeded {seeded} prefab(s).");
+        }
+
+        /// <summary>
+        /// Seeds Faceless prefabs with the same readable-spell kits the runtime resolves via
+        /// <see cref="AbilityKitDefaults.CreateForSpawn(string,UnitRole,int,int)"/> — the Faceless
+        /// caster kit (FACELESS-016) and the champion veteran kits (slots 7–10, FACELESS-012). Unit
+        /// bonus slots 1–6 and base heroes/titan resolve to an empty kit (no Faceless card authored
+        /// yet), which intentionally clears their ability list so the prefab matches runtime.
+        /// </summary>
+        static int SeedFaceless(UnitVisualCatalog visualCatalog, UnitAbilityCatalog abilityCatalog)
+        {
+            var seeded = 0;
+            var roles = new[]
+            {
+                UnitRole.Melee,
+                UnitRole.Ranged,
+                UnitRole.Caster,
+                UnitRole.Siege,
+                UnitRole.Flying,
+                UnitRole.Super,
+            };
+
+            foreach (var role in roles)
+            {
+                if (Seed(
+                        visualCatalog,
+                        abilityCatalog,
+                        GameIds.Races.Faceless,
+                        role,
+                        0,
+                        AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, role, 0, 0),
+                        bonusSlot: 0))
+                {
+                    seeded++;
+                }
+            }
+
+            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+            {
+                if (Seed(
+                        visualCatalog,
+                        abilityCatalog,
+                        GameIds.Races.Faceless,
+                        UnitRole.Hero,
+                        slot,
+                        AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, slot, 0),
+                        bonusSlot: 0))
+                {
+                    seeded++;
+                }
+            }
+
+            if (Seed(
+                    visualCatalog,
+                    abilityCatalog,
+                    GameIds.Races.Faceless,
+                    UnitRole.Titan,
+                    0,
+                    AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Titan, 0, 0),
+                    bonusSlot: 0))
+            {
+                seeded++;
+            }
+
+            for (var bonusSlot = 1; bonusSlot <= 10; bonusSlot++)
+            {
+                UnitRole role;
+                int heroSlot;
+                if (BonusKitRules.IsBonusSlot(bonusSlot))
+                {
+                    role = BonusKitRules.RoleForBonusSlot(bonusSlot);
+                    heroSlot = 0;
+                }
+                else if (BonusKitRules.IsHeroBonusSlot(bonusSlot))
+                {
+                    role = UnitRole.Hero;
+                    heroSlot = BonusKitRules.HeroSlotForBonusSlot(bonusSlot);
+                }
+                else
+                {
+                    role = UnitRole.Titan;
+                    heroSlot = 0;
+                }
+
+                if (Seed(
+                        visualCatalog,
+                        abilityCatalog,
+                        GameIds.Races.Faceless,
+                        role,
+                        heroSlot,
+                        AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, role, heroSlot, bonusSlot),
+                        bonusSlot))
+                {
+                    seeded++;
+                }
+            }
+
+            return seeded;
         }
 
         static bool Seed(
@@ -89,11 +190,23 @@ namespace Game.Editor
             UnitAbilityDef[] defaults,
             int bonusSlot = 0)
         {
-            if (!catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, bonusSlot, out var prefab)
+            return Seed(catalog, abilityCatalog, GameIds.Races.Human, role, heroSlot, defaults, bonusSlot);
+        }
+
+        static bool Seed(
+            UnitVisualCatalog catalog,
+            UnitAbilityCatalog abilityCatalog,
+            string raceId,
+            UnitRole role,
+            int heroSlot,
+            UnitAbilityDef[] defaults,
+            int bonusSlot = 0)
+        {
+            if (!catalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var prefab)
                 || prefab == null)
             {
                 Debug.LogWarning(
-                    $"UnitAbilitySeeder: no prefab for {role} slot {heroSlot} bonus {bonusSlot}.");
+                    $"UnitAbilitySeeder: no prefab for {raceId} {role} slot {heroSlot} bonus {bonusSlot}.");
                 return false;
             }
 

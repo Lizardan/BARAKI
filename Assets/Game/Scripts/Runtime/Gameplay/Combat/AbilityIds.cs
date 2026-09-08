@@ -56,6 +56,15 @@ namespace Game.Gameplay.Combat
         /// <summary>Titan veteran (bonus slot 10): stronger MaxHp aura replacing Colossus.</summary>
         public const int GreaterColossus = 59;
 
+        /// <summary>Faceless King veteran (bonus slot 7): self +50% dmg & +2 armor, AoE hit +30% (FACELESS-012).</summary>
+        public const int AncientMantle = 60;
+        /// <summary>Faceless Warlock veteran (bonus slot 8): enemies in radius miss all attacks (FACELESS-012).</summary>
+        public const int AreaOfMiss = 61;
+        /// <summary>Faceless Berserker veteran (bonus slot 9): following zone heals allies 30% of damage dealt (FACELESS-012).</summary>
+        public const int FeastZone = 62;
+        /// <summary>Faceless Titan veteran (bonus slot 10): army lifesteals 15% of damage dealt (FACELESS-012).</summary>
+        public const int AuraOfHunger = 63;
+
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;
         /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>

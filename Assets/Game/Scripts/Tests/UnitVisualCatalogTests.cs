@@ -676,12 +676,12 @@ namespace Game.Tests
                 "Осадный · усиленный",
                 MatchInspectorFormatting.FormatUnitTitle(
                     UnitRole.Siege,
-                    HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege)));
+                    BonusKitRules.BonusSlotForRole(UnitRole.Siege)));
             Assert.AreEqual(
                 "Осадный",
                 MatchInspectorFormatting.FormatUnitTitle(
                     UnitRole.Siege,
-                    HumanBonusUnitRules.BonusSlotForRole(UnitRole.Flying)));
+                    BonusKitRules.BonusSlotForRole(UnitRole.Flying)));
         }
     }
 

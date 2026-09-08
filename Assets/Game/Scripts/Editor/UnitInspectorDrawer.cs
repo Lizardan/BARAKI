@@ -123,37 +123,42 @@ namespace Game.Editor
                 return default;
             }
 
-            var race = raceCatalog.GetRace(GameIds.Races.Human);
-            if (race == null)
+            // Resolve the balance source for both races so the Faceless prefabs' "Open" button
+            // (and the balance card) behave uniformly with the Humans ones.
+            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Faceless })
             {
-                return default;
-            }
-
-            foreach (var role in UnitRoles)
-            {
-                if (visualCatalog.TryGetPrefab(GameIds.Races.Human, role, 0, out var prefab)
-                    && prefab != null
-                    && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                var race = raceCatalog.GetRace(raceId);
+                if (race == null)
                 {
-                    return new BalanceSourceInfo(race.GetUnit(role));
+                    continue;
                 }
-            }
 
-            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
-            {
-                if (visualCatalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Hero, slot, out var prefab)
-                    && prefab != null
-                    && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                foreach (var role in UnitRoles)
                 {
-                    return new BalanceSourceInfo(race.GetHeroBySlot(slot));
+                    if (visualCatalog.TryGetPrefab(raceId, role, 0, out var prefab)
+                        && prefab != null
+                        && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                    {
+                        return new BalanceSourceInfo(race.GetUnit(role));
+                    }
                 }
-            }
 
-            if (visualCatalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, 0, out var titan)
-                && titan != null
-                && AssetDatabase.GetAssetPath(titan) == prefabPath)
-            {
-                return new BalanceSourceInfo(race.GetHeroBySlot(1));
+                for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+                {
+                    if (visualCatalog.TryGetPrefab(raceId, UnitRole.Hero, slot, out var prefab)
+                        && prefab != null
+                        && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                    {
+                        return new BalanceSourceInfo(race.GetHeroBySlot(slot));
+                    }
+                }
+
+                if (visualCatalog.TryGetPrefab(raceId, UnitRole.Titan, 0, out var titan)
+                    && titan != null
+                    && AssetDatabase.GetAssetPath(titan) == prefabPath)
+                {
+                    return new BalanceSourceInfo(race.GetHeroBySlot(1));
+                }
             }
 
             return default;

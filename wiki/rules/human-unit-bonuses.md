@@ -6,7 +6,7 @@
 
 - `MatchPlayerState.BonusPickSlot` пишется в `MatchController.TrySetBonusPick` / host-apply снапшота.
 - `HandleWave` / manual call / pending spawn передают
-  `HumanBonusUnitRules.EffectiveBonusSlotForRole(pick, role)` → только юниты **совпадающей** роли
+  `BonusKitRules.EffectiveBonusSlotForRole(raceId, pick, role)` → только юниты **совпадающей** роли
   получают `BonusSlot` / bonus-статы / bonus-префаб.
 - `UnitStatsResolver.Resolve(…, bonusSlot)` берёт bonus-префаб или `RaceDefinition.GetUnitBonus`, затем стакает `RaceUpgradeStatsRules.Apply`.
 - Казармы UI: кнопка выкупа роли показывает **bonus-портрет**, если пик совпадает с ролью.
@@ -73,9 +73,10 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 
 Общее:
 
-- Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`HumanBonusUnitRules.Veteran*`). Префаб-сеттингс
-  авторитетен; фолбэк без префаба — `UnitStatsResolver.ResolveBase` × `ApplyVeteranMultipliers`.
-- Слот героя N усиливается пиком `6+N`; титан — пиком 10 (`EffectiveBonusSlotForHero/ForTitan`).
+- Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`BonusKitRules.Veteran*`). Префаб-сеттингс
+  авторитетен; фолбэк без префаба — `UnitStatsResolver.ResolveBase` × `BonusKitRules.ApplyVeteranMultipliers`.
+- Слот героя N усиливается пиком `6+N`; титан — пиком 10 (`BonusKitRules.EffectiveBonusSlotForHero/ForTitan`,
+  race-aware версия с `raceId` гейтует расы без кита).
   `BonusSlot` юнита едет в UnitsStatic v21 без изменений кодека — клиентские визуал/портреты
   резолвятся тем же `TryGetPrefab/TryGetBonusPortrait` (каталог расширен слотами 7–10).
 - Ветеранские киты: `AbilityKitDefaults.CreateKingBonus/PaladinBonus/PriestBonus/TitanBonus`

@@ -150,7 +150,7 @@ namespace Game.Gameplay.Combat
 
             // Siege BONUS is foot Paladin (infantry Shield); base Siege stays mounted cavalry.
             if (role == UnitRole.Siege
-                && bonusSlot == HumanBonusUnitRules.BonusSlotForRole(UnitRole.Siege))
+                && bonusSlot == BonusKitRules.BonusSlotForRole(UnitRole.Siege))
             {
                 return InfantryAttackClipSeconds;
             }

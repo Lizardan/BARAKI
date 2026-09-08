@@ -116,7 +116,7 @@ namespace Game.Tests
             var kit = AbilityKitDefaults.CreateForSpawn(
                 UnitRole.Ranged,
                 heroSlot: 0,
-                bonusSlot: HumanBonusUnitRules.BonusSlotForRole(UnitRole.Ranged));
+                bonusSlot: BonusKitRules.BonusSlotForRole(UnitRole.Ranged));
             Assert.AreEqual(1, kit.Length);
             Assert.AreEqual(AbilityIds.RangedCrit, kit[0].AbilityId);
 
@@ -127,7 +127,7 @@ namespace Game.Tests
         [Test]
         public void CreateForSpawn_Faceless_NonCasterRolesReturnEmptyKit()
         {
-            Assert.IsFalse(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Faceless));
+            Assert.IsFalse(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
 
             // FACELESS-016: only the Caster kit is authored so far. Other roles stay gated
             // (bonus / veteran kits are separate cards FACELESS-011 / FACELESS-012).
@@ -165,17 +165,17 @@ namespace Game.Tests
         [Test]
         public void EffectiveBonusSlots_Faceless_AlwaysZero()
         {
-            Assert.IsFalse(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Faceless));
-            Assert.IsTrue(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Human));
+            Assert.IsFalse(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
+            Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Human));
 
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForRole(
-                GameIds.Races.Faceless, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForHero(GameIds.Races.Faceless, 8, 2));
-            Assert.AreEqual(0, HumanBonusUnitRules.EffectiveBonusSlotForTitan(GameIds.Races.Faceless, 10));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForRole(
+                GameIds.Races.Faceless, BonusKitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(GameIds.Races.Faceless, 8, 2));
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForTitan(GameIds.Races.Faceless, 10));
 
-            Assert.AreEqual(HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee),
-                HumanBonusUnitRules.EffectiveBonusSlotForRole(
-                    GameIds.Races.Human, HumanBonusUnitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
+            Assert.AreEqual(BonusKitRules.BonusSlotForRole(UnitRole.Melee),
+                BonusKitRules.EffectiveBonusSlotForRole(
+                    GameIds.Races.Human, BonusKitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
         }
 
         [Test]

@@ -107,7 +107,11 @@ namespace Game.Gameplay.Combat
         IReadOnlyList<CombatCorpseState> Corpses { get; }
 
         float GetEffectiveMaxHp(MatchUnitState unit);
-        void ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot);
+        /// <summary>
+        /// Applies damage and returns the amount actually dealt (after armor, attacker multipliers
+        /// and absorb); 0 when the target is missing or already dead.
+        /// </summary>
+        float ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot);
         MatchUnitState FindMostInjuredAlly(IReadOnlyList<MatchUnitState> allies);
         MatchUnitState ResurrectUnit(CombatCorpseState corpse);
         /// <summary>
