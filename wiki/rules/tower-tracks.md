@@ -32,19 +32,38 @@
 | 8 | `_FIELD_MEDICS` | все юниты | +1/2/3 HP/с регенерации |
 | 9 | `_LAST_STAND` | все юниты | при HP < 30% урон +20/30/40% |
 
+## 9 треков Древних (Faceless) — FACELESS-017
+
+Параллельная таблица `FacelessTowerTrackRules` (те же индексы 0..8, те же UI-слоты 4–12).
+
+| # | Id | Роли | Эффект |
+|---|----|------|--------|
+| 1 | `UPG_TOWER_FACELESS_CHITINOUS_HIDE` | Melee+Super | +1/2/3 брони; L3 +15% макс. ХП |
+| 2 | `UPG_TOWER_FACELESS_HOLLOW_BARBS` | Ranged+Flying | игнор +1/2/3 брони цели |
+| 3 | `UPG_TOWER_FACELESS_VACUUM_COLLAPSE` | Melee+Flying | при смерти замедление 15/25/35% на 3 с в радиусе 3 |
+| 4 | `UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP` | Caster | живой кастер в радиусе 8 снижает входящий урон на 6/10/15% |
+| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Ranged+Caster | −1/−2/−3 брони цели на 4 с |
+| 6 | `UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP` | Melee+Siege | +10/15/20% скорости атаки |
+| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Caster+Super | splash 0.5/1.0/1.5 м, 25/35/50% урона |
+| 8 | `UPG_TOWER_FACELESS_HOLLOW_BONES` | Siege+Flying | +8/16/24% скорости движения |
+| 9 | `UPG_TOWER_FACELESS_VOID_HARDENING` | все юниты | −10/−15/−20% урона от атак башен/зданий |
+
 ## Карта кода
 
 | Файл | Роль |
 |------|------|
-| `Gameplay/Match/TowerTrackRules.cs` | ids/порядок, роли, тюнинг эффектов, уровни игрока |
+| `Gameplay/Match/TowerTrackRules.cs` | ids/порядок, роли, тюнинг эффектов (Human) |
+| `Gameplay/Match/FacelessTowerTrackRules.cs` | ids/порядок, роли, тюнинг эффектов (Faceless) — FACELESS-017 |
 | `MatchEconomyRules.cs` | `MaxTowerTrackLevel`, `TowerTrackCosts/DurationsSeconds`, `TryGetTowerTrackUpgrade` |
-| `MatchPlayerState.cs` | `TowerTrackLevels[]`, `Get/SetTowerTrackLevels` |
+| `MatchPlayerState.cs` | `TowerTrackLevels[]`, `Get/SetTowerTrackLevels` (race-agnostic, 9 слотов) |
 | `MatchController.cs` | tower-ветка `TryStartResearch` / `ApplyCompletedResearch`, `GetResearchQueueLimit`, apply снапшота |
 | `MatchResearchQueue.cs` | перегрузки `HasSpace/TryEnqueue` с per-building лимитом |
-| `Combat/TowerTrackUnitRules.cs` | спавн-статы (броня/дальность/скорость), фильтр Hero/Titan; хук в `UnitStatsResolver.Resolve` |
-| `Combat/MatchCombatSystem.cs` | burn/bloodrage/last stand/battering/arcane focus/medics (хост-сим) |
+| `Combat/TowerTrackUnitRules.cs` | спавн-статы Human (броня/дальность/скорость), фильтр Hero/Titan; хук в `UnitStatsResolver.Resolve` |
+| `Combat/FacelessTowerTrackUnitRules.cs` | спавн-статы Faceless (броня/скорость атаки/движения, max HP L3) — FACELESS-017 |
+| `Combat/MatchCombatSystem.cs` | burn/bloodrage/last stand/battering/arcane focus/medics (Human) + armor pen/slow/ritual/debuff/splash/void hardening (Faceless) |
 | `Networking/MatchSnapshot.cs` | v22: 9 байт уровней в Players-секции |
-| `UI/Runtime/Controllers/MatchInspectorController.cs` | слоты 4–12 (`PopulateTowerTrackCommands`), stub «Апгрейд» удалён |
+| `UI/Runtime/Controllers/MatchInspectorController.cs` | слоты 4–12 (`PopulateTowerTrackCommands`), race-dispatch для Faceless |
+| `UI/Runtime/MatchUpgradeLabelRules.cs` | лейблы кнопок/тултипов: race-aware `GetTowerTrackTitle/Effect` |
 
 ## Хостово-клиентский расклад
 
@@ -59,14 +78,26 @@
 ## Тесты
 
 `TowerTrackRulesTests`, `TowerTrackResearchTests`, `TowerTrackCombatTests`,
-`TowerTrackSnapshotTests` (+ кейсы в `MatchUpgradeLabelRulesTests`).
+`TowerTrackSnapshotTests`, `FacelessTowerTrackTests` (+ кейсы в `MatchUpgradeLabelRulesTests`).
 После правок: `run_tests` EditMode green.
 
 ## Как добавить трек новой расе
 
-Расширить `TowerTrackRules.TrackIds`/`RoleMatches` нельзя без рефакторинга индексов —
-новая раса получает собственную таблицу правил рядом (прецедент: `HumanBonusUnitRules`)
-и свой набор id `UPG_TOWER_<RACE>_*`; Player-секция wire расширится по тому же паттерну.
+Новая раса получает **собственную параллельную таблицу** правил рядом с `TowerTrackRules`
+(прецедент: `FacelessTowerTrackRules` для FACELESS-017). Те же 9 индексов 0..8 → те же
+UI-слоты 4–12; wire-контракт (`TowerTrackLevels[]` в Player-секции) не меняется.
+
+Шаги:
+1. Добавить id `UPG_TOWER_<RACE>_*` в `GameIds.Upgrades`.
+2. Создать `<Race>TowerTrackRules.cs` (ids, роли, константы, `TryGetTrackIndex`).
+3. Подключить `TryGetTrackIndex` в `TowerTrackRules.TryGetTrackIndex` (fallback).
+4. Создать `<Race>TowerTrackUnitRules.cs` для спавн-статов и подключить в
+   `TowerTrackUnitRules.Apply` (race-dispatch).
+5. Добавить runtime-хуки в `MatchCombatSystem` (armor/slow/splash/...).
+6. Обновить `MatchUpgradeLabelRules` (race-aware `GetTowerTrackTitle/Effect`).
+7. Обновить `MatchInspectorController.PopulateTowerTrackCommand` (race-dispatch trackIds).
+8. Добавить тесты (`<Race>TowerTrackTests.cs`).
+9. Зафиксировать в `wiki/rules/tower-tracks.md` и `GameDesign/Races.md`.
 
 ### Трек не должен дублировать механику бонуса (правило 2026-09-08)
 

@@ -1,3 +1,4 @@
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Match;
 
@@ -16,6 +17,11 @@ namespace Game.Gameplay.Combat
             if (player == null || stats.Role is UnitRole.Hero or UnitRole.Titan)
             {
                 return stats;
+            }
+
+            if (player.RaceId == GameIds.Races.Faceless)
+            {
+                return FacelessTowerTrackUnitRules.Apply(stats, player);
             }
 
             var armorBonus = 0f;

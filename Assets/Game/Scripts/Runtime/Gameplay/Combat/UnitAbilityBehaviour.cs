@@ -110,6 +110,14 @@ namespace Game.Gameplay.Combat
         void ApplyDamage(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot);
         MatchUnitState FindMostInjuredAlly(IReadOnlyList<MatchUnitState> allies);
         MatchUnitState ResurrectUnit(CombatCorpseState corpse);
+        /// <summary>
+        /// Summons a minion of <paramref name="role"/> for <paramref name="ownerSlot"/> next to
+        /// <paramref name="anchor"/>, stats scaled by <paramref name="statScale"/> (FACELESS-016 minion).
+        /// Returns null when the anchor lane route is unknown.
+        /// </summary>
+        MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor, Data.UnitRole role, float statScale);
+        /// <summary>Removes a corpse without resurrecting it (consumed by Raise the Drowned).</summary>
+        void ConsumeCorpse(CombatCorpseState corpse);
         bool HasActiveHealZone(int casterUnitId);
         void ReplaceHealZone(HeroHealZoneState zone);
         void ArmSlotCooldown(MatchUnitState unit, int slotIndex, float seconds);

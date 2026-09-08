@@ -1253,6 +1253,24 @@ namespace Game.Gameplay.Combat
                 unit.BloodrageRemainingSeconds = Mathf.Max(0f, unit.BloodrageRemainingSeconds - deltaTime);
             }
 
+            if (unit.SlowRemainingSeconds > 0f)
+            {
+                unit.SlowRemainingSeconds = Mathf.Max(0f, unit.SlowRemainingSeconds - deltaTime);
+                if (unit.SlowRemainingSeconds <= 0f)
+                {
+                    unit.SlowPercent = 0f;
+                }
+            }
+
+            if (unit.ArmorDebuffRemainingSeconds > 0f)
+            {
+                unit.ArmorDebuffRemainingSeconds = Mathf.Max(0f, unit.ArmorDebuffRemainingSeconds - deltaTime);
+                if (unit.ArmorDebuffRemainingSeconds <= 0f)
+                {
+                    unit.ArmorDebuffAmount = 0f;
+                }
+            }
+
             if (unit.BurnSecondsRemaining <= 0f || unit.BurnDamagePerSecond <= 0f || !unit.IsAlive)
             {
                 return;
@@ -1552,7 +1570,7 @@ namespace Game.Gameplay.Combat
 
         void TickMove(MatchUnitState unit, LaneRoute route, float deltaTime)
         {
-            var maxStep = unit.MarchMoveSpeed * deltaTime;
+            var maxStep = GetEffectiveMarchSpeed(unit) * deltaTime;
             if (maxStep <= 0.0001f)
             {
                 return;
@@ -1602,7 +1620,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var maxStep = unit.MarchMoveSpeed * deltaTime;
+            var maxStep = GetEffectiveMarchSpeed(unit) * deltaTime;
             if (maxStep <= 0.0001f)
             {
                 return;
@@ -1894,7 +1912,7 @@ namespace Game.Gameplay.Combat
             Vector3 threatPosition,
             float deltaTime)
         {
-            var maxStep = unit.MarchMoveSpeed * deltaTime;
+            var maxStep = GetEffectiveMarchSpeed(unit) * deltaTime;
             if (maxStep <= 0.0001f)
             {
                 return;
@@ -2011,7 +2029,7 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var maxStep = unit.MarchMoveSpeed * deltaTime;
+            var maxStep = GetEffectiveMarchSpeed(unit) * deltaTime;
             if (maxStep <= 0.0001f)
             {
                 return;
@@ -2500,8 +2518,15 @@ namespace Game.Gameplay.Combat
             var target = GetUnitById(projectile.TargetUnitId);
             if (target != null && target.IsAlive)
             {
-                ApplyDamage(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
+                var effectiveDamage = rawDamage;
+                if (projectile.IsBuildingAttack)
+                {
+                    effectiveDamage *= GetFacelessVoidHardeningMultiplier(target, isBuildingAttack: true);
+                }
+                ApplyDamage(attacker, target, effectiveDamage, projectile.AttackerOwnerSlot);
                 TryApplyFlamingArrowsBurn(projectile, target);
+                TryApplyUnnervingAimDebuff(attacker, target);
+                TryApplyFacelessSplash(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
             }
 
             if (rangedCrit)
@@ -2581,6 +2606,8 @@ namespace Game.Gameplay.Combat
             {
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
                 ApplyDamage(attacker, target, ApplyBulwarkBlock(target, strike.RawDamage), killerSlot);
+                TryApplyUnnervingAimDebuff(attacker, target);
+                TryApplyFacelessSplash(attacker, target, strike.RawDamage, killerSlot);
 
                 if (attacker != null && HumanBonusUnitRules.IsCasterBonus(attacker))
                 {
@@ -2659,7 +2686,8 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            var damage = CombatRules.ApplyArmor(rawDamage, GetEffectiveArmor(target));
+            var armor = Mathf.Max(0f, GetEffectiveArmor(target) - GetFacelessArmorPen(attacker));
+            var damage = CombatRules.ApplyArmor(rawDamage, armor);
             damage *= GetArmyDamageMultiplier(attacker);
             damage *= GetLastStandDamageMultiplier(attacker);
             if (attacker != null && attacker.UltimateBuffRemaining > 0f)
@@ -2669,6 +2697,8 @@ namespace Game.Gameplay.Combat
                     : HeroAbilityRules.UltimateSelfDamageBonusPercent;
                 damage *= 1f + percent;
             }
+
+            damage *= GetFacelessRitualMultiplier(target, attacker);
 
             if (target.AbsorbRemaining > 0f)
             {
@@ -2702,6 +2732,7 @@ namespace Game.Gameplay.Combat
             RemoveUnit(target);
             TrySpawnFlyingBonusOnDeath(deathOwnerSlot, deathLaneId, deathPosition, deathBonusSlot, deathMarchFocus);
             TryApplyBloodrageOnKill(attacker);
+            TryApplyVacuumCollapseOnDeath(deathOwnerSlot, deathPosition);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
                 deathOwnerSlot,
@@ -2917,7 +2948,12 @@ namespace Game.Gameplay.Combat
                     : HeroAbilityRules.ShieldArmorBonus;
             }
 
-            return armor;
+            if (target.ArmorDebuffRemainingSeconds > 0f)
+            {
+                armor -= target.ArmorDebuffAmount;
+            }
+
+            return Mathf.Max(0f, armor);
         }
 
         public float GetEffectiveMaxHp(MatchUnitState unit)
@@ -2928,6 +2964,207 @@ namespace Game.Gameplay.Combat
             }
 
             return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp, unit.WorldPosition));
+        }
+
+        float GetEffectiveMarchSpeed(MatchUnitState unit)
+        {
+            if (unit == null)
+            {
+                return 0f;
+            }
+
+            if (unit.SlowRemainingSeconds <= 0f)
+            {
+                return unit.MarchMoveSpeed;
+            }
+
+            return unit.MarchMoveSpeed * (1f - unit.SlowPercent);
+        }
+
+        // === Faceless Tower Track Helpers (FACELESS-017) ===
+
+        float GetFacelessArmorPen(MatchUnitState attacker)
+        {
+            if (attacker == null || !attacker.IsAlive || attacker.IsChampion)
+            {
+                return 0f;
+            }
+
+            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.HollowBarbsTrackIndex, attacker.Role))
+            {
+                return 0f;
+            }
+
+            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.HollowBarbsTrackIndex);
+            if (level <= 0)
+            {
+                return 0f;
+            }
+
+            return FacelessTowerTrackRules.HollowBarbsArmorPenByLevel[level - 1];
+        }
+
+        float GetFacelessRitualMultiplier(MatchUnitState target, MatchUnitState attacker)
+        {
+            if (target == null || !target.IsAlive)
+            {
+                return 1f;
+            }
+
+            if (attacker != null && attacker.OwnerSlot == target.OwnerSlot)
+            {
+                return 1f;
+            }
+
+            var level = GetTowerTrackLevel(target.OwnerSlot, FacelessTowerTrackRules.RitualOfTheDeepTrackIndex);
+            if (level <= 0)
+            {
+                return 1f;
+            }
+
+            if (!HasLivingCasterWithinRadius(target.WorldPosition, target.OwnerSlot, FacelessTowerTrackRules.RitualRadius))
+            {
+                return 1f;
+            }
+
+            return 1f - FacelessTowerTrackRules.RitualReductionPercentByLevel[level - 1];
+        }
+
+        bool HasLivingCasterWithinRadius(Vector3 center, int ownerSlot, float radius)
+        {
+            var radiusSq = radius * radius;
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (unit == null || !unit.IsAlive || unit.OwnerSlot != ownerSlot)
+                {
+                    continue;
+                }
+
+                if (unit.Role != UnitRole.Caster)
+                {
+                    continue;
+                }
+
+                if (HorizontalDistanceSq(center, unit.WorldPosition) <= radiusSq)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        float GetFacelessVoidHardeningMultiplier(MatchUnitState target, bool isBuildingAttack)
+        {
+            if (target == null || !target.IsAlive || target.IsChampion || !isBuildingAttack)
+            {
+                return 1f;
+            }
+
+            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.VoidHardeningTrackIndex, target.Role))
+            {
+                return 1f;
+            }
+
+            var level = GetTowerTrackLevel(target.OwnerSlot, FacelessTowerTrackRules.VoidHardeningTrackIndex);
+            if (level <= 0)
+            {
+                return 1f;
+            }
+
+            return 1f - FacelessTowerTrackRules.VoidHardeningReductionPercentByLevel[level - 1];
+        }
+
+        void TryApplyVacuumCollapseOnDeath(int deathOwnerSlot, Vector3 deathPosition)
+        {
+            var player = deathOwnerSlot >= 0 && deathOwnerSlot < _players.Count ? _players[deathOwnerSlot] : null;
+            if (player == null || player.RaceId != GameIds.Races.Faceless)
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(deathOwnerSlot, FacelessTowerTrackRules.VacuumCollapseTrackIndex);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            var slowPercent = FacelessTowerTrackRules.VacuumCollapseSlowPercentByLevel[level - 1];
+            var radius = FacelessTowerTrackRules.VacuumCollapseRadius;
+            var duration = FacelessTowerTrackRules.VacuumCollapseSlowDurationSeconds;
+
+            _nearbyBuffer.Clear();
+            _spatialGrid.Rebuild(_units);
+            _spatialGrid.Query(deathPosition, radius, _nearbyBuffer);
+            var radiusSq = radius * radius;
+
+            for (var i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                var enemy = _nearbyBuffer[i];
+                if (enemy == null || !enemy.IsAlive || enemy.OwnerSlot == deathOwnerSlot)
+                {
+                    continue;
+                }
+
+                if (HorizontalDistanceSq(deathPosition, enemy.WorldPosition) > radiusSq)
+                {
+                    continue;
+                }
+
+                enemy.SlowRemainingSeconds = duration;
+                enemy.SlowPercent = slowPercent;
+            }
+        }
+
+        void TryApplyUnnervingAimDebuff(MatchUnitState attacker, MatchUnitState target)
+        {
+            if (attacker == null || !attacker.IsAlive || attacker.IsChampion)
+            {
+                return;
+            }
+
+            if (target == null || !target.IsAlive || target.OwnerSlot == attacker.OwnerSlot)
+            {
+                return;
+            }
+
+            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.UnnervingAimTrackIndex, attacker.Role))
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.UnnervingAimTrackIndex);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            target.ArmorDebuffRemainingSeconds = FacelessTowerTrackRules.UnnervingAimDebuffDurationSeconds;
+            target.ArmorDebuffAmount = FacelessTowerTrackRules.UnnervingAimArmorDebuffByLevel[level - 1];
+        }
+
+        void TryApplyFacelessSplash(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
+        {
+            if (attacker == null || !attacker.IsAlive || attacker.IsChampion)
+            {
+                return;
+            }
+
+            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.SplashOfTheDeepTrackIndex, attacker.Role))
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.SplashOfTheDeepTrackIndex);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            var radius = FacelessTowerTrackRules.SplashRadiusByLevel[level - 1];
+            var damagePercent = FacelessTowerTrackRules.SplashDamagePercentByLevel[level - 1];
+            ApplySplashDamage(attacker, target.WorldPosition, rawDamage * damagePercent, radius, killerOwnerSlot, excludeUnitId: target.UnitId);
         }
 
         /// <summary>
@@ -3263,16 +3500,16 @@ namespace Game.Gameplay.Combat
 
             var state = def.Fx.AnimState;
             var kind = AbilityAnimRules.ResolveAnim(def.AbilityId, def.Fx.AnimKind, state);
-            if (kind == AbilityAnimKind.None && string.IsNullOrEmpty(state))
-            {
-                return;
-            }
 
             var lockSeconds = AbilityAnimRules.ResolveLockSeconds(
                 kind,
                 GetUnitAttackInterval(unit),
                 def.AbilityId);
-            if (lockSeconds <= 0f && !string.IsNullOrEmpty(state))
+            // Active abilities with no authored cast/attack clip (AbilityAnimKind.None)
+            // must still occupy the caster briefly. Without this, the next kit ability
+            // re-casts on the very next tick and spells fire simultaneously instead of
+            // strictly in sequence. Matches the canonical staff cast clip length.
+            if (lockSeconds <= 0f)
             {
                 lockSeconds = AbilityAnimRules.StaffCastClipSeconds;
             }
@@ -3420,6 +3657,68 @@ namespace Game.Gameplay.Combat
             _unitById[revived.UnitId] = revived;
             _corpses.Remove(corpse);
             return revived;
+        }
+
+        public MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor, UnitRole role, float statScale)
+        {
+            if (anchor == null || statScale <= 0f)
+            {
+                return null;
+            }
+
+            var source = FindMinionSourceStats(ownerSlot, role, anchor);
+            var stats = new UnitCombatStats(
+                role,
+                source.MaxHp * statScale,
+                source.Armor * statScale,
+                source.DamageMin * statScale,
+                source.DamageMax * statScale,
+                source.AttackSpeed,
+                source.AttackRange,
+                source.MoveSpeed,
+                goldBounty: 0,
+                maxMana: 0f);
+
+            try
+            {
+                return SpawnUnit(
+                    ownerSlot,
+                    anchor.LaneId,
+                    role,
+                    stats,
+                    anchor.MarchProgressDistance,
+                    new Vector3(1.2f, 0f, 0f));
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+        }
+
+        public void ConsumeCorpse(CombatCorpseState corpse)
+        {
+            if (corpse != null)
+            {
+                _corpses.Remove(corpse);
+            }
+        }
+
+        /// <summary>
+        /// Minion baseline: a living friendly unit of the same role (canon ×0.5 of the race Melee),
+        /// falling back to the anchor stats when none is on the field.
+        /// </summary>
+        UnitCombatStats FindMinionSourceStats(int ownerSlot, UnitRole role, MatchUnitState anchor)
+        {
+            for (var i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (unit != null && unit.IsAlive && unit.OwnerSlot == ownerSlot && unit.Role == role)
+                {
+                    return unit.Stats;
+                }
+            }
+
+            return anchor.Stats;
         }
 
         public bool HasActiveHealZone(int casterUnitId)

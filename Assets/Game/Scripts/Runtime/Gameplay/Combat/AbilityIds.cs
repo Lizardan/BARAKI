@@ -7,6 +7,13 @@ namespace Game.Gameplay.Combat
         public const int Frost = 2;
         public const int Resurrect = 3;
 
+        /// <summary>Faceless caster slot 1: single-target damage + dot (FACELESS-016).</summary>
+        public const int BlightingGaze = 4;
+        /// <summary>Faceless caster slot 2: ground AoE damage + lifesteal to the caster (FACELESS-016).</summary>
+        public const int VoidDrain = 5;
+        /// <summary>Faceless caster slot 3: raise ANY corpse as a controlled melee minion (FACELESS-016).</summary>
+        public const int RaiseDrowned = 6;
+
         public const int Heal = 10;
         public const int Ultimate = 11;
         public const int Strike = 12;

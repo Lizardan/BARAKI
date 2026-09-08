@@ -85,7 +85,8 @@ namespace Game.Gameplay.Match
                 }
             }
 
-            return false;
+            // Also recognize Faceless tower tracks (same slot indices, different race table).
+            return FacelessTowerTrackRules.TryGetTrackIndex(upgradeId, out index);
         }
 
         public static int GetLevel(int[] levels, string upgradeId) =>

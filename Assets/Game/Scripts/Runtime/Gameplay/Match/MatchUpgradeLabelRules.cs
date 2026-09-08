@@ -139,22 +139,55 @@ namespace Game.Gameplay.Match
         public static string FormatStatTrackTooltip(string trackId, int nextLevel, int cost, float seconds) =>
             $"{GetStatTrackTitle(trackId)} — уровень {nextLevel}\n{cost}g · {seconds:0}с\n{GetStatTrackEffect(trackId)}";
 
-        public static string GetTowerTrackTitle(int trackIndex) => trackIndex switch
+        public static string GetTowerTrackTitle(int trackIndex, string raceId = GameIds.Races.Human) => raceId switch
         {
-            0 => "Flaming Arrows",
-            1 => "Bulwark",
-            2 => "Bloodrage",
-            3 => "Battering Rams",
-            4 => "Arcane Focus",
-            5 => "Skirmishers",
-            6 => "Forced March",
-            7 => "Field Medics",
-            8 => "Last Stand",
-            _ => "Трек башни",
+            GameIds.Races.Faceless => trackIndex switch
+            {
+                0 => "Chitinous Hide",
+                1 => "Hollow Barbs",
+                2 => "Vacuum Collapse",
+                3 => "Ritual of the Deep",
+                4 => "Unnerving Aim",
+                5 => "Frenzy of the Deep",
+                6 => "Splash of the Deep",
+                7 => "Hollow Bones",
+                8 => "Void Hardening",
+                _ => "Трек башни",
+            },
+            _ => trackIndex switch
+            {
+                0 => "Flaming Arrows",
+                1 => "Bulwark",
+                2 => "Bloodrage",
+                3 => "Battering Rams",
+                4 => "Arcane Focus",
+                5 => "Skirmishers",
+                6 => "Forced March",
+                7 => "Field Medics",
+                8 => "Last Stand",
+                _ => "Трек башни",
+            },
         };
 
-        public static string GetTowerTrackEffect(int trackIndex)
+        public static string GetTowerTrackEffect(int trackIndex, string raceId = GameIds.Races.Human)
         {
+            if (raceId == GameIds.Races.Faceless)
+            {
+                return trackIndex switch
+                {
+                    0 => "Мили и супер: +1/+2/+3 брони; на ур. 3 +15% макс. ХП",
+                    1 => "Стрелки и летуны: игнор +1/+2/+3 брони цели",
+                    2 => "Мили и летуны: при смерти замедление 15%/25%/35% на 3 с в радиусе 3",
+                    3 => "Кастеры: живой кастер в радиусе 8 снижает входящий урон на 6%/10%/15%",
+                    4 => "Стрелки и кастеры: −1/−2/−3 брони цели на 4 с",
+                    5 => "Мили и осада: +10%/+15%/+20% скорости атаки",
+                    6 => "Кастеры и супер: splash 0.5/1.0/1.5 м, 25%/35%/50% урона",
+                    7 => "Осада и летуны: +8%/+16%/+24% скорости движения",
+                    8 => "Все юниты: −10%/−15%/−20% урона от атак башен/зданий",
+                    _ => string.Empty,
+                };
+            }
+
             return trackIndex switch
             {
                 0 => "Стрелки и летуны поджигают: 2/4/6 dmg/с за уровень в течение 2 с; выстрелы живых башен тоже горят",
@@ -170,11 +203,11 @@ namespace Game.Gameplay.Match
             };
         }
 
-        public static string FormatTowerTrackButton(int trackIndex, int nextLevel, int cost) =>
-            $"{GetTowerTrackTitle(trackIndex)}\nУр. {nextLevel}\n{cost}g";
+        public static string FormatTowerTrackButton(int trackIndex, int nextLevel, int cost, string raceId = GameIds.Races.Human) =>
+            $"{GetTowerTrackTitle(trackIndex, raceId)}\nУр. {nextLevel}\n{cost}g";
 
-        public static string FormatTowerTrackTooltip(int trackIndex, int nextLevel, int cost, float seconds) =>
-            $"{GetTowerTrackTitle(trackIndex)} — уровень {nextLevel}\n{cost}g · {seconds:0}с\n{GetTowerTrackEffect(trackIndex)}";
+        public static string FormatTowerTrackTooltip(int trackIndex, int nextLevel, int cost, float seconds, string raceId = GameIds.Races.Human) =>
+            $"{GetTowerTrackTitle(trackIndex, raceId)} — уровень {nextLevel}\n{cost}g · {seconds:0}с\n{GetTowerTrackEffect(trackIndex, raceId)}";
 
         public static string FormatQueueSlotShort(string upgradeId, int displayLevel)
         {

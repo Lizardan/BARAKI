@@ -400,6 +400,91 @@
     padding: 0;
 }
 
+/* Unit ability / spell slots in the inspector (FACELESS-016 info panel) */
+.match-unit-abilities {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(75, 77, 69, 0.6);
+}
+
+.match-unit-abilities--hidden {
+    display: none;
+}
+
+.match-ability-slot {
+    flex-direction: column;
+    align-items: center;
+    margin: 0 8px 8px 0;
+    width: 60px;
+}
+
+.match-ability-slot__icon {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-width: 1px;
+    border-color: rgb(95, 98, 88);
+    border-radius: 4px;
+    background-color: rgb(20, 21, 19);
+}
+
+.match-ability-slot__fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.match-ability-slot__cooldown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0%;
+    background-color: rgba(8, 8, 10, 0.62);
+    pointer-events: none;
+}
+
+.match-ability-slot__cd-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(235, 232, 222);
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 2px rgb(0, 0, 0);
+    pointer-events: none;
+}
+
+.match-ability-slot__label {
+    font-size: 10px;
+    color: rgb(190, 188, 178);
+    margin-top: 2px;
+    max-width: 56px;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-align: middle-center;
+    text-overflow: ellipsis;
+}
+
+.match-ability-slot--locked .match-ability-slot__icon {
+    border-color: rgba(70, 72, 66, 0.8);
+}
+
+.match-ability-slot--locked .match-ability-slot__label {
+    color: rgb(120, 122, 114);
+}
+
 .match-panel__content-root {
     position: relative;
     flex-grow: 1;

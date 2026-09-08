@@ -144,6 +144,16 @@ namespace Game.Core
             public const string TowerHumanForcedMarch = "UPG_TOWER_HUMAN_FORCED_MARCH";
             public const string TowerHumanFieldMedics = "UPG_TOWER_HUMAN_FIELD_MEDICS";
             public const string TowerHumanLastStand = "UPG_TOWER_HUMAN_LAST_STAND";
+
+            public const string TowerFacelessChitinousHide = "UPG_TOWER_FACELESS_CHITINOUS_HIDE";
+            public const string TowerFacelessHollowBarbs = "UPG_TOWER_FACELESS_HOLLOW_BARBS";
+            public const string TowerFacelessVacuumCollapse = "UPG_TOWER_FACELESS_VACUUM_COLLAPSE";
+            public const string TowerFacelessRitualOfTheDeep = "UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP";
+            public const string TowerFacelessUnnervingAim = "UPG_TOWER_FACELESS_UNNERVING_AIM";
+            public const string TowerFacelessFrenzyOfTheDeep = "UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP";
+            public const string TowerFacelessSplashOfTheDeep = "UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP";
+            public const string TowerFacelessHollowBones = "UPG_TOWER_FACELESS_HOLLOW_BONES";
+            public const string TowerFacelessVoidHardening = "UPG_TOWER_FACELESS_VOID_HARDENING";
         }
 
         public static class Match

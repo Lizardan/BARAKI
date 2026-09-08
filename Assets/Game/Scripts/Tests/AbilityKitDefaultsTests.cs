@@ -125,19 +125,41 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CreateForSpawn_Faceless_ReturnsEmptyKit()
+        public void CreateForSpawn_Faceless_NonCasterRolesReturnEmptyKit()
         {
             Assert.IsFalse(HumanBonusUnitRules.HasBonusKit(GameIds.Races.Faceless));
 
-            foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged, UnitRole.Caster, UnitRole.Titan })
+            // FACELESS-016: only the Caster kit is authored so far. Other roles stay gated
+            // (bonus / veteran kits are separate cards FACELESS-011 / FACELESS-012).
+            foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged, UnitRole.Titan })
             {
                 var kit = AbilityKitDefaults.CreateForSpawn(
                     GameIds.Races.Faceless, role, heroSlot: 1, bonusSlot: 0);
                 Assert.AreEqual(0, kit.Length, $"Faceless {role} must not inherit Human kit.");
             }
+        }
 
+        [Test]
+        public void CreateForSpawn_Faceless_CasterReturnsThreeSpells()
+        {
             var casterKit = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Caster, 0, 0);
-            Assert.AreEqual(0, casterKit.Length);
+            Assert.AreEqual(3, casterKit.Length, "Faceless caster must return its 3 authored spells.");
+            Assert.AreEqual(AbilityIds.BlightingGaze, casterKit[0].AbilityId);
+            Assert.AreEqual(AbilityIds.VoidDrain, casterKit[1].AbilityId);
+            Assert.AreEqual(AbilityIds.RaiseDrowned, casterKit[2].AbilityId);
+        }
+
+        [Test]
+        public void CreateFacelessCaster_UnlocksByMagicLevel()
+        {
+            var kit = AbilityKitDefaults.CreateFacelessCaster();
+            Assert.AreEqual(3, kit.Length);
+            Assert.AreEqual(AbilityUnlock.MagicLevel, kit[0].Unlock);
+            Assert.AreEqual(1, kit[0].UnlockValue);
+            Assert.AreEqual(2, kit[1].UnlockValue);
+            Assert.AreEqual(3, kit[2].UnlockValue);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(kit[0].DisplayName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(kit[0].Description));
         }
 
         [Test]

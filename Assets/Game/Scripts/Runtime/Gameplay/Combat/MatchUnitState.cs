@@ -146,6 +146,14 @@ namespace Game.Gameplay.Combat
         public int BurnSourceOwnerSlot { get; set; }
         /// <summary>Host-only: remaining Bloodrage seconds (attack speed after a kill).</summary>
         public float BloodrageRemainingSeconds { get; set; }
+        /// <summary>Host-only: remaining slow seconds from Vacuum Collapse.</summary>
+        public float SlowRemainingSeconds { get; set; }
+        /// <summary>Host-only: slow percent from Vacuum Collapse (0.15–0.35).</summary>
+        public float SlowPercent { get; set; }
+        /// <summary>Host-only: remaining armor-debuff seconds from Unnerving Aim.</summary>
+        public float ArmorDebuffRemainingSeconds { get; set; }
+        /// <summary>Host-only: flat armor reduction from Unnerving Aim (1–3).</summary>
+        public float ArmorDebuffAmount { get; set; }
         public bool IsAlive => CurrentHp > 0f;
     }
 }

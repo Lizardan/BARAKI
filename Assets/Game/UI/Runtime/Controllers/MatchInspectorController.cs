@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
@@ -27,6 +28,9 @@ namespace Game.UI.Controllers
         const string ExtraAbilityPickedClass = "match-extra-ability__btn--picked";
         const string TargetingTooltipHiddenClass = "match-targeting-tooltip--hidden";
         const string CommandSlotLockedClass = "match-command-grid__slot--locked";
+        const string UnitAbilityBarName = "UnitAbilityBar";
+        const string UnitAbilityBarHiddenClass = "match-unit-abilities--hidden";
+        static readonly Color LockedAbilityColor = new Color(0.32f, 0.33f, 0.30f, 1f);
         const float TargetingTooltipOffsetX = 18f;
         const float TargetingTooltipOffsetY = 18f;
 
@@ -69,6 +73,10 @@ namespace Game.UI.Controllers
         string _commandsFingerprint;
         UnitVisualCatalog _visualCatalog;
         MatchCombatPresenter _combatPresenter;
+        VisualElement _unitAbilityBar;
+        readonly List<AbilitySlotView> _abilitySlots = new List<AbilitySlotView>();
+        string _abilityBarFingerprint;
+        MatchUnitState _abilityBarUnit;
 
         void Awake()
         {
@@ -87,6 +95,7 @@ namespace Game.UI.Controllers
             _readonly = root.Q<Label>("InspectorReadonly");
             _commandGrid = root.Q<VisualElement>("CommandGrid");
             _unitInfoPanel = root.Q<VisualElement>("UnitInfoPanel");
+            _unitAbilityBar = root.Q<VisualElement>(UnitAbilityBarName);
             _emptyOverlay = root.Q<VisualElement>("InspectorEmptyOverlay");
             _panelBody = root.Q<VisualElement>("InspectorPanelBody");
             _commandTooltip = root.Q<VisualElement>("CommandTooltip");
@@ -271,6 +280,236 @@ namespace Game.UI.Controllers
             _meta.text = string.Empty;
             _badge.text = string.Empty;
             _readonly.text = string.Empty;
+            RefreshUnitAbilities(unit);
+        }
+
+        /// <summary>
+        /// Renders the selected unit's ability kit as square icons. Unlocked abilities show their
+        /// authored colour; locked ones (not yet learned / below required hero or magic level) are
+        /// greyed out. While an ability is on cooldown the square shows a sweeping overlay plus a
+        /// countdown of the remaining seconds. Runs every frame (cheap: only the kit shape rebuilds
+        /// when the ability set changes).
+        /// </summary>
+        void RefreshUnitAbilities(MatchUnitState unit)
+        {
+            if (_unitAbilityBar == null)
+            {
+                return;
+            }
+
+            _abilityBarUnit = unit;
+
+            var abilities = unit?.Abilities;
+            if (abilities == null || abilities.Length == 0)
+            {
+                if (_abilityBarFingerprint != null)
+                {
+                    ClearAbilitySlots();
+                    _abilityBarFingerprint = null;
+                }
+
+                _unitAbilityBar.EnableInClassList(UnitAbilityBarHiddenClass, true);
+                return;
+            }
+
+            _unitAbilityBar.EnableInClassList(UnitAbilityBarHiddenClass, false);
+
+            var combat = _matchRuntime != null ? _matchRuntime.Controller?.Combat : null;
+            var fingerprint = string.Empty;
+            for (var i = 0; i < abilities.Length; i++)
+            {
+                fingerprint += (abilities[i]?.AbilityId ?? 0).ToString();
+                fingerprint += ",";
+            }
+
+            if (!string.Equals(fingerprint, _abilityBarFingerprint, StringComparison.Ordinal))
+            {
+                RebuildAbilitySlots(abilities);
+                _abilityBarFingerprint = fingerprint;
+            }
+
+            for (var i = 0; i < abilities.Length; i++)
+            {
+                var def = abilities[i];
+                if (def == null)
+                {
+                    continue;
+                }
+
+                var view = _abilitySlots[i];
+                var unlocked = IsAbilityUnlocked(combat, unit, def);
+                var remaining = (unit.AbilityCooldownRemaining != null && i < unit.AbilityCooldownRemaining.Length)
+                    ? unit.AbilityCooldownRemaining[i]
+                    : 0f;
+                var total = def.CooldownSeconds;
+
+                view.Fill.style.backgroundColor = unlocked ? def.Fx.Color : LockedAbilityColor;
+                view.Root.EnableInClassList("match-ability-slot--locked", !unlocked);
+
+                if (remaining > 0.001f && total > 0.001f)
+                {
+                    var fraction = Mathf.Clamp01(remaining / total);
+                    view.CooldownOverlay.style.height = Length.Percent(fraction * 100f);
+                    view.CooldownOverlay.visible = true;
+                    view.CdText.text = Mathf.CeilToInt(remaining).ToString();
+                    view.CdText.visible = true;
+                }
+                else
+                {
+                    view.CooldownOverlay.visible = false;
+                    view.CdText.visible = false;
+                }
+            }
+        }
+
+        static bool IsAbilityUnlocked(MatchCombatSystem combat, MatchUnitState unit, UnitAbilityDef def)
+        {
+            switch (def.Unlock)
+            {
+                case AbilityUnlock.Always:
+                    return true;
+                case AbilityUnlock.HeroLevel:
+                    return unit.Level >= def.UnlockValue;
+                case AbilityUnlock.MagicLevel:
+                    return combat != null && combat.GetMagicLevel(unit.OwnerSlot) >= def.UnlockValue;
+                default:
+                    return false;
+            }
+        }
+
+        void RebuildAbilitySlots(UnitAbilityDef[] abilities)
+        {
+            ClearAbilitySlots();
+            for (var i = 0; i < abilities.Length; i++)
+            {
+                var def = abilities[i];
+
+                var root = new VisualElement { name = $"AbilitySlot{i}" };
+                root.AddToClassList("match-ability-slot");
+
+                var icon = new VisualElement();
+                icon.AddToClassList("match-ability-slot__icon");
+
+                var fill = new VisualElement();
+                fill.AddToClassList("match-ability-slot__fill");
+
+                var overlay = new VisualElement();
+                overlay.AddToClassList("match-ability-slot__cooldown");
+                overlay.visible = false;
+
+                var cdText = new Label();
+                cdText.AddToClassList("match-ability-slot__cd-text");
+                cdText.visible = false;
+
+                icon.Add(fill);
+                icon.Add(overlay);
+                icon.Add(cdText);
+
+                var label = new Label(def != null ? def.DisplayName : string.Empty);
+                label.AddToClassList("match-ability-slot__label");
+
+                root.Add(icon);
+                root.Add(label);
+                _unitAbilityBar.Add(root);
+
+                var view = new AbilitySlotView
+                {
+                    Root = root,
+                    Icon = icon,
+                    Fill = fill,
+                    CooldownOverlay = overlay,
+                    CdText = cdText,
+                    Label = label,
+                    Def = def,
+                    SlotIndex = i,
+                };
+                _abilitySlots.Add(view);
+
+                // Styled hover tooltip (reuses the shared CommandTooltip) — see ShowAbilityTooltip.
+                root.RegisterCallback<PointerEnterEvent>(_ => ShowAbilityTooltip(view));
+                root.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
+            }
+        }
+
+        void ClearAbilitySlots()
+        {
+            _unitAbilityBar?.Clear();
+            _abilitySlots.Clear();
+        }
+
+        sealed class AbilitySlotView
+        {
+            public VisualElement Root;
+            public VisualElement Icon;
+            public VisualElement Fill;
+            public VisualElement CooldownOverlay;
+            public Label CdText;
+            public Label Label;
+            public UnitAbilityDef Def;
+            public int SlotIndex;
+        }
+
+        /// <summary>
+        /// Styled hover tooltip for an ability square — name + description, and, when the ability is
+        /// locked, the reason it is locked (hero/magic level requirement). Reuses the shared
+        /// <c>CommandTooltip</c> element so it matches the rest of the HUD.
+        /// </summary>
+        void ShowAbilityTooltip(AbilitySlotView view)
+        {
+            if (view == null || view.Def == null || _commandTooltip == null || _commandTooltipLabel == null)
+            {
+                HideTooltip();
+                return;
+            }
+
+            // Keep the command-slot hover state clean so it does not re-show on the next refresh.
+            _hoveredCommandIndex = -1;
+            _hoveredExtraAbilityIndex = -1;
+
+            var def = view.Def;
+            var combat = _matchRuntime != null ? _matchRuntime.Controller?.Combat : null;
+            var unit = _abilityBarUnit;
+            var unlocked = unit != null && IsAbilityUnlocked(combat, unit, def);
+
+            var text = def.DisplayName;
+            if (!string.IsNullOrEmpty(def.Description))
+            {
+                text += "\n" + def.Description;
+            }
+
+            if (!unlocked)
+            {
+                text += "\n" + AbilityUnlockRequirementText(def, combat);
+            }
+            else if (def.ManaCost > 0f)
+            {
+                text += "\nМана: " + def.ManaCost.ToString("0");
+                if (def.CooldownSeconds > 0f)
+                {
+                    text += "   Кулдаун: " + def.CooldownSeconds.ToString("0") + " с";
+                }
+            }
+
+            _commandTooltipLabel.text = text;
+            _commandTooltip.RemoveFromClassList(TooltipHiddenClass);
+            _commandTooltip.BringToFront();
+            _commandTooltip.schedule.Execute(() => PositionTooltip(view.Root));
+        }
+
+        string AbilityUnlockRequirementText(UnitAbilityDef def, MatchCombatSystem combat)
+        {
+            switch (def.Unlock)
+            {
+                case AbilityUnlock.HeroLevel:
+                    return $"Закрыто — требуется уровень героя: {def.UnlockValue}";
+                case AbilityUnlock.MagicLevel:
+                    var lvl = (combat != null && _abilityBarUnit != null)
+                        ? combat.GetMagicLevel(_abilityBarUnit.OwnerSlot)
+                        : 0;
+                    return $"Закрыто — требуется магия ур.: {def.UnlockValue} (сейчас {lvl})";
+                default:
+                    return "Закрыто";
+            }
         }
 
         void RefreshBuilding(int instanceId, bool forceCommands)
@@ -563,7 +802,11 @@ namespace Game.UI.Controllers
             int trackIndex)
         {
             const int uiSlotOffset = 3;
-            var trackId = TowerTrackRules.TrackIds[trackIndex];
+            var raceId = player?.RaceId ?? GameIds.Races.Human;
+            var trackIds = raceId == GameIds.Races.Faceless
+                ? FacelessTowerTrackRules.TrackIds
+                : TowerTrackRules.TrackIds;
+            var trackId = trackIds[trackIndex];
             var currentLevel = player?.GetTowerTrackLevel(trackIndex) ?? 0;
             var queued = controller?.Research.CountUpgrade(building.InstanceId, trackId) ?? 0;
             var nextLevel = MatchUpgradeLabelRules.GetNextLevel(currentLevel, queued);
@@ -582,13 +825,13 @@ namespace Game.UI.Controllers
             SetCommand(
                 uiSlotOffset + trackIndex,
                 hasStep
-                    ? MatchUpgradeLabelRules.FormatTowerTrackButton(trackIndex, nextLevel, cost)
-                    : $"Макс. {MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex)}",
+                    ? MatchUpgradeLabelRules.FormatTowerTrackButton(trackIndex, nextLevel, cost, raceId)
+                    : $"Макс. {MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex, raceId)}",
                 canBuy,
                 () => StartResearch(trackId),
                 hasStep
-                    ? MatchUpgradeLabelRules.FormatTowerTrackTooltip(trackIndex, nextLevel, cost, duration)
-                    : $"{MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex)} — максимальный уровень");
+                    ? MatchUpgradeLabelRules.FormatTowerTrackTooltip(trackIndex, nextLevel, cost, duration, raceId)
+                    : $"{MatchUpgradeLabelRules.GetTowerTrackTitle(trackIndex, raceId)} — максимальный уровень");
         }
 
         void PopulateStatTrackCommand(

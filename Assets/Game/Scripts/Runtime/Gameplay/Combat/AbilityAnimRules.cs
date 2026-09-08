@@ -57,7 +57,10 @@ namespace Game.Gameplay.Combat
                     or AbilityIds.GreaterHeal
                     or AbilityIds.Revive
                     or AbilityIds.Shield
-                    or AbilityIds.Rally => AbilityAnimKind.Cast,
+                    or AbilityIds.Rally
+                    or AbilityIds.BlightingGaze
+                    or AbilityIds.VoidDrain
+                    or AbilityIds.RaiseDrowned => AbilityAnimKind.Cast,
 
                 _ => AbilityAnimKind.None,
             };

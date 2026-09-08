@@ -14,6 +14,13 @@ namespace Game.Gameplay.Combat
         public static readonly Color Priest = new(0.78f, 0.92f, 1f);
         public static readonly Color DivineSmite = new(1f, 0.92f, 0.45f);
 
+        /// <summary>Faceless caster slot 1: Blighting Gaze (FACELESS-016).</summary>
+        public static readonly Color Blight = new(0.45f, 0.85f, 0.35f);
+        /// <summary>Faceless caster slot 2: Void Drain (FACELESS-016).</summary>
+        public static readonly Color VoidDrain = new(0.65f, 0.35f, 0.95f);
+        /// <summary>Faceless caster slot 3: Raise the Drowned (FACELESS-016).</summary>
+        public static readonly Color RaiseDrowned = new(0.25f, 0.9f, 0.85f);
+
         public static readonly Color AuraDamage = new(0.9f, 0.2f, 0.15f);
         /// <summary>Paladin haste — green runic ring (not gold sparkle).</summary>
         public static readonly Color AuraAttackSpeed = new(0.3f, 0.92f, 0.35f);

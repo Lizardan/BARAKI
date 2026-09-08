@@ -555,6 +555,13 @@ namespace Game.Gameplay.Combat
         {
             if (raceId == GameIds.Races.Faceless)
             {
+                // FACELESS-016: the caster kit is authored. Other roles stay gated — the bonus/veteran
+                // kits are separate cards (FACELESS-011, FACELESS-012).
+                if (role == UnitRole.Caster)
+                {
+                    return CreateFacelessCaster();
+                }
+
                 return System.Array.Empty<UnitAbilityDef>();
             }
 
@@ -601,6 +608,54 @@ namespace Game.Gameplay.Combat
                 cooldownSeconds: CasterSpellRules.ResurrectCooldownSeconds,
                 durationSeconds: CasterSpellRules.ResurrectCorpseMaxAgeSeconds,
                 manaCost: CasterSpellRules.ResurrectManaCost),
+        };
+
+        /// <summary>
+        /// Faceless caster kit (FACELESS-016). Canon: <c>GameDesign/Races.md</c> § Magic — Древние.
+        /// Slot 1/2/3 unlock with main magic level 1/2/3, same as the Human kit.
+        /// Design axis: Humans preserve their own, the Faceless feed on the foreign.
+        /// </summary>
+        public static UnitAbilityDef[] CreateFacelessCaster() => new[]
+        {
+            Active(
+                AbilityIds.BlightingGaze,
+                "Blighting Gaze",
+                "Гниющий взор: урон цели и гниение, снимающее здоровье.",
+                FacelessSpellRules.GazeRequiredMagicLevel,
+                BlightingGaze(),
+                fx: new AbilityFx { Color = AbilityFxColors.Blight },
+                unlock: AbilityUnlock.MagicLevel,
+                damage: FacelessSpellRules.GazeDamage,
+                castRange: FacelessSpellRules.CastRange,
+                durationSeconds: FacelessSpellRules.GazeDotSeconds,
+                cooldownSeconds: FacelessSpellRules.GazeCooldownSeconds,
+                manaCost: FacelessSpellRules.GazeManaCost),
+            Active(
+                AbilityIds.VoidDrain,
+                "Void Drain",
+                "Вытягивание жизни: урон по скоплению врагов, кастер лечится от нанесённого урона.",
+                FacelessSpellRules.DrainRequiredMagicLevel,
+                VoidDrain(),
+                fx: new AbilityFx { Color = AbilityFxColors.VoidDrain },
+                unlock: AbilityUnlock.MagicLevel,
+                damage: FacelessSpellRules.DrainDamage,
+                radius: FacelessSpellRules.DrainRadius,
+                castRange: FacelessSpellRules.CastRange,
+                percent: FacelessSpellRules.DrainLifestealPercent,
+                cooldownSeconds: FacelessSpellRules.DrainCooldownSeconds,
+                manaCost: FacelessSpellRules.DrainManaCost),
+            Active(
+                AbilityIds.RaiseDrowned,
+                "Raise the Drowned",
+                "Поднять павшего: любой недавний труп (включая вражеский) становится мини-меле кастера.",
+                FacelessSpellRules.RaiseRequiredMagicLevel,
+                RaiseDrowned(),
+                fx: new AbilityFx { Color = AbilityFxColors.RaiseDrowned },
+                unlock: AbilityUnlock.MagicLevel,
+                castRange: FacelessSpellRules.CastRange,
+                durationSeconds: FacelessSpellRules.RaiseCorpseMaxAgeSeconds,
+                cooldownSeconds: FacelessSpellRules.RaiseCooldownSeconds,
+                manaCost: FacelessSpellRules.RaiseManaCost),
         };
 
         static UnitAbilityDef Active(
@@ -683,6 +738,13 @@ namespace Game.Gameplay.Combat
             b.Configure(applyUltimateSelfBuff);
             return b;
         }
+
+        static BlightingGazeBehaviour BlightingGaze() =>
+            ScriptableObject.CreateInstance<BlightingGazeBehaviour>();
+
+        static VoidDrainBehaviour VoidDrain() => ScriptableObject.CreateInstance<VoidDrainBehaviour>();
+
+        static RaiseDrownedBehaviour RaiseDrowned() => ScriptableObject.CreateInstance<RaiseDrownedBehaviour>();
 
         static DamageBurstBehaviour DamageBurst()
         {
