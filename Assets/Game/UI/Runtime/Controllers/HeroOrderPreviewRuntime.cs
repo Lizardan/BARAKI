@@ -168,13 +168,13 @@ namespace Game.UI.Controllers
                 preview.Playback = new UnitCombatAnimatorPlayback();
                 SetLayerRecursively(preview.Hero.transform, HeroPreviewLayer);
 
-                var extent = GetHeroExtent(preview.Hero.GetComponentInChildren<Renderer>());
-                preview.Hero.transform.localPosition =
-                    new Vector3(index * extent * PreviewSlotSpacingFactor, 0f, 0f);
+var extent = GetHeroExtent(preview.Hero);
+            preview.Hero.transform.localPosition =
+                new Vector3(index * extent * PreviewSlotSpacingFactor, 0f, 0f);
 
-                FrameHero(preview.Camera, preview.Hero);
-                OrientHeroToCamera(preview.Hero, preview.Camera);
-                FrameHero(preview.Camera, preview.Hero);
+            FrameHero(preview.Camera, preview.Hero);
+            OrientHeroToCamera(preview.Hero, preview.Camera);
+            FrameHero(preview.Camera, preview.Hero);
                 if (preview.Animator != null)
                 {
                     UnitCombatAnimatorDriver.TickStand(preview.Animator, preview.Playback);
@@ -203,7 +203,6 @@ namespace Game.UI.Controllers
             hero.name = $"HeroOrderPreviewInst{heroSlot}";
             hero.transform.SetParent(transform, worldPositionStays: false);
             hero.transform.localPosition = Vector3.zero;
-            hero.transform.localRotation = Quaternion.identity;
             return true;
         }
 
@@ -214,9 +213,9 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var renderer = hero.GetComponentInChildren<Renderer>();
-            var center = renderer != null ? renderer.bounds.center : hero.transform.position;
-            var extent = GetHeroExtent(renderer);
+            var bounds = GetHeroBounds(hero);
+            var center = bounds.center;
+            var extent = GetHeroExtent(bounds);
 
             camera.transform.position = center + new Vector3(0f, extent * 0.2f, -extent * 2.4f);
             camera.transform.LookAt(center);
@@ -224,9 +223,11 @@ namespace Game.UI.Controllers
         }
 
         /// <summary>
-        /// Turns the spawned hero so its forward faces the preview camera (heroes spawn facing
-        /// +Z, the camera sits on -Z in <see cref="FrameHero"/>, so identity rotation shows their
-        /// backs/sides). Rerun <see cref="FrameHero"/> afterwards to reframe the rotated bounds.
+        /// Turns the spawned hero so its visual face points at the preview camera. Heroes carry
+        /// an authored base yaw in their prefab root (Human: identity, Faceless: 270°, aligning
+        /// the +X-authored mesh to the +Z face convention), so the camera-facing turn is composed
+        /// on top of that base rotation instead of this code deciding the model's forward itself.
+        /// Rerun <see cref="FrameHero"/> afterwards to reframe the rotated bounds.
         /// </summary>
         private static void OrientHeroToCamera(GameObject hero, Camera camera)
         {
@@ -235,24 +236,56 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            var renderer = hero.GetComponentInChildren<Renderer>();
-            var center = renderer != null ? renderer.bounds.center : hero.transform.position;
-            var toCamera = camera.transform.position - center;
+            var baseRotation = hero.transform.localRotation;
+            var bounds = GetHeroBounds(hero);
+            var toCamera = camera.transform.position - bounds.center;
             toCamera.y = 0f;
             if (toCamera.sqrMagnitude > 0.0001f)
             {
-                hero.transform.rotation = Quaternion.LookRotation(toCamera.normalized, Vector3.up);
+                hero.transform.rotation =
+                    Quaternion.LookRotation(toCamera.normalized, Vector3.up) * baseRotation;
             }
         }
 
-        private static float GetHeroExtent(Renderer renderer)
+        private static float GetHeroExtent(GameObject hero)
         {
-            if (renderer == null)
+            var bounds = GetHeroBounds(hero);
+            return Mathf.Max(bounds.extents.y, bounds.extents.x * 0.75f, 1f);
+        }
+
+        private static float GetHeroExtent(Bounds bounds)
+        {
+            return Mathf.Max(bounds.extents.y, bounds.extents.x * 0.75f, 1f);
+        }
+
+        /// <summary>
+        /// Combined world AABB across every renderer of the hero (humans split the body into many
+        /// pieces — quiver, shields, head… — so a single <c>GetComponentInChildren&lt;Renderer&gt;</c>
+        /// would frame an off-center fragment).
+        /// </summary>
+        private static Bounds GetHeroBounds(GameObject hero)
+        {
+            Bounds result = new Bounds(hero.transform.position, Vector3.zero);
+            var hasRenderer = false;
+            foreach (var renderer in hero.GetComponentsInChildren<Renderer>(true))
             {
-                return 1f;
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (!hasRenderer)
+                {
+                    result = new Bounds(renderer.bounds.center, renderer.bounds.size);
+                    hasRenderer = true;
+                }
+                else
+                {
+                    result.Encapsulate(renderer.bounds);
+                }
             }
 
-            return Mathf.Max(renderer.bounds.extents.y, renderer.bounds.extents.x * 0.75f, 1f);
+            return result;
         }
 
         private void ApplyTargets()

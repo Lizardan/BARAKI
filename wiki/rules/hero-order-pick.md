@@ -64,14 +64,23 @@
 - **Изоляция превью (важно):** все герои лежат на слое 9, камера режет по слою, а не по
    объекту, поэтому героев нельзя спавнить в одну точку — иначе каждая превью-камера покажет
    всех троих сразу. Спавн по оси X: `x = index * extent * 6` (`PreviewSlotSpacingFactor = 6`,
-   `extent = GetHeroExtent(renderer)`), камеру кадрирует `FrameHero` из `bounds` **после**
-   смещения (и на порядке «сначала позиция, потом frame» стоит не менять). Сосед героя на
-   ≥5×extent при полуширине камеры ~1.15×extent — не в кадре.
-- **Ориентация героя:** префабы героев имеют forward = +Z, а `FrameHero` ставит камеру на
-   −Z (центр + `(0, 0.2e, −2.4e)`), поэтому `rotation = identity` показывал героев спиной/в
-   профиль. `OrientHeroToCamera` поворачивает героя `Quaternion.LookRotation(toCamera)`
-   (как юниты в бою по `FacingDirection`), затем `FrameHero` повторно кадрирует повёрнутые
-   bounds. Порядок: спавн → позиция → FrameHero → orient → FrameHero.
+   `extent = GetHeroExtent(hero)` по **объединённым** bounds), камеру кадрирует `FrameHero` из
+   `bounds` **после** смещения (и на порядке «сначала позиция, потом frame» стоит не менять).
+   Сосед героя на ≥5×extent при полуширине камеры ~1.15×extent — не в кадре.
+- **Центрирование (важно):** кадр строится по **объединённым** world-AABB всех рендереров
+   героя (`GetHeroBounds` — Encapsulate по `GetComponentsInChildren<Renderer>`), а не по первому
+   рендереру: у Людей тело разбито на десятки частей (колчан, щиты, голова…), и самый первый
+   рендерер (`quiver_A`) уводил камеру вбок. У Древних обвязка один SkinnedMeshRenderer — там
+   объединённые bounds совпадают с первым.
+- **Ориентация героя:** `FrameHero` ставит камеру на −Z (центр + `(0, 0.2e, −2.4e)`).
+   `OrientHeroToCamera` поворачивает героя `Quaternion.LookRotation(toCamera) * baseRotation`,
+   где `baseRotation = hero.transform.localRotation` — **авторский yaw префаба, его нельзя
+   сбрасывать в identity**: Древние имеют вшитый baked 270° на корне (компенсация «меш
+   авторится на +X, в бою «лицо» на +Z» — см. `UnitGreyboxVisuals.AnimatedHumanModelYawDegrees`),
+   и `TrySpawnHero` раньше затирал его → герои Древних не поворачивались к камере. Композиция
+   на базе вращения повторяет боевую схему (`visual.Root.rotation = LookRotation(facing)` поверх
+   baked-yaw модели). Затем `FrameHero` повторно кадрирует повёрнутые bounds.
+   Порядок: спавн → позиция → FrameHero → orient → FrameHero.
 
 ## UI Toolkit
 

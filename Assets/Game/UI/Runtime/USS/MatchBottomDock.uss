@@ -291,9 +291,11 @@
     border-color: rgb(75, 77, 69);
     color: rgb(208, 178, 118);
     padding: 0;
-    margin: 0 8px 8px 0;
-    width: 105.33px;
+    margin: 1%;
+    width: 31%;
     height: 77px;
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .ui-btn--square.match-command-grid__slot:hover {
@@ -521,18 +523,4 @@
 /* Research queue last slot: no margin-right since parent uses gap */
 #ResearchQueueSlot2 {
     margin-right: 0;
-}
-
-/* Command grid: last column no right margin, last row no bottom margin */
-#CommandSlot2,
-#CommandSlot5,
-#CommandSlot8,
-#CommandSlot11 {
-    margin-right: 0;
-}
-
-#CommandSlot9,
-#CommandSlot10,
-#CommandSlot11 {
-    margin-bottom: 0;
 }
