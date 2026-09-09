@@ -624,6 +624,18 @@ namespace Game.UI.Controllers
                 }
             }
 
+            var heroOrderKey = 0;
+            var heroOrder = player?.HeroOrder;
+            if (!HeroOrderPickRules.IsValidOrder(heroOrder))
+            {
+                heroOrder = HeroOrderPickRules.DefaultOrder();
+            }
+
+            for (var i = 0; i < heroOrder.Length; i++)
+            {
+                heroOrderKey = (heroOrderKey * 10) + heroOrder[i];
+            }
+
             var titanKey = 0;
             var titanCd = 0;
             var titan = controller?.GetTitanState(_localPlayerSlot);
@@ -637,7 +649,7 @@ namespace Game.UI.Controllers
                 }
             }
 
-            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}:{player?.DivineBlessingComplete}:{player?.MainExtraAbilityId ?? 0}:{player?.MainMana ?? 0f:0}:{player?.MainExtraAbilityCooldownRemaining ?? 0f:0}:{MatchSelectionBridge.Current?.IsMainExtraCastPending}";
+            return $"{building.InstanceId}:{gold}:{passive}:{mainLevel}:{queueCount}:{barracksLevel}:{heroKey}:{heroCdKey}:{titanKey}:{titanCd}:{chargesKey}:{heroOrderKey}:{player?.MeleeDamageLevel ?? 0}:{player?.RangedDamageLevel ?? 0}:{player?.HpArmorLevel ?? 0}:{player?.MagicLevel ?? 0}:{player?.DivineBlessingComplete}:{player?.MainExtraAbilityId ?? 0}:{player?.MainMana ?? 0f:0}:{player?.MainExtraAbilityCooldownRemaining ?? 0f:0}:{MatchSelectionBridge.Current?.IsMainExtraCastPending}";
         }
 
         void PopulateBuildingCommands(BuildingState building)
@@ -1293,15 +1305,22 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
+            var order = player.HeroOrder;
+            if (!HeroOrderPickRules.IsValidOrder(order))
             {
-                if (!MatchMainHireSlotRules.TryGetHeroHireSlot(heroSlot, out var commandIndex))
+                order = HeroOrderPickRules.DefaultOrder();
+            }
+
+            for (var position = 0; position < order.Length; position++)
+            {
+                if (!MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(position, out var commandIndex))
                 {
                     continue;
                 }
 
+                var heroSlot = order[position];
                 var state = roster.Get(heroSlot);
-                if (!HeroRules.ShouldShowHire(state.State, heroSlot, player.MainLevel))
+                if (!HeroRules.ShouldShowHire(state.State, heroSlot, player.MainLevel, player.HeroOrder))
                 {
                     continue;
                 }
@@ -1310,7 +1329,7 @@ namespace Game.UI.Controllers
                 var queued = controller.Research.CountUpgrade(building.InstanceId, hireId) > 0;
                 var canHire = !queued
                     && !queueFull
-                    && HeroRules.CanHire(state.State, heroSlot, player.MainLevel, player.Gold);
+                    && HeroRules.CanHire(state.State, heroSlot, player.MainLevel, player.Gold, player.HeroOrder);
                 var capturedSlot = heroSlot;
                 SetCommand(
                     commandIndex,
@@ -1610,13 +1629,20 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
+            var order = player != null ? player.HeroOrder : null;
+            if (!HeroOrderPickRules.IsValidOrder(order))
             {
-                if (!MatchBarracksCallSlotRules.TryGetHeroDeploySlot(heroSlot, out var commandIndex))
+                order = HeroOrderPickRules.DefaultOrder();
+            }
+
+            for (var position = 0; position < order.Length; position++)
+            {
+                if (!MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(position, out var commandIndex))
                 {
                     continue;
                 }
 
+                var heroSlot = order[position];
                 var state = roster.Get(heroSlot);
                 if (!HeroRules.ShouldShowDeploy(state.State))
                 {

@@ -303,6 +303,31 @@ namespace Game.Gameplay.Match
             return true;
         }
 
+        /// <summary>
+        /// Confirms the local player's hero order after the bonus pick (order pick). Server/offline
+        /// authoritative; pure clients send it through the hero order network bridge.
+        /// </summary>
+        public bool TrySetHeroOrder(int playerSlot, int[] heroOrder)
+        {
+            if (!IsRunning)
+            {
+                return false;
+            }
+
+            if (playerSlot < 0 || playerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            if (!HeroOrderPickRules.IsValidOrder(heroOrder))
+            {
+                return false;
+            }
+
+            _players[playerSlot].ConfirmHeroOrder(heroOrder);
+            return true;
+        }
+
         public bool TryGetResearch(int buildingInstanceId, out BuildingResearchState research) =>
             _research.TryGetActive(buildingInstanceId, out research);
 
@@ -594,6 +619,12 @@ namespace Game.Gameplay.Match
                     Math.Max(0f, p.IceRingCooldownRemaining);
                 _players[p.Slot].WaveOfLightCooldownRemaining =
                     Math.Max(0f, p.WaveOfLightCooldownRemaining);
+                if (HeroOrderPickRules.IsValidOrder(p.HeroOrder))
+                {
+                    _players[p.Slot].HeroOrder = p.HeroOrder;
+                }
+
+                _players[p.Slot].HeroOrderConfirmed = p.HeroOrderConfirmed;
                 if (p.Slot < _bonusAutoPicks.Length && BonusPickRules.IsValidSlot(p.BonusPickSlot))
                 {
                     _bonusAutoPicks[p.Slot] = p.BonusPickSlot;
@@ -1872,7 +1903,7 @@ namespace Game.Gameplay.Match
 
             var roster = _heroRosters[player.SlotIndex];
             var slotState = roster.Get(heroSlot);
-            if (!HeroRules.CanHire(slotState.State, heroSlot, player.MainLevel, player.Gold))
+            if (!HeroRules.CanHire(slotState.State, heroSlot, player.MainLevel, player.Gold, player.HeroOrder))
             {
                 return false;
             }
@@ -1924,6 +1955,15 @@ namespace Game.Gameplay.Match
                     if (pick == BonusKitRules.RaceUnique2Slot)
                     {
                         stoneMasonryApplied = true;
+                    }
+                }
+
+                // Order pick: nobody stalls the match — an unconfirmed order falls back to default.
+                for (var slot = 0; slot < _players.Count; slot++)
+                {
+                    if (!_players[slot].HeroOrderConfirmed)
+                    {
+                        _players[slot].ConfirmHeroOrder(HeroOrderPickRules.DefaultOrder());
                     }
                 }
 

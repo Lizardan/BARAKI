@@ -604,6 +604,43 @@ namespace Game.Tests
                 "Attack commit flag must reach clients (Super ammo hide).");
         }
 
+        [Test]
+        public void ApplyAuthoritativeSnapshot_RestoresHeroOrderAndConfirmed()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            Assert.IsTrue(host.TrySetHeroOrder(0, new[] { 3, 1, 2 }));
+            Assert.IsTrue(host.TrySetHeroOrder(1, new[] { 2, 3, 1 }));
+
+            var bytes = MatchSnapshotCodec.Serialize(MatchSnapshotCodec.Capture(host));
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.ApplyAuthoritativeSnapshot(MatchSnapshotCodec.Deserialize(bytes));
+
+            Assert.IsTrue(client.Players[0].HeroOrderConfirmed);
+            CollectionAssert.AreEqual(new[] { 3, 1, 2 }, client.Players[0].HeroOrder);
+            CollectionAssert.AreEqual(new[] { 2, 3, 1 }, client.Players[1].HeroOrder);
+        }
+
+        [Test]
+        public void ApplyAuthoritativeSnapshot_IgnoresInvalidHeroOrder()
+        {
+            var host = new MatchController();
+            host.StartMatch(MatchConfig.MvpDefault(2));
+            host.Players[0].ConfirmHeroOrder(new[] { 3, 1, 2 });
+
+            var snapshot = MatchSnapshotCodec.Capture(host);
+            snapshot.Players[0].HeroOrder = new[] { 9, 9, 9 };
+
+            var client = new MatchController();
+            client.StartMatch(MatchConfig.MvpDefault(2));
+            client.Players[0].ConfirmHeroOrder(new[] { 3, 1, 2 });
+            client.ApplyAuthoritativeSnapshot(snapshot);
+
+            CollectionAssert.AreEqual(new[] { 3, 1, 2 }, client.Players[0].HeroOrder);
+            Assert.IsTrue(client.Players[0].HeroOrderConfirmed);
+        }
+
         static BuildingState FindBuilding(MatchController controller, int ownerSlot, string buildingId)
         {
             foreach (var building in controller.Buildings.Buildings)

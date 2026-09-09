@@ -37,6 +37,27 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CanHire_FollowsConfirmedHeroOrder()
+        {
+            var order = new[] { 3, 1, 2 };
+            Assert.IsTrue(HeroRules.CanHire(HeroLifecycleState.None, heroSlot: 3, mainLevel: 1, gold: 500, order));
+            Assert.IsFalse(HeroRules.CanHire(HeroLifecycleState.None, heroSlot: 1, mainLevel: 1, gold: 500, order));
+            Assert.IsTrue(HeroRules.CanHire(HeroLifecycleState.None, heroSlot: 1, mainLevel: 2, gold: 500, order));
+            Assert.IsFalse(HeroRules.CanHire(HeroLifecycleState.None, heroSlot: 2, mainLevel: 2, gold: 500, order));
+            Assert.IsTrue(HeroRules.CanHire(HeroLifecycleState.None, heroSlot: 2, mainLevel: 3, gold: 500, order));
+        }
+
+        [Test]
+        public void ShouldShowHire_FollowsConfirmedHeroOrder()
+        {
+            var order = new[] { 3, 1, 2 };
+            Assert.IsTrue(HeroRules.ShouldShowHire(HeroLifecycleState.None, heroSlot: 3, mainLevel: 1, order));
+            Assert.IsFalse(HeroRules.ShouldShowHire(HeroLifecycleState.None, heroSlot: 2, mainLevel: 2, order));
+            Assert.IsTrue(HeroRules.ShouldShowHire(HeroLifecycleState.None, heroSlot: 1, mainLevel: 2, order));
+            Assert.IsTrue(HeroRules.ShouldShowHire(HeroLifecycleState.None, heroSlot: 2, mainLevel: 3, order));
+        }
+
+        [Test]
         public void CanDeploy_RequiresIdleOrDeadReadyAndBarracks()
         {
             Assert.IsTrue(HeroRules.CanDeploy(HeroLifecycleState.IdleAtBase, 0f, 1000, true));

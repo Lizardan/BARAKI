@@ -50,6 +50,19 @@ namespace Game.Tests
         }
 
         [Test]
+        public void TryGetHeroDeploySlotByPosition_MapsPositionsToCommandSlots()
+        {
+            Assert.IsTrue(MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(0, out var first));
+            Assert.IsTrue(MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(1, out var middle));
+            Assert.IsTrue(MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(2, out var last));
+            Assert.AreEqual(9, first);
+            Assert.AreEqual(10, middle);
+            Assert.AreEqual(11, last);
+            Assert.IsFalse(MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(-1, out _));
+            Assert.IsFalse(MatchBarracksCallSlotRules.TryGetHeroDeploySlotByPosition(3, out _));
+        }
+
+        [Test]
         public void TryGetTitanDeploySlot_UsesSlotTwo()
         {
             Assert.IsTrue(MatchBarracksCallSlotRules.TryGetTitanDeploySlot(out var titan));

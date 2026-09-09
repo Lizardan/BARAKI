@@ -80,6 +80,9 @@ namespace Game.Gameplay.Networking
         /// <summary>Building ability cooldowns (MAIN-001), added in v23.</summary>
         public float IceRingCooldownRemaining;
         public float WaveOfLightCooldownRemaining;
+        /// <summary>Confirmed hero order (permutation of 1..3), added in v25. Null/invalid = default.</summary>
+        public int[] HeroOrder;
+        public bool HeroOrderConfirmed;
     }
 
     public struct MatchHeroSlotSnapshot
@@ -240,7 +243,7 @@ namespace Game.Gameplay.Networking
     public static class MatchSnapshotCodec
     {
         // v24: second bonus pick (auto slot + offered subset) in the Players section.
-        public const int CurrentVersion = 24;
+        public const int CurrentVersion = 25;
 
         /// <summary>Self-contained encode: full static roster, safe for any fresh decoder.</summary>
         public static byte[] Serialize(MatchSnapshot snapshot) =>
@@ -289,6 +292,8 @@ namespace Game.Gameplay.Networking
                     IceRingCooldownRemaining = p.IceRingCooldownRemaining,
                     WaveOfLightCooldownRemaining = p.WaveOfLightCooldownRemaining,
                     TowerTrackLevels = (int[])p.TowerTrackLevels.Clone(),
+                    HeroOrder = (int[])p.HeroOrder.Clone(),
+                    HeroOrderConfirmed = p.HeroOrderConfirmed,
                 });
             }
 
@@ -808,6 +813,15 @@ namespace Game.Gameplay.Networking
                                 : 0;
                             w.Write((byte)Math.Clamp(level, 0, byte.MaxValue));
                         }
+                        var heroOrder = HeroOrderPickRules.IsValidOrder(p.HeroOrder)
+                            ? p.HeroOrder
+                            : HeroOrderPickRules.DefaultOrder();
+                        for (var h = 0; h < heroOrder.Length; h++)
+                        {
+                            w.Write((byte)Math.Clamp(heroOrder[h], 1, heroOrder.Length));
+                        }
+
+                        w.Write(p.HeroOrderConfirmed);
                     }
                 });
             }
@@ -1301,6 +1315,8 @@ namespace Game.Gameplay.Networking
                     IceRingCooldownRemaining = Math.Max(0f, reader.ReadSingle()),
                     WaveOfLightCooldownRemaining = Math.Max(0f, reader.ReadSingle()),
                     TowerTrackLevels = ReadTowerTrackLevels(reader),
+                    HeroOrder = ReadHeroOrder(reader),
+                    HeroOrderConfirmed = reader.ReadBoolean(),
                 };
 
                 if (players[i].TitanLevel <= 0)
@@ -1321,6 +1337,18 @@ namespace Game.Gameplay.Networking
             }
 
             return levels;
+        }
+
+        private static int[] ReadHeroOrder(System.IO.BinaryReader reader)
+        {
+            var order = new int[HeroRules.MaxHeroSlots];
+            for (var i = 0; i < order.Length; i++)
+            {
+                var raw = reader.ReadByte();
+                order[i] = Math.Clamp((int)raw, 1, HeroRules.MaxHeroSlots);
+            }
+
+            return order;
         }
 
         private static int[] ReadBonusPickOfferSlots(System.IO.BinaryReader reader)

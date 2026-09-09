@@ -57,5 +57,20 @@
         "Temp/": true
     },
     "dotnet.defaultSolution": "BARAKI.sln",
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "files.watcherExclude": {
+        "**/Temp/**": true,
+        "**/Library/**": true,
+        "**/obj/**": true,
+        "**/Logs/**": true,
+        "**/.vs/**": true,
+        "**/UserSettings/**": true
+    },
+    "search.exclude": {
+        "**/Temp": true,
+        "**/Library": true,
+        "**/obj": true,
+        "**/Logs": true,
+        "**/UserSettings": true
+    }
 }

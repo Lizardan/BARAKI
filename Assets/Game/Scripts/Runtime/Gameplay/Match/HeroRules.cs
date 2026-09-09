@@ -51,20 +51,26 @@ namespace Game.Gameplay.Match
             HeroLifecycleState state,
             int heroSlot,
             int mainLevel,
-            int gold) =>
+            int gold,
+            int[] heroOrder = null) =>
             state == HeroLifecycleState.None
             && IsValidHeroSlot(heroSlot)
-            && heroSlot <= GetMaxHiredHeroes(mainLevel)
+            && HeroOrderPickRules.IsUnlockedAtLevel(heroOrder, heroSlot, mainLevel)
             && gold >= HireGold;
 
         /// <summary>
         /// Main hire button is visible for each unlocked slot that is not yet hired.
-        /// Slot N unlocks at main level N — previous slots do not have to be hired first.
+        /// A hero unlocks at a main level matching its position in the hero order —
+        /// previous heroes do not have to be hired first.
         /// </summary>
-        public static bool ShouldShowHire(HeroLifecycleState state, int heroSlot, int mainLevel) =>
+        public static bool ShouldShowHire(
+            HeroLifecycleState state,
+            int heroSlot,
+            int mainLevel,
+            int[] heroOrder = null) =>
             state == HeroLifecycleState.None
             && IsValidHeroSlot(heroSlot)
-            && heroSlot <= GetMaxHiredHeroes(mainLevel);
+            && HeroOrderPickRules.IsUnlockedAtLevel(heroOrder, heroSlot, mainLevel);
 
         /// <summary>
         /// Can the hero be deployed from a specific barracks? Death cooldown is per-barracks:

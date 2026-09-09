@@ -1,0 +1,164 @@
+.hero-order {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(8, 9, 8, 0.82);
+}
+
+.hero-order__center {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    /* Поднять весь блок на 10% высоты экрана, чтобы кнопка подтверждения
+       не наезжала на нижний HUD-додк (кнопку перекрывали клики дока). */
+    position: relative;
+    top: -10%;
+}
+
+.hero-order__top {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.hero-order__title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    color: rgb(185, 154, 98);
+    -unity-text-align: middle-center;
+}
+
+.ui-panel__note.hero-order__note {
+    font-size: 12px;
+    color: rgb(133, 137, 128);
+    margin-top: 6px;
+    margin-bottom: 0;
+    white-space: normal;
+    max-width: 760px;
+    -unity-text-align: middle-center;
+}
+
+.hero-order__row {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.hero-order__card {
+    position: relative;
+    width: 216px;
+    min-width: 216px;
+    max-width: 216px;
+    height: 324px;
+    min-height: 324px;
+    max-height: 324px;
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 0;
+    background-color: rgb(16, 18, 17);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
+    overflow: hidden;
+    transition-duration: 0.1s;
+    transition-property: background-color, border-color, opacity, scale;
+}
+
+.hero-order__card:hover {
+    background-color: rgb(20, 23, 21);
+    border-color: rgb(75, 77, 69);
+}
+
+.hero-order__card--dragging {
+    opacity: 0.72;
+    scale: 0.98;
+}
+
+.hero-order__card--swap {
+    border-color: rgb(185, 154, 98);
+}
+
+.hero-order__preview {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    right: 6px;
+    bottom: 34px;
+    background-color: rgba(0, 0, 0, 0);
+    background-size: cover;
+    -unity-background-scale-mode: scale-and-crop;
+    background-position-x: 50%;
+    background-position-y: 50%;
+    overflow: hidden;
+    picking-mode: ignore;
+}
+
+.hero-order__badge {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 34px;
+    height: 34px;
+    font-size: 19px;
+    -unity-font-style: bold;
+    color: rgb(239, 228, 207);
+    background-color: rgb(86, 103, 122);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
+    border-radius: 0;
+    -unity-text-align: middle-center;
+    picking-mode: ignore;
+}
+
+.hero-order__badge--veteran {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    height: 22px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(230, 208, 146);
+    background-color: rgb(52, 42, 24);
+    border-width: 1px;
+    border-color: rgb(185, 154, 98);
+    border-radius: 0;
+    -unity-text-align: middle-center;
+    picking-mode: ignore;
+}
+
+.hero-order__badge--veteran-hidden {
+    display: none;
+}
+
+.hero-order__name {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 8px;
+    height: 26px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(222, 219, 210);
+    -unity-text-align: middle-center;
+    picking-mode: ignore;
+}
+
+.ui-btn--primary.hero-order__confirm {
+    width: 240px;
+    margin-top: 20px;
+    margin-bottom: 0;
+}
+
+.hero-order--hidden {
+    display: none;
+}

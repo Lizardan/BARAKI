@@ -36,6 +36,25 @@ namespace Game.Gameplay.Match
         public int BonusPickSlot2 { get; set; }
         /// <summary>Random subset (0..<see cref="BonusPickRules.OfferSize"/>) offered in the second window; excludes the auto pick.</summary>
         public int[] BonusPickOfferSlots { get; private set; } = Array.Empty<int>();
+        /// <summary>
+        /// Permutation of hero slots 1..3 set after the bonus pick (order pick): position in the
+        /// order = main level at which the hero unlocks for hire. Default <c>[1,2,3]</c>.
+        /// </summary>
+        public int[] HeroOrder { get; set; } = HeroOrderPickRules.DefaultOrder();
+        /// <summary>True once the player confirmed the order (host applies; snapshot replicates).</summary>
+        public bool HeroOrderConfirmed { get; set; }
+
+        /// <summary>Applies and confirms a valid hero order. Invalid orders are ignored.</summary>
+        public void ConfirmHeroOrder(int[] order)
+        {
+            if (!HeroOrderPickRules.IsValidOrder(order))
+            {
+                return;
+            }
+
+            HeroOrder = order;
+            HeroOrderConfirmed = true;
+        }
 
         public void SetBonusPickOffer(int[] offer)
         {

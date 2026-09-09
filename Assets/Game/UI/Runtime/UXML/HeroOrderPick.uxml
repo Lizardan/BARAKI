@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="project://database/Assets/Game/UI/Runtime/USS/HeroOrderPick.uss" />
+    <ui:Style src="project://database/Assets/Game/UI/Runtime/USS/BarakiTheme.uss" />
+    <ui:VisualElement name="HeroOrderOverlay" class="hero-order" picking-mode="Ignore">
+        <ui:VisualElement class="hero-order__center" picking-mode="Ignore">
+            <ui:VisualElement class="hero-order__top" picking-mode="Ignore">
+                <ui:Label text="ПОРЯДОК ГЕРОЕВ" class="hero-order__title" />
+                <ui:Label name="HeroOrderHint" text="Перетащите героев — герой на первой позиции открывается на 1 уровне главного здания, на второй на 2, на третьей на 3." class="ui-panel__note hero-order__note" />
+            </ui:VisualElement>
+            <ui:VisualElement name="HeroOrderRow" class="hero-order__row" picking-mode="Ignore" />
+            <ui:Button name="HeroOrderConfirm" text="ПОДТВЕРДИТЬ" class="ui-btn ui-btn--primary hero-order__confirm" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

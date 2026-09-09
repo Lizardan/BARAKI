@@ -40,6 +40,11 @@ namespace Game.UI.Controllers
                 TryGetComponent(out _uiDocument);
             }
 
+            if (_uiDocument != null)
+            {
+                _uiDocument.sortingOrder = 100;
+            }
+
             var root = _uiDocument.rootVisualElement;
             _screen = root.Q<VisualElement>("RacePickScreen");
             _subtitleLabel = root.Q<Label>("SubtitleLabel");

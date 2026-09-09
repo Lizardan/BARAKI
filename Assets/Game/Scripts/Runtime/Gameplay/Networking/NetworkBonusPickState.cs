@@ -67,5 +67,45 @@ namespace Game.Gameplay.Networking
 
             controller.TrySetBonusPick(slot, bonusSlot);
         }
+
+        /// <summary>Sends the local player's confirmed hero order to the server (host applies locally).</summary>
+        public void RequestHeroOrder(int[] heroOrder)
+        {
+            if (MatchPauseGate.IsPaused)
+            {
+                return;
+            }
+
+            if (IsServer)
+            {
+                TryHeroOrderLocal(MatchNetworkSession.LocalSlot, heroOrder);
+                return;
+            }
+
+            RequestHeroOrderServerRpc(heroOrder);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void RequestHeroOrderServerRpc(int[] heroOrder, RpcParams rpcParams = default)
+        {
+            var lobby = NetworkLobbyState.Instance;
+            if (lobby == null)
+            {
+                return;
+            }
+
+            TryHeroOrderLocal(lobby.FindClientSlot(rpcParams.Receive.SenderClientId), heroOrder);
+        }
+
+        void TryHeroOrderLocal(int slot, int[] heroOrder)
+        {
+            var controller = MatchRuntime.Current?.Controller;
+            if (controller == null)
+            {
+                return;
+            }
+
+            controller.TrySetHeroOrder(slot, heroOrder);
+        }
     }
 }

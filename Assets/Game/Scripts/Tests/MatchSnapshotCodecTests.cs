@@ -365,7 +365,7 @@ namespace Game.Tests
 
             var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
 
-            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 24);
+            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 25);
             Assert.AreEqual(33.5f, restored.Players[0].IceRingCooldownRemaining, 0.01f);
             Assert.AreEqual(120.25f, restored.Players[0].WaveOfLightCooldownRemaining, 0.01f);
             Assert.AreEqual(0f, restored.Players[1].IceRingCooldownRemaining, 0.01f);
@@ -459,6 +459,53 @@ namespace Game.Tests
             Assert.AreEqual(1, restored.Players[0].BonusPickSlot);
             Assert.AreEqual(7, restored.Players[0].BonusPickSlot2);
             CollectionAssert.AreEqual(new[] { 2, 4, 6 }, restored.Players[0].BonusPickOfferSlots);
+        }
+
+        [Test]
+        public void RoundTrip_V25_PreservesHeroOrder()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 1,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        HeroOrder = new[] { 3, 1, 2 },
+                        HeroOrderConfirmed = true,
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 25);
+            CollectionAssert.AreEqual(new[] { 3, 1, 2 }, restored.Players[0].HeroOrder);
+            Assert.IsTrue(restored.Players[0].HeroOrderConfirmed);
+        }
+
+        [Test]
+        public void RoundTrip_V25_DefaultOrderWhenFieldUnset()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 1,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[] { new MatchPlayerSnapshot { Slot = 0 } },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            var order = restored.Players[0].HeroOrder;
+            Assert.IsNotNull(order);
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, order);
+            Assert.IsFalse(restored.Players[0].HeroOrderConfirmed);
         }
 
         [Test]

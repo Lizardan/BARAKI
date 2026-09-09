@@ -18,5 +18,18 @@ namespace Game.Tests
             Assert.IsFalse(MatchMainHireSlotRules.TryGetHeroHireSlot(0, out _));
             Assert.IsFalse(MatchMainHireSlotRules.TryGetHeroHireSlot(4, out _));
         }
+
+        [Test]
+        public void TryGetHeroHireSlotByPosition_MapsPositionsToCommandSlots()
+        {
+            Assert.IsTrue(MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(0, out var first));
+            Assert.IsTrue(MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(1, out var middle));
+            Assert.IsTrue(MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(2, out var last));
+            Assert.AreEqual(6, first);
+            Assert.AreEqual(7, middle);
+            Assert.AreEqual(8, last);
+            Assert.IsFalse(MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(-1, out _));
+            Assert.IsFalse(MatchMainHireSlotRules.TryGetHeroHireSlotByPosition(3, out _));
+        }
     }
 }

@@ -48,6 +48,16 @@ namespace Game.UI.Controllers
                 TryGetComponent(out _uiDocument);
             }
 
+            if (_uiDocument != null)
+            {
+                _uiDocument.sortingOrder = 100;
+            }
+
+            ResolveElementReferences();
+        }
+
+        private void ResolveElementReferences()
+        {
             var root = _uiDocument.rootVisualElement;
             _overlay = root.Q<VisualElement>("BonusPickOverlay");
             _timerLabel = root.Q<Label>("BonusPickTimer");
@@ -79,6 +89,11 @@ namespace Game.UI.Controllers
                 _matchRuntime = MatchRuntime.Current;
             }
 
+            if (_overlay == null || _timerLabel == null)
+            {
+                ResolveElementReferences();
+            }
+
             var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
             if (controller == null || !_matchRuntime.IsMatchStarted)
             {
@@ -106,7 +121,11 @@ namespace Game.UI.Controllers
                 return;
             }
 
-            _timerLabel.text = Mathf.CeilToInt(deadline).ToString();
+            if (_timerLabel != null)
+            {
+                _timerLabel.text = Mathf.CeilToInt(deadline).ToString();
+            }
+
             EnsureAutoGrid(autoPick);
             EnsureOfferGrid(offer);
             Show();

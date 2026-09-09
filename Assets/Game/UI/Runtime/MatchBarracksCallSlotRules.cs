@@ -27,6 +27,23 @@ namespace Game.UI
             return true;
         }
 
+        /// <summary>
+        /// Command slot for a hero by its 0-based position in the confirmed order. Barracks
+        /// deploy buttons follow the rearranged hero order (position 0 = first deployed hero);
+        /// <see cref="TryGetHeroDeploySlot"/> stays for callers keyed by the hero's own slot.
+        /// </summary>
+        public static bool TryGetHeroDeploySlotByPosition(int position, out int slotIndex)
+        {
+            if (position < 0 || position >= HeroRules.MaxHeroSlots)
+            {
+                slotIndex = -1;
+                return false;
+            }
+
+            slotIndex = HeroDeploySlotStart + position;
+            return true;
+        }
+
         public static bool TryGetTitanDeploySlot(out int slotIndex)
         {
             slotIndex = TitanDeploySlot;

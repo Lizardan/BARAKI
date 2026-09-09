@@ -68,6 +68,18 @@ private void OnDisable()
 `Esc` при фокусе в `TextField` часто не всплывает (bubble-up). Для отмены режима ввода регистрировать
 `KeyDownEvent` с `TrickleDown.TrickleDown` (как в `MainMenuController` для join-кода).
 
+## Запросы элементов и ассет UXML (два грабля)
+
+1. **Не назначенный `visualTreeAsset`** в сцене: UIDocument есть, UXML не привязан → `rootVisualElement`
+   пустой, все `Q<T>()` дают `null`, окно не рендерится (симптом — NRE на первом же
+   не-защищённом `.text = `/`.Clear()`, например `BonusPickController.LateUpdate`). Проверять
+   в edit/play, что у каждого scene-UIDocument (`MatchHud`, `RacePick`, `BonusPick`, `HeroOrderPick` в
+   `Game.unity`) поле `visualTreeAsset` заполнен (например, через `execute_code`).
+2. **Запросы в `Awake`** могут выполниться до импорта дерева UIDocument (импорт — на enable,
+   порядок с колбэком не гарантирован) → поля остаются `null`. Не полагаться на один `Awake`;
+   вынести lookup в переиспользуемый `ResolveElementReferences()` и пере-резолвить в `LateUpdate`,
+   пока сентинел `== null` (как в `BonusPickController`/`HeroOrderPickController`).
+
 ## uGUI → UI Toolkit map
 
 | Legacy uGUI (удалено) | UI Toolkit (использовать) |

@@ -40,6 +40,7 @@
 | `rules/adding-a-new-race.md` | Добавление новой расы: `BonusKitRules` (общий слой), чек-лист, гейт `NoBonusKitRaceIds` |
 | `rules/tower-tracks.md` | Апгрейды башен Людей (PRE-007): 9 треков, экономика, wire v22 |
 | `rules/arena-buildings.md` | Ориентация зданий на базе, pick/клик-выбор, руины |
+| `rules/hero-order-pick.md` | Порядок героев после бонусов: панель, DnD, wire v25, слой HeroPreview, превью-камеры |
 | `rules/distribution.md` | Распространение клиента: апдейтер, GitHub Releases, лендинг Cloudflare |
 | `rules/github-issues-workflow.md` | Трекинг задач: HacknPlan + UnioTasks (GitHub Issues — архив) |
 

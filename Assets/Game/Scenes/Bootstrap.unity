@@ -180,7 +180,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1257830811}
+  - {fileID: 1222699156}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1158154281
@@ -215,7 +215,7 @@ Transform:
   - {fileID: 1526348052}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1257830810
+--- !u!1 &1222699155
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -223,9 +223,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1257830811}
-  - component: {fileID: 1257830813}
-  - component: {fileID: 1257830812}
+  - component: {fileID: 1222699156}
+  - component: {fileID: 1222699158}
+  - component: {fileID: 1222699157}
   m_Layer: 0
   m_Name: Launcher
   m_TagString: Untagged
@@ -233,13 +233,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1257830811
+--- !u!4 &1222699156
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1257830810}
+  m_GameObject: {fileID: 1222699155}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -248,32 +248,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 867218050}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1257830812
+--- !u!114 &1222699157
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1257830810}
+  m_GameObject: {fileID: 1222699155}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d2ae7c858fa9634dbfe8a7fdde3f31f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.UI::Game.UI.Controllers.LauncherController
-  _uiDocument: {fileID: 1257830813}
+  _uiDocument: {fileID: 1222699158}
   _previewPhase: 1
   _previewProgress: 0.34
   _previewLocalVersion: 0.2.0
   _previewRemoteVersion: 0.2.2
   _previewWarmingDetail: "\u0410\u0432\u0442\u043E\u0440\u0438\u0437\u0430\u0446\u0438\u044F"
   _previewError: 
---- !u!114 &1257830813
+--- !u!114 &1222699158
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1257830810}
+  m_GameObject: {fileID: 1222699155}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}

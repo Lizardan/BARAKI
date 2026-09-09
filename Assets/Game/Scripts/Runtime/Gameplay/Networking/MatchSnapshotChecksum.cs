@@ -47,6 +47,17 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, (int)snapshot.Players[i].MainExtraAbilityCooldownRemaining);
                         Mix(ref hash, (int)snapshot.Players[i].IceRingCooldownRemaining);
                         Mix(ref hash, (int)snapshot.Players[i].WaveOfLightCooldownRemaining);
+                        var order = snapshot.Players[i].HeroOrder;
+                        Mix(ref hash, order?.Length ?? 0);
+                        if (order != null)
+                        {
+                            for (var o = 0; o < order.Length; o++)
+                            {
+                                Mix(ref hash, order[o]);
+                            }
+                        }
+
+                        Mix(ref hash, snapshot.Players[i].HeroOrderConfirmed ? 1 : 0);
                     }
                 }
 
