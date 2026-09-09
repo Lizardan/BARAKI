@@ -124,6 +124,12 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero2BonusSlot);
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero3BonusSlot);
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.TitanBonusSlot);
+
+            // --- Faceless base champion kits (Plan0909, Фаза 5): Human base + Call of the Deep ---
+            yield return AbilityKitDefaults.CreateFacelessHeroKit(HeroAbilityRules.KingSlot);
+            yield return AbilityKitDefaults.CreateFacelessHeroKit(HeroAbilityRules.PaladinSlot);
+            yield return AbilityKitDefaults.CreateFacelessHeroKit(HeroAbilityRules.PriestSlot);
+            yield return AbilityKitDefaults.CreateFacelessTitanKit();
         }
 
         static void EnsureFolder()
@@ -278,7 +284,8 @@ namespace Game.Editor
             AbilityIds.FacelessCallOfAbyss => ContentAssetPaths.FacelessCasterBonusAbilities,
             AbilityIds.FacelessDeathExplosion => ContentAssetPaths.FacelessSiegeBonusAbilities,
             AbilityIds.FacelessHungeringFlight => ContentAssetPaths.FacelessFlyingBonusAbilities,
-            AbilityIds.FacelessFeast => ContentAssetPaths.FacelessSuperBonusAbilities,
+            AbilityIds.DevourServant => ContentAssetPaths.FacelessSuperBonusAbilities,
+            AbilityIds.CallOfTheDeep => ContentAssetPaths.FacelessHero1Abilities,
 
             AbilityIds.AuraHpRegen => ContentAssetPaths.HumanSiegeAbilities,
             AbilityIds.MeleeCleave => ContentAssetPaths.HumanMeleeAbilities,
@@ -358,6 +365,12 @@ namespace Game.Editor
             { AbilityIds.Aegis,         "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
             { AbilityIds.Sanctuary,     "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Misc/CFXR3 Ambient Glows.prefab" },
             { AbilityIds.GreaterColossus, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Magic Misc/CFXR3 Magic Aura A (Runic).prefab" },
+
+            // Faceless (FACELESS-011 Super 6): Devour Servant reinfects the feast VFX (CFXR2 Souls Escape)
+            { AbilityIds.DevourServant, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Eerie/CFXR2 Souls Escape.prefab" },
+
+            // Faceless champion (Фаза 5): Call of the Deep — servant summon uses the Souls Escape VFX
+            { AbilityIds.CallOfTheDeep, "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Eerie/CFXR2 Souls Escape.prefab" },
         };
 
         static void ApplyVfxPrefab(UnitAbilityDef def)

@@ -37,12 +37,6 @@ namespace Game.Gameplay.Combat
         public const float RaiseManaCost = 150f;
         public const float RaiseCooldownSeconds = 30f;
 
-        /// <summary>
-        /// Minion stats as a fraction of the race Melee baseline (×0.5 → HP 60, dmg 4–5, armor 0 per canon).
-        /// Visual prefab scale (×0.67) is a presenter concern, not combat.
-        /// </summary>
-        public const float MinionStatScale = 0.5f;
-
         /// <summary>Living enemy with the highest current HP within range (canon priority: highest_hp_enemy_in_range).</summary>
         public static MatchUnitState PickGazeTarget(
             MatchUnitState caster,

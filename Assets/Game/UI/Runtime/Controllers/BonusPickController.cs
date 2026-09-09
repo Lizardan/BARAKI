@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Match;
@@ -9,10 +8,14 @@ using UnityEngine.UIElements;
 namespace Game.UI.Controllers
 {
     /// <summary>
-    /// Post-race-pick bonus overlay (PRE-001 / PRE-006). Shows the 12 bonus slots + countdown while the
-    /// pick window is open and hides as soon as the local player picks or the deadline expires.
-    /// Slots 1–10 show portraits + tooltips; race uniques 11–12 show name + tooltip only.
-    /// Backdrop is picking-mode Ignore — the overlay never blocks pan camera / unit controls.
+    /// Post-race-pick bonus overlay (PRE-001 / PRE-006) with two windows. Both windows appear
+    /// together once the base-focus fly-in ends. Left: the auto-fate pick — one random bonus
+    /// rolled for the player at that moment (read-only; the other 11 cells stay empty). Right:
+    /// a random subset of <see cref="BonusPickRules.OfferSize"/> slots out of the remaining 11 —
+    /// the player picks one (the other 6 cells stay empty). The overlay closes once the choice
+    /// is made or the 60s deadline expires (the server fills the offer randomly). Both picked
+    /// bonuses stack. Backdrop is picking-mode Ignore — the overlay never blocks pan camera /
+    /// unit controls.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class BonusPickController : MonoBehaviour
@@ -20,6 +23,8 @@ namespace Game.UI.Controllers
         private const string HiddenClass = "bonus-pick--hidden";
         private const string PickedClass = "bonus-pick__slot--picked";
         private const string LockedClass = "bonus-pick__slot--locked";
+        private const string PortraitClass = "bonus-pick__portrait";
+        private const string EmptyCellClass = "bonus-pick__cell--empty";
         private const string TooltipHiddenClass = "bonus-pick-tooltip--hidden";
 
         [SerializeField] private UIDocument _uiDocument;
@@ -30,9 +35,11 @@ namespace Game.UI.Controllers
         private Label _timerLabel;
         private VisualElement _tooltip;
         private Label _tooltipLabel;
-        private readonly List<(Button button, int bonusSlot)> _slotButtons = new();
+        private VisualElement _autoGrid;
+        private VisualElement _offerGrid;
         private int _hoveredSlot = BonusPickRules.NoneSlot;
-        private bool _portraitsApplied;
+        private int _builtAutoPick = BonusPickRules.NoneSlot;
+        private int[] _builtOffer = System.Array.Empty<int>();
 
         private void Awake()
         {
@@ -46,15 +53,8 @@ namespace Game.UI.Controllers
             _timerLabel = root.Q<Label>("BonusPickTimer");
             _tooltip = root.Q<VisualElement>("BonusPickTooltip");
             _tooltipLabel = root.Q<Label>("BonusPickTooltipLabel");
-            BuildSlotButtons(root.Q<VisualElement>("BonusPickGrid"));
-
-            foreach (var (button, bonusSlot) in _slotButtons)
-            {
-                var slot = bonusSlot;
-                var anchor = button;
-                button.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(slot, anchor));
-                button.RegisterCallback<PointerLeaveEvent>(_ => HideTooltipIfSlot(slot));
-            }
+            _autoGrid = root.Q<VisualElement>("BonusPickAutoGrid");
+            _offerGrid = root.Q<VisualElement>("BonusPickOfferGrid");
         }
 
         private void OnEnable()
@@ -93,18 +93,22 @@ namespace Game.UI.Controllers
                 localSlot,
                 controller.BonusPickDeadlineSeconds,
                 controller.GetBonusPickSlot(localSlot),
+                controller.GetBonusPickSlot(localSlot, panel: 1),
+                controller.GetBonusPickOffer(localSlot),
                 out var deadline,
-                out var ownPick);
+                out var autoPick,
+                out var pick2,
+                out var offer);
 
-            if (!BonusPickHudRules.IsPickWindowOpen(deadline, ownPick))
+            if (!BonusPickHudRules.IsPickWindowOpen(deadline, pick2))
             {
                 Hide();
                 return;
             }
 
-            RefreshPortraitsIfNeeded();
             _timerLabel.text = Mathf.CeilToInt(deadline).ToString();
-            UpdateSlotButtons(ownPick);
+            EnsureAutoGrid(autoPick);
+            EnsureOfferGrid(offer);
             Show();
         }
 
@@ -126,55 +130,173 @@ namespace Game.UI.Controllers
             _visualCatalog = presenter != null ? presenter.VisualCatalog : null;
         }
 
-        private void RefreshPortraitsIfNeeded()
+        private void EnsureAutoGrid(int autoPick)
         {
-            ResolveVisualCatalog();
-            if (_visualCatalog == null || _portraitsApplied)
+            if (_autoGrid == null)
             {
                 return;
             }
 
+            if (_builtAutoPick == autoPick)
+            {
+                return;
+            }
+
+            _builtAutoPick = autoPick;
+            _autoGrid.Clear();
+
             var raceId = ResolveLocalRaceId();
-            var anyApplied = false;
-            foreach (var (button, slot) in _slotButtons)
+            foreach (var slot in BonusPickRules.DisplayOrderSlots)
             {
-                if (!BonusKitRules.IsBonusSlot(slot)
-                    && !BonusKitRules.IsChampionBonusSlot(slot))
+                if (slot == autoPick)
                 {
-                    continue;
+                    var button = CreateSlotButton(slot, raceId, selectable: false);
+                    button.AddToClassList(PickedClass);
+                    _autoGrid.Add(button);
+                    ApplyPortrait(button, slot, raceId);
+                    RegisterTooltip(button, slot);
                 }
-
-                if (!_visualCatalog.TryGetBonusPortrait(raceId, slot, out var portrait) || portrait == null)
+                else
                 {
-                    continue;
+                    _autoGrid.Add(CreateEmptyCell());
                 }
+            }
+        }
 
-                var existing = button.Q<VisualElement>("BonusPortrait");
-                if (existing == null)
-                {
-                    existing = new VisualElement { name = "BonusPortrait" };
-                    existing.AddToClassList("bonus-pick__portrait");
-                    button.Add(existing);
-                }
-
-                existing.style.backgroundImage = new StyleBackground(portrait);
-                button.text = string.Empty;
-                anyApplied = true;
+        private void EnsureOfferGrid(int[] offer)
+        {
+            if (_offerGrid == null)
+            {
+                return;
             }
 
-            if (anyApplied)
+            if (offer is not { Length: > 0 })
             {
-                _portraitsApplied = true;
+                return;
             }
+
+            if (SameOffer(_builtOffer, offer))
+            {
+                return;
+            }
+
+            _builtOffer = offer;
+            _offerGrid.Clear();
+
+            var raceId = ResolveLocalRaceId();
+            foreach (var slot in BonusPickRules.DisplayOrderSlots)
+            {
+                if (BonusPickRules.IsSlotInOffer(offer, slot))
+                {
+                    var clickedSlot = slot;
+                    var button = CreateSlotButton(slot, raceId, selectable: true);
+                    button.clicked += () => OnSlotClicked(clickedSlot);
+                    _offerGrid.Add(button);
+                    ApplyPortrait(button, slot, raceId);
+                    RegisterTooltip(button, slot);
+                }
+                else
+                {
+                    _offerGrid.Add(CreateEmptyCell());
+                }
+            }
+        }
+
+        private Button CreateSlotButton(int slot, string raceId, bool selectable)
+        {
+            var button = new Button
+            {
+                name = $"BonusSlot{slot}",
+                text = BonusPickRules.GetSlotDisplayName(slot, raceId),
+            };
+            button.AddToClassList("ui-btn");
+            button.AddToClassList("ui-btn--square");
+            button.AddToClassList("bonus-pick__slot");
+
+            if (!selectable)
+            {
+                button.SetEnabled(false);
+                button.AddToClassList(LockedClass);
+            }
+
+            return button;
+        }
+
+        private static VisualElement CreateEmptyCell()
+        {
+            var cell = new VisualElement { name = "BonusPickEmpty" };
+            cell.AddToClassList("bonus-pick__cell");
+            cell.AddToClassList(EmptyCellClass);
+            return cell;
+        }
+
+        private static bool SameOffer(int[] a, int[] b)
+        {
+            if (a == b)
+            {
+                return true;
+            }
+
+            if (a == null || b == null || a.Length != b.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ApplyPortrait(Button button, int slot, string raceId)
+        {
+            ResolveVisualCatalog();
+            if (_visualCatalog == null || button == null)
+            {
+                return;
+            }
+
+            if (!BonusKitRules.IsBonusSlot(slot) && !BonusKitRules.IsChampionBonusSlot(slot))
+            {
+                return;
+            }
+
+            if (!_visualCatalog.TryGetBonusPortrait(raceId, slot, out var portrait) || portrait == null)
+            {
+                return;
+            }
+
+            var existing = button.Q<VisualElement>("BonusPortrait");
+            if (existing == null)
+            {
+                existing = new VisualElement { name = "BonusPortrait" };
+                existing.AddToClassList(PortraitClass);
+                button.Add(existing);
+            }
+
+            existing.style.backgroundImage = new StyleBackground(portrait);
+            button.text = string.Empty;
+        }
+
+        private void RegisterTooltip(Button button, int slot)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var anchor = button;
+            button.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(slot, anchor));
+            button.RegisterCallback<PointerLeaveEvent>(_ => HideTooltipIfSlot(slot));
         }
 
         private void OnSlotClicked(int bonusSlot)
         {
-            if (!BonusPickRules.IsSlotAvailable(bonusSlot, ResolveLocalRaceId()))
-            {
-                return;
-            }
-
             var controller = _matchRuntime != null ? _matchRuntime.Controller : null;
             if (controller == null)
             {
@@ -187,51 +309,6 @@ namespace Game.UI.Controllers
             }
 
             controller.TrySetBonusPick(ResolveLocalSlot(), bonusSlot);
-        }
-
-        private void UpdateSlotButtons(int ownPick)
-        {
-            var raceId = ResolveLocalRaceId();
-            var locked = ownPick != BonusPickRules.NoneSlot;
-            foreach (var (button, bonusSlot) in _slotButtons)
-            {
-                // Slots without mechanics for this race (Faceless 7–12) stay greyed out.
-                var selectable = BonusPickRules.IsSlotAvailable(bonusSlot, raceId);
-                button.text = BonusPickRules.GetSlotDisplayName(bonusSlot, raceId);
-                button.SetEnabled(selectable && !locked);
-                button.EnableInClassList(PickedClass, ownPick == bonusSlot);
-                button.EnableInClassList(LockedClass, !selectable || locked);
-            }
-        }
-
-        private void BuildSlotButtons(VisualElement grid)
-        {
-            if (grid == null)
-            {
-                return;
-            }
-
-            var raceId = ResolveLocalRaceId();
-            foreach (var slot in BonusPickRules.DisplayOrderSlots)
-            {
-                var button = new Button(() => OnSlotClicked(slot))
-                {
-                    name = $"BonusSlot{slot}",
-                    text = BonusPickRules.GetSlotDisplayName(slot, raceId),
-                };
-                button.AddToClassList("ui-btn");
-                button.AddToClassList("ui-btn--square");
-                button.AddToClassList("bonus-pick__slot");
-
-                if (!BonusPickRules.IsSlotAvailable(slot, raceId))
-                {
-                    button.SetEnabled(false);
-                    button.AddToClassList(LockedClass);
-                }
-
-                grid.Add(button);
-                _slotButtons.Add((button, slot));
-            }
         }
 
         private void ShowTooltip(int bonusSlot, VisualElement anchor)

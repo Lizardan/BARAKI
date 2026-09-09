@@ -25,21 +25,31 @@
 |------|---------------|----------|--------|
 | 1 Melee | `UNIT_FACELESS_MELEE` | **Hunger of the Old One** | Пассив. On-hit **15%**: лечение = **50% урона** удара (вампиризм) |
 | 2 Ranged | `UNIT_FACELESS_RANGED` | **Tainting Bolt** | Пассив. On-hit **15%**: дот **3 dmg/с × 3 с** (≈9–10 итог) |
-| 3 Caster | `UNIT_FACELESS_CASTER` | **Call of the Abyss** | On-**kill** (добивание кастером, шанс **100%**): спавн **1 мини-меле** со статами **×0.5 от Melee** (HP 60, dmg 4–5, броня 0), масштаб **×0.67** (в 1.5 раза меньше) |
+| 3 Caster | `UNIT_FACELESS_CASTER` | **Call of the Abyss** | On-**kill** (добивание кастером, шанс **100%**): спавн **1 прислужника (servant)** — фиксированный профиль HP **60** / броня **0** / dmg **4–5** / AS 1 / range 1.5 / speed 4 / bounty 0, префаб `Faceless_Servant` (scale **1.25**, без оружия) |
 | 4 Siege | `UNIT_FACELESS_SIEGE` | **Death Explosion** | При смерти: взрыв, урон = **10% max HP** вражеским **юнитам** в радиусе **3**; здания **не** задевает |
 | 5 Flying | `UNIT_FACELESS_FLYING` | **Hungering Flight** | On-kill: **+15% AS** на 3 с, стакается до 3 |
-| 6 Super | `UNIT_FACELESS_SUPER` | **Feast on the Fallen** | On-kill: **+80 HP**, **+10% AS** на 3 с, стакается до 3 |
+| 6 Super | `UNIT_FACELESS_SUPER` | **Devour Servant** | Auto, HP<**50%**: съедает ближайшего своего servant → лечение = **max HP servant (60)**, **+15% AS** на 5 с (стак, кап 3), кулдаун **3 с** |
 
 ### Заметки по механикам
 
 - **Вампиризм (1)**: лечение только от нанесённого урона удара (не от промаха), до реального
   урона после брони цели.
-- **Call of the Abyss (3)**: мини-юнит — меле (роль Melee, статы ×0.5), команда владельца,
-  спавн рядом с кастером, масштаб префаба ×0.67 от `Faceless_Melee`. Добивание — только убийство
-  от этого кастера (не союзников, не дот-бонуса другого юнита).
+- **Call of the Abyss (3)**: servant — меле (роль Melee), команда владельца, спавн рядом с кастером
+  (смещение ≈1.2 по X), маркер `BonusKitRules.SummonBonusSlot = 13`. Статы — фиксированный
+  servant-профиль (`FacelessServantRules`, Plan0909 Фаза 1), а не ×0.5 от живого Melee;
+  презентация — отдельный префаб `Faceless_Servant` (scale 1.25, без оружия). Добивание — только
+  убийство от этого кастера (не союзников, не дот-бонуса другого юнита). Труп убитого после
+  успешного спавна **потребляется** (`ConsumeCorpse`) — «no double» (Plan0909 Фаза 2).
 - **Death Explosion (4)**: срабатывает при любой смерти бонус-юнита (убит юнитом/зданием/героем).
   Урон фикс = 10% max HP бонусного осадника (≈20 при базе 200). Здания не задевает — только
   вражеские юниты, включая летающих.
+- **Devour Servant (6)**: реактив-пассив Super (замена Feast on the Fallen, FACELESS-011 Фаза 4).
+  При `HP < 50% max`, кулдауне ≤ 0 — `FindNearestOwnServant` ищет ближайшего своего servant;
+  если найден — servant умирает (без корпуса и смертных проков), Super лечится на
+  `servant.MaxHp` (= 60), получает **+15% AS** на 5 с. Буфер AS **переиспользует поля слота 5**
+  (`FeastStacks`/`FeastRemainingSeconds`, кап `MaxFeastStacks=3`) — они не удалены. Съедаются и
+  базовые, и summon-слуги. Кулдаун спадает в `TickTowerTrackStatus`, поэтому в тик-цикле
+  `TickDevourServant` вызывается **после** неё (иначе первый укус блокируется).
 - Спавн-бонусы (3, 5, 6) и on-hit (1, 2) — работают по replacement policy: применяются только
   к будущим спавнам после пика.
 
@@ -78,9 +88,9 @@ Player-level модификаторы (как March Discipline / Stone Masonry �
 |------|------|
 | `Combat/FacelessBonusUnitRules.cs` | константы эффектов, slot↔role маппинг, `IsFacelessBonus`, `RollProc` |
 | `Combat/MatchCombatSystem.cs` | хуки бонусов (см. ниже) |
-| `Combat/MatchUnitState.cs` | `FeastStacks` / `FeastRemainingSeconds` / `FeastAttackSpeedPerStack` (стаки 5–6) |
-| `Tests/FacelessBonusUnitRulesTests.cs` | 8 тестов: вампиризм, дот, мини-меле, взрыв, стаки AS, экспара стаков, гейт расы/слота |
-| `Combat/AbilityIds.cs` | def-маркеры 64–69 (`FacelessHunger`..`FacelessFeast`) |
+| `Combat/MatchUnitState.cs` | `FeastStacks` / `FeastRemainingSeconds` / `FeastAttackSpeedPerStack` (стаки 5–6); `DevourCooldownRemaining` (слот 6) |
+| `Tests/FacelessBonusUnitRulesTests.cs` | 14 тестов: вампиризм, дот, servant-спавн, взрыв, стаки AS, экспара стаков, Devour (5), гейт расы/слота |
+| `Combat/AbilityIds.cs` | def-маркеры 64–69 (`FacelessHunger`..`AuraOfHunger`; 69 = `DevourServant`) |
 | `Combat/AbilityKitDefaults.cs` | `CreateFacelessBonus(role)` — Passive-маркер на роль (Caster: спеллы + Call of the Abyss) |
 | `Editor/UnitAbilityAssetBuilder.cs` | билд def-ассетов в `Faceless*/BonusUnits/*/Abilities` |
 | `Editor/UnitAbilitySeeder.cs` | запись дефов в `_abilities` бонус-префабов |
@@ -144,13 +154,14 @@ ScriptableObjects/Races/Faceless/BonusUnits/{Role}/Abilities/*.asset      # def-
 |-------|-------------|----------|
 | 1 вампиризм | `ResolveMeleeImpact` → `TryApplyHungerOfTheOldOne` | 15% прок, лечение = 50% фактического урона (`ApplyDamage` теперь возвращает урон) |
 | 2 дот | `ResolveProjectileImpact` → `TryApplyTaintingBolt` | 15% прок, переиспользует burn-таймеры (3 dmg/с × 3 с) |
-| 3 мини-меле | `ApplyDamage` (on-kill) → `TryApplyCallOfTheAbyss` | `SummonMinion(..., Melee, ×0.5)` |
+| 3 servant | `ApplyDamage` (on-kill) → `TryApplyCallOfTheAbyss` | `SummonMinion(ownerSlot, anchor)` — servant-профиль, маркер SummonBonusSlot=13 |
 | 4 взрыв | `ApplyDamage` (смерть) → `TryApplyDeathExplosion` | `ApplySplashDamage` 10% max HP, радиус 3, только юниты |
 | 5 стаки AS | `ApplyDamage` (on-kill) → `TryApplyHungeringFlight` | +15%/стак, кап 3, 3 с |
-| 6 лечение+AS | `ApplyDamage` (on-kill) → `TryApplyFeastOnTheFallen` | +80 HP, +10%/стак, кап 3, 3 с |
+| 6 Devour | `TickDevourServant` (после `TickTowerTrackStatus`) → `FindNearestOwnServant` | HP<50%: servant умирает, +60 HP (== servant.MaxHp), +15% AS 5 с, стак кап 3, кулдаун 3 с |
 
-AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен в `GetUnitAttackInterval`
-(делит интервал, как Bloodrage); decay — в `TickTowerTrackStatus`.
+AS-стаки (5 и 6): множитель `GetFacelessFeastAsMultiplier` встроен в `GetUnitAttackInterval`
+(делит интервал, как Bloodrage); decay — в `TickTowerTrackStatus`. Кулдаун Devour (6) спадает
+в той же точке — потому в тик-цикле `TickDevourServant` идёт ПОСЛЕ `TickTowerTrackStatus`.
 
 Гейт снят (FACELESS-014): `HasBonusKit(RACE_FACELESS)` = true — бонус-слот присваивается юнитам
 и волной, и ручным наймом. Тесты задают `bonusSlot` вручную через `SpawnUnit`.
@@ -170,6 +181,12 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 
 - `FacelessImplementedSlots` — полный набор {1..12}: юниты 1–6 (FACELESS-011),
   ветераны 7–10 (FACELESS-012), уники 11–12 (FACELESS-013).
+
+Оверлей — **два окна** (PRE-001): панель 0 = авто-фейт (1 случайный, read-only; ролл происходит,
+когда оба окна появляются — `BeginEarlyPhase`, после подлёта камеры, не на старте матча), панель 1 =
+оффер 6 из оставшихся 11, игрок берёт 1; оба пика стакаются. Дедлайн 60 с от открытия окон; по
+таймауту сервер заполняет оффер (`GetRandomFromOffer`, роллит только доступные). `MatchConfig.AutoFateBonuses`
+по умолчанию `false` (тесты держат сетапы детерминированными), прод включает.
 
 ## Реализация слотов 7–10 (FACELESS-012, 2026-09-08)
 
@@ -264,6 +281,67 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 
 Тесты: полный EditMode-прогон `Game.Tests` — 1336 passed (2026-09-09).
 
+## Фаза 5 (Plan0909, 2026-09-09) — «Зов глубин»: servant-призыв героев/титана/ветеранов
+
+Базовые герои Hero1/2/3, титан и ветераны 7–10 получают servant-кит: **Call of the Deep** (id **70**).
+Механика: при активации из ближайшего трупа (**любой** команды, возраст ≤ 15 с, поиск в радиусе 6;
+def: `castRange` 6, `durationSeconds` 15) поднимает **2 servant-ов** и потребляет труп; если трупа нет —
+**1 servant** рядом с героем. Маны у героев/титана нет (maxMana 0 — mana-check отсутствует),
+кулдаун **25 с**, unlock переносится с заменяемого Human-слота. VFX — Souls Escape (цвет `RaiseDrowned`).
+
+| Кто | Кит | Замена (Human-слот) | Unlock Call |
+|-----|-----|---------------------|-------------|
+| Hero1 Король (melee) | `CreateKing` | Heal (10) | 4 |
+| Hero2 Колдун (melee) | `CreatePaladin` | Consecration (22) | 10 |
+| Hero3 Берсерк (range) | `CreatePriest` | Greater Heal (31) | 4 |
+| Титан | `CreateTitan` | Stomp (41) | 10 |
+| Ветераны 7–10 (сигнатура 60–63 остаётся) | `CreateVeteranKit(Faceless, slot)` | 7→Heal, 8→Consecration, 9→Revive, 10→Stomp | 4/10/10/10 |
+
+Ключевые точки:
+- `Combat/AbilityIds.cs` — `CallOfTheDeep = 70`.
+- `Combat/FacelessHeroRules.cs` — константы (`CallCastRange` 6, `CallCorpseMaxAgeSeconds` 15,
+  `CallCooldownSeconds` 25, `ServantsWithCorpse` 2, `ServantsWithoutCorpse` 1).
+- `Combat/Abilities/CallOfTheDeepBehaviour.cs` — `PickAnyCorpse` → `SummonMinion` (×2/×1 у героя) →
+  `ConsumeCorpse` (если труп) → `ArmSlotCooldown` → `EmitCast`; fallback-числа берутся из def.
+- `Combat/AbilityKitDefaults.cs` — `CreateFacelessHeroKit(heroSlot)` / `CreateFacelessTitanKit()` /
+  `ReplaceSlotWithCallOfTheDeep(kit, id)` (unlock с заменяемого слота); `CreateForSpawn(Faceless,
+  Hero/Titan)` возвращает базовые киты вместо пустых; `CreateVeteranKit(Faceless, 7–10)` — сигнатура + Call.
+- `Editor/UnitAbilityAssetBuilder.cs` — `CollectKits` добавил базовые Faceless герой/титан киты;
+  `GetAbilityDirectory(70)` → `FacelessHero1Abilities`; VFX Souls Escape для 70.
+- `Editor/UnitAbilitySeeder.cs` — `SeedFaceless` сеет базовых героев/титана через
+  `CreateForSpawn(Faceless, …)` (ранее `Create(Hero/Titan)` — Human-киты).
+- Префабы пересижены: `Faceless_Hero1 → [70,11,12,13]`, Hero2 `[21,70,20,23]`, Hero3 `[70,32,30,33]`,
+  ветераны — сигнатура 60–63 + Call (e.g. Hero1_BONUS `[70,60,12,13]`).
+
+Тесты: `AbilityKitDefaultsTests` +2 (empty-кит переписан: Titan возвращает кит; Melee/Ranged пусты;
+замены герой/титан/ветеран), `FacelessHeroRulesTests` +6 (2 servant с трупом + consume, 1 без трупа,
+владелец/роль/маркер-слот servant, гейт уровня 4, титан, кулдаун), `FacelessVeteranBonusTests` —
+ожидания переведены на Call. Полный `Game.Tests` — **1352 passed**.
+
+## Фаза 6 (Plan0909, 2026-09-09) — «Рой и Пир»: servant-треки башен #5/#7
+
+Два tower-трека Древних используют servant-рост (FACELESS-017, канон —
+`wiki/rules/tower-tracks.md`):
+
+- **Трек 5 — «Рой на месте гибели»** (`UPG_TOWER_FACELESS_UNNERVING_AIM`, Ranged+Caster):
+  при смерти **обычного** юнита владельца (не servant, не герой/титан) шанс **5/10/15%**
+  по уровню — спавн **servant на месте гибели** (`MatchCombatSystem.TryApplySwarmAtDeath` →
+  `SummonServantAt`). Труп погибшего **потребляется** (`no corpse` — servant не всплывает
+  повторно через Raise/Resurrect), servant не цепляет каскад (убийство servants не роллит).
+  Ролл рандома — первый draw смерти для этого юнита.
+- **Трек 7 — «Пир на герое»** (`UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP`, Caster+Super):
+  при убийстве **героя/титана** (`target.IsChampion`) servants владельца в **r=8** от места
+  гибели получают **+30% урона** (damage-множитель `GetFeastOnHeroesDamageMultiplier`) и
+  **+30% max HP** на **10 с** (`GetEffectiveMaxHp` + подъём `CurrentHp` на ту же долю; поля
+  `HeroFeastRemainingSeconds/HeroFeastDamagePercent/HeroFeastMaxHpPercent` в `MatchUnitState`).
+  Декей: в `TickTowerTrackStatus` servant теряет `maxHp × ⅓ × dt/10` как life-damage
+  (`ApplyDamage(null, unit, …, unit.OwnerSlot)` — без рас-гейтов); по истечении поля обнуляются.
+
+Серванты **не** активируют трек-спавн (#5) и **не** считаются героями для пира (#7), но
+**получают** пир и **могут** быть съедены Devour (слот 6) во время активного баффа (бафф уходит
+с умирающим servant). Трек-пир не конфликтует с бонусом 3 (Call of the Abyss, on-kill-призыв
+кастером) и бонусом 4 (Death Explosion, on-death-взрыв).
+
 ## Статус
 
 - [x] Дизайн слотов 1–12 утверждён пользователем (2026-09-08).
@@ -293,7 +371,18 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
       трансфера ветеранов Faceless (fallback). EditMode 1336 passed. Выбор расы в лобби
       (`SelectableRaceIds`) остаётся отдельным гейтом (`GameDesign/Races.md`, EA-001).
 - [x] Реализация слотов 11–12 (FACELESS-013): Shadow of the Void, Void Bastion — 2026-09-09.
+- [x] **Servant-юнит (Plan0909 Фаза 1, 2026-09-09):** отдельный прислужник вместо «×0.5 mini-melee» —
+      `UNIT_FACELESS_SERVANT` (60/0/4–5, AS 1, range 1.5, speed 4, bounty 0), префаб `Faceless_Servant`
+      (scale 1.25, меш без оружия), `FacelessServantRules` (фиксированный профиль),
+      `SummonBonusSlot = 13`, ветка servant-префаба в `UnitVisualCatalog`; `SummonMinion` единый
+      и для Call of the Abyss, и для Raise the Drowned. `MiniMeleeStatScale`/`MinionStatScale` удалены.
+      EditMode 1336 passed.
 - [x] Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — FACELESS-008, дизайн 2026-09-08 (`GameDesign/Races.md`).
+- [x] **Фаза 5 (Plan0909, 2026-09-09): «Зов глубин» (Call of the Deep)** — servant-кит героев/титана и
+      ветеранов 7–10 (одна Human-замена + сигнатура сохраняется). 1352 passed.
+- [x] **Фаза 6 (Plan0909, 2026-09-09): «Рой и Пир»** — треки башен #5/#7 переведены на servant-рост
+      (спавн servant on-death с no-corpse и пир на герое/титане); `FacelessTowerTrackTests` 15/15.
+      Доки: `tower-tracks.md`, `Races.md`, `building-abilities.md` (слот 10 — призыв).
 
 Связанные правила: `wiki/rules/human-unit-bonuses.md` (формат ветеранов/китов/UI как Люди),
 `wiki/rules/faceless-assets.md`, `wiki/rules/abilities.md`.

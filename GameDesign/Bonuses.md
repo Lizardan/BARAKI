@@ -1,9 +1,9 @@
 ---
 doc_id: bonuses
-version: 0.2
+version: 0.3
 status: draft
 depends_on: [match_flow, races, units, heroes]
-provides: [bonus_pick_rules, bonus_slots, replacement_policy]
+provides: [bonus_pick_rules, bonus_slots, replacement_policy, two_windows]
 ---
 
 # Bonuses
@@ -14,24 +14,36 @@ provides: [bonus_pick_rules, bonus_slots, replacement_policy]
 
 ## Обзор
 
-После выбора расы матч **стартует сразу** — волны идут, паузы нет. Поверх HUD — оверлей выбора бонуса на **60 с**.
+После выбора расы матч **стартует сразу** — волны идут, паузы нет. Камера ведёт на базу (цифровой
+полёт), и только **когда прилёт заканчивается**, появляются **два окна** бонуса на **60 с**:
+1. **Левое — авто-фейт:** для игрока **сразу бросается 1 случайный** из 12 (read-only; остальные
+   11 клеток пустые). Это и есть точка ролла — не на старте матча, а при появлении окон.
+2. **Правое — выбор:** случайная **подвыборка 6 из оставшихся 11**, игрок выбирает **1**.
+   Верхний таймер 60 с; по таймауту сервер сам заполняет оффер из подвыборки.
+
+Оба пика **стакаются** (авто-фейт + выбор), скрыты от соперников, переживают reconnect и
+host migration.
 
 ```entity
 id: BONUS_PICK_RULES
-trigger: after_race_pick_on_game_scene
+trigger: early_phase_after_base_focus_flyin
 match_pause: false
 overlay_duration_sec: 60
-choices_per_player: 1
+windows: 2
+auto_fate_panel: 1_random_of_12
+choice_panel: 1_of_6_offer_from_remaining_11
+auto_roll_timing: when_the_two_windows_open (never at match start; MatchConfig.AutoFateBonuses gates it, production match starts enable it)
 pool_size: 12
+offer_size: 6
 visibility: hidden_from_opponents
-visibility_note: скрытность = отсутствие отображения в UI (чужие пики не показываются); данные реплицируются всем клиентам (снапшот v13), выбор переживает reconnect и host migration
-timeout_pick: random_from_pool
+visibility_note: скрытность = отсутствие отображения в UI (чужие пики не показываются); данные реплицируются всем клиентам (снапшот v24), выбор переживает reconnect и host migration
+timeout_pick: random_from_offer
 ui_display_order: titan, race_unique_1, hero_1..3, units, race_unique_2
-ui_display_order_note: только порядок кнопок оверлея; slot_index в данных и снапшоте v13 не меняется (1..12 стабильны)
+ui_display_order_note: только порядок кнопок оверлея; slot_index в данных и снапшоте v24 не меняется (1..12 стабильны)
 replacement_scope: future_spawns_only
 already_spawned_units: unchanged
 mvp: false
-note: Каркас; реализация PRE-001
+note: Реализация PRE-001 (два окна, сетевой state, снапшот v24); авто-фейт бросается при появлении окон (после подлёта камеры)
 ```
 
 ### Replacement policy
@@ -190,14 +202,14 @@ mvp: false
 ## Flow
 
 ```
-Race pick → Match start (waves run) → Bonus overlay 60s
-  → Player picks 1 of 12 (hidden) OR timeout → random
-  → Future spawns/hires use enhanced defs where applicable
+Race pick → Match start (waves run) → camera flies to base → two windows open (auto-fate roll + 6-of-11 offer), 60s
+  → player picks 1 from the offer (auto-fate already set) OR timeout → server fills offer randomly
+  → both picks stack; future spawns/hires use enhanced defs where applicable
 ```
 
 ### Видимость выбора (важно)
 
-- Все клиенты технически получают пики (снапшот v13) — сервер и клиенты «знают» выбор каждого.
+- Все клиенты технически получают пики (снапшот v24) — сервер и клиенты «знают» выбор каждого.
 - Скрытность реализуется **только на уровне UI**: в интерфейсе игрок видит свой выбор; чужие пики нигде не отображаются.
 - Игрок узнаёт о чужих бонусах лишь по последствиям в игре (усиленные/заменённые юниты, уникальные эффекты).
 - Т.к. пики в снапшоте — выбор корректно переживает **reconnect** и **host migration** без доп. механики.
@@ -206,14 +218,15 @@ Race pick → Match start (waves run) → Bonus overlay 60s
 
 | Решение | Значение |
 |---------|----------|
-| Таймер | **60 с**, без паузы матча |
-| Выбор | Ровно **1** из **12** |
-| Видимость | Чужие пики **не отображаются** в UI; данные технически знают все клиенты (снапшот v13) |
-| Timeout | **Случайный** из 12 |
+| Момент появления окон | **Авто-фейт бросается и оверлей открывается** только когда камера долетела до базы (фаза Early), не на старте матча |
+| Таймер | **60 с** от появления окон, без паузы матча |
+| Авто-фейт (панель 0) | **1 случайный** из 12, read-only, участнику не показывается в праве |
+| Выбор (панель 1) | Ровно **1 из 6** оффера (подвыборка из оставшихся 11) |
+| Видимость | Чужие пики **не отображаются** в UI; данные технически знают все клиенты (снапшот v24) |
+| Timeout | **Случайный** из оффера |
 | Replacement | Только **будущие** спавны/наймы/redeploy |
-| Умения слотов 1–12 | Invent + fill = **PRE-006**; обязательны до EA-001 |
-| Stack | Каждый бонус = **+1 линия** усиления; **стакается** с tower upgrades и прочим tech |
-| Late game | Матчи ~**40–60 мин** — у всех мощные юниты и сильно усиленная армия |
+| Stack | Оба пика **стакаются**; каждый бонус = **+1 линия** усиления, стакается с tower upgrades и прочим tech |
+| Детерминизм тестов | `MatchConfig.AutoFateBonuses` по умолчанию `false` (bare-сетапы предсказуемы); продакшн стартует с `true` |
 
 ## Open
 

@@ -82,6 +82,7 @@ namespace Game.Gameplay.Match
             [SerializeField] private GameObject _siege;
             [SerializeField] private GameObject _flying;
             [SerializeField] private GameObject _super;
+            [SerializeField] private GameObject _meleeServant;
             [FormerlySerializedAs("_hero")]
             [SerializeField] private GameObject _hero1;
             [SerializeField] private GameObject _hero2;
@@ -137,6 +138,11 @@ namespace Game.Gameplay.Match
 
             public GameObject GetPrefab(UnitRole role, int heroSlot, int bonusSlot)
             {
+                if (bonusSlot == BonusKitRules.SummonBonusSlot)
+                {
+                    return role == UnitRole.Melee && _meleeServant != null ? _meleeServant : ResolveBasePrefab(role, heroSlot);
+                }
+
                 if (BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot))
                 {
                     return GetBonusPrefab(bonusSlot) ?? ResolveBasePrefab(role, heroSlot);

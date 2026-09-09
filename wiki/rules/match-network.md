@@ -16,13 +16,15 @@ Listen-host (host-as-server) + NGO. Клиенты **не** тикают сим�
 ## Бонус-оверлей и HUD
 
 - Хост читает `MatchController` напрямую.
-- Клиент предпочитает снапшот v13, но **если снапшота ещё нет** — fallback на локальный controller после `StartMatch`. Иначе оверлей пустой, а часы зависают на `00:00`.
+- Клиент предпочитает снапшот (v24), но **если снапшота ещё нет** — fallback на локальный controller.
+  Оверлей при этом скрыт: локальный дедлайн 0 до перехода Start→Early (авто-фейт-ролл происходит в
+  `BeginEarlyPhase`), а бонус-оверлей гейтится `deadline > 0 && pick2 == None`.
 - Снапшот публикуется сразу в `BeginMatchOnServer` (`PublishSnapshotNow`), не только по таймеру `SnapshotHz`.
-- `MatchSnapshotCodec` читает только текущую версию (v21+); смешанные билды закрываются handshake'ом версии в лобби (`SnapshotVersionGate`, см. `snapshot-wire.md`). Исторический урок: хардкод allow-list версий при бампе ронял каждый клиентский RPC — не возвращать.
+- `MatchSnapshotCodec` читает только текущую версию (v24); смешанные билды закрываются handshake'ом версии в лобби (`SnapshotVersionGate`, см. `snapshot-wire.md`). Исторический урок: хардкод allow-list версий при бампе ронял каждый клиентский RPC — не возвращать.
 
 ## Start → Early
 
-Камера летит к базе (`IsFocusInProgress`). Early **не** ждёт race-pick pan lock. Таймаут `MatchRules.StartPhaseMaxWaitSeconds` (5 с, GDD `PHASE_START`), чтобы застрявшая камера не держала часы на нуле.
+Камера летит к базе (`IsFocusInProgress`). Early **не** ждёт race-pick pan lock. Таймаут `MatchRules.StartPhaseMaxWaitSeconds` (5 с, GDD `PHASE_START`), чтобы застрявшая камера не держала часы на нуле. В этот момент (Start→Early) открываются окна бонуса: авто-фейт-ролл + оффер + старт 60-с дедлайна (`MatchController.OpenBonusPickWindow`, однократно, гейтится `AutoFateBonuses`).
 
 ## Host drop и миграция
 

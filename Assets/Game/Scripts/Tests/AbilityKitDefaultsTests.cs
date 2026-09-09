@@ -125,20 +125,83 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CreateForSpawn_Faceless_NonCasterRolesReturnEmptyKit()
+        public void CreateForSpawn_Faceless_UnitRolesStayEmpty()
         {
-            // FACELESS-014 flipped the gate: Faceless now owns a bonus kit, but its *spawn* kit
-            // stays empty for non-caster roles without a bonus slot (base hero/titan kits are
-            // separate cards), so it never inherits the Human defaults.
+            // FACELESS-014 flipped the gate: Faceless owns bonus kits, but base unit (non-caster,
+            // non-champion) spawn kits stay empty without a bonus slot — never the Human defaults.
             Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
 
-            foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged, UnitRole.Titan })
+            foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged })
             {
                 var kit = AbilityKitDefaults.CreateForSpawn(
-                    GameIds.Races.Faceless, role, heroSlot: 1, bonusSlot: 0);
+                    GameIds.Races.Faceless, role, heroSlot: 0, bonusSlot: 0);
                 Assert.AreEqual(0, kit.Length, $"Faceless {role} must not inherit Human kit.");
             }
         }
+
+        [Test]
+        public void CreateForSpawn_Faceless_ChampionKitsReplaceOneHumanSlot()
+        {
+            // Plan0909, Фаза 5: hero/titan base kits reuse the Human kit with one slot replaced
+            // by Call of the Deep; the unlock value is carried over from the replaced slot.
+            var hero1 = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, heroSlot: 1, 0);
+            Assert.AreEqual(4, hero1.Length);
+            Assert.IsFalse(HasAbility(hero1, AbilityIds.Heal));
+            AssertCallOfTheDeep(hero1, unlockValue: 4);
+
+            var hero2 = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, heroSlot: 2, 0);
+            Assert.IsFalse(HasAbility(hero2, AbilityIds.Consecration));
+            AssertCallOfTheDeep(hero2, unlockValue: 10);
+
+            var hero3 = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, heroSlot: 3, 0);
+            Assert.IsFalse(HasAbility(hero3, AbilityIds.GreaterHeal));
+            AssertCallOfTheDeep(hero3, unlockValue: 4);
+
+            var titan = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Titan, heroSlot: 0, 0);
+            Assert.AreEqual(4, titan.Length);
+            Assert.IsFalse(HasAbility(titan, AbilityIds.Stomp));
+            AssertCallOfTheDeep(titan, unlockValue: 10);
+        }
+
+        [Test]
+        public void CreateForSpawn_Faceless_VeteranKitsKeepSignaturePlusServantCall()
+        {
+            // Veteran slots 7–10 keep their signature (60–63) and swap one Human slot for the
+            // servant summon (Call of the Deep, Plan0909 Фаза 5).
+            var hero1 = AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero1BonusSlot);
+            Assert.IsTrue(HasAbility(hero1, AbilityIds.AncientMantle));
+            Assert.IsFalse(HasAbility(hero1, AbilityIds.Heal));
+            AssertCallOfTheDeep(hero1, unlockValue: 4);
+
+            var hero2 = AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero2BonusSlot);
+            Assert.IsTrue(HasAbility(hero2, AbilityIds.AreaOfMiss));
+            Assert.IsFalse(HasAbility(hero2, AbilityIds.Consecration));
+            AssertCallOfTheDeep(hero2, unlockValue: 10);
+
+            var hero3 = AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero3BonusSlot);
+            Assert.IsTrue(HasAbility(hero3, AbilityIds.FeastZone));
+            Assert.IsFalse(HasAbility(hero3, AbilityIds.Revive));
+            AssertCallOfTheDeep(hero3, unlockValue: 10);
+
+            var titan = AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.TitanBonusSlot);
+            Assert.IsTrue(HasAbility(titan, AbilityIds.AuraOfHunger));
+            Assert.IsFalse(HasAbility(titan, AbilityIds.Stomp));
+            AssertCallOfTheDeep(titan, unlockValue: 10);
+        }
+
+        static void AssertCallOfTheDeep(UnitAbilityDef[] kit, int unlockValue)
+        {
+            var call = System.Array.Find(kit, def => def != null && def.AbilityId == AbilityIds.CallOfTheDeep);
+            Assert.IsNotNull(call, "Kit must contain Call of the Deep.");
+            Assert.That(call.Behaviour, Is.TypeOf<CallOfTheDeepBehaviour>());
+            Assert.AreEqual(unlockValue, call.UnlockValue);
+            Assert.IsTrue(call.IsActive);
+            Assert.AreEqual(FacelessHeroRules.CallCastRange, call.CastRange, 0.0001f);
+            Assert.AreEqual(FacelessHeroRules.CallCooldownSeconds, call.CooldownSeconds, 0.0001f);
+        }
+
+        static bool HasAbility(UnitAbilityDef[] kit, int abilityId) =>
+            System.Array.Exists(kit, def => def != null && def.AbilityId == abilityId);
 
         [Test]
         public void CreateForSpawn_Faceless_CasterReturnsThreeSpells()
@@ -177,7 +240,7 @@ namespace Game.Tests
 
             var super = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Super, 0, bonusSlot: 6);
             Assert.AreEqual(1, super.Length);
-            Assert.AreEqual(AbilityIds.FacelessFeast, super[0].AbilityId);
+            Assert.AreEqual(AbilityIds.DevourServant, super[0].AbilityId);
         }
 
         [Test]
@@ -190,8 +253,8 @@ namespace Game.Tests
             Assert.AreEqual(FacelessBonusUnitRules.DeathExplosionRadius, siege.Radius, 0.0001f);
 
             var super = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Super, 0, bonusSlot: 6)[0];
-            Assert.AreEqual(FacelessBonusUnitRules.FeastHealFlat, super.FlatBonus, 0.0001f);
-            Assert.AreEqual(FacelessBonusUnitRules.FeastAttackSpeedPerStack, super.Percent, 0.0001f);
+            Assert.AreEqual(FacelessServantRules.MaxHp, super.FlatBonus, 0.0001f);
+            Assert.AreEqual(FacelessBonusUnitRules.DevourAttackSpeedBonus, super.Percent, 0.0001f);
         }
 
         [Test]

@@ -9,43 +9,25 @@
 
 .bonus-pick__center {
     flex-grow: 1;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 24px;
 }
 
-.ui-chrome.bonus-pick__panel {
-    width: 350px;
-    min-width: 350px;
-    max-width: 350px;
-    padding: 8px;
-    background-color: rgb(16, 18, 17);
-    border-width: 1px;
-    border-color: rgb(52, 56, 50);
-    border-radius: 0;
-}
-
-.bonus-pick__inner {
-    flex-grow: 1;
-    justify-content: flex-start;
-}
-
-.ui-panel__header {
-    height: auto;
+.bonus-pick__top {
     flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding-bottom: 0;
-    border-bottom-width: 0;
+    justify-content: center;
+    align-items: baseline;
+    margin-bottom: 4px;
 }
 
-.ui-panel__header-text.bonus-pick__title {
-    font-size: 13px;
+.bonus-pick__title {
+    font-size: 15px;
     -unity-font-style: bold;
     letter-spacing: 4px;
     color: rgb(185, 154, 98);
-    -unity-text-align: middle-left;
+    -unity-text-align: middle-center;
 }
 
 .bonus-pick__timer {
@@ -54,15 +36,45 @@
     color: rgb(185, 154, 98);
     letter-spacing: 2px;
     min-width: 48px;
+    margin-left: 16px;
     -unity-text-align: middle-right;
 }
 
 .ui-panel__note.bonus-pick__status {
     font-size: 12px;
     color: rgb(133, 137, 128);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     white-space: normal;
-    -unity-text-align: middle-left;
+    max-width: 760px;
+    -unity-text-align: middle-center;
+}
+
+.bonus-pick__row {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.ui-chrome.bonus-pick__panel {
+    width: 350px;
+    min-width: 350px;
+    max-width: 350px;
+    padding: 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+    background-color: rgb(16, 18, 17);
+    border-width: 1px;
+    border-color: rgb(52, 56, 50);
+    border-radius: 0;
+}
+
+.bonus-pick__panel-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 3px;
+    color: rgb(185, 154, 98);
+    margin-bottom: 6px;
+    -unity-text-align: middle-center;
 }
 
 .bonus-pick__grid {
@@ -104,6 +116,20 @@
     background-color: rgb(36, 39, 35);
     border-color: rgb(185, 154, 98);
     scale: 1;
+}
+
+/* Empty cells keep the stable 3x4 grid in both windows without any visible content. */
+.bonus-pick__cell {
+    width: 31%;
+    height: 77px;
+    min-height: 77px;
+    max-height: 77px;
+    margin: 1%;
+    flex-shrink: 0;
+}
+
+.bonus-pick__cell--empty {
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .bonus-pick__slot--picked {

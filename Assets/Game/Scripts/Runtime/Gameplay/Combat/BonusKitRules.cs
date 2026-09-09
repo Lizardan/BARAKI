@@ -1,5 +1,6 @@
 using System;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 
 namespace Game.Gameplay.Combat
 {
@@ -31,6 +32,13 @@ namespace Game.Gameplay.Combat
         public const int RaceUnique1Slot = 11;
         /// <summary>Race-unique bonus slot #2.</summary>
         public const int RaceUnique2Slot = 12;
+
+        /// <summary>
+        /// Summon marker (NOT an authored game slot — outside the 1–12 range on purpose). Wire v22 ships
+        /// bonusSlot as byte 0–255, so 13 is safe. <see cref="MatchesUnit"/>/<see cref="RoleForBonusSlot"/>
+        /// and <see cref="EffectiveBonusSlotForRole(string, int, UnitRole)"/> must keep ignoring it.
+        /// </summary>
+        public const int SummonBonusSlot = 13;
 
         /// <summary>Hero slot N is enhanced when the player picked bonus slot 6 + N (7..9).</summary>
         public const int HeroBonusSlotOffset = 6;
@@ -136,32 +144,88 @@ namespace Game.Gameplay.Combat
 
         /// <summary>Player pick applies only to the matching role (manual call / wave). Otherwise 0 = base unit.</summary>
         public static int EffectiveBonusSlotForRole(int playerBonusPickSlot, UnitRole role) =>
-            EffectiveBonusSlotForRole(null, playerBonusPickSlot, role);
+            EffectiveBonusSlotForRole(null, playerBonusPickSlot, BonusPickRules.NoneSlot, role);
 
-        /// <summary>Race-aware role bonus slot; races without a bonus kit always resolve to 0.</summary>
+        /// <summary>Race-aware role bonus slot (single-pick path); races without a bonus kit always resolve to 0.</summary>
         public static int EffectiveBonusSlotForRole(string raceId, int playerBonusPickSlot, UnitRole role) =>
-            !HasBonusKit(raceId) ? 0 :
-            IsBonusSlot(playerBonusPickSlot) && RoleForBonusSlot(playerBonusPickSlot) == role
-                ? playerBonusPickSlot
-                : 0;
+            EffectiveBonusSlotForRole(raceId, playerBonusPickSlot, BonusPickRules.NoneSlot, role);
 
-        /// <summary>Effective bonus slot for a hero spawn: pick must match this hero's slot, else 0.</summary>
+        /// <summary>Player picks apply only to the matching role (manual call / wave). Otherwise 0 = base unit.</summary>
+        public static int EffectiveBonusSlotForRole(int pick1, int pick2, UnitRole role) =>
+            EffectiveBonusSlotForRole(null, pick1, pick2, role);
+
+        /// <summary>Race-aware role bonus slot from either pick (auto + chosen stack); races without a kit resolve to 0.</summary>
+        public static int EffectiveBonusSlotForRole(string raceId, int pick1, int pick2, UnitRole role)
+        {
+            if (!HasBonusKit(raceId))
+            {
+                return 0;
+            }
+
+            if (IsBonusSlot(pick1) && RoleForBonusSlot(pick1) == role)
+            {
+                return pick1;
+            }
+
+            if (IsBonusSlot(pick2) && RoleForBonusSlot(pick2) == role)
+            {
+                return pick2;
+            }
+
+            return 0;
+        }
+
+        /// <summary>Effective bonus slot for a hero spawn: a pick must match this hero's slot, else 0.</summary>
         public static int EffectiveBonusSlotForHero(int playerBonusPickSlot, int heroSlot) =>
-            EffectiveBonusSlotForHero(null, playerBonusPickSlot, heroSlot);
+            EffectiveBonusSlotForHero(null, playerBonusPickSlot, BonusPickRules.NoneSlot, heroSlot);
 
-        /// <summary>Race-aware hero bonus slot; races without a bonus kit always resolve to 0.</summary>
+        /// <summary>Race-aware hero bonus slot (single-pick path); races without a bonus kit always resolve to 0.</summary>
         public static int EffectiveBonusSlotForHero(string raceId, int playerBonusPickSlot, int heroSlot) =>
-            !HasBonusKit(raceId) ? 0 :
-            playerBonusPickSlot == BonusSlotForHeroSlot(heroSlot) ? playerBonusPickSlot : 0;
+            EffectiveBonusSlotForHero(raceId, playerBonusPickSlot, BonusPickRules.NoneSlot, heroSlot);
 
-        /// <summary>Effective bonus slot for a titan spawn: pick must be the titan slot, else 0.</summary>
+        /// <summary>Effective bonus slot for a hero spawn: either pick may match this hero's slot.</summary>
+        public static int EffectiveBonusSlotForHero(int pick1, int pick2, int heroSlot) =>
+            EffectiveBonusSlotForHero(null, pick1, pick2, heroSlot);
+
+        /// <summary>Race-aware hero bonus slot from either pick (auto + chosen stack).</summary>
+        public static int EffectiveBonusSlotForHero(string raceId, int pick1, int pick2, int heroSlot)
+        {
+            if (!HasBonusKit(raceId))
+            {
+                return 0;
+            }
+
+            var slot = BonusSlotForHeroSlot(heroSlot);
+            if (pick1 == slot || pick2 == slot)
+            {
+                return slot;
+            }
+
+            return 0;
+        }
+
+        /// <summary>Effective bonus slot for a titan spawn: a pick must be the titan slot, else 0.</summary>
         public static int EffectiveBonusSlotForTitan(int playerBonusPickSlot) =>
-            EffectiveBonusSlotForTitan(null, playerBonusPickSlot);
+            EffectiveBonusSlotForTitan(null, playerBonusPickSlot, BonusPickRules.NoneSlot);
 
-        /// <summary>Race-aware titan bonus slot; races without a bonus kit always resolve to 0.</summary>
+        /// <summary>Race-aware titan bonus slot (single-pick path); races without a bonus kit always resolve to 0.</summary>
         public static int EffectiveBonusSlotForTitan(string raceId, int playerBonusPickSlot) =>
-            !HasBonusKit(raceId) ? 0 :
-            playerBonusPickSlot == TitanBonusSlot ? playerBonusPickSlot : 0;
+            EffectiveBonusSlotForTitan(raceId, playerBonusPickSlot, BonusPickRules.NoneSlot);
+
+        /// <summary>Effective bonus slot for a titan spawn: either pick may be the titan slot.</summary>
+        public static int EffectiveBonusSlotForTitan(int pick1, int pick2) =>
+            EffectiveBonusSlotForTitan(null, pick1, pick2);
+
+        /// <summary>Race-aware titan bonus slot from either pick (auto + chosen stack).</summary>
+        public static int EffectiveBonusSlotForTitan(string raceId, int pick1, int pick2)
+        {
+            if (!HasBonusKit(raceId))
+            {
+                return 0;
+            }
+
+            return pick1 == TitanBonusSlot || pick2 == TitanBonusSlot ? TitanBonusSlot : 0;
+        }
 
         /// <summary>Applies veteran champion multipliers to base hero/titan stats (fallback path).</summary>
         public static UnitCombatStats ApplyVeteranMultipliers(UnitCombatStats stats) =>

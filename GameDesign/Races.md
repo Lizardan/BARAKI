@@ -338,9 +338,16 @@ mvp: true
 Экономика tower/magic — **общая** с Людьми (см. `RACE_TOWER_UPGRADES`).
 
 **Главное ограничение: трек не повторяет механику бонуса.** Бонусы Древних (FACELESS-010)
-дают **вампиризм, дот on-hit, призыв мини-меле, взрыв при смерти, on-kill бафы и уклонение** —
+дают **вампиризм, дот on-hit, взрыв при смерти, on-kill бафы юнитов и уклонение** —
 ничего из этого в треках нет. Проверка при изменении: новый эффект сверять с таблицей
 `wiki/rules/faceless-unit-bonuses.md`.
+
+> **Исключение для servant-осей (FACELESS-017, Plan0909 §5.6):** треки 5 и 7 используют
+> servant-рост — спавн при смерти и пир на герое. Они не дублируют бонусы: слот 3 Call of
+> the Abyss призывает servant **on-kill** (кастером), слот 4 Death Explosion — **урон** при
+> смерти; трек 5 — вероятностный спавн servant на месте гибели любого юнита владельца,
+> трек 7 — **бафф** servants при убийстве героя/титана. «Призыв мини-меле» для этих двух
+> осей снят с запрета; для остальных треков и рас правило остаётся в силе.
 
 | # | Track id | Имя | Роли | L1 / L2 / L3 |
 |---|----------|-----|------|--------------|
@@ -348,9 +355,9 @@ mvp: true
 | 2 | `UPG_TOWER_FACELESS_HOLLOW_BARBS` | Hollow Barbs / Полые жала | Ranged + Flying | Пробитие: атаки игнорируют **1 / 2 / 3** брони цели |
 | 3 | `UPG_TOWER_FACELESS_VACUUM_COLLAPSE` | Vacuum Collapse / Вакуумное схлопывание | Melee + Flying | При смерти: враги в r=3 получают **−15% / −25% / −35%** скорости на 3 с |
 | 4 | `UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP` | Ritual of the Deep / Ритуал глубин | Caster | Пока кастер жив: союзники в r=8 получают **−6% / −10% / −15%** урона от **юнитов и героев** |
-| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Unnerving Aim / Нервирующий прицел | Ranged + Caster | Атаки снижают броню цели на **1 / 2 / 3** на 4 с (дебаф, обновляется, не стакается) |
+| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Swarm at Death Site / Рой на месте гибели | Ranged + Caster | При смерти обычного юнита владельца шанс **5% / 10% / 15%**: спавн **servant** на месте гибели (труп консьюмится; servant не цепляет каскад). Legacy-ид #5, механика заменена (FACELESS-017) |
 | 6 | `UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP` | Frenzy of the Deep | Melee + Siege | **+10% / +15% / +20%** скорости атаки |
-| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Splash of the Deep / Сплеш глубин | Caster + Super | Атаки получают сплеш радиусом **0.5 / 1.0 / 1.5** |
+| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Feast on Heroes / Пир на герое | Caster + Super | Servants владельца в **r=8** от места гибели героя/титана: **+30% урона и +30% max HP на 10 с**; декей ⅓ max HP за 10 с. Legacy-ид #7, механика заменена (FACELESS-017) |
 | 8 | `UPG_TOWER_FACELESS_HOLLOW_BONES` | Hollow Bones | Siege + Flying | **+8% / +16% / +24%** скорости движения |
 | 9 | `UPG_TOWER_FACELESS_VOID_HARDENING` | Void Hardening / Закалка пустотой | все юниты | **−10% / −15% / −20%** урона от **зданий и башен** |
 
@@ -361,16 +368,28 @@ Flying (2, 3, 8) · Super (1, 7) · все юниты (9). Пары ролей �
 #9 — только от **зданий и башен** (пассивно). Это разные источники, стакаются.
 
 **Асимметрия к Людям:** у Людей треки — **про статы и выживаемость** (броня, дальность, реген,
-урон при низком HP, поджог). У Древних — **про пробитие и контроль**: своя броня, пробитие
-брони, дебаф брони, облако замедления на месте смерти, защитная аура кастера, сплеш,
-стойкость к осаде. С бонусами слотов 1–12 (FACELESS-010) треки **не пересекаются по механикам**.
+урон при низком HP, поджог). У Древних — **про контроль и servant-рост**: своя броня, пробитие
+брони, облако замедления на месте смерти, защитная аура кастера, спавн servant при гибели,
+пир на герое, стойкость к осаде. С бонусами слотов 1–12 (FACELESS-010) треки **не
+пересекаются по механикам** (исключение для servant-осей см. выше).
 
-**Новые механики** (в коде пока нет, потребуют хуков в FACELESS-017): пробитие брони (#2),
-дебаф брони (#5), замедление (#3), сплеш у Caster/Super (#7), +max HP при спавне (#1 L3),
-аура среза входящего урона (#4), множитель урона от зданий/башен (#9).
+**Новые механики #5/#7** (FACELESS-017, 2026-09-09): старый дебаф брони (#5 Unnerving Aim)
+и сплеш (#7 Splash of the Deep) **заменены** на servant-рост — «Рой на месте гибели» и
+«Пир на герое»; legacy-иды в `GameIds` не переименовываются, семантика живёт в
+`FacelessTowerTrackRules`. Остальные треки — спавн-статы и пассивные множители.
 
-Авоспособности без маны: Vacuum Collapse (#3, по смерти), Unnerving Aim (#5, on-hit),
-Splash of the Deep (#7, по атаке). Остальное — спавн-статы и пассивные множители.
+Авоспособности без маны: Vacuum Collapse (#3, по смерти), Swarm at Death Site (#5, по смерти
+случайный шанс), Feast on Heroes (#7, по убийству героя/титана). Остальное — спавн-статы и
+пассивные множители.
+
+### Servant (прислужник) — единый профиль (Plan0909 Фаза 1)
+
+Servant — отдельный юнит `UNIT_FACELESS_SERVANT`: **HP 60 / броня 0 / dmg 4–5 / AS 1 /
+range 1.5 / speed 4 / bounty 0**, префаб `Faceless_Servant` (scale 1.25, меш без оружия),
+маркер `SummonBonusSlot = 13` (не игровой слот). Источники: бонус 3 Call of the Abyss
+(on-kill кастером), Raise the Drowned, способность героев/титана Call of the Deep (Фаза 5),
+трек #5 «Рой на месте гибели» (Фаза 6). Servant не цепляет трек-ролл #5 и не является героем
+для пира #7. Канон с числами — `wiki/rules/faceless-unit-bonuses.md`.
 
 ### Расовые уники — Древние (слоты 11–12)
 
@@ -450,9 +469,9 @@ tower_tracks:                     # FACELESS-008; порядок = слоты 4�
   - UPG_TOWER_FACELESS_HOLLOW_BARBS         # Ranged+Flying: пробитие брони 1/2/3
   - UPG_TOWER_FACELESS_VACUUM_COLLAPSE      # Melee+Flying: при смерти враги r3 −15/25/35% скорости 3 с
   - UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP   # Caster: аура r8 −6/10/15% урона от юнитов и героев
-  - UPG_TOWER_FACELESS_UNNERVING_AIM        # Ranged+Caster: дебаф брони цели −1/2/3 на 4 с
+  - UPG_TOWER_FACELESS_UNNERVING_AIM        # Ranged+Caster: Рой на месте гибели — on-death 5/10/15%: спавн servant (FACELESS-017)
   - UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP   # Melee+Siege: скорость атаки +10/15/20%
-  - UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP   # Caster+Super: сплеш r0.5/1.0/1.5
+  - UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP   # Caster+Super: Пир на герое — servants r8 +30% dmg/+30% max HP 10 с (FACELESS-017)
   - UPG_TOWER_FACELESS_HOLLOW_BONES         # Siege+Flying: скорость движения +8/16/24%
   - UPG_TOWER_FACELESS_VOID_HARDENING       # все юниты: −10/15/20% урона от зданий и башен
 magic_spells:                     # FACELESS-008

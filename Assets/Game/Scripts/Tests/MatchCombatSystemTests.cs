@@ -24,8 +24,7 @@ namespace Game.Tests
         [Test]
         public void HandleWave_SpawnsInFrontOfBarracks_AllFourPlayers()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var barracksByLane = new Dictionary<string, string>
             {
@@ -104,8 +103,7 @@ namespace Game.Tests
         public void HandleWave_N2_LeftFlank_MarchesForwardWithoutStalling()
         {
             WalkableSurfaceCache.Clear();
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
             controller.BeginEarlyPhase();
 
             var combat = controller.Combat;
@@ -151,8 +149,7 @@ namespace Game.Tests
         [Test]
         public void HandleWave_NorthLeftBarracks_MarchesForwardWithoutStalling()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, randomSeed: 77);
@@ -199,8 +196,7 @@ namespace Game.Tests
         [Test]
         public void HandleWave_SpawnsSquadUnitsOnLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -228,8 +224,7 @@ namespace Game.Tests
         [Test]
         public void HandleWave_SpawnsUnitsSequentiallyWithInterval()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -261,8 +256,7 @@ namespace Game.Tests
         [Test]
         public void SpawnUnit_FacesLaneForwardAtSpawnDistance()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -291,8 +285,7 @@ namespace Game.Tests
         [Test]
         public void Tick_UnitMarchesAlongLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -318,8 +311,7 @@ namespace Game.Tests
         [Test]
         public void Tick_MarchAvoidance_FacesActualMovementNotLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -424,8 +416,7 @@ namespace Game.Tests
 
         float TickMarchFirstStepLateral(UnitRole moverRole, UnitRole blockerRole)
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -486,8 +477,7 @@ namespace Game.Tests
         [Test]
         public void Tick_KillGrantsBountyToKillerOwner()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, randomSeed: 1);
@@ -540,8 +530,7 @@ namespace Game.Tests
         [Test]
         public void Tick_MeleeCannotDamageFlyingInRange()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -585,8 +574,7 @@ namespace Game.Tests
         [Test]
         public void CombatLaneRules_EngagesAnyNonOwnedUnit()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var leftUnit = new MatchUnitState(1, 0, GameIds.Lanes.Left, UnitRole.Melee, default, 1f, Vector3.zero);
             var rightOpponent = new MatchUnitState(2, 3, GameIds.Lanes.Right, UnitRole.Melee, default, 1f, Vector3.zero);
@@ -601,8 +589,7 @@ namespace Game.Tests
         [Test]
         public void Tick_EngagesNextLivingPlayerAfterOriginalMatchup()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, randomSeed: 11);
@@ -652,8 +639,7 @@ namespace Game.Tests
         [Test]
         public void Tick_TitanAttackRange_HitsAndIsHitAtThree()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, randomSeed: 21);
@@ -687,8 +673,7 @@ namespace Game.Tests
         [Test]
         public void Tick_AfterKill_PursuesAnotherEnemyInAggroRadius()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, randomSeed: 3);
@@ -761,8 +746,7 @@ namespace Game.Tests
         [Test]
         public void Tick_ChaseTowardTarget_DoesNotExceedMoveSpeed()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -822,8 +806,7 @@ namespace Game.Tests
         [Test]
         public void Tick_Chase_RoutesAroundBlockingAlly()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -908,8 +891,7 @@ namespace Game.Tests
         [Test]
         public void Tick_Chase_NeverDisplacesAlly()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -942,8 +924,7 @@ namespace Game.Tests
         [Test]
         public void Tick_March_NeverDisplacesAlly()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -977,8 +958,7 @@ namespace Game.Tests
         [Test]
         public void Tick_ThreeMelee_SpreadLaterallyAroundTarget()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1037,8 +1017,7 @@ namespace Game.Tests
         [Test]
         public void Tick_RearMelee_ReachesAttackRange()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1140,8 +1119,7 @@ namespace Game.Tests
         [Test]
         public void Tick_March_DoesNotStackBehindFightingAlly()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1178,8 +1156,7 @@ namespace Game.Tests
         [Test]
         public void Tick_Chase_DoesNotOverlapUnits()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1235,8 +1212,7 @@ namespace Game.Tests
         [Test]
         public void Tick_Chase_StaysWithinRoadBoundary()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1310,8 +1286,7 @@ namespace Game.Tests
         public void Tick_N2FlankLeft_MarchesOffBarracksWithWalkableSurface()
         {
             WalkableSurfaceCache.Clear();
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1348,8 +1323,7 @@ namespace Game.Tests
         [Test]
         public void Tick_N4FlankLeft_MarchesOffBarracksAndProgressesAlongLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1390,8 +1364,7 @@ namespace Game.Tests
         [Test]
         public void Tick_MarchAfterWideCombatDrift_DoesNotTeleportOntoLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph);
@@ -1432,8 +1405,7 @@ namespace Game.Tests
         [Test]
         public void ReplaceLaneRoute_KeepsWorldPosition_NoTeleport()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(4));
+            var controller = CreateController(MatchConfig.MvpDefault(4));
 
             var combat = controller.Combat;
             Assert.IsTrue(controller.Graph.TryGetLane(0, GameIds.Lanes.Center, out var lane));
@@ -1465,8 +1437,7 @@ namespace Game.Tests
         [Test]
         public void Tick_SiegeDamagesEnemyBuildingOnCenterLane()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
 
             var combat = controller.Combat;
             var targetBuilding = FindBuilding(
@@ -1506,8 +1477,7 @@ namespace Game.Tests
         [Test]
         public void Tick_MeleeDamagesEnemyBuildingWhenInRange()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
             controller.BeginEarlyPhase();
 
             var combat = controller.Combat;
@@ -1548,8 +1518,7 @@ namespace Game.Tests
         [Test]
         public void Tick_SiegePrefersNearerUnitOverBuilding()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
             controller.BeginEarlyPhase();
 
             var combat = controller.Combat;
@@ -1594,8 +1563,7 @@ namespace Game.Tests
         [Test]
         public void Tick_UnitKeepsMarchingOnClosedLoopWithNoTargets()
         {
-            var controller = new MatchController();
-            controller.StartMatch(MatchConfig.MvpDefault(2));
+            var controller = CreateController(MatchConfig.MvpDefault(2));
             controller.BeginEarlyPhase();
 
             var combat = controller.Combat;
@@ -1695,6 +1663,23 @@ namespace Game.Tests
             }
 
             return bestDistance;
+        }
+
+        /// <summary>
+        /// Combat-movement tests use bare (auto-fate disabled) configs; the clear is a defensive
+        /// baseline so a fixture that enables auto-fate keeps deterministic movement geometry.
+        /// </summary>
+        static MatchController CreateController(MatchConfig config)
+        {
+            var controller = new MatchController();
+            controller.StartMatch(config);
+            foreach (var player in controller.Players)
+            {
+                player.BonusPickSlot = BonusPickRules.NoneSlot;
+                player.BonusPickSlot2 = BonusPickRules.NoneSlot;
+            }
+
+            return controller;
         }
     }
 }

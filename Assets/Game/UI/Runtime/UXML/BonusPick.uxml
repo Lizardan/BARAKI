@@ -3,14 +3,19 @@
     <ui:Style src="project://database/Assets/Game/UI/Runtime/USS/BarakiTheme.uss" />
     <ui:VisualElement name="BonusPickOverlay" class="bonus-pick" picking-mode="Ignore">
         <ui:VisualElement class="bonus-pick__center" picking-mode="Ignore">
-            <ui:VisualElement class="ui-chrome bonus-pick__panel">
-                <ui:VisualElement class="bonus-pick__inner">
-                    <ui:VisualElement class="ui-panel__header">
-                        <ui:Label text="ВЫБОР БОНУСА" class="ui-panel__header-text bonus-pick__title" />
-                        <ui:Label name="BonusPickTimer" text="60" class="bonus-pick__timer" />
-                    </ui:VisualElement>
-                    <ui:Label text="Выберите бонус — матч уже идёт" class="ui-panel__note bonus-pick__status" />
-                    <ui:VisualElement name="BonusPickGrid" class="bonus-pick__grid" />
+            <ui:VisualElement class="bonus-pick__top" picking-mode="Ignore">
+                <ui:Label text="ВЫБОР БОНУСОВ" class="bonus-pick__title" />
+                <ui:Label name="BonusPickTimer" text="60" class="bonus-pick__timer" />
+            </ui:VisualElement>
+            <ui:Label text="Первый бонус уже выбран за вас. Во втором окне выберите один из шести предложенных — матч уже идёт." class="ui-panel__note bonus-pick__status" />
+            <ui:VisualElement class="bonus-pick__row" picking-mode="Ignore">
+                <ui:VisualElement name="BonusPickAutoPanel" class="ui-chrome bonus-pick__panel">
+                    <ui:Label text="СЛУЧАЙНЫЙ БОНУС" class="bonus-pick__panel-title" />
+                    <ui:VisualElement name="BonusPickAutoGrid" class="bonus-pick__grid" />
+                </ui:VisualElement>
+                <ui:VisualElement name="BonusPickOfferPanel" class="ui-chrome bonus-pick__panel">
+                    <ui:Label text="ВЫБЕРИ БОНУС" class="bonus-pick__panel-title" />
+                    <ui:VisualElement name="BonusPickOfferGrid" class="bonus-pick__grid" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

@@ -365,7 +365,7 @@ namespace Game.Tests
 
             var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
 
-            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 23);
+            Assert.AreEqual(MatchSnapshotCodec.CurrentVersion, 24);
             Assert.AreEqual(33.5f, restored.Players[0].IceRingCooldownRemaining, 0.01f);
             Assert.AreEqual(120.25f, restored.Players[0].WaveOfLightCooldownRemaining, 0.01f);
             Assert.AreEqual(0f, restored.Players[1].IceRingCooldownRemaining, 0.01f);
@@ -431,6 +431,34 @@ namespace Game.Tests
             Assert.AreEqual(42.5f, restored.BonusPickDeadlineSeconds, 0.01f);
             Assert.AreEqual(3, restored.Players[0].BonusPickSlot);
             Assert.AreEqual(11, restored.Players[1].BonusPickSlot);
+        }
+
+        [Test]
+        public void RoundTrip_V24_PreservesSecondBonusPickAndOffer()
+        {
+            var original = new MatchSnapshot
+            {
+                PlayerCount = 1,
+                Phase = 1,
+                MatchTimeSeconds = 5f,
+                WinnerSlot = -1,
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 0,
+                        BonusPickSlot = 1,
+                        BonusPickSlot2 = 7,
+                        BonusPickOfferSlots = new[] { 2, 4, 6 },
+                    },
+                },
+            };
+
+            var restored = MatchSnapshotCodec.Deserialize(MatchSnapshotCodec.Serialize(original));
+
+            Assert.AreEqual(1, restored.Players[0].BonusPickSlot);
+            Assert.AreEqual(7, restored.Players[0].BonusPickSlot2);
+            CollectionAssert.AreEqual(new[] { 2, 4, 6 }, restored.Players[0].BonusPickOfferSlots);
         }
 
         [Test]

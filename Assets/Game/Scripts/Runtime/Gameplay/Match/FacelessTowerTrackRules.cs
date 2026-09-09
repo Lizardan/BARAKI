@@ -17,13 +17,18 @@ namespace Game.Gameplay.Match
         public const int HollowBarbsTrackIndex = 1;
         public const int VacuumCollapseTrackIndex = 2;
         public const int RitualOfTheDeepTrackIndex = 3;
-        public const int UnnervingAimTrackIndex = 4;
+        public const int SwarmAtDeathTrackIndex = 4;
         public const int FrenzyOfTheDeepTrackIndex = 5;
-        public const int SplashOfTheDeepTrackIndex = 6;
+        public const int FeastOnHeroesTrackIndex = 6;
         public const int HollowBonesTrackIndex = 7;
         public const int VoidHardeningTrackIndex = 8;
 
         /// <summary>Canonical order: index 0..8 → UI command slots 4..12.</summary>
+        /// <remarks>
+        /// Track 4 and 6 keep their legacy upgrade ids (Plan0909 redefined the mechanics in place —
+        /// no wire/research-queue migration): UPG_TOWER_FACELESS_UNNERVING_AIM = "Рой на месте гибели",
+        /// UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP = "Пир на герое" (2026-09-09).
+        /// </remarks>
         public static readonly string[] TrackIds =
         {
             GameIds.Upgrades.TowerFacelessChitinousHide,
@@ -57,19 +62,21 @@ namespace Game.Gameplay.Match
         public const float RitualRadius = 8f;
         public static readonly UnitRole[] RitualRoles = { UnitRole.Caster };
 
-        // Unnerving Aim (index 4)
-        public static readonly float[] UnnervingAimArmorDebuffByLevel = { 1f, 2f, 3f };
-        public const float UnnervingAimDebuffDurationSeconds = 4f;
-        public static readonly UnitRole[] UnnervingAimRoles = { UnitRole.Ranged, UnitRole.Caster };
+        // Swarm at Death Site (index 4) — Plan0909 Ф6: any regular allied death
+        // has a chance to raise a servant on the corpse spot (corpse consumed).
+        public static readonly float[] SwarmAtDeathChanceByLevel = { 0.05f, 0.10f, 0.15f };
 
         // Frenzy of the Deep (index 5)
         public static readonly float[] FrenzyAttackSpeedPercentByLevel = { 0.10f, 0.15f, 0.20f };
         public static readonly UnitRole[] FrenzyRoles = { UnitRole.Melee, UnitRole.Siege };
 
-        // Splash of the Deep (index 6)
-        public static readonly float[] SplashRadiusByLevel = { 0.5f, 1.0f, 1.5f };
-        public static readonly float[] SplashDamagePercentByLevel = { 0.25f, 0.35f, 0.50f };
-        public static readonly UnitRole[] SplashRoles = { UnitRole.Caster, UnitRole.Super };
+        // Feast on Heroes (index 6) — Plan0909 Ф6: killing an enemy hero/titan buffs the
+        // owner's servants within radius: +damage and +max HP (decay drains them later).
+        public const float FeastOnHeroesDamagePercent = 0.30f;
+        public const float FeastOnHeroesMaxHpPercent = 0.30f;
+        public const float FeastOnHeroesDurationSeconds = 10f;
+        public const float FeastOnHeroesDecayMaxHpFraction = 1f / 3f;
+        public const float FeastOnHeroesRadius = 8f;
 
         // Hollow Bones (index 7)
         public const float HollowBonesMoveSpeedPercentPerLevel = 0.08f;
@@ -108,9 +115,12 @@ namespace Game.Gameplay.Match
                 case 1: return Contains(HollowBarbsRoles, role);
                 case 2: return Contains(VacuumCollapseRoles, role);
                 case 3: return Contains(RitualRoles, role);
-                case 4: return Contains(UnnervingAimRoles, role);
+                case 4:
+                case 6:
+                    // Tracks 4 (swarm at death) and 6 (feast on heroes) use the owner/track level
+                    // and the servant marker as their trigger, not a unit role gate.
+                    return true;
                 case 5: return Contains(FrenzyRoles, role);
-                case 6: return Contains(SplashRoles, role);
                 case 7: return Contains(HollowBonesRoles, role);
                 case 8:
                     // Void Hardening affects every regular unit.

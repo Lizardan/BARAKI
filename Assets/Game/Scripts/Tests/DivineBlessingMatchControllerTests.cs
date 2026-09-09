@@ -167,6 +167,14 @@ namespace Game.Tests
         {
             var controller = new MatchController();
             controller.StartMatch(MatchConfig.MvpDefault(2));
+            // Auto-fate is disabled in MvpDefault; the clear is a defensive baseline so a
+            // bonus fixture cannot scale main HP and break these assertions.
+            foreach (var player in controller.Players)
+            {
+                player.BonusPickSlot = BonusPickRules.NoneSlot;
+                player.BonusPickSlot2 = BonusPickRules.NoneSlot;
+            }
+
             controller.BeginEarlyPhase();
             return controller;
         }

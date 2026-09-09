@@ -44,6 +44,14 @@ namespace Game.Gameplay.Match
         /// <summary>Wave of Light effect radius from base = main→center-barracks distance × this.</summary>
         public const float WaveOfLightRadiusFactor = 3f;
 
+        /// <summary>
+        /// Faceless slot 10 replacement (Plan0909, Фаза 3) — "Призыв глубин":
+        /// each alive barracks summons wave-size × this servants.
+        /// </summary>
+        public const int SummonDeepCallSizeMultiplier = 2;
+
+        public static bool IsFaceless(string raceId) => raceId == GameIds.Races.Faceless;
+
         public static bool IsValidId(int abilityId) =>
             abilityId is IceRingId or WaveOfLightId;
 
@@ -178,10 +186,10 @@ namespace Game.Gameplay.Match
             return dx * dx + dz * dz <= castRange * castRange;
         }
 
-        public static string GetDisplayName(int abilityId) => abilityId switch
+        public static string GetDisplayName(int abilityId, string raceId = null) => abilityId switch
         {
             IceRingId => "Ледяное кольцо",
-            WaveOfLightId => "Волна света",
+            WaveOfLightId => IsFaceless(raceId) ? "Призыв глубин" : "Волна света",
             _ => string.Empty,
         };
 
@@ -195,12 +203,15 @@ namespace Game.Gameplay.Match
             return $"Уровень главного здания {GetRequiredMainLevel(abilityId)}+";
         }
 
-        public static string GetEffectDescription(int abilityId) => abilityId switch
+        public static string GetEffectDescription(int abilityId, string raceId = null) => abilityId switch
         {
             IceRingId =>
                 $"Замораживает врагов в круге на {IceRingFreezeSeconds:0} с и наносит {IceRingDamage:0} урона\n" +
                 $"Радиус области {IceRingRadius:0}\n" +
                 $"Применяется только рядом с базой · Перезарядка {IceRingCooldownSeconds:0}с · {IceRingManaCost:0} маны",
+            WaveOfLightId when IsFaceless(raceId) =>
+                $"Каждая живая казарма призывает прислужников: размер волны ×{SummonDeepCallSizeMultiplier}\n" +
+                $"Казармы-руины не участвуют · Перезарядка {WaveOfLightCooldownSeconds:0}с · {WaveOfLightManaCost:0} маны",
             WaveOfLightId =>
                 $"Волна от базы бьёт всех врагов в радиусе ({WaveOfLightRadiusFactor:0}× до казарм) на {WaveOfLightDamage:0} урона\n" +
                 $"Волна расширяется за {WaveOfLightExpandSeconds:0} с — урон наносится фронтом\n" +
@@ -208,15 +219,15 @@ namespace Game.Gameplay.Match
             _ => string.Empty,
         };
 
-        public static string GetTooltip(int abilityId)
+        public static string GetTooltip(int abilityId, string raceId = null)
         {
-            var name = GetDisplayName(abilityId);
+            var name = GetDisplayName(abilityId, raceId);
             if (string.IsNullOrEmpty(name))
             {
                 return string.Empty;
             }
 
-            return $"{name}\n{GetEffectDescription(abilityId)}\nТребуется: {GetGateDescription(abilityId)}";
+            return $"{name}\n{GetEffectDescription(abilityId, raceId)}\nТребуется: {GetGateDescription(abilityId)}";
         }
     }
 }

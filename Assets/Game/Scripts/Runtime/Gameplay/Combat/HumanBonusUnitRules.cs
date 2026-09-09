@@ -40,7 +40,7 @@ namespace Game.Gameplay.Combat
         {
             if (player == null
                 || player.RaceId != GameIds.Races.Human
-                || player.BonusPickSlot != BonusKitRules.RaceUnique1Slot
+                || !player.HasBonusEffective(BonusKitRules.RaceUnique1Slot)
                 || speed <= 0f)
             {
                 return speed;

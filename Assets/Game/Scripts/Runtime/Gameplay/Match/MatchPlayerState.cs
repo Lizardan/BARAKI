@@ -32,6 +32,23 @@ namespace Game.Gameplay.Match
         public int MainExtraAbilityId { get; set; }
         /// <summary>Chosen bonus slot (1..12: units, veterans, race uniques); <see cref="BonusPickRules.NoneSlot"/> until picked.</summary>
         public int BonusPickSlot { get; set; }
+        /// <summary>Chosen slot of the second (choice) window (1..12); <see cref="BonusPickRules.NoneSlot"/> until picked or timed out.</summary>
+        public int BonusPickSlot2 { get; set; }
+        /// <summary>Random subset (0..<see cref="BonusPickRules.OfferSize"/>) offered in the second window; excludes the auto pick.</summary>
+        public int[] BonusPickOfferSlots { get; private set; } = Array.Empty<int>();
+
+        public void SetBonusPickOffer(int[] offer)
+        {
+            if (offer == null || offer.Length == 0)
+            {
+                return;
+            }
+
+            BonusPickOfferSlots = offer;
+        }
+
+        /// <summary>True when either pick equals <paramref name="slot"/> (auto and chosen bonuses stack).</summary>
+        public bool HasBonusEffective(int slot) => BonusPickSlot == slot || BonusPickSlot2 == slot;
         public float MainMana { get; set; }
         public float MainManaMax { get; private set; }
         public float MainExtraAbilityCooldownRemaining { get; set; }

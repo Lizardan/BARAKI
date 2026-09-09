@@ -12,10 +12,11 @@ namespace Game.Tests
         [Test]
         public void CreateVeteranKit_Faceless_SlotMapsToSignatureAbility()
         {
+            // Фаза 5: the signature (60–63) stays; one Human slot becomes Call of the Deep (70).
             CollectionAssert.AreEquivalent(
                 new[]
                 {
-                    AbilityIds.Heal,
+                    AbilityIds.CallOfTheDeep,
                     AbilityIds.AncientMantle,
                     AbilityIds.Strike,
                     AbilityIds.AuraDamagePercent,
@@ -25,7 +26,7 @@ namespace Game.Tests
                 new[]
                 {
                     AbilityIds.AreaOfMiss,
-                    AbilityIds.Consecration,
+                    AbilityIds.CallOfTheDeep,
                     AbilityIds.Smite,
                     AbilityIds.AuraAttackSpeedPercent,
                 },
@@ -34,7 +35,7 @@ namespace Game.Tests
                 new[]
                 {
                     AbilityIds.FeastZone,
-                    AbilityIds.Revive,
+                    AbilityIds.CallOfTheDeep,
                     AbilityIds.HolyNova,
                     AbilityIds.AuraArmorPercent,
                 },
@@ -43,7 +44,7 @@ namespace Game.Tests
                 new[]
                 {
                     AbilityIds.Rally,
-                    AbilityIds.Stomp,
+                    AbilityIds.CallOfTheDeep,
                     AbilityIds.Slam,
                     AbilityIds.AuraOfHunger,
                 },

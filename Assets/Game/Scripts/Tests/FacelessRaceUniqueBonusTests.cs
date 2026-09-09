@@ -10,12 +10,17 @@ namespace Game.Tests
     public sealed class FacelessRaceUniqueBonusTests
     {
         [Test]
-        public void Faceless_PicksRaceUniqueSlots11And12_Succeed()
+        public void Faceless_PicksOfferedSlot_Succeeds()
         {
             var controller = CreateEarlyFacelessMatch();
 
-            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.RaceUnique1Slot));
-            Assert.IsTrue(controller.TrySetBonusPick(1, BonusKitRules.RaceUnique2Slot));
+            // PRE-001: the choice is offer-gated — take the first offered slot of each player.
+            var first = controller.GetBonusPickOffer(0)[0];
+            var second = controller.GetBonusPickOffer(1)[0];
+            Assert.IsTrue(controller.TrySetBonusPick(0, first));
+            Assert.IsTrue(controller.TrySetBonusPick(1, second));
+            Assert.AreEqual(first, controller.GetBonusPickSlot(0, panel: 1));
+            Assert.AreEqual(second, controller.GetBonusPickSlot(1, panel: 1));
         }
 
         [Test]
@@ -227,6 +232,13 @@ namespace Game.Tests
             Assert.IsNotNull(main);
             var baseMaxHp = main.MaxHp;
 
+            // Seed the offered subset so slot 12 is actually pickable, then pick it as Faceless.
+            controller.Players[0].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[0].BonusPickSlot2 = BonusPickRules.NoneSlot;
+            typeof(MatchController)
+                .GetField("_bonusOffers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(controller, new[] { new[] { 12, 1, 2, 3, 4, 5 }, new[] { 1, 2, 3, 4, 5, 6 } });
+
             Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.RaceUnique2Slot));
             Assert.AreEqual(
                 baseMaxHp,
@@ -283,7 +295,8 @@ namespace Game.Tests
             var controller = new MatchController();
             controller.StartMatch(new MatchConfig(
                 playerCount: 2,
-                raceIds: new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }));
+                raceIds: new[] { GameIds.Races.Faceless, GameIds.Races.Faceless },
+                autoFateBonuses: true));
             controller.BeginEarlyPhase();
             return controller;
         }
@@ -297,9 +310,23 @@ namespace Game.Tests
         {
             var controller = new MatchController();
             controller.StartMatch(new MatchConfig(playerCount: 2, raceIds: raceIds));
+            NeutralizeBonusPicks(controller);
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, seed);
             return (controller, combat);
+        }
+
+        /// <summary>
+        /// These fixtures use bare configs with auto-fate disabled, so the auto pick is
+        /// already None; the clear is a defensive baseline for when a fixture enables it.
+        /// </summary>
+        static void NeutralizeBonusPicks(MatchController controller)
+        {
+            foreach (var player in controller.Players)
+            {
+                player.BonusPickSlot = BonusPickRules.NoneSlot;
+                player.BonusPickSlot2 = BonusPickRules.NoneSlot;
+            }
         }
 
         static int _nextTestId = 1;

@@ -165,8 +165,19 @@ namespace Game.Gameplay.Combat
         public float FeastRemainingSeconds { get; set; }
         /// <summary>Host-only: stacks of the Faceless on-kill attack-speed buff (1–3).</summary>
         public int FeastStacks { get; set; }
-        /// <summary>Host-only: attack-speed percent per stack (slot 5 = 0.15, slot 6 = 0.10).</summary>
+        /// <summary>Host-only: attack-speed percent per stack (slot 5 = 0.15).</summary>
         public float FeastAttackSpeedPerStack { get; set; }
+        /// <summary>Host-only: remaining cooldown of the Devour Servant passive (slot 6 Super).</summary>
+        public float DevourCooldownRemaining { get; set; }
+        /// <summary>
+        /// Host-only: remaining seconds of the tower-track 6 Feast on Heroes buff on this servant
+        /// (+attack / +max HP, decaying as life damage). 0 = not feasting.
+        /// </summary>
+        public float HeroFeastRemainingSeconds { get; set; }
+        /// <summary>Host-only: extra attack damage percent while <see cref="HeroFeastRemainingSeconds"/> &gt; 0.</summary>
+        public float HeroFeastDamagePercent { get; set; }
+        /// <summary>Host-only: extra effective-max-HP percent while <see cref="HeroFeastRemainingSeconds"/> &gt; 0.</summary>
+        public float HeroFeastMaxHpPercent { get; set; }
         public bool IsAlive => CurrentHp > 0f;
     }
 }

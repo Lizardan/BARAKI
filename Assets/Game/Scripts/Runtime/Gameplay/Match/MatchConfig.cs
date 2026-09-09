@@ -11,13 +11,15 @@ namespace Game.Gameplay.Match
             IReadOnlyList<string> raceIds,
             float arenaRadius = MatchArenaGenerator.DefaultArenaRadius,
             float mainToTowerDistance = MatchArenaGenerator.DefaultMainToTowerDistance,
-            float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius)
+            float centerArenaRadius = LaneGraphBuilder.DefaultCenterArenaRadius,
+            bool autoFateBonuses = false)
         {
             PlayerCount = playerCount;
             RaceIds = raceIds;
             ArenaRadius = arenaRadius;
             MainToTowerDistance = mainToTowerDistance;
             CenterArenaRadius = centerArenaRadius;
+            AutoFateBonuses = autoFateBonuses;
         }
 
         public int PlayerCount { get; }
@@ -25,6 +27,13 @@ namespace Game.Gameplay.Match
         public float MainToTowerDistance { get; }
         public float CenterArenaRadius { get; }
         public IReadOnlyList<string> RaceIds { get; }
+
+        /// <summary>
+        /// True when the auto-fate bonus (panel 0) and the pick deadline are rolled once the
+        /// base-focus fly-in ends (early phase). Off by default so bare match setups stay
+        /// deterministic; production match starts enable it via <see cref="FromSetup"/>.
+        /// </summary>
+        public bool AutoFateBonuses { get; }
 
         public static MatchConfig FromSetup(MatchSetup setup)
         {
@@ -35,12 +44,18 @@ namespace Game.Gameplay.Match
 
             return new MatchConfig(
                 setup.PlayerCount,
-                setup.RaceIds ?? CreateDefaultRaceIds(setup.PlayerCount));
+                setup.RaceIds ?? CreateDefaultRaceIds(setup.PlayerCount),
+                autoFateBonuses: true);
         }
 
-        public static MatchConfig MvpDefault(int playerCount = MatchSetup.DefaultPlayerCount)
+        public static MatchConfig MvpDefault(
+            int playerCount = MatchSetup.DefaultPlayerCount,
+            bool autoFateBonuses = false)
         {
-            return new MatchConfig(playerCount, CreateDefaultRaceIds(playerCount));
+            return new MatchConfig(
+                playerCount,
+                CreateDefaultRaceIds(playerCount),
+                autoFateBonuses: autoFateBonuses);
         }
 
         public string GetRaceId(int slotIndex)

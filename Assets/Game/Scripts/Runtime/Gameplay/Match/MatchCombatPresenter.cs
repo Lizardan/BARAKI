@@ -784,7 +784,10 @@ namespace Game.Gameplay.Match
 
             // Faceless has no dedicated bonus models yet — keep the regular model and mark the
             // enhanced (bonus / veteran hero) variant with a small blue flame above the head.
-            if (unit.BonusSlot > 0 && raceId == GameIds.Races.Faceless)
+            // The summon marker (SummonBonusSlot) is NOT a bonus pick — servants get no flame.
+            if (unit.BonusSlot > 0
+                && unit.BonusSlot != BonusKitRules.SummonBonusSlot
+                && raceId == GameIds.Races.Faceless)
             {
                 AttachBonusFlame(root, visualHeight);
             }

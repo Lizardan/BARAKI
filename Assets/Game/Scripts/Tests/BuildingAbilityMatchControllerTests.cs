@@ -187,12 +187,138 @@ namespace Game.Tests
             Assert.IsNull(MainExtraAbilityFxDefs.GetForBuildingAbility(99));
         }
 
+        [Test]
+        public void SummonDeepCall_FacelessSlot10_SpawnsServantsAndSpendsCosts()
+        {
+            var controller = CreateFacelessMatch();
+            var player = controller.Players[0];
+            player.MainLevel = 2;
+            player.SyncMainManaMax(fillToMax: true);
+
+            var aliveBarracks = CountAliveBarracks(controller, 0);
+            Assert.AreEqual(3, aliveBarracks, "three intact barracks in an early match");
+
+            Assert.IsTrue(controller.TryCastBuildingAbility(
+                0,
+                BuildingAbilityRules.WaveOfLightId,
+                Vector3.zero));
+
+            var expected = aliveBarracks
+                * BarracksManualCallRules.GetTotalUnits(
+                    BarracksManualCallRules.GetDefaultSquadCounts(1))
+                * BuildingAbilityRules.SummonDeepCallSizeMultiplier;
+            Assert.AreEqual(expected, CountServants(controller, 0));
+
+            var spawned = controller.Combat.Units[controller.Combat.Units.Count - 1];
+            Assert.AreEqual(UnitRole.Melee, spawned.Role);
+            Assert.AreEqual(BonusKitRules.SummonBonusSlot, spawned.BonusSlot);
+            Assert.AreEqual(FacelessServantRules.MaxHp, spawned.Stats.MaxHp, 0.001f);
+
+            Assert.AreEqual(
+                MainExtraAbilityRules.GetMainManaMax(2) - BuildingAbilityRules.WaveOfLightManaCost,
+                player.MainMana,
+                0.01f);
+            Assert.AreEqual(BuildingAbilityRules.WaveOfLightCooldownSeconds,
+                player.WaveOfLightCooldownRemaining, 0.01f);
+
+            // The summon branch does not fire the Wave-of-Light fx.
+            Assert.AreEqual(0, controller.Combat.ConsumePendingAbilityCasts().Count);
+        }
+
+        [Test]
+        public void SummonDeepCall_IgnoresRuinedBarracks()
+        {
+            var controller = CreateFacelessMatch();
+            var player = controller.Players[0];
+            player.MainLevel = 2;
+            player.SyncMainManaMax(fillToMax: true);
+
+            controller.WaveScheduler.SetBarracksRuins(0, GameIds.Buildings.BarracksCenter);
+
+            Assert.IsTrue(controller.TryCastBuildingAbility(
+                0,
+                BuildingAbilityRules.WaveOfLightId,
+                Vector3.zero));
+
+            var alive = CountAliveBarracks(controller, 0);
+            Assert.AreEqual(2, alive);
+            var expected = alive
+                * BarracksManualCallRules.GetTotalUnits(
+                    BarracksManualCallRules.GetDefaultSquadCounts(1))
+                * BuildingAbilityRules.SummonDeepCallSizeMultiplier;
+            Assert.AreEqual(expected, CountServants(controller, 0));
+        }
+
+        [Test]
+        public void SummonDeepCall_Faceless_RejectsWhenNothingAlive()
+        {
+            var controller = CreateFacelessMatch();
+            var player = controller.Players[0];
+            player.MainLevel = 2;
+            player.SyncMainManaMax(fillToMax: true);
+
+            controller.WaveScheduler.SetBarracksRuins(0, GameIds.Buildings.BarracksLeft);
+            controller.WaveScheduler.SetBarracksRuins(0, GameIds.Buildings.BarracksCenter);
+            controller.WaveScheduler.SetBarracksRuins(0, GameIds.Buildings.BarracksRight);
+
+            Assert.IsFalse(controller.TryCastBuildingAbility(
+                0,
+                BuildingAbilityRules.WaveOfLightId,
+                Vector3.zero));
+            Assert.AreEqual(
+                MainExtraAbilityRules.GetMainManaMax(2),
+                player.MainMana,
+                0.01f);
+            Assert.AreEqual(0f, player.WaveOfLightCooldownRemaining, 0.01f);
+        }
+
         static MatchController CreateEarlyMatch()
         {
             var controller = new MatchController();
             controller.StartMatch(MatchConfig.MvpDefault(2));
             controller.BeginEarlyPhase();
             return controller;
+        }
+
+        static MatchController CreateFacelessMatch()
+        {
+            var controller = new MatchController();
+            controller.StartMatch(new MatchConfig(
+                playerCount: 2,
+                raceIds: new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }));
+            controller.BeginEarlyPhase();
+            return controller;
+        }
+
+        static int CountAliveBarracks(MatchController controller, int ownerSlot)
+        {
+            var count = 0;
+            for (var i = 0; i < controller.WaveScheduler.Barracks.Count; i++)
+            {
+                var barracks = controller.WaveScheduler.Barracks[i];
+                if (barracks.OwnerSlot == ownerSlot && !barracks.IsRuins)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        static int CountServants(MatchController controller, int ownerSlot)
+        {
+            var count = 0;
+            for (var i = 0; i < controller.Combat.Units.Count; i++)
+            {
+                var unit = controller.Combat.Units[i];
+                if (unit.OwnerSlot == ownerSlot
+                    && unit.BonusSlot == BonusKitRules.SummonBonusSlot)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         static Vector3 GetBasePosition(MatchController controller, int ownerSlot) =>

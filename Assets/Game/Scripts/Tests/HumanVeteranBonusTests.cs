@@ -300,6 +300,19 @@ namespace Game.Tests
             main.ApplyDamage(main.CurrentHp * 0.5f);
             var damagedFraction = main.CurrentHp / main.MaxHp;
 
+            // Offer-gated pick (PRE-001): force the window open with a counting deadline and seed the
+            // offered subset so Stone Masonry (RaceUnique2Slot) is available to pick.
+            controller.Players[0].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[0].BonusPickSlot2 = BonusPickRules.NoneSlot;
+            controller.Players[1].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[1].BonusPickSlot2 = BonusPickRules.NoneSlot;
+            typeof(MatchController)
+                .GetField("_bonusOffers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(controller, new[] { new[] { 12, 1, 2, 3, 4, 5 }, new[] { 1, 2, 3, 4, 5, 6 } });
+            typeof(MatchController)
+                .GetField("_bonusPickDeadlineSeconds", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(controller, BonusPickRules.OverlayDurationSeconds);
+
             Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.RaceUnique2Slot));
 
             Assert.AreEqual(baseMaxHp * HumanBonusUnitRules.StoneMasonryHpMultiplier, main.MaxHp, 0.01f);
@@ -330,7 +343,8 @@ namespace Game.Tests
             var controller = CreateEarlyMatch();
             var player = controller.Players[0];
             player.Gold = 10_000;
-            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForHeroSlot(1)));
+            player.BonusPickSlot = BonusPickRules.NoneSlot;
+            player.BonusPickSlot2 = BonusKitRules.BonusSlotForHeroSlot(1);
             Assert.IsTrue(controller.TryHireHero(0, 1));
             controller.DebugCompleteResearchForOwner(0);
 

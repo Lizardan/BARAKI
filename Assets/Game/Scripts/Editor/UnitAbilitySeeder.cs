@@ -122,6 +122,7 @@ namespace Game.Editor
             }
 
             // Base heroes/titan carry the shared base kits (same Human defs; FACELESS-012 canon).
+            // Фаза 5: the Faceless branch replaces one Human slot with Call of the Deep.
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
             {
                 if (Seed(
@@ -130,7 +131,7 @@ namespace Game.Editor
                         GameIds.Races.Faceless,
                         UnitRole.Hero,
                         slot,
-                        AbilityKitDefaults.Create(UnitRole.Hero, slot),
+                        AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, slot, 0),
                         bonusSlot: 0))
                 {
                     seeded++;
@@ -143,7 +144,7 @@ namespace Game.Editor
                     GameIds.Races.Faceless,
                     UnitRole.Titan,
                     0,
-                    AbilityKitDefaults.Create(UnitRole.Titan, 0),
+                    AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Titan, 0, 0),
                     bonusSlot: 0))
             {
                 seeded++;

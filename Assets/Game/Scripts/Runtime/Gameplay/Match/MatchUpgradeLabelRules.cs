@@ -73,16 +73,20 @@ namespace Game.Gameplay.Match
             int abilityId,
             float mana,
             float manaMax,
-            float cooldown) =>
+            float cooldown,
+            string raceId = null) =>
             cooldown > 0.05f
-                ? $"{BuildingAbilityRules.GetDisplayName(abilityId)}\n{cooldown:0}с"
-                : $"{BuildingAbilityRules.GetDisplayName(abilityId)}\n{mana:0}/{manaMax:0}";
+                ? $"{BuildingAbilityRules.GetDisplayName(abilityId, raceId)}\n{cooldown:0}с"
+                : $"{BuildingAbilityRules.GetDisplayName(abilityId, raceId)}\n{mana:0}/{manaMax:0}";
 
-        public static string FormatBuildingAbilityLockedButton(int abilityId, int requiredMainLevel) =>
-            $"{BuildingAbilityRules.GetDisplayName(abilityId)}\nУр. {requiredMainLevel}";
+        public static string FormatBuildingAbilityLockedButton(
+            int abilityId,
+            int requiredMainLevel,
+            string raceId = null) =>
+            $"{BuildingAbilityRules.GetDisplayName(abilityId, raceId)}\nУр. {requiredMainLevel}";
 
-        public static string FormatBuildingAbilityTooltip(int abilityId) =>
-            BuildingAbilityRules.GetTooltip(abilityId);
+        public static string FormatBuildingAbilityTooltip(int abilityId, string raceId = null) =>
+            BuildingAbilityRules.GetTooltip(abilityId, raceId);
 
         public static string FormatHeroHireButton(int heroSlot, int cost) =>
             $"Герой {heroSlot}\n{cost}g";
@@ -147,9 +151,9 @@ namespace Game.Gameplay.Match
                 1 => "Hollow Barbs",
                 2 => "Vacuum Collapse",
                 3 => "Ritual of the Deep",
-                4 => "Unnerving Aim",
+                4 => "Swarm at Death Site",
                 5 => "Frenzy of the Deep",
-                6 => "Splash of the Deep",
+                6 => "Feast on Heroes",
                 7 => "Hollow Bones",
                 8 => "Void Hardening",
                 _ => "Трек башни",
@@ -179,9 +183,9 @@ namespace Game.Gameplay.Match
                     1 => "Стрелки и летуны: игнор +1/+2/+3 брони цели",
                     2 => "Мили и летуны: при смерти замедление 15%/25%/35% на 3 с в радиусе 3",
                     3 => "Кастеры: живой кастер в радиусе 8 снижает входящий урон на 6%/10%/15%",
-                    4 => "Стрелки и кастеры: −1/−2/−3 брони цели на 4 с",
+                    4 => "При смерти обычного юнита: шанс 5%/10%/15% — поднять слугу на месте гибели",
                     5 => "Мили и осада: +10%/+15%/+20% скорости атаки",
-                    6 => "Кастеры и супер: splash 0.5/1.0/1.5 м, 25%/35%/50% урона",
+                    6 => "Убийство вражеского героя/титана: слуги в радиусе 8 — +30% атаки и +30% макс. ХП на 10 с (декей 1/3 ХП)",
                     7 => "Осада и летуны: +8%/+16%/+24% скорости движения",
                     8 => "Все юниты: −10%/−15%/−20% урона от атак башен/зданий",
                     _ => string.Empty,

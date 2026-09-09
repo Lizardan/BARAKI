@@ -25,6 +25,16 @@ namespace Game.Gameplay.Networking
                         Mix(ref hash, snapshot.Players[i].Slot);
                         Mix(ref hash, snapshot.Players[i].Gold);
                         Mix(ref hash, snapshot.Players[i].BonusPickSlot);
+                        Mix(ref hash, snapshot.Players[i].BonusPickSlot2);
+                        var offer = snapshot.Players[i].BonusPickOfferSlots;
+                        Mix(ref hash, offer?.Length ?? 0);
+                        if (offer != null)
+                        {
+                            for (var o = 0; o < offer.Length; o++)
+                            {
+                                Mix(ref hash, offer[o]);
+                            }
+                        }
                         Mix(ref hash, snapshot.Players[i].IsEliminated ? 1 : 0);
                         Mix(ref hash, (int)snapshot.Players[i].TitanResearchProgressSeconds);
                         Mix(ref hash, snapshot.Players[i].TitanState);

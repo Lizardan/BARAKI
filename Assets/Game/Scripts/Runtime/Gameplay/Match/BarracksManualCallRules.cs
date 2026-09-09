@@ -56,6 +56,22 @@ namespace Game.Gameplay.Match
         public static bool CanCall(bool enoughGold, int charges, bool barracksIntact, bool notEliminated) =>
             enoughGold && charges > 0 && barracksIntact && notEliminated;
 
+        /// <summary>Total unit count across all roles of a squad (waves, summon sizes).</summary>
+        public static int GetTotalUnits(ISquadCounts counts)
+        {
+            if (counts == null)
+            {
+                throw new ArgumentNullException(nameof(counts));
+            }
+
+            return counts.GetCount(UnitRole.Melee)
+                + counts.GetCount(UnitRole.Ranged)
+                + counts.GetCount(UnitRole.Caster)
+                + counts.GetCount(UnitRole.Siege)
+                + counts.GetCount(UnitRole.Flying)
+                + counts.GetCount(UnitRole.Super);
+        }
+
         /// <summary>Fallback squad counts when RaceCatalog is unavailable (Edit Mode).</summary>
         public static ISquadCounts GetDefaultSquadCounts(int barracksLevel) => barracksLevel switch
         {

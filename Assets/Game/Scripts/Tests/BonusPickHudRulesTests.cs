@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace Game.Tests
 {
-    /// <summary>PRE-001: bonus overlay data-source rules (snapshot vs controller).</summary>
+    /// <summary>PRE-001: bonus overlay data-source rules (two windows: snapshot vs controller).</summary>
     public sealed class BonusPickHudRulesTests
     {
         [Test]
@@ -14,13 +14,15 @@ namespace Game.Tests
             {
                 Players = new[]
                 {
-                    new MatchPlayerSnapshot { Slot = 0, BonusPickSlot = 7 },
+                    new MatchPlayerSnapshot { Slot = 0, BonusPickSlot = 7, BonusPickSlot2 = 2 },
                     new MatchPlayerSnapshot { Slot = 1, BonusPickSlot = 0 },
                 },
             };
 
-            Assert.IsTrue(BonusPickHudRules.TryGetSnapshotBonusPick(snapshot, 0, out var slot));
-            Assert.AreEqual(7, slot);
+            Assert.IsTrue(BonusPickHudRules.TryGetSnapshotBonusPick(snapshot, 0, panel: 0, out var auto));
+            Assert.AreEqual(7, auto);
+            Assert.IsTrue(BonusPickHudRules.TryGetSnapshotBonusPick(snapshot, 0, panel: 1, out var pick2));
+            Assert.AreEqual(2, pick2);
         }
 
         [Test]
@@ -34,15 +36,39 @@ namespace Game.Tests
                 },
             };
 
-            Assert.IsFalse(BonusPickHudRules.TryGetSnapshotBonusPick(snapshot, 4, out var slot));
+            Assert.IsFalse(BonusPickHudRules.TryGetSnapshotBonusPick(snapshot, 4, panel: 0, out var slot));
             Assert.AreEqual(BonusPickRules.NoneSlot, slot);
         }
 
         [Test]
         public void TryGetSnapshotBonusPick_NullSnapshot_False()
         {
-            Assert.IsFalse(BonusPickHudRules.TryGetSnapshotBonusPick(null, 0, out var slot));
+            Assert.IsFalse(BonusPickHudRules.TryGetSnapshotBonusPick(null, 0, panel: 0, out var slot));
             Assert.AreEqual(BonusPickRules.NoneSlot, slot);
+        }
+
+        [Test]
+        public void TryGetSnapshotBonusOffer_ReturnsOffer()
+        {
+            var snapshot = new MatchSnapshot
+            {
+                Players = new[]
+                {
+                    new MatchPlayerSnapshot { Slot = 0, BonusPickOfferSlots = new[] { 1, 3, 5 } },
+                },
+            };
+
+            Assert.IsTrue(BonusPickHudRules.TryGetSnapshotBonusOffer(snapshot, 0, out var offer));
+            CollectionAssert.AreEqual(new[] { 1, 3, 5 }, offer);
+        }
+
+        [Test]
+        public void TryGetSnapshotBonusOffer_MissingSlot_Empty()
+        {
+            var snapshot = new MatchSnapshot { Players = new[] { new MatchPlayerSnapshot { Slot = 0 } } };
+
+            Assert.IsFalse(BonusPickHudRules.TryGetSnapshotBonusOffer(snapshot, 7, out var offer));
+            Assert.AreEqual(0, offer.Length);
         }
 
         [Test]
@@ -62,7 +88,7 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsPickWindowOpen_OpenWhileNoPickAndDeadlineCounting()
+        public void IsPickWindowOpen_OpenWhileNoChoiceAndDeadlineCounting()
         {
             Assert.IsTrue(BonusPickHudRules.IsPickWindowOpen(60f, BonusPickRules.NoneSlot));
         }
@@ -74,9 +100,9 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsPickWindowOpen_ClosedAfterOwnPick()
+        public void IsPickWindowOpen_ClosedAfterChoice()
         {
-                        Assert.IsFalse(BonusPickHudRules.IsPickWindowOpen(30f, 5));
+            Assert.IsFalse(BonusPickHudRules.IsPickWindowOpen(30f, 5));
         }
 
         [Test]
@@ -87,13 +113,19 @@ namespace Game.Tests
                 snapshot: null,
                 localSlot: 0,
                 controllerDeadline: 55f,
-                controllerPick: BonusPickRules.NoneSlot,
+                controllerAutoPick: 3,
+                controllerPick2: BonusPickRules.NoneSlot,
+                controllerOffer: new[] { 1, 2 },
                 out var deadline,
-                out var ownPick);
+                out var autoPick,
+                out var pick2,
+                out var offer);
 
             Assert.AreEqual(55f, deadline, 0.01f);
-            Assert.AreEqual(BonusPickRules.NoneSlot, ownPick);
-            Assert.IsTrue(BonusPickHudRules.IsPickWindowOpen(deadline, ownPick));
+            Assert.AreEqual(3, autoPick);
+            Assert.AreEqual(BonusPickRules.NoneSlot, pick2);
+            CollectionAssert.AreEqual(new[] { 1, 2 }, offer);
+            Assert.IsTrue(BonusPickHudRules.IsPickWindowOpen(deadline, pick2));
         }
 
         [Test]
@@ -104,7 +136,13 @@ namespace Game.Tests
                 BonusPickDeadlineSeconds = 12f,
                 Players = new[]
                 {
-                    new MatchPlayerSnapshot { Slot = 1, BonusPickSlot = 4 },
+                    new MatchPlayerSnapshot
+                    {
+                        Slot = 1,
+                        BonusPickSlot = 4,
+                        BonusPickSlot2 = 9,
+                        BonusPickOfferSlots = new[] { 5, 6 },
+                    },
                 },
             };
 
@@ -113,12 +151,18 @@ namespace Game.Tests
                 snapshot,
                 localSlot: 1,
                 controllerDeadline: 60f,
-                controllerPick: BonusPickRules.NoneSlot,
+                controllerAutoPick: 3,
+                controllerPick2: BonusPickRules.NoneSlot,
+                controllerOffer: new[] { 1, 2 },
                 out var deadline,
-                out var ownPick);
+                out var autoPick,
+                out var pick2,
+                out var offer);
 
             Assert.AreEqual(12f, deadline, 0.01f);
-            Assert.AreEqual(4, ownPick);
+            Assert.AreEqual(4, autoPick);
+            Assert.AreEqual(9, pick2);
+            CollectionAssert.AreEqual(new[] { 5, 6 }, offer);
         }
 
         [Test]
@@ -130,12 +174,18 @@ namespace Game.Tests
                 snapshot,
                 localSlot: 0,
                 controllerDeadline: 40f,
-                controllerPick: BonusPickRules.NoneSlot,
+                controllerAutoPick: 7,
+                controllerPick2: BonusPickRules.NoneSlot,
+                controllerOffer: new[] { 8 },
                 out var deadline,
-                out var ownPick);
+                out var autoPick,
+                out var pick2,
+                out var offer);
 
             Assert.AreEqual(40f, deadline, 0.01f);
-            Assert.AreEqual(BonusPickRules.NoneSlot, ownPick);
+            Assert.AreEqual(7, autoPick);
+            Assert.AreEqual(BonusPickRules.NoneSlot, pick2);
+            CollectionAssert.AreEqual(new[] { 8 }, offer);
         }
 
         [Test]

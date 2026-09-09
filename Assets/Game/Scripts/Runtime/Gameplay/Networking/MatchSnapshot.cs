@@ -58,6 +58,10 @@ namespace Game.Gameplay.Networking
         public int[] TowerTrackLevels;
         /// <summary>Chosen bonus slot (1..12), 0 = none yet.</summary>
         public int BonusPickSlot;
+        /// <summary>Chosen slot of the second (choice) window (1..12), 0 = not picked yet.</summary>
+        public int BonusPickSlot2;
+        /// <summary>Random subset offered in the second window (excludes the auto pick); empty until the offer is built.</summary>
+        public int[] BonusPickOfferSlots;
         public float TitanResearchProgressSeconds;
         public bool TitanUnlocked;
         /// <summary><see cref="TitanLifecycleState"/> as int.</summary>
@@ -235,8 +239,8 @@ namespace Game.Gameplay.Networking
 
     public static class MatchSnapshotCodec
     {
-        // v23: building ability cooldowns in the Players section (MAIN-001).
-        public const int CurrentVersion = 23;
+        // v24: second bonus pick (auto slot + offered subset) in the Players section.
+        public const int CurrentVersion = 24;
 
         /// <summary>Self-contained encode: full static roster, safe for any fresh decoder.</summary>
         public static byte[] Serialize(MatchSnapshot snapshot) =>
@@ -269,6 +273,8 @@ namespace Game.Gameplay.Networking
                     RangedDamageLevel = p.RangedDamageLevel,
                     HpArmorLevel = p.HpArmorLevel,
                     BonusPickSlot = controller.GetBonusPickSlot(p.SlotIndex),
+                    BonusPickSlot2 = controller.GetBonusPickSlot(p.SlotIndex, panel: 1),
+                    BonusPickOfferSlots = controller.GetBonusPickOffer(p.SlotIndex),
                     TitanResearchProgressSeconds = titan?.ResearchProgressSeconds ?? 0f,
                     TitanUnlocked = titan?.IsUnlocked ?? false,
                     TitanState = titan == null ? 0 : (int)titan.State,
@@ -768,6 +774,20 @@ namespace Game.Gameplay.Networking
                         w.Write(p.RangedDamageLevel);
                         w.Write(p.HpArmorLevel);
                         w.Write(p.BonusPickSlot);
+                        w.Write(p.BonusPickSlot2);
+                        var offer = p.BonusPickOfferSlots;
+                        if (offer is { Length: > 0 })
+                        {
+                            w.Write((byte)offer.Length);
+                            foreach (var s in offer)
+                            {
+                                w.Write((byte)s);
+                            }
+                        }
+                        else
+                        {
+                            w.Write((byte)0);
+                        }
                         w.Write(p.TitanResearchProgressSeconds);
                         w.Write(p.TitanUnlocked);
                         w.Write(p.TitanState);
@@ -1265,6 +1285,8 @@ namespace Game.Gameplay.Networking
                     RangedDamageLevel = reader.ReadInt32(),
                     HpArmorLevel = reader.ReadInt32(),
                     BonusPickSlot = reader.ReadInt32(),
+                    BonusPickSlot2 = reader.ReadInt32(),
+                    BonusPickOfferSlots = ReadBonusPickOfferSlots(reader),
                     TitanResearchProgressSeconds = reader.ReadSingle(),
                     TitanUnlocked = reader.ReadBoolean(),
                     TitanState = reader.ReadInt32(),
@@ -1299,6 +1321,23 @@ namespace Game.Gameplay.Networking
             }
 
             return levels;
+        }
+
+        private static int[] ReadBonusPickOfferSlots(System.IO.BinaryReader reader)
+        {
+            var count = reader.ReadByte();
+            if (count == 0)
+            {
+                return Array.Empty<int>();
+            }
+
+            var offer = new int[count];
+            for (var i = 0; i < count; i++)
+            {
+                offer[i] = reader.ReadByte();
+            }
+
+            return offer;
         }
 
         private static MatchBuildingSnapshot[] ReadBuildings(System.IO.BinaryReader reader, List<string> strings)

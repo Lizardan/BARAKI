@@ -115,11 +115,10 @@ namespace Game.Gameplay.Combat
         MatchUnitState FindMostInjuredAlly(IReadOnlyList<MatchUnitState> allies);
         MatchUnitState ResurrectUnit(CombatCorpseState corpse);
         /// <summary>
-        /// Summons a minion of <paramref name="role"/> for <paramref name="ownerSlot"/> next to
-        /// <paramref name="anchor"/>, stats scaled by <paramref name="statScale"/> (FACELESS-016 minion).
-        /// Returns null when the anchor lane route is unknown.
+        /// Summons a servant (fixed Faceless servant profile, Plan0909) for <paramref name="ownerSlot"/>
+        /// next to <paramref name="anchor"/>. Returns null when the anchor lane route is unknown.
         /// </summary>
-        MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor, Data.UnitRole role, float statScale);
+        MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor);
         /// <summary>Removes a corpse without resurrecting it (consumed by Raise the Drowned).</summary>
         void ConsumeCorpse(CombatCorpseState corpse);
         bool HasActiveHealZone(int casterUnitId);

@@ -69,14 +69,20 @@ namespace Game.Gameplay.Combat
         public const int FacelessHunger = 64;
         /// <summary>Faceless Ranged bonus (slot 2): 15% on-hit dot 3 dmg/s for 3 s (FACELESS-011).</summary>
         public const int FacelessTaint = 65;
-        /// <summary>Faceless Caster bonus (slot 3): on kill spawn a ×0.5 mini-melee (FACELESS-011).</summary>
+        /// <summary>Faceless Caster bonus (slot 3): on kill spawn a servant (fixed profile, Plan0909).</summary>
         public const int FacelessCallOfAbyss = 66;
         /// <summary>Faceless Siege bonus (slot 4): on death explode for 10% max HP in radius 3 (FACELESS-011).</summary>
         public const int FacelessDeathExplosion = 67;
         /// <summary>Faceless Flying bonus (slot 5): on kill +15% attack speed, stacks to 3 (FACELESS-011).</summary>
         public const int FacelessHungeringFlight = 68;
-        /// <summary>Faceless Super bonus (slot 6): on kill +80 HP and +10% attack speed, stacks to 3 (FACELESS-011).</summary>
-        public const int FacelessFeast = 69;
+        /// <summary>Faceless Super bonus (slot 6): at HP&lt;50% eats the nearest own servant — heal + attack-speed buff (Plan0909).</summary>
+        public const int DevourServant = 69;
+
+        /// <summary>
+        /// Faceless hero/titan kit share — "Зов глубин": summons 1–2 servants, preferring a recent corpse
+        /// in range (consumed) over a spawn beside the champion (Plan0909, Фаза 5).
+        /// </summary>
+        public const int CallOfTheDeep = 70;
 
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;

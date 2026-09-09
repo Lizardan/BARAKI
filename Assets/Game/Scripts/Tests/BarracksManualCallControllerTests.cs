@@ -34,7 +34,8 @@ namespace Game.Tests
         public void TryManualCallUnit_WithMatchingBonusPick_SpawnsBonusUnit()
         {
             var controller = CreateControllerWithCatalogs();
-            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Melee)));
+            controller.Players[0].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[0].BonusPickSlot2 = BonusKitRules.BonusSlotForRole(UnitRole.Melee);
             controller.BeginEarlyPhase();
             controller.Players[0].Gold = 200;
 
@@ -54,7 +55,8 @@ namespace Game.Tests
             var controller = CreateControllerWithCatalogs();
             Assert.IsNotNull(controller.CombatCatalog);
             Assert.IsNotNull(controller.UnitVisualCatalog);
-            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Caster)));
+            controller.Players[0].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[0].BonusPickSlot2 = BonusKitRules.BonusSlotForRole(UnitRole.Caster);
             controller.BeginEarlyPhase();
             controller.Players[0].Gold = 200;
 
@@ -87,7 +89,8 @@ namespace Game.Tests
             controller.CombatCatalog = new RaceCatalogCombatCatalog(raceCatalog);
             controller.UnitVisualCatalog = visualCatalog;
             controller.StartMatch(new MatchConfig(2, new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }));
-            Assert.IsTrue(controller.TrySetBonusPick(0, BonusKitRules.BonusSlotForRole(UnitRole.Melee)));
+            controller.Players[0].BonusPickSlot = BonusPickRules.NoneSlot;
+            controller.Players[0].BonusPickSlot2 = BonusKitRules.BonusSlotForRole(UnitRole.Melee);
             controller.BeginEarlyPhase();
             controller.Players[0].Gold = 200;
 

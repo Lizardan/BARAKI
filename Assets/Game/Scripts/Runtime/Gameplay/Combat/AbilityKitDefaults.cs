@@ -522,10 +522,12 @@ namespace Game.Gameplay.Combat
             {
                 return bonusSlot switch
                 {
-                    7 => CreateAncientMantle(),
-                    8 => CreateAreaOfMiss(),
-                    9 => CreateFeastZone(),
-                    10 => CreateAuraOfHunger(),
+                    // Plan0909, Фаза 5: one Human slot per veteran becomes the servant summon
+                    // (Call of the Deep); the signature (60–63) stays untouched.
+                    7 => ReplaceSlotWithCallOfTheDeep(CreateAncientMantle(), AbilityIds.Heal),
+                    8 => ReplaceSlotWithCallOfTheDeep(CreateAreaOfMiss(), AbilityIds.Consecration),
+                    9 => ReplaceSlotWithCallOfTheDeep(CreateFeastZone(), AbilityIds.Revive),
+                    10 => ReplaceSlotWithCallOfTheDeep(CreateAuraOfHunger(), AbilityIds.Stomp),
                     _ => System.Array.Empty<UnitAbilityDef>(),
                 };
             }
@@ -781,11 +783,66 @@ namespace Game.Gameplay.Combat
                     return CreateFacelessCaster();
                 }
 
+                // Plan0909, Фаза 5: Faceless heroes and titans reuse the Human base kit with one
+                // slot replaced by the servant summon (Call of the Deep). Other unit roles stay gated.
+                if (role == UnitRole.Hero)
+                {
+                    return CreateFacelessHeroKit(heroSlot);
+                }
+
+                if (role == UnitRole.Titan)
+                {
+                    return CreateFacelessTitanKit();
+                }
+
                 return System.Array.Empty<UnitAbilityDef>();
             }
 
             return CreateForSpawn(role, heroSlot, bonusSlot);
         }
+
+        /// <summary>
+        /// Faceless hero base kit (Plan0909, Фаза 5): the Human hero kit with one slot replaced by
+        /// Call of the Deep (Hero1 → Heal, Hero2 → Consecration, Hero3 → Greater Heal).
+        /// </summary>
+        public static UnitAbilityDef[] CreateFacelessHeroKit(int heroSlot) => heroSlot switch
+        {
+            HeroAbilityRules.PaladinSlot => ReplaceSlotWithCallOfTheDeep(CreatePaladin(), AbilityIds.Consecration),
+            HeroAbilityRules.PriestSlot => ReplaceSlotWithCallOfTheDeep(CreatePriest(), AbilityIds.GreaterHeal),
+            _ => ReplaceSlotWithCallOfTheDeep(CreateKing(), AbilityIds.Heal),
+        };
+
+        /// <summary>Faceless titan base kit (Plan0909, Фаза 5): Stomp becomes Call of the Deep.</summary>
+        public static UnitAbilityDef[] CreateFacelessTitanKit() =>
+            ReplaceSlotWithCallOfTheDeep(CreateTitan(), AbilityIds.Stomp);
+
+        /// <summary>Replaces the Human slot <paramref name="replaceAbilityId"/> in-place with Call of the Deep.</summary>
+        static UnitAbilityDef[] ReplaceSlotWithCallOfTheDeep(UnitAbilityDef[] kit, int replaceAbilityId)
+        {
+            for (var i = 0; i < kit.Length; i++)
+            {
+                if (kit[i] != null && kit[i].AbilityId == replaceAbilityId)
+                {
+                    var next = new UnitAbilityDef[kit.Length];
+                    System.Array.Copy(kit, next, kit.Length);
+                    next[i] = CallOfTheDeep(kit[i].UnlockValue);
+                    return next;
+                }
+            }
+
+            return kit;
+        }
+
+        static UnitAbilityDef CallOfTheDeep(int unlockValue) => Active(
+            AbilityIds.CallOfTheDeep,
+            "Call of the Deep",
+            "Зов глубин: из ближайшего трупа (или просто рядом с героем) поднимает прислужников Древних.",
+            unlockValue,
+            CallOfTheDeep(),
+            fx: new AbilityFx { Color = AbilityFxColors.RaiseDrowned },
+            castRange: FacelessHeroRules.CallCastRange,
+            durationSeconds: FacelessHeroRules.CallCorpseMaxAgeSeconds,
+            cooldownSeconds: FacelessHeroRules.CallCooldownSeconds);
 
         public static UnitAbilityDef[] CreateCaster() => new[]
         {
@@ -866,7 +923,7 @@ namespace Game.Gameplay.Combat
             Active(
                 AbilityIds.RaiseDrowned,
                 "Raise the Drowned",
-                "Поднять павшего: любой недавний труп (включая вражеский) становится мини-меле кастера.",
+                "Поднять павшего: любой недавний труп (включая вражеский) становится прислужником кастера.",
                 FacelessSpellRules.RaiseRequiredMagicLevel,
                 RaiseDrowned(),
                 fx: new AbilityFx { Color = AbilityFxColors.RaiseDrowned },
@@ -938,14 +995,14 @@ namespace Game.Gameplay.Combat
             UnitRole.Super => new[]
             {
                 Passive(
-                    AbilityIds.FacelessFeast,
-                    "Feast on the Fallen",
-                    "При убийстве: +80 макс. здоровья и +10% скорости атаки на 3 с, стаки до 3.",
+                    AbilityIds.DevourServant,
+                    "Devour Servant",
+                    "При HP<50%: съедает ближайшего прислужника — +макс. HP прислужника и +15% скорости атаки на 5 с (КД 3 с).",
                     0,
                     Trait(),
                     unlock: AbilityUnlock.Always,
-                    percent: FacelessBonusUnitRules.FeastAttackSpeedPerStack,
-                    flatBonus: FacelessBonusUnitRules.FeastHealFlat,
+                    percent: FacelessBonusUnitRules.DevourAttackSpeedBonus,
+                    flatBonus: FacelessServantRules.MaxHp,
                     fx: new AbilityFx { Color = AbilityFxColors.AuraMaxHp }),
             },
             _ => System.Array.Empty<UnitAbilityDef>(),
@@ -961,11 +1018,10 @@ namespace Game.Gameplay.Combat
             var call = Passive(
                 AbilityIds.FacelessCallOfAbyss,
                 "Call of the Abyss",
-                "При убийстве: призыв минимеле со статами ×0.5 от расового меле-базиса.",
+                "При убийстве: призыв прислужника (фиксированный servant-профиль).",
                 0,
                 Trait(),
                 unlock: AbilityUnlock.Always,
-                percent: FacelessBonusUnitRules.MiniMeleeStatScale,
                 fx: new AbilityFx { Color = AbilityFxColors.RaiseDrowned });
             var kit = new UnitAbilityDef[spells.Length + 1];
             System.Array.Copy(spells, kit, spells.Length);
@@ -1060,6 +1116,8 @@ namespace Game.Gameplay.Combat
         static VoidDrainBehaviour VoidDrain() => ScriptableObject.CreateInstance<VoidDrainBehaviour>();
 
         static RaiseDrownedBehaviour RaiseDrowned() => ScriptableObject.CreateInstance<RaiseDrownedBehaviour>();
+
+        static CallOfTheDeepBehaviour CallOfTheDeep() => ScriptableObject.CreateInstance<CallOfTheDeepBehaviour>();
 
         static AreaOfMissBehaviour AreaOfMiss() => ScriptableObject.CreateInstance<AreaOfMissBehaviour>();
 

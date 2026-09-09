@@ -22,9 +22,8 @@ namespace Game.Gameplay.Combat
         public const float TaintingBoltDamagePerSecond = 3f;
         public const float TaintingBoltDurationSeconds = 3f;
 
-        // --- Slot 3 Caster: Call of the Abyss (mini-melee on kill) ---
-        /// <summary>Mini-melee stats = ×0.5 of the race Melee baseline.</summary>
-        public const float MiniMeleeStatScale = 0.5f;
+        // --- Slot 3 Caster: Call of the Abyss (servant on kill) ---
+        // Servant stats come from the fixed FacelessServantRules profile (Plan0909, Фаза 1).
 
         // --- Slot 4 Siege: Death Explosion (AoE on death) ---
         public const float DeathExplosionMaxHpPercent = 0.10f;
@@ -33,11 +32,17 @@ namespace Game.Gameplay.Combat
         // --- Slot 5 Flying: Hungering Flight (attack-speed stacks on kill) ---
         public const float HungeringFlightAttackSpeedPerStack = 0.15f;
 
-        // --- Slot 6 Super: Feast on the Fallen (heal + attack-speed stacks on kill) ---
-        public const float FeastHealFlat = 80f;
-        public const float FeastAttackSpeedPerStack = 0.10f;
+        // --- Slot 6 Super: Devour Servant (Поедание прислужника, Plan0909 Фаза 4) ---
+        /// <summary>HP fraction below which the Super starts devouring a nearby own servant.</summary>
+        public const float DevourHpThreshold = 0.50f;
+        /// <summary>Attack-speed percent granted per devour (5 s buff).</summary>
+        public const float DevourAttackSpeedBonus = 0.15f;
+        /// <summary>Duration in seconds of the devour attack-speed buff.</summary>
+        public const float DevourBuffSeconds = 5f;
+        /// <summary>Cooldown in seconds between devours.</summary>
+        public const float DevourCooldownSeconds = 3f;
 
-        // --- Shared for slots 5–6 ---
+        // --- Shared stack decay for slot 5 (Hungering Flight) ---
         public const float FeastBuffDurationSeconds = 3f;
         public const int MaxFeastStacks = 3;
 
@@ -50,11 +55,10 @@ namespace Game.Gameplay.Combat
             && BonusKitRules.IsBonusSlot(bonusSlot)
             && BonusKitRules.RoleForBonusSlot(bonusSlot) == role;
 
-        /// <summary>Attack-speed bonus per stack for slots 5–6 (0 for any other slot).</summary>
+        /// <summary>Attack-speed bonus per stack for slot 5 (0 for any other slot).</summary>
         public static float AttackSpeedPerStackForSlot(int bonusSlot) => bonusSlot switch
         {
             5 => HungeringFlightAttackSpeedPerStack,
-            6 => FeastAttackSpeedPerStack,
             _ => 0f,
         };
 
@@ -101,7 +105,7 @@ namespace Game.Gameplay.Combat
         public static bool HasShadowOfTheVoid(MatchPlayerState player) =>
             player != null
             && player.RaceId == GameIds.Races.Faceless
-            && player.BonusPickSlot == BonusKitRules.RaceUnique1Slot;
+            && player.HasBonusEffective(BonusKitRules.RaceUnique1Slot);
 
         /// <summary>
         /// True when the player owns Void Bastion (Faceless race unique slot 12).
@@ -110,6 +114,6 @@ namespace Game.Gameplay.Combat
         public static bool HasVoidBastion(MatchPlayerState player) =>
             player != null
             && player.RaceId == GameIds.Races.Faceless
-            && player.BonusPickSlot == BonusKitRules.RaceUnique2Slot;
+            && player.HasBonusEffective(BonusKitRules.RaceUnique2Slot);
     }
 }

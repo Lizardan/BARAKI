@@ -17,6 +17,11 @@
   остальные = `MatchResearchQueue.MaxQueueLength`); 4 башни = до 4 разных треков параллельно.
 - Старые id `UPG_TOWER_HUMAN_STEEL_TEMPER … HOLD_THE_LINE/BALLISTA_OVERDRAW/ARCANE_RELAY`
   удалены из канона и из `GameIds` (не возвращать).
+- **[FACELESS-017 (2026-09-09)]** треки Древних 5 и 7 заменены на «Рой на месте гибели»
+  и «Пир на герое» (Plan0909 §5.6). Legacy-иды `UPG_TOWER_FACELESS_UNNERVING_AIM` (5)
+  и `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` (7) в `GameIds` **не переименовываются**
+  (история/снапшоты), семантика живёт только в `FacelessTowerTrackRules`. Прежние механики
+  (дебафф брони, splash-урон) из кода удалены; splash остался лишь у Human катапульты.
 
 ## 9 треков Людей (порядок = UI слоты 4–12)
 
@@ -42,9 +47,11 @@
 | 2 | `UPG_TOWER_FACELESS_HOLLOW_BARBS` | Ranged+Flying | игнор +1/2/3 брони цели |
 | 3 | `UPG_TOWER_FACELESS_VACUUM_COLLAPSE` | Melee+Flying | при смерти замедление 15/25/35% на 3 с в радиусе 3 |
 | 4 | `UPG_TOWER_FACELESS_RITUAL_OF_THE_DEEP` | Caster | живой кастер в радиусе 8 снижает входящий урон на 6/10/15% |
-| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Ranged+Caster | −1/−2/−3 брони цели на 4 с |
+| 5 | `UPG_TOWER_FACELESS_UNNERVING_AIM` | Ranged+Caster | **Рой на месте гибели**: при смерти неслужебного юнита владельца шанс 5/10/15%: спавн servant на месте гибели, труп консьюмится; servant не цепляет каскад |
 | 6 | `UPG_TOWER_FACELESS_FRENZY_OF_THE_DEEP` | Melee+Siege | +10/15/20% скорости атаки |
-| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Caster+Super | splash 0.5/1.0/1.5 м, 25/35/50% урона |
+| 7 | `UPG_TOWER_FACELESS_SPLASH_OF_THE_DEEP` | Caster+Super | **Пир на герое**: servants владельца в r=8 от места гибели героя/титана получают +30% урона и +30% max HP на 10 с; декей ⅓ max HP за 10 с |
+| 8 | `UPG_TOWER_FACELESS_HOLLOW_BONES` | Siege+Flying | +8/16/24% скорости движения |
+| 9 | `UPG_TOWER_FACELESS_VOID_HARDENING` | все юниты | −10/−15/−20% урона от атак башен/зданий |
 | 8 | `UPG_TOWER_FACELESS_HOLLOW_BONES` | Siege+Flying | +8/16/24% скорости движения |
 | 9 | `UPG_TOWER_FACELESS_VOID_HARDENING` | все юниты | −10/−15/−20% урона от атак башен/зданий |
 
@@ -60,7 +67,7 @@
 | `MatchResearchQueue.cs` | перегрузки `HasSpace/TryEnqueue` с per-building лимитом |
 | `Combat/TowerTrackUnitRules.cs` | спавн-статы Human (броня/дальность/скорость), фильтр Hero/Titan; хук в `UnitStatsResolver.Resolve` |
 | `Combat/FacelessTowerTrackUnitRules.cs` | спавн-статы Faceless (броня/скорость атаки/движения, max HP L3) — FACELESS-017 |
-| `Combat/MatchCombatSystem.cs` | burn/bloodrage/last stand/battering/arcane focus/medics (Human) + armor pen/slow/ritual/debuff/splash/void hardening (Faceless) |
+| `Combat/MatchCombatSystem.cs` | burn/bloodrage/last stand/battering/arcane focus/medics (Human) + armor pen/slow/ritual/swarm/feast/void hardening (Faceless) |
 | `Networking/MatchSnapshot.cs` | v22: 9 байт уровней в Players-секции |
 | `UI/Runtime/Controllers/MatchInspectorController.cs` | слоты 4–12 (`PopulateTowerTrackCommands`), race-dispatch для Faceless |
 | `UI/Runtime/MatchUpgradeLabelRules.cs` | лейблы кнопок/тултипов: race-aware `GetTowerTrackTitle/Effect` |
@@ -106,11 +113,20 @@ UI-слоты 4–12; wire-контракт (`TowerTrackLevels[]` в Player-се
 (`wiki/rules/faceless-unit-bonuses.md` для Древних, `human-unit-bonuses.md` для Людей).
 
 Запрещённые в треках механики Древних (заняты бонусами FACELESS-010): вампиризм,
-дот on-hit, призыв мини-меле, урон/взрыв при смерти, on-kill бафы, уклонение и промах.
+дот on-hit, урон/взрыв при смерти, on-kill бафф юнитов, уклонение и промах.
 
-Свободные оси: броня, пробитие брони, дебаф брони, скорость атаки/движения, дальность,
-сплеш, урон по зданиям, max HP, срез входящего урона (с явным указанием источника:
-юниты/герои vs здания/башни), кулдауны, реген.
+> **Исключение для servant-осей (FACELESS-017, 2026-09-09, Plan0909 §5.6):** треки Древних
+> 5 и 7 намеренно используют servant-рост — спавн при смерти и пир на герое. Они не
+> дублируют бонусы: слот 3 Call of the Abyss призывает servant **on-kill** (кастером),
+> слот 4 Death Explosion — **урон** при смерти; трек 5 — вероятностный спавн servant на
+> месте гибели **любого** юнита владельца, трек 7 — **бафф** servants при убийстве
+> героя/титана. «Призыв мини-меле» для этих двух осей снят с запрета; для остальных
+> треков и рас правило остаётся в силе.
+
+Свободные оси: броня, пробитие брони, дебаф брони (кроме Древних — занят слотом 2 Hollow
+Barbs и треком 2), скорость атаки/движения, дальность, сплеш, урон по зданиям, max HP,
+срез входящего урона (с явным указанием источника: юниты/герои vs здания/башни),
+кулдауны, реген.
 
 Источник урона для срезов указывать **явно** — иначе два трека молча дублируют друг друга
 (прецедент: аура кастера срезала всё подряд и пересекалась с треком «−% от зданий»).

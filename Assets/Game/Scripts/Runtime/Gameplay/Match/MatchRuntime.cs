@@ -194,7 +194,7 @@ namespace Game.Gameplay.Match
                 throw new ArgumentOutOfRangeException(nameof(localPlayerSlot));
             }
 
-            var config = new MatchConfig(setup.PlayerCount, raceIds);
+            var config = new MatchConfig(setup.PlayerCount, raceIds, autoFateBonuses: true);
             Controller = new MatchController();
             if (_raceCatalog != null)
             {

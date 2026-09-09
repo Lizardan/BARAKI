@@ -647,6 +647,7 @@ namespace Game.Gameplay.Combat
                 var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(
                     player?.RaceId,
                     player?.BonusPickSlot ?? 0,
+                    player?.BonusPickSlot2 ?? 0,
                     slot.Role);
                 var stats = UnitStatsResolver.Resolve(
                     catalog,
@@ -1254,6 +1255,7 @@ namespace Game.Gameplay.Combat
 
                 TickUnit(unit, deltaTime);
                 TickTowerTrackStatus(unit, deltaTime);
+                TickDevourServant(unit);
             }
 
             TickHealZones(deltaTime);
@@ -1296,6 +1298,32 @@ namespace Game.Gameplay.Combat
                     unit.FeastStacks = 0;
                     unit.FeastAttackSpeedPerStack = 0f;
                 }
+            }
+
+            // Tower track 6 "Пир на герое": buffed servants decay 1/3 of max HP as life damage
+            // over the buff window, then the +attack/+max HP buff falls off.
+            if (unit.HeroFeastRemainingSeconds > 0f)
+            {
+                unit.HeroFeastRemainingSeconds = Mathf.Max(0f, unit.HeroFeastRemainingSeconds - deltaTime);
+                var decay = unit.Stats.MaxHp
+                            * FacelessTowerTrackRules.FeastOnHeroesDecayMaxHpFraction
+                            * deltaTime
+                            / FacelessTowerTrackRules.FeastOnHeroesDurationSeconds;
+                if (decay > 0f)
+                {
+                    ApplyDamage(null, unit, decay, unit.OwnerSlot);
+                }
+
+                if (unit.HeroFeastRemainingSeconds <= 0f)
+                {
+                    unit.HeroFeastDamagePercent = 0f;
+                    unit.HeroFeastMaxHpPercent = 0f;
+                }
+            }
+
+            if (unit.DevourCooldownRemaining > 0f)
+            {
+                unit.DevourCooldownRemaining = Mathf.Max(0f, unit.DevourCooldownRemaining - deltaTime);
             }
 
             if (unit.BurnSecondsRemaining <= 0f || unit.BurnDamagePerSecond <= 0f || !unit.IsAlive)
@@ -2565,8 +2593,6 @@ namespace Game.Gameplay.Combat
                 ApplyDamage(attacker, target, effectiveDamage, projectile.AttackerOwnerSlot);
                 TryApplyFlamingArrowsBurn(projectile, target);
                 TryApplyTaintingBolt(attacker, target);
-                TryApplyUnnervingAimDebuff(attacker, target);
-                TryApplyFacelessSplash(attacker, target, rawDamage, projectile.AttackerOwnerSlot);
             }
 
             if (rangedCrit)
@@ -2657,8 +2683,6 @@ namespace Game.Gameplay.Combat
                     ApplyBulwarkBlock(target, strike.RawDamage),
                     killerSlot);
                 TryApplyHungerOfTheOldOne(attacker, meleeDealt);
-                TryApplyUnnervingAimDebuff(attacker, target);
-                TryApplyFacelessSplash(attacker, target, strike.RawDamage, killerSlot);
 
                 if (attacker != null && HumanBonusUnitRules.IsCasterBonus(attacker))
                 {
@@ -2758,6 +2782,7 @@ namespace Game.Gameplay.Combat
             var damage = CombatRules.ApplyArmor(rawDamage, armor);
             damage *= GetArmyDamageMultiplier(attacker);
             damage *= GetLastStandDamageMultiplier(attacker);
+            damage *= GetFeastOnHeroesDamageMultiplier(attacker);
             if (attacker != null && attacker.UltimateBuffRemaining > 0f)
             {
                 var percent = attacker.UltimateBuffPercent > 0f
@@ -2810,9 +2835,10 @@ namespace Game.Gameplay.Combat
             TrySpawnFlyingBonusOnDeath(deathOwnerSlot, deathLaneId, deathPosition, deathBonusSlot, deathMarchFocus);
             TryApplyBloodrageOnKill(attacker);
             TryApplyVacuumCollapseOnDeath(deathOwnerSlot, deathPosition);
-            TryApplyCallOfTheAbyss(attacker);
+            TryApplyCallOfTheAbyss(attacker, target.UnitId);
+            TryApplySwarmAtDeath(deathOwnerSlot, deathLaneId, deathPosition, target.UnitId, target.IsChampion, deathBonusSlot);
+            TryApplyFeastOnHeroes(attacker, target.IsChampion, deathPosition);
             TryApplyHungeringFlight(attacker);
-            TryApplyFeastOnTheFallen(attacker);
             TryApplyDeathExplosion(deathOwnerSlot, deathPosition, deathBonusSlot, deathMaxHp);
             UnitKilled?.Invoke(new UnitKillEvent(
                 killerOwnerSlot,
@@ -2924,6 +2950,17 @@ namespace Game.Gameplay.Combat
             }
 
             return 1f + TowerTrackRules.LastStandDamagePercentByLevel[level - 1];
+        }
+
+        /// <summary>Tower track 6 "Пир на герое": attack-damage multiplier while the servant is feasting.</summary>
+        float GetFeastOnHeroesDamageMultiplier(MatchUnitState unit)
+        {
+            if (unit == null || unit.HeroFeastRemainingSeconds <= 0f)
+            {
+                return 1f;
+            }
+
+            return 1f + unit.HeroFeastDamagePercent;
         }
 
         /// <summary>Bloodrage (tower track 3): attack-speed buff after killing an enemy.</summary>
@@ -3070,7 +3107,14 @@ namespace Game.Gameplay.Combat
                 return 0f;
             }
 
-            return unit.Stats.MaxHp * (1f + GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp, unit.WorldPosition));
+            var maxHpPercent = GetAuraPercent(unit.OwnerSlot, AuraStat.MaxHp, unit.WorldPosition);
+            if (unit.HeroFeastRemainingSeconds > 0f)
+            {
+                // Tower track 6 "Пир на герое" raises the captain's servants' effective max HP.
+                maxHpPercent += unit.HeroFeastMaxHpPercent;
+            }
+
+            return unit.Stats.MaxHp * (1f + maxHpPercent);
         }
 
         float GetEffectiveMarchSpeed(MatchUnitState unit)
@@ -3224,56 +3268,6 @@ namespace Game.Gameplay.Combat
             }
         }
 
-        void TryApplyUnnervingAimDebuff(MatchUnitState attacker, MatchUnitState target)
-        {
-            if (attacker == null || !attacker.IsAlive || attacker.IsChampion)
-            {
-                return;
-            }
-
-            if (target == null || !target.IsAlive || target.OwnerSlot == attacker.OwnerSlot)
-            {
-                return;
-            }
-
-            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.UnnervingAimTrackIndex, attacker.Role))
-            {
-                return;
-            }
-
-            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.UnnervingAimTrackIndex);
-            if (level <= 0)
-            {
-                return;
-            }
-
-            target.ArmorDebuffRemainingSeconds = FacelessTowerTrackRules.UnnervingAimDebuffDurationSeconds;
-            target.ArmorDebuffAmount = FacelessTowerTrackRules.UnnervingAimArmorDebuffByLevel[level - 1];
-        }
-
-        void TryApplyFacelessSplash(MatchUnitState attacker, MatchUnitState target, float rawDamage, int killerOwnerSlot)
-        {
-            if (attacker == null || !attacker.IsAlive || attacker.IsChampion)
-            {
-                return;
-            }
-
-            if (!FacelessTowerTrackRules.RoleMatches(FacelessTowerTrackRules.SplashOfTheDeepTrackIndex, attacker.Role))
-            {
-                return;
-            }
-
-            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.SplashOfTheDeepTrackIndex);
-            if (level <= 0)
-            {
-                return;
-            }
-
-            var radius = FacelessTowerTrackRules.SplashRadiusByLevel[level - 1];
-            var damagePercent = FacelessTowerTrackRules.SplashDamagePercentByLevel[level - 1];
-            ApplySplashDamage(attacker, target.WorldPosition, rawDamage * damagePercent, radius, killerOwnerSlot, excludeUnitId: target.UnitId);
-        }
-
         // === Faceless Unit Bonus Helpers (FACELESS-011) ===
 
         /// <summary>Slot 1 Melee — Hunger of the Old One: 15% on-hit heal for 50% of the damage dealt.</summary>
@@ -3341,8 +3335,8 @@ namespace Game.Gameplay.Combat
             target.BurnSecondsRemaining = FacelessBonusUnitRules.TaintingBoltDurationSeconds;
         }
 
-        /// <summary>Slot 3 Caster — Call of the Abyss: on kill spawn one ×0.5 mini-melee.</summary>
-        void TryApplyCallOfTheAbyss(MatchUnitState attacker)
+        /// <summary>Slot 3 Caster — Call of the Abyss: on kill spawn one servant and consume the slain corpse (no double).</summary>
+        void TryApplyCallOfTheAbyss(MatchUnitState attacker, int slainUnitId)
         {
             if (attacker == null || !attacker.IsAlive)
             {
@@ -3362,18 +3356,167 @@ namespace Game.Gameplay.Combat
                 return;
             }
 
-            // Stat baseline resolution lives in SummonMinion (living friendly Melee, else the anchor).
-            SummonMinion(
-                attacker.OwnerSlot,
-                attacker,
-                UnitRole.Melee,
-                FacelessBonusUnitRules.MiniMeleeStatScale);
+            // Servant stats come straight from the fixed servant profile (Plan0909, Фаза 1).
+            var minion = SummonMinion(attacker.OwnerSlot, attacker);
+            if (minion == null)
+            {
+                return;
+            }
+
+            // No double: the same corpse cannot be raised again (Plan0909, Фаза 2).
+            for (var i = _corpses.Count - 1; i >= 0; i--)
+            {
+                if (_corpses[i].UnitId == slainUnitId)
+                {
+                    ConsumeCorpse(_corpses[i]);
+                    break;
+                }
+            }
         }
 
         /// <summary>
-        /// Slots 5–6 — on-kill attack-speed stacks (and the slot 6 flat heal).
-        /// Fires only for the mechanic-specific slot so a Flying (5) unit never
-        /// double-stacks via the Super (6) helper and vice versa.
+        /// Tower track 4 — "Рой на месте гибели" (Plan0909, Фаза 6): when any regular allied unit
+        /// of a Faceless owner dies (not a servant, not a champion) there is a level-based chance to
+        /// destroy the corpse and raise a servant exactly on the death spot.
+        /// </summary>
+        void TryApplySwarmAtDeath(
+            int deathOwnerSlot,
+            string deathLaneId,
+            Vector3 deathPosition,
+            int deadUnitId,
+            bool deadIsChampion,
+            int deadBonusSlot)
+        {
+            if (deadIsChampion || FacelessServantRules.IsServant(deadBonusSlot))
+            {
+                return;
+            }
+
+            if (GetPlayerRaceId(deathOwnerSlot) != GameIds.Races.Faceless)
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(deathOwnerSlot, FacelessTowerTrackRules.SwarmAtDeathTrackIndex);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            if (!BonusKitRules.RollProc(_random, FacelessTowerTrackRules.SwarmAtDeathChanceByLevel[level - 1]))
+            {
+                return;
+            }
+
+            if (SummonServantAt(deathOwnerSlot, deathLaneId, deathPosition) == null)
+            {
+                return;
+            }
+
+            // The raised corpse is consumed — one body, one servant.
+            for (var i = _corpses.Count - 1; i >= 0; i--)
+            {
+                if (_corpses[i].UnitId == deadUnitId)
+                {
+                    ConsumeCorpse(_corpses[i]);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tower track 6 — "Пир на герое" (Plan0909, Фаза 6): only hero/titan kills
+        /// (<paramref name="killedChampion"/>) buff the owner's servants within
+        /// <see cref="FacelessTowerTrackRules.FeastOnHeroesRadius"/> of the fallen champion:
+        /// +attack and +max HP (effective max raises, current HP raised by the same amount),
+        /// decaying as life damage each tick until the buff expires.
+        /// </summary>
+        void TryApplyFeastOnHeroes(MatchUnitState attacker, bool killedChampion, Vector3 feastPosition)
+        {
+            if (!killedChampion || attacker == null || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            if (GetPlayerRaceId(attacker.OwnerSlot) != GameIds.Races.Faceless)
+            {
+                return;
+            }
+
+            var level = GetTowerTrackLevel(attacker.OwnerSlot, FacelessTowerTrackRules.FeastOnHeroesTrackIndex);
+            if (level <= 0)
+            {
+                return;
+            }
+
+            var radius = FacelessTowerTrackRules.FeastOnHeroesRadius;
+            var radiusSq = radius * radius;
+            _nearbyBuffer.Clear();
+            _spatialGrid.Rebuild(_units);
+            _spatialGrid.Query(feastPosition, radius, _nearbyBuffer);
+            for (var i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                var unit = _nearbyBuffer[i];
+                if (unit == null
+                    || !unit.IsAlive
+                    || unit.OwnerSlot != attacker.OwnerSlot
+                    || !FacelessServantRules.IsServant(unit.BonusSlot))
+                {
+                    continue;
+                }
+
+                if (HorizontalDistanceSq(feastPosition, unit.WorldPosition) > radiusSq)
+                {
+                    continue;
+                }
+
+                unit.HeroFeastRemainingSeconds = FacelessTowerTrackRules.FeastOnHeroesDurationSeconds;
+                unit.HeroFeastDamagePercent = Mathf.Max(
+                    unit.HeroFeastDamagePercent,
+                    FacelessTowerTrackRules.FeastOnHeroesDamagePercent);
+                unit.HeroFeastMaxHpPercent = Mathf.Max(
+                    unit.HeroFeastMaxHpPercent,
+                    FacelessTowerTrackRules.FeastOnHeroesMaxHpPercent);
+                unit.CurrentHp = Mathf.Min(
+                    GetEffectiveMaxHp(unit),
+                    unit.CurrentHp + unit.Stats.MaxHp * FacelessTowerTrackRules.FeastOnHeroesMaxHpPercent);
+            }
+        }
+
+        /// <summary>
+        /// Spawns a servant exactly at <paramref name="worldPosition"/> (used by track 4 "Рой на
+        /// месте гибели"). Project distances back onto the owner's lane route.
+        /// </summary>
+        public MatchUnitState SummonServantAt(int ownerSlot, string laneId, Vector3 worldPosition)
+        {
+            if (!_routes.TryGetRoute(ownerSlot, laneId, out var route))
+            {
+                return null;
+            }
+
+            var distance = route.ProjectDistance(worldPosition);
+            var spine = route.ResolveSpawnPosition(distance, default);
+            var offset = worldPosition - spine;
+            try
+            {
+                return SpawnUnit(
+                    ownerSlot,
+                    laneId,
+                    FacelessServantRules.Role,
+                    FacelessServantRules.BuildStats(),
+                    distance,
+                    formationOffset: offset,
+                    bonusSlot: BonusKitRules.SummonBonusSlot);
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Slot 5 — on-kill attack-speed stacks (Hungering Flight). Fires only for the
+        /// Flying slot so no other unit type stacks from the on-kill trigger.
         /// </summary>
         void TryApplyFeastStacks(MatchUnitState attacker, float healAmount, int expectedBonusSlot)
         {
@@ -3415,9 +3558,66 @@ namespace Game.Gameplay.Combat
         void TryApplyHungeringFlight(MatchUnitState attacker) =>
             TryApplyFeastStacks(attacker, 0f, BonusKitRules.BonusSlotForRole(UnitRole.Flying));
 
-        /// <summary>Slot 6 Super — Feast on the Fallen: on kill +80 HP and +10% attack speed, stacks up to 3.</summary>
-        void TryApplyFeastOnTheFallen(MatchUnitState attacker) =>
-            TryApplyFeastStacks(attacker, FacelessBonusUnitRules.FeastHealFlat, BonusKitRules.BonusSlotForRole(UnitRole.Super));
+        /// <summary>
+        /// Slot 6 Super — Devour Servant (Plan0909 Фаза 4): while below the HP threshold the Super
+        /// automatically eats the nearest living own servant (heal of the servant's max HP) and gains a
+        /// short attack-speed buff. Runs every tick on a small cooldown; waits when no servant is near.
+        /// </summary>
+        void TickDevourServant(MatchUnitState super)
+        {
+            if (super == null
+                || !super.IsAlive
+                || !FacelessBonusUnitRules.IsFacelessBonus(
+                    super.BonusSlot,
+                    super.Role,
+                    GetPlayerRaceId(super.OwnerSlot))
+                || super.BonusSlot != BonusKitRules.BonusSlotForRole(UnitRole.Super)
+                || super.DevourCooldownRemaining > 0f
+                || super.CurrentHp >= GetEffectiveMaxHp(super) * FacelessBonusUnitRules.DevourHpThreshold)
+            {
+                return;
+            }
+
+            var target = FindNearestOwnServant(super);
+            if (target == null)
+            {
+                return;
+            }
+
+            RemoveUnit(target);
+            HealUnit(super, target.Stats.MaxHp);
+            super.FeastAttackSpeedPerStack = FacelessBonusUnitRules.DevourAttackSpeedBonus;
+            super.FeastStacks = Mathf.Min(FacelessBonusUnitRules.MaxFeastStacks, super.FeastStacks + 1);
+            super.FeastRemainingSeconds = FacelessBonusUnitRules.DevourBuffSeconds;
+            super.DevourCooldownRemaining = FacelessBonusUnitRules.DevourCooldownSeconds;
+        }
+
+        /// <summary>Nearest living servant (<see cref="BonusKitRules.SummonBonusSlot"/>) owned by the same slot, or null.</summary>
+        MatchUnitState FindNearestOwnServant(MatchUnitState super)
+        {
+            MatchUnitState nearest = null;
+            var bestDistanceSqr = float.MaxValue;
+            foreach (var candidate in _units)
+            {
+                if (candidate.OwnerSlot != super.OwnerSlot
+                    || candidate.BonusSlot != BonusKitRules.SummonBonusSlot
+                    || !candidate.IsAlive)
+                {
+                    continue;
+                }
+
+                var dx = candidate.WorldPosition.x - super.WorldPosition.x;
+                var dz = candidate.WorldPosition.z - super.WorldPosition.z;
+                var distanceSqr = dx * dx + dz * dz;
+                if (distanceSqr < bestDistanceSqr)
+                {
+                    bestDistanceSqr = distanceSqr;
+                    nearest = candidate;
+                }
+            }
+
+            return nearest;
+        }
 
         /// <summary>
         /// Slot 4 Siege — Death Explosion: on death deal 10% of the owner's max HP to enemy
@@ -4062,35 +4262,26 @@ namespace Game.Gameplay.Combat
             return revived;
         }
 
-        public MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor, UnitRole role, float statScale)
+        public MatchUnitState SummonMinion(int ownerSlot, MatchUnitState anchor)
         {
-            if (anchor == null || statScale <= 0f)
+            if (anchor == null)
             {
                 return null;
             }
 
-            var source = FindMinionSourceStats(ownerSlot, role, anchor);
-            var stats = new UnitCombatStats(
-                role,
-                source.MaxHp * statScale,
-                source.Armor * statScale,
-                source.DamageMin * statScale,
-                source.DamageMax * statScale,
-                source.AttackSpeed,
-                source.AttackRange,
-                source.MoveSpeed,
-                goldBounty: 0,
-                maxMana: 0f);
+            var stats = FacelessServantRules.BuildStats();
 
             try
             {
-                return SpawnUnit(
+                var unit = SpawnUnit(
                     ownerSlot,
                     anchor.LaneId,
-                    role,
+                    FacelessServantRules.Role,
                     stats,
                     anchor.MarchProgressDistance,
-                    new Vector3(1.2f, 0f, 0f));
+                    new Vector3(1.2f, 0f, 0f),
+                    bonusSlot: BonusKitRules.SummonBonusSlot);
+                return unit;
             }
             catch (InvalidOperationException)
             {
@@ -4107,21 +4298,42 @@ namespace Game.Gameplay.Combat
         }
 
         /// <summary>
-        /// Minion baseline: a living friendly unit of the same role (canon ×0.5 of the race Melee),
-        /// falling back to the anchor stats when none is on the field.
+        /// Faceless main-building skill (slot 10) — "Призыв глубин": spawns the requested number of
+        /// servants at the barracks rally of the given lane (Plan0909, Фаза 3). Returns count spawned.
         /// </summary>
-        UnitCombatStats FindMinionSourceStats(int ownerSlot, UnitRole role, MatchUnitState anchor)
+        public int SummonServantWave(int ownerSlot, string laneId, int count)
         {
-            for (var i = 0; i < _units.Count; i++)
+            if (count <= 0 || !_routes.TryGetRoute(ownerSlot, laneId, out var route))
             {
-                var unit = _units[i];
-                if (unit != null && unit.IsAlive && unit.OwnerSlot == ownerSlot && unit.Role == role)
+                return 0;
+            }
+
+            var stats = FacelessServantRules.BuildStats();
+            var spawned = 0;
+            for (var i = 0; i < count; i++)
+            {
+                try
                 {
-                    return unit.Stats;
+                    var distance = CombatFormationRules.BarracksSpawnForwardClearance
+                                   + i * CombatFormationRules.SpawnRowDepth * 0.12f;
+                    var offset = CombatFormationRules.BuildSpawnFormationOffset(route.Path, _random, i);
+                    SpawnUnit(
+                        ownerSlot,
+                        laneId,
+                        FacelessServantRules.Role,
+                        stats,
+                        distance,
+                        formationOffset: offset,
+                        bonusSlot: BonusKitRules.SummonBonusSlot);
+                    spawned++;
+                }
+                catch (InvalidOperationException)
+                {
+                    break;
                 }
             }
 
-            return anchor.Stats;
+            return spawned;
         }
 
         public bool HasActiveHealZone(int casterUnitId)

@@ -124,3 +124,19 @@ Siege BONUS — пеший: `AbilityAnimRules.ResolveAttackClipSeconds(Siege, bo
 Нижняя context-strip / inspector: при `unit.BonusSlot` (1–10, `MatchesUnit`) → `TryGetBonusPortrait` +
 title `«Роль · усиленный»` / `«Роль · ветеран»`. Казармы (deploy героя) и main (титан) показывают
 ветеранский портрет, когда пик совпадает со слотом.
+
+### Два окна и сетевой state (PRE-001)
+
+Оверлей выбора — **два окна**, оба появляются вместе, когда камера долетела до базы (переход
+Start→Early, `MatchController.BeginEarlyPhase`):
+
+- **Панель 0 (авто-фейт):** 1 случайный слот из доступных, read-only; **ролл происходит в этот
+  момент**, а не на старте матча (оверлей скрыт во время подлёта).
+- **Панель 1 (выбор):** подвыборка `BonusPickRules.OfferSize` (6) из оставшихся 11, игрок берёт 1.
+- Дедлайн **60 с** отсчитывается от открытия окон; по таймауту сервер заполняет оффер случайно.
+- Оба пика стакаются (`BonusPickSlot` + `BonusPickSlot2`).
+
+Детерминизм: `MatchConfig.AutoFateBonuses` по умолчанию `false` (bare-сетапы в тестах не роллят);
+прод-старт (`MatchConfig.FromSetup`, `MatchRuntime.StartMatch`) включает. `TrySetBonusPick` гейтится
+активным дедлайном (window open) + оффером. Снапшот v24: `BonusPickSlot`, `BonusPickSlot2`, оффер
+(byte length + byte значения), дедлайн; переживает reconnect/host migration.

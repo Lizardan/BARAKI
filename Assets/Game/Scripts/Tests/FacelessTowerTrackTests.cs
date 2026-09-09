@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Core;
 using Game.Gameplay.Combat;
 using Game.Gameplay.Data;
@@ -86,17 +87,150 @@ namespace Game.Tests
         }
 
         [Test]
-        public void UnnervingAim_AppliesArmorDebuff()
+        public void SwarmAtDeath_RegularUnitDeathSpawnsServant()
+        {
+            var seed = FindSeedThatProcs(FacelessTowerTrackRules.SwarmAtDeathChanceByLevel[2]);
+            var (controller, combat) = CreateFacelessCombat(seed);
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 3, 0, 0, 0, 0 });
+
+            var victim = Spawn(combat, 0, UnitRole.Melee);
+            var deathPosition = victim.WorldPosition;
+            var killer = Spawn(combat, 1, UnitRole.Melee);
+
+            combat.ApplyDamage(killer, victim, 10_000f, killer.OwnerSlot);
+
+            var servant = FindServant(combat.Units, 0);
+            Assert.IsNotNull(servant, "Track 5 swarm must spawn a servant after an ordinary unit dies");
+            Assert.AreEqual(BonusKitRules.SummonBonusSlot, servant.BonusSlot);
+            Assert.AreEqual(deathPosition.x, servant.WorldPosition.x, 0.1f);
+            Assert.AreEqual(deathPosition.z, servant.WorldPosition.z, 0.1f);
+            Assert.IsTrue(HasCorpse(combat, victim.UnitId) == false, "The raised corpse must be consumed");
+        }
+
+        [Test]
+        public void SwarmAtDeath_NoLevel_LeavesCorpseNoServant()
         {
             var (controller, combat) = CreateFacelessCombat();
-            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 2, 0, 0, 0, 0 });
+            controller.Players[0].SetTowerTrackLevels(new int[9]);
 
-            var attacker = Spawn(combat, 0, UnitRole.Ranged);
-            var target = Spawn(combat, 1, UnitRole.Melee);
+            var victim = Spawn(combat, 0, UnitRole.Melee);
+            var killer = Spawn(combat, 1, UnitRole.Melee);
 
-            combat.ResolveProjectileImpact(UnitShot(attacker, target));
-            Assert.Greater(target.ArmorDebuffRemainingSeconds, 0f);
-            Assert.AreEqual(FacelessTowerTrackRules.UnnervingAimArmorDebuffByLevel[1], target.ArmorDebuffAmount);
+            combat.ApplyDamage(killer, victim, 10_000f, killer.OwnerSlot);
+
+            Assert.IsNull(FindServant(combat.Units, 0), "No track level must not spawn a servant");
+            Assert.IsTrue(HasCorpse(combat, victim.UnitId), "Without the proc the corpse stays");
+        }
+
+        [Test]
+        public void SwarmAtDeath_ServantDeathDoesNotChain()
+        {
+            var seed = FindSeedThatProcs(FacelessTowerTrackRules.SwarmAtDeathChanceByLevel[2]);
+            var (controller, combat) = CreateFacelessCombat(seed);
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 3, 0, 0, 0, 0 });
+
+            var anchor = Spawn(combat, 0, UnitRole.Melee);
+            var servant = combat.SummonMinion(0, anchor);
+            var killer = Spawn(combat, 1, UnitRole.Melee);
+
+            combat.ApplyDamage(killer, servant, 10_000f, killer.OwnerSlot);
+
+            var count = CountServants(combat.Units, 0);
+            Assert.AreEqual(0, count, "A dead servant must not chain-spawn more servants");
+        }
+
+        [Test]
+        public void SwarmAtDeath_ChampionDeathDoesNotSpawnServant()
+        {
+            var seed = FindSeedThatProcs(FacelessTowerTrackRules.SwarmAtDeathChanceByLevel[2]);
+            var (controller, combat) = CreateFacelessCombat(seed);
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 3, 0, 0, 0, 0 });
+
+            var hero = SpawnHero(combat, 0, 1);
+            var killer = Spawn(combat, 1, UnitRole.Melee);
+
+            combat.ApplyDamage(killer, hero, 10_000f, killer.OwnerSlot);
+
+            Assert.AreEqual(0, CountServants(combat.Units, 0), "Champion deaths must not spawn servants");
+        }
+
+        [Test]
+        public void FeastOnHeroes_HeroKillBuffsNearbyServants()
+        {
+            var (controller, combat) = CreateFacelessCombat();
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 0, 0, 2, 0, 0 });
+
+            var killer = Spawn(combat, 0, UnitRole.Melee);
+            var hero = SpawnHero(combat, 1, 1);
+            hero.WorldPosition = killer.WorldPosition + new Vector3(2f, 0f, 0f);
+            var servant = combat.SummonMinion(0, killer);
+
+            combat.ApplyDamage(killer, hero, 10_000f, killer.OwnerSlot);
+
+            Assert.IsNotNull(servant);
+            Assert.Greater(servant.HeroFeastRemainingSeconds, 0f);
+            Assert.AreEqual(FacelessTowerTrackRules.FeastOnHeroesDamagePercent, servant.HeroFeastDamagePercent);
+            Assert.AreEqual(FacelessTowerTrackRules.FeastOnHeroesMaxHpPercent, servant.HeroFeastMaxHpPercent);
+        }
+
+        [Test]
+        public void FeastOnHeroes_NonChampionKillDoesNotBuff()
+        {
+            var (controller, combat) = CreateFacelessCombat();
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 0, 0, 2, 0, 0 });
+
+            var killer = Spawn(combat, 0, UnitRole.Melee);
+            var victim = Spawn(combat, 1, UnitRole.Melee);
+            victim.WorldPosition = killer.WorldPosition + new Vector3(2f, 0f, 0f);
+            var servant = combat.SummonMinion(0, killer);
+
+            combat.ApplyDamage(killer, victim, 10_000f, killer.OwnerSlot);
+
+            Assert.AreEqual(0f, servant.HeroFeastRemainingSeconds);
+            Assert.AreEqual(0f, servant.HeroFeastDamagePercent);
+        }
+
+        [Test]
+        public void FeastOnHeroes_ServantOutOfRadiusNotBuffed()
+        {
+            var (controller, combat) = CreateFacelessCombat();
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 0, 0, 2, 0, 0 });
+
+            var killer = Spawn(combat, 0, UnitRole.Melee);
+            var hero = SpawnHero(combat, 1, 1);
+            hero.WorldPosition = killer.WorldPosition + new Vector3(2f, 0f, 0f);
+            var farServant = combat.SummonMinion(0, killer);
+            farServant.WorldPosition = hero.WorldPosition + new Vector3(FacelessTowerTrackRules.FeastOnHeroesRadius + 10f, 0f, 0f);
+
+            combat.ApplyDamage(killer, hero, 10_000f, killer.OwnerSlot);
+
+            Assert.AreEqual(0f, farServant.HeroFeastRemainingSeconds);
+            Assert.AreEqual(0f, farServant.HeroFeastDamagePercent);
+        }
+
+        [Test]
+        public void FeastOnHeroes_BuffDecaysThenExpires()
+        {
+            var (controller, combat) = CreateFacelessCombat();
+            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 0, 0, 2, 0, 0 });
+
+            var killer = Spawn(combat, 0, UnitRole.Melee);
+            var hero = SpawnHero(combat, 1, 1);
+            hero.WorldPosition = killer.WorldPosition + new Vector3(2f, 0f, 0f);
+            var servant = combat.SummonMinion(0, killer);
+
+            combat.ApplyDamage(killer, hero, 10_000f, killer.OwnerSlot);
+
+            var hpAfterBuff = servant.CurrentHp;
+            Assert.Greater(hpAfterBuff, FacelessServantRules.MaxHp + 0.1f, "Feast must raise effective max HP");
+
+            combat.Tick(1f);
+            Assert.Less(servant.CurrentHp, hpAfterBuff, "Feast must decay max HP as life damage");
+
+            combat.Tick(FacelessTowerTrackRules.FeastOnHeroesDurationSeconds + 1f);
+            Assert.AreEqual(0f, servant.HeroFeastRemainingSeconds);
+            Assert.AreEqual(0f, servant.HeroFeastDamagePercent);
+            Assert.AreEqual(0f, servant.HeroFeastMaxHpPercent);
         }
 
         [Test]
@@ -110,24 +244,6 @@ namespace Game.Tests
 
             var expectedMultiplier = 1f + FacelessTowerTrackRules.FrenzyAttackSpeedPercentByLevel[1];
             Assert.AreEqual(1f * expectedMultiplier, modified.AttackSpeed, 0.001f);
-        }
-
-        [Test]
-        public void SplashOfTheDeep_ProjectileTriggersSplash()
-        {
-            var (controller, combat) = CreateFacelessCombat();
-            controller.Players[0].SetTowerTrackLevels(new[] { 0, 0, 0, 0, 0, 0, 2, 0, 0 });
-
-            var attacker = Spawn(combat, 0, UnitRole.Caster);
-            var target = Spawn(combat, 1, UnitRole.Melee);
-            var nearby = Spawn(combat, 1, UnitRole.Melee);
-            nearby.WorldPosition = target.WorldPosition + new Vector3(0.5f, 0f, 0f);
-
-            var hpBefore = nearby.CurrentHp;
-            combat.ResolveProjectileImpact(UnitShot(attacker, target));
-            var loss = hpBefore - nearby.CurrentHp;
-
-            Assert.Greater(loss, 0f, "Splash of the Deep must damage nearby enemies");
         }
 
         [Test]
@@ -196,19 +312,72 @@ namespace Game.Tests
                 isHero: false,
                 heroSlot: 0);
 
-        static CombatProjectileState UnitShot(MatchUnitState attacker, MatchUnitState target) =>
-            new(
-                projectileId: NextId(),
-                attacker.UnitId,
-                target.UnitId,
-                attacker.OwnerSlot,
-                attacker.Role,
-                GameIds.Races.Faceless,
-                rawDamage: 10f,
-                flightDuration: 0.01f,
-                startPosition: attacker.WorldPosition,
-                targetPosition: target.WorldPosition,
-                isParabolic: false);
+        static MatchUnitState SpawnHero(MatchCombatSystem combat, int ownerSlot, int heroSlot)
+        {
+            var stats = new UnitCombatStats(UnitRole.Hero, 500f, 0f, 10f, 10f, 1f, 1.5f, 3.5f, 100);
+            return combat.SpawnUnit(
+                ownerSlot,
+                GameIds.Lanes.Left,
+                UnitRole.Hero,
+                stats,
+                distanceAlongLane: 20f,
+                isHero: true,
+                heroSlot: heroSlot);
+        }
+
+        static MatchUnitState FindServant(IReadOnlyList<MatchUnitState> units, int ownerSlot)
+        {
+            for (var i = 0; i < units.Count; i++)
+            {
+                if (units[i].OwnerSlot == ownerSlot && FacelessServantRules.IsServant(units[i].BonusSlot))
+                {
+                    return units[i];
+                }
+            }
+
+            return null;
+        }
+
+        static int CountServants(IReadOnlyList<MatchUnitState> units, int ownerSlot)
+        {
+            var count = 0;
+            for (var i = 0; i < units.Count; i++)
+            {
+                if (units[i].OwnerSlot == ownerSlot && FacelessServantRules.IsServant(units[i].BonusSlot))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        static bool HasCorpse(MatchCombatSystem combat, int unitId)
+        {
+            for (var i = 0; i < combat.Corpses.Count; i++)
+            {
+                if (combat.Corpses[i].UnitId == unitId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static int FindSeedThatProcs(float chance)
+        {
+            for (var seed = 0; seed < 10_000; seed++)
+            {
+                if (BonusKitRules.RollProc(new System.Random(seed), chance))
+                {
+                    return seed;
+                }
+            }
+
+            Assert.Fail("No seed produced a proc for chance " + chance);
+            return 0;
+        }
 
         static CombatProjectileState BuildingShot(
             int ownerSlot,
@@ -239,6 +408,13 @@ namespace Game.Tests
             controller.StartMatch(new MatchConfig(
                 playerCount: 2,
                 raceIds: new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }));
+            // Auto-fate is disabled in this bare config; the clear is a defensive "no bonus" baseline.
+            foreach (var player in controller.Players)
+            {
+                player.BonusPickSlot = BonusPickRules.NoneSlot;
+                player.BonusPickSlot2 = BonusPickRules.NoneSlot;
+            }
+
             var combat = new MatchCombatSystem();
             combat.Reset(controller.Players, controller.Graph, seed);
             return (controller, combat);

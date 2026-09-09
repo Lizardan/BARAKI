@@ -6,6 +6,9 @@ namespace Game.Gameplay.Match
 {
     /// <summary>
     /// Pure rules for the post-race-pick bonus overlay (PRE-001).
+    /// Two windows: the left shows an auto-picked bonus (chosen for the player at match start),
+    /// the right offers a random subset of <see cref="OfferSize"/> slots out of the remaining
+    /// <see cref="SlotCount"/> - 1. The player picks one from the offer; both bonuses stack.
     /// See <c>GameDesign/Bonuses.md</c>.
     /// </summary>
     public static class BonusPickRules
@@ -16,8 +19,14 @@ namespace Game.Gameplay.Match
         /// <summary>Overlay duration in seconds; match keeps running (Bonuses.md).</summary>
         public const float OverlayDurationSeconds = 60f;
 
-        /// <summary>Exactly one bonus per player.</summary>
-        public const int MaxPicksPerPlayer = 1;
+        /// <summary>Two bonuses per player: one auto-fate pick, one choice from the offered subset.</summary>
+        public const int MaxPicksPerPlayer = 2;
+
+        /// <summary>Panels of the overlay (left = auto, right = choice).</summary>
+        public const int PickPanelCount = 2;
+
+        /// <summary>Random slots revealed in the second (choice) window, out of the remaining 11.</summary>
+        public const int OfferSize = 6;
 
         /// <summary>Slot index meaning "nothing picked yet" (reserved).</summary>
         public const int NoneSlot = 0;
@@ -100,7 +109,7 @@ namespace Game.Gameplay.Match
                     3 => "Call of the Abyss",
                     4 => "Death Explosion",
                     5 => "Hungering Flight",
-                    6 => "Feast on the Fallen",
+                    6 => "Поедание прислужника",
                     7 => "Ancient Mantle",
                     8 => "Area of Miss",
                     9 => "Feast Zone",
@@ -138,10 +147,10 @@ namespace Game.Gameplay.Match
                 {
                     1 => "Древние melee: on-hit 15% — лечение 50% от нанесённого урона (вампиризм).",
                     2 => "Древние ranged: on-hit 15% — дот 3 урона/с в течение 3 с.",
-                    3 => "Древние caster: при добивании врага призывает мини-меле (статы ×0.5).",
+                    3 => "Древние caster: при добивании врага призывает прислужника (фиксированный servant-профиль).",
                     4 => "Древние siege: при смерти взрыв — 10% макс. HP вражеским юнитам в радиусе 3.",
                     5 => "Древние flying: при убийстве +15% скорости атаки на 3 с (стаки до 3).",
-                    6 => "Древние super: при убийстве +80 HP и +10% скорости атаки на 3 с (стаки до 3).",
+                    6 => "Древние super: при HP<50% съедает ближайшего прислужника — +макс. HP и +15% скорости атаки на 5 с (КД 3 с).",
                     7 => "Ветеран-король: HP ×1.4, урон ×1.35, +2 брони. Ульта «Ancient Mantle»: сам герой +50% урона и +2 брони на 8 с, AoE-удар +30%. Morale +15% урона.",
                     8 => "Ветеран-колдун: HP ×1.4, урон ×1.35, +2 брони. «Area of Miss»: враги в радиусе 5 на 4 с промахиваются. Morale +15% скорости атаки.",
                     9 => "Ветеран-берсерк: HP ×1.4, урон ×1.35, +2 брони. «Feast Zone»: зона 10 с следует за героем, союзники внутри лечатся на 30% от урона. Morale +15% брони.",
@@ -184,12 +193,81 @@ namespace Game.Gameplay.Match
 
             return random.Next(1, SlotCount + 1);
         }
+
+        /// <summary>
+        /// Random subset of distinct available slots for the second (choice) window.
+        /// Excludes <paramref name="excludeSlot"/> (the auto pick) so bonuses never repeat.
+        /// </summary>
+        public static int[] BuildOffer(Random random, string raceId, int excludeSlot, int count = OfferSize)
+        {
+            if (random == null)
+            {
+                throw new ArgumentNullException(nameof(random));
+            }
+
+            var pool = new List<int>(SlotCount);
+            for (var slot = 1; slot <= SlotCount; slot++)
+            {
+                if (slot == excludeSlot || !IsSlotAvailable(slot, raceId))
+                {
+                    continue;
+                }
+
+                pool.Add(slot);
+            }
+
+            count = Math.Min(count, pool.Count);
+            var offer = new int[count];
+            for (var i = 0; i < count; i++)
+            {
+                var index = random.Next(0, pool.Count);
+                offer[i] = pool[index];
+                pool.RemoveAt(index);
+            }
+
+            return offer;
+        }
+
+        /// <summary>True when <paramref name="bonusSlot"/> is part of the offered subset.</summary>
+        public static bool IsSlotInOffer(int[] offer, int bonusSlot)
+        {
+            if (offer == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < offer.Length; i++)
+            {
+                if (offer[i] == bonusSlot)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Random slot from the offer (timeout resolution).</summary>
+        public static int GetRandomFromOffer(int[] offer, Random random)
+        {
+            if (offer == null || offer.Length == 0)
+            {
+                throw new ArgumentException("Offer must not be empty.", nameof(offer));
+            }
+
+            if (random == null)
+            {
+                throw new ArgumentNullException(nameof(random));
+            }
+
+            return offer[random.Next(0, offer.Length)];
+        }
     }
 
     /// <summary>Pure rules for replicated bonus picks (server authoritative).</summary>
     public static class BonusPickNetworkRules
     {
-        public static bool TryApplyPick(int[] picks, int playerSlot, int bonusSlot)
+        public static bool TryApplyPick(int[] picks, int[] offer, int playerSlot, int bonusSlot)
         {
             if (picks == null)
             {
@@ -206,7 +284,13 @@ namespace Game.Gameplay.Match
                 return false;
             }
 
-            // Exactly one pick per player — reject a second pick.
+            // The player may only choose one of the slots they were offered.
+            if (!BonusPickRules.IsSlotInOffer(offer, bonusSlot))
+            {
+                return false;
+            }
+
+            // Exactly one choice per player in the second window.
             if (picks[playerSlot] != BonusPickRules.NoneSlot)
             {
                 return false;
@@ -217,11 +301,10 @@ namespace Game.Gameplay.Match
         }
 
         /// <summary>
-        /// Randomly fills all slots that did not pick before the deadline.
-        /// Pass <paramref name="raceIds"/> so races with a partial kit (Faceless) only roll
-        /// slots that actually have mechanics.
+        /// Randomly fills all slots that did not pick before the deadline from that player's own
+        /// offered subset (never rolls outside it).
         /// </summary>
-        public static void FillTimeoutPicks(int[] picks, Random random, IReadOnlyList<string> raceIds = null)
+        public static void FillTimeoutPicks(int[] picks, int[][] offers, Random random)
         {
             if (picks == null)
             {
@@ -237,10 +320,8 @@ namespace Game.Gameplay.Match
             {
                 if (picks[slot] == BonusPickRules.NoneSlot)
                 {
-                    var raceId = raceIds != null && slot < raceIds.Count
-                        ? raceIds[slot]
-                        : GameIds.Races.Human;
-                    picks[slot] = BonusPickRules.GetRandomSlot(random, raceId);
+                    var offer = offers != null && slot < offers.Length ? offers[slot] : null;
+                    picks[slot] = BonusPickRules.GetRandomFromOffer(offer, random);
                 }
             }
         }

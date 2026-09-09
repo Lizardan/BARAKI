@@ -20,9 +20,21 @@ namespace Game.Tests
         }
 
         [Test]
-        public void MaxPicks_IsOne()
+        public void MaxPicks_IsTwo()
         {
-            Assert.AreEqual(1, BonusPickRules.MaxPicksPerPlayer);
+            Assert.AreEqual(2, BonusPickRules.MaxPicksPerPlayer);
+        }
+
+        [Test]
+        public void OfferSize_IsSix()
+        {
+            Assert.AreEqual(6, BonusPickRules.OfferSize);
+        }
+
+        [Test]
+        public void PickPanelCount_IsTwo()
+        {
+            Assert.AreEqual(2, BonusPickRules.PickPanelCount);
         }
 
         [Test]
@@ -140,7 +152,8 @@ namespace Game.Tests
         public void TryApplyPick_AcceptsFirstValidPick()
         {
             var picks = new int[4];
-            Assert.IsTrue(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 1, bonusSlot: 5));
+            var offer = new[] { 5, 9, 11 };
+            Assert.IsTrue(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 1, bonusSlot: 5));
             Assert.AreEqual(5, picks[1]);
         }
 
@@ -148,17 +161,28 @@ namespace Game.Tests
         public void TryApplyPick_RejectsSecondPickForSamePlayer()
         {
             var picks = new int[4];
-            Assert.IsTrue(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 0, bonusSlot: 3));
-            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 0, bonusSlot: 7));
+            var offer = new[] { 3, 7, 1 };
+            Assert.IsTrue(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 0, bonusSlot: 3));
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 0, bonusSlot: 3));
             Assert.AreEqual(3, picks[0]);
+        }
+
+        [Test]
+        public void TryApplyPick_RejectsSlotOutsideOffer()
+        {
+            var picks = new int[4];
+            var offer = new[] { 4, 8 };
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 0, bonusSlot: 5));
+            Assert.AreEqual(0, picks[0]);
         }
 
         [Test]
         public void TryApplyPick_RejectsInvalidSlot()
         {
             var picks = new int[4];
-            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 0, bonusSlot: 0));
-            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 0, bonusSlot: 13));
+            var offer = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 0, bonusSlot: 0));
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 0, bonusSlot: 13));
             Assert.AreEqual(0, picks[0]);
         }
 
@@ -166,29 +190,78 @@ namespace Game.Tests
         public void TryApplyPick_RejectsOutOfRangePlayer()
         {
             var picks = new int[2];
-            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: -1, bonusSlot: 1));
-            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, playerSlot: 2, bonusSlot: 1));
+            var offer = new[] { 1, 2 };
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: -1, bonusSlot: 1));
+            Assert.IsFalse(BonusPickNetworkRules.TryApplyPick(picks, offer, playerSlot: 2, bonusSlot: 1));
         }
 
         [Test]
-        public void FillTimeoutPicks_FillsOnlyUnpickedSlots()
+        public void FillTimeoutPicks_FillsOnlyUnpickedSlots_FromOwnOffer()
         {
             var picks = new int[4];
             picks[1] = 5;
 
-            BonusPickNetworkRules.FillTimeoutPicks(picks, new Random(7));
+            var offers = new[]
+            {
+                new[] { 1, 2 },
+                new[] { 6, 5 },
+                new[] { 7, 8 },
+                new[] { 9, 10 },
+            };
+            BonusPickNetworkRules.FillTimeoutPicks(picks, offers, new Random(7));
 
             Assert.AreEqual(5, picks[1]);
-            Assert.IsTrue(BonusPickRules.IsValidSlot(picks[0]));
-            Assert.IsTrue(BonusPickRules.IsValidSlot(picks[2]));
-            Assert.IsTrue(BonusPickRules.IsValidSlot(picks[3]));
+            Assert.IsTrue(BonusPickRules.IsSlotInOffer(offers[0], picks[0]));
+            Assert.IsTrue(BonusPickRules.IsSlotInOffer(offers[2], picks[2]));
+            Assert.IsTrue(BonusPickRules.IsSlotInOffer(offers[3], picks[3]));
         }
 
         [Test]
         public void FillTimeoutPicks_ThrowsOnNullRandom()
         {
             Assert.Throws<ArgumentNullException>(
-                () => BonusPickNetworkRules.FillTimeoutPicks(new int[2], null));
+                () => BonusPickNetworkRules.FillTimeoutPicks(new int[2], new[] { new[] { 1 } }, null));
+        }
+
+        [Test]
+        public void BuildOffer_ReturnsOfferSizeDistinctSlotsExcludingAuto()
+        {
+            var offer = BonusPickRules.BuildOffer(new Random(42), GameIds.Races.Human, excludeSlot: 3);
+
+            Assert.AreEqual(BonusPickRules.OfferSize, offer.Length);
+            Assert.IsFalse(BonusPickRules.IsSlotInOffer(offer, 3), "auto pick must not be offered");
+            var seen = new bool[BonusPickRules.SlotCount + 1];
+            foreach (var slot in offer)
+            {
+                Assert.IsTrue(BonusPickRules.IsValidSlot(slot), $"invalid slot {slot}");
+                Assert.IsFalse(seen[slot], $"duplicate slot {slot}");
+                seen[slot] = true;
+            }
+        }
+
+        [Test]
+        public void BuildOffer_RespectsPartialFacelessKit()
+        {
+            // All 12 Faceless slots are implemented, so the pool is 11 after the auto pick.
+            var offer = BonusPickRules.BuildOffer(new Random(11), GameIds.Races.Faceless, excludeSlot: 4);
+            Assert.AreEqual(BonusPickRules.OfferSize, offer.Length);
+            Assert.IsFalse(BonusPickRules.IsSlotInOffer(offer, 4));
+        }
+
+        [Test]
+        public void GetRandomFromOffer_ReturnsSlotInsideOffer()
+        {
+            var offer = new[] { 11, 12 };
+            for (var i = 0; i < 50; i++)
+            {
+                Assert.IsTrue(BonusPickRules.IsSlotInOffer(offer, BonusPickRules.GetRandomFromOffer(offer, new Random(i))));
+            }
+        }
+
+        [Test]
+        public void GetRandomFromOffer_ThrowsOnNullRandom()
+        {
+            Assert.Throws<ArgumentNullException>(() => BonusPickRules.GetRandomFromOffer(new[] { 1 }, null));
         }
 
         [Test]
@@ -199,7 +272,7 @@ namespace Game.Tests
             Assert.AreEqual("Call of the Abyss", BonusPickRules.GetSlotDisplayName(3, GameIds.Races.Faceless));
             Assert.AreEqual("Death Explosion", BonusPickRules.GetSlotDisplayName(4, GameIds.Races.Faceless));
             Assert.AreEqual("Hungering Flight", BonusPickRules.GetSlotDisplayName(5, GameIds.Races.Faceless));
-            Assert.AreEqual("Feast on the Fallen", BonusPickRules.GetSlotDisplayName(6, GameIds.Races.Faceless));
+            Assert.AreEqual("Поедание прислужника", BonusPickRules.GetSlotDisplayName(6, GameIds.Races.Faceless));
             Assert.AreEqual("Ancient Mantle", BonusPickRules.GetSlotDisplayName(7, GameIds.Races.Faceless));
             Assert.AreEqual("Area of Miss", BonusPickRules.GetSlotDisplayName(8, GameIds.Races.Faceless));
             Assert.AreEqual("Feast Zone", BonusPickRules.GetSlotDisplayName(9, GameIds.Races.Faceless));

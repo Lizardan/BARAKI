@@ -70,23 +70,39 @@ namespace Game.Tests
         }
 
         [Test]
-        public void CallOfTheAbyss_CasterBonus_SpawnsMiniMeleeOnKill()
+        public void CallOfTheAbyss_CasterBonus_SpawnsServantOnKill()
         {
             var combat = CreateFacelessCombat();
-            var allyMelee = Spawn(combat, 0, UnitRole.Melee);
             var caster = Spawn(combat, 0, UnitRole.Caster, bonusSlot: 3);
             var victim = Spawn(combat, 1, UnitRole.Melee);
 
             var before = combat.Units.Count;
             combat.ApplyDamage(caster, victim, 10_000f, caster.OwnerSlot);
 
-            Assert.AreEqual(before, combat.Units.Count, "victim is removed and replaced by a mini-melee");
+            Assert.AreEqual(before, combat.Units.Count, "victim is removed and replaced by a servant");
             var spawned = combat.Units[combat.Units.Count - 1];
             Assert.AreEqual(UnitRole.Melee, spawned.Role);
-            Assert.AreEqual(
-                allyMelee.Stats.MaxHp * FacelessBonusUnitRules.MiniMeleeStatScale,
-                spawned.Stats.MaxHp,
-                0.001f);
+            Assert.AreEqual(BonusKitRules.SummonBonusSlot, spawned.BonusSlot);
+            Assert.AreEqual(FacelessServantRules.MaxHp, spawned.Stats.MaxHp, 0.001f);
+            Assert.AreEqual(FacelessServantRules.DamageMin, spawned.Stats.DamageMin, 0.001f);
+            Assert.AreEqual(FacelessServantRules.DamageMax, spawned.Stats.DamageMax, 0.001f);
+            Assert.AreEqual(0, spawned.Stats.GoldBounty);
+        }
+
+        [Test]
+        public void CallOfTheAbyss_ConsumesSlainCorpse_NoDoubleRaise()
+        {
+            var combat = CreateFacelessCombat();
+            var caster = Spawn(combat, 0, UnitRole.Caster, bonusSlot: 3);
+            var victim = Spawn(combat, 1, UnitRole.Melee);
+
+            combat.ApplyDamage(caster, victim, 10_000f, caster.OwnerSlot);
+
+            for (var i = 0; i < combat.Corpses.Count; i++)
+            {
+                Assert.AreNotEqual(victim.UnitId, combat.Corpses[i].UnitId,
+                    "the slain corpse must be consumed by the servant summon (no double raise)");
+            }
         }
 
         [Test]
@@ -149,22 +165,105 @@ namespace Game.Tests
         }
 
         [Test]
-        public void FeastOnTheFallen_SuperBonus_HealsAndStacks()
+        public void DevourServant_SuperBelowHp_EatsNearestServantAndBuffs()
         {
             var combat = CreateFacelessCombat();
             var super = Spawn(combat, 0, UnitRole.Super, bonusSlot: 6);
-            super.CurrentHp = super.Stats.MaxHp * 0.5f;
+            super.CurrentHp = super.Stats.MaxHp * 0.4f;
+            super.WorldPosition = new Vector3(10f, 0f, 10f);
+
+            var farServant = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            farServant.WorldPosition = new Vector3(50f, 0f, 50f);
+            var nearServant = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            nearServant.WorldPosition = new Vector3(11f, 0f, 10f);
 
             var before = super.CurrentHp;
-            var victim = Spawn(combat, 1, UnitRole.Melee);
-            combat.ApplyDamage(super, victim, 10_000f, super.OwnerSlot);
+            combat.Tick(0.1f);
 
-            Assert.AreEqual(before + FacelessBonusUnitRules.FeastHealFlat, super.CurrentHp, 0.001f);
+            Assert.AreEqual(before + nearServant.Stats.MaxHp, super.CurrentHp, 0.001f,
+                "heal equals the eaten servant's max HP");
             Assert.AreEqual(1, super.FeastStacks);
-            Assert.AreEqual(
-                FacelessBonusUnitRules.FeastAttackSpeedPerStack,
-                super.FeastAttackSpeedPerStack,
-                0.001f);
+            Assert.AreEqual(FacelessBonusUnitRules.DevourAttackSpeedBonus, super.FeastAttackSpeedPerStack, 0.001f);
+            Assert.IsFalse(UnitsContains(combat, nearServant), "nearest servant is consumed");
+            Assert.IsTrue(UnitsContains(combat, farServant), "the far servant stays");
+        }
+
+        [Test]
+        public void DevourServant_Cooldown_BlocksRepeatedEats()
+        {
+            var combat = CreateFacelessCombat();
+            var super = Spawn(combat, 0, UnitRole.Super, bonusSlot: 6);
+            super.CurrentHp = super.Stats.MaxHp * 0.2f;
+
+            var first = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            first.WorldPosition = super.WorldPosition + Vector3.right;
+
+            combat.Tick(0.1f);
+            Assert.AreEqual(1, super.FeastStacks);
+
+            var hpAfterFirst = super.CurrentHp;
+            var second = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            second.WorldPosition = super.WorldPosition + Vector3.right * 2f;
+
+            combat.Tick(0.1f);
+            Assert.AreEqual(hpAfterFirst, super.CurrentHp, 0.001f, "cooldown blocks a second devour");
+            Assert.AreEqual(1, super.FeastStacks);
+            Assert.IsTrue(UnitsContains(combat, second), "second servant is not consumed while on cooldown");
+
+            combat.Tick(FacelessBonusUnitRules.DevourCooldownSeconds + 0.2f);
+            Assert.AreEqual(2, super.FeastStacks, "after the cooldown the super devours again");
+            Assert.IsFalse(UnitsContains(combat, second), "second servant consumed after the cooldown expires");
+        }
+
+        [Test]
+        public void DevourServant_HpAboveThreshold_NoDevour()
+        {
+            var combat = CreateFacelessCombat();
+            var super = Spawn(combat, 0, UnitRole.Super, bonusSlot: 6);
+            super.CurrentHp = super.Stats.MaxHp * 0.6f;
+
+            var servant = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            servant.WorldPosition = super.WorldPosition + Vector3.right;
+
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(0, super.FeastStacks);
+            Assert.IsTrue(UnitsContains(combat, servant), "servant stays when the super is above the threshold");
+        }
+
+        [Test]
+        public void DevourServant_NoServantNearby_Waits()
+        {
+            var combat = CreateFacelessCombat();
+            var super = Spawn(combat, 0, UnitRole.Super, bonusSlot: 6);
+            super.CurrentHp = super.Stats.MaxHp * 0.2f;
+            super.WorldPosition = new Vector3(10f, 0f, 10f);
+
+            var ownMelee = Spawn(combat, 0, UnitRole.Melee);
+            ownMelee.WorldPosition = super.WorldPosition + Vector3.right;
+
+            var before = super.CurrentHp;
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(before, super.CurrentHp, 0.001f);
+            Assert.AreEqual(0, super.FeastStacks);
+            Assert.IsTrue(UnitsContains(combat, ownMelee), "a regular melee is never a devour target");
+        }
+
+        [Test]
+        public void DevourServant_NeverFiresForHumanRace()
+        {
+            var combat = CreateHumanCombat();
+            var super = Spawn(combat, 0, UnitRole.Super, bonusSlot: 6);
+            super.CurrentHp = super.Stats.MaxHp * 0.2f;
+
+            var servant = Spawn(combat, 0, UnitRole.Melee, bonusSlot: BonusKitRules.SummonBonusSlot);
+            servant.WorldPosition = super.WorldPosition + Vector3.right;
+
+            combat.Tick(0.1f);
+
+            Assert.AreEqual(0, super.FeastStacks);
+            Assert.IsTrue(UnitsContains(combat, servant), "a Human super must never devour servants");
         }
 
         [Test]
@@ -265,6 +364,19 @@ namespace Game.Tests
         static int _nextTestId = 1;
 
         static int NextId() => _nextTestId++;
+
+        static bool UnitsContains(MatchCombatSystem combat, MatchUnitState unit)
+        {
+            foreach (var candidate in combat.Units)
+            {
+                if (candidate == unit)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         static MatchCombatSystem CreateFacelessCombat(int seed = 12345) =>
             CreateCombat(new[] { GameIds.Races.Faceless, GameIds.Races.Faceless }, seed);

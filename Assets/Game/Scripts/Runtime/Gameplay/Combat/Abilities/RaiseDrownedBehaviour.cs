@@ -5,8 +5,8 @@ namespace Game.Gameplay.Combat
 {
     /// <summary>
     /// Faceless caster slot 3 — Raise the Drowned / Поднять павшего: consumes ANY recent corpse in range
-    /// (enemy corpses included, unlike the Human Resurrect) and summons one melee minion under the caster's
-    /// control. Minion stats are a fraction of the race Melee baseline (×0.5 per canon); prefab scale (×0.67)
+    /// (enemy corpses included, unlike the Human Resurrect) and summons one servant under the caster's
+    /// control. Servant stats come from the fixed servant profile (Plan0909, Фаза 1); prefab scale ×1.25
     /// is a presenter concern.
     /// </summary>
     public sealed class RaiseDrownedBehaviour : UnitAbilityBehaviour
@@ -33,11 +33,7 @@ namespace Game.Gameplay.Combat
                 return false;
             }
 
-            var minion = ctx.Host.SummonMinion(
-                caster.OwnerSlot,
-                caster,
-                UnitRole.Melee,
-                FacelessSpellRules.MinionStatScale);
+            var minion = ctx.Host.SummonMinion(caster.OwnerSlot, caster);
             if (minion == null)
             {
                 return false;
@@ -58,6 +54,6 @@ namespace Game.Gameplay.Combat
         }
 
         public override string DescribeParams() =>
-            $"труп ≤{FacelessSpellRules.RaiseCorpseMaxAgeSeconds:0} с, мини-меле ×{FacelessSpellRules.MinionStatScale:0.##}";
+            $"труп ≤{FacelessSpellRules.RaiseCorpseMaxAgeSeconds:0} с, прислужник";
     }
 }

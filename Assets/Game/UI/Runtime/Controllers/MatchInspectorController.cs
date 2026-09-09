@@ -1057,17 +1057,17 @@ namespace Game.UI.Controllers
             var player = FindLocalPlayer(_matchRuntime?.Controller);
             var raceId = player != null ? player.RaceId : GameIds.Races.Human;
             var bonusSlot = player != null
-                ? BonusKitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role)
+                ? BonusKitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, player.BonusPickSlot2, role)
                 : 0;
             if (bonusSlot == 0 && player != null)
             {
                 if (role == UnitRole.Hero && heroSlot >= 1)
                 {
-                    bonusSlot = BonusKitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, heroSlot);
+                    bonusSlot = BonusKitRules.EffectiveBonusSlotForHero(player.BonusPickSlot, player.BonusPickSlot2, heroSlot);
                 }
                 else if (role == UnitRole.Titan)
                 {
-                    bonusSlot = BonusKitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot);
+                    bonusSlot = BonusKitRules.EffectiveBonusSlotForTitan(player.BonusPickSlot, player.BonusPickSlot2);
                 }
             }
 
@@ -1357,10 +1357,13 @@ namespace Game.UI.Controllers
                 // Keep the button enabled for hover tooltips; click is gated below.
                 SetCommand(
                     slot,
-                    MatchUpgradeLabelRules.FormatBuildingAbilityLockedButton(abilityId, requiredLevel),
+                    MatchUpgradeLabelRules.FormatBuildingAbilityLockedButton(
+                        abilityId,
+                        requiredLevel,
+                        player.RaceId),
                     enabled: true,
                     action: () => { },
-                    MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId));
+                    MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId, player.RaceId));
                 SetCommandLocked(slot, locked: true);
                 return;
             }
@@ -1376,10 +1379,11 @@ namespace Game.UI.Controllers
                     abilityId,
                     player.MainMana,
                     player.MainManaMax,
-                    BuildingAbilityRules.GetCooldownRemaining(player, abilityId)),
+                    BuildingAbilityRules.GetCooldownRemaining(player, abilityId),
+                    player.RaceId),
                 enabled: canCast || pending,
                 action: () => ToggleBuildingAbilityCast(abilityId),
-                MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId));
+                MatchUpgradeLabelRules.FormatBuildingAbilityTooltip(abilityId, player.RaceId));
             SetCommandLocked(slot, locked: false);
         }
 
