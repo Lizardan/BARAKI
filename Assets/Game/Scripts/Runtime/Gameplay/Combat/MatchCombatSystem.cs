@@ -1518,6 +1518,7 @@ namespace Game.Gameplay.Combat
             {
                 unit.FrozenRemainingSeconds = Mathf.Max(0f, unit.FrozenRemainingSeconds - deltaTime);
                 unit.CastLockRemainingSeconds = 0f;
+                ClearCastLockAnim(unit);
                 unit.BehaviorState = UnitBehaviorState.Frozen;
                 return;
             }
@@ -1532,6 +1533,12 @@ namespace Game.Gameplay.Combat
                 {
                     return;
                 }
+
+                // The authored anim override is only meaningful while the lock runs.
+                // Leaving it behind would keep the presenter stuck in the cast/attack
+                // animation even when the unit resumes marching (e.g. Faceless Hero2
+                // Smite/Shield after the clip finished).
+                ClearCastLockAnim(unit);
             }
 
             if (TickSuperAttackCommit(unit, deltaTime))
@@ -4127,6 +4134,17 @@ namespace Game.Gameplay.Combat
             {
                 unit.AttackSwingSerial++;
             }
+        }
+
+        /// <summary>
+        /// Clears the authored anim override left by <see cref="ApplyAbilityAnimLock"/>.
+        /// Must run when the cast lock ends (timeout or freeze), otherwise the presenter
+        /// keeps forcing the stale cast/attack animation while the unit marches.
+        /// </summary>
+        void ClearCastLockAnim(MatchUnitState unit)
+        {
+            unit.CastLockAnimState = null;
+            unit.CastLockAnimVariant = 0;
         }
 
         public void EmitCast(AbilityCastEvent cast)

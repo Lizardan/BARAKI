@@ -39,6 +39,41 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CastLockExpiry_ClearsAuthoredAnimOverride_SoHeroResumesWalk()
+        {
+            var controller = CreateEarlyMatch();
+            var hero = controller.Combat.SpawnUnit(
+                0, GameIds.Lanes.Left, UnitRole.Hero, HeroStats(),
+                distanceAlongLane: 20f, isHero: true, heroSlot: 2, level: 1);
+            var enemy = controller.Combat.SpawnUnit(
+                1, GameIds.Lanes.Left, UnitRole.Melee, MeleeStats(),
+                distanceAlongLane: 24f);
+            enemy.WorldPosition = hero.WorldPosition + new Vector3(2f, 0f, 0f);
+
+            controller.Combat.Tick(0.1f);
+            Assert.Greater(hero.CastLockRemainingSeconds, 0f, "Smite must start a cast lock.");
+            Assert.AreEqual(UnitBehaviorState.Attack, hero.BehaviorState);
+
+            // Mirror runtime host kits (e.g. Faceless Hero2 Priest/Smite assets) where the
+            // authored def carries a non-empty AnimState the presenter uses as override.
+            hero.CastLockAnimState = "Attack";
+            hero.CastLockAnimVariant = 1;
+
+            // Let the lock fully expire: the stale override must be cleared, otherwise the
+            // presenter keeps forcing the attack animation while the hero marches.
+            for (var i = 0; i < 15; i++)
+            {
+                controller.Combat.Tick(0.1f);
+            }
+
+            Assert.LessOrEqual(hero.CastLockRemainingSeconds, 0f, "Cast lock must fully expire.");
+            Assert.IsTrue(
+                string.IsNullOrEmpty(hero.CastLockAnimState),
+                "Authored anim override must be cleared when the cast lock ends.");
+            Assert.AreEqual(0, hero.CastLockAnimVariant);
+        }
+
+        [Test]
         public void HeroCastsHeal_OnInjuredAllyInRange()
         {
             var controller = CreateEarlyMatch();

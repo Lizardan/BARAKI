@@ -547,7 +547,11 @@ namespace Game.Gameplay.Match
 
         void RememberAbilityAnim(UnitVisual visual, MatchUnitState unit, MatchCombatSystem combat)
         {
-            if (!string.IsNullOrEmpty(unit.CastLockAnimState))
+            // Only an active cast lock may force the authored anim state. A stale
+            // CastLockAnimState (surviving an expired lock) would keep the unit stuck
+            // in the attack/cast animation while it marches.
+            if (unit.CastLockRemainingSeconds > 0f
+                && !string.IsNullOrEmpty(unit.CastLockAnimState))
             {
                 visual.HasAbilityAnim = true;
                 visual.AbilityAnimState = unit.CastLockAnimState;

@@ -103,6 +103,11 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
    Эффект умения применяется сразу; лок только на AI/анимацию.
    Когда cast-lock истекает в текущем тике, юнит **не** возвращается раньше времени: в том же тике
    кастует следующую готовую способность (кулдауны уже могли обнулиться — см. п.2).
+   Авторный override анимации (`CastLockAnimState`/`CastLockAnimVariant`) живёт **только** пока
+   лок активен: при истечении лока или заморозке `TickUnit` вызывает `ClearCastLockAnim`.
+   Презентер (`RememberAbilityAnim`) тоже игнорирует `CastLockAnimState` при `CastLockRemainingSeconds <= 0`
+   — иначе герой (напр. Faceless Hero2 Smite/Shield, Faceless Titan Rally) навсегда застревает
+   в анимации каста/атаки при движении.
 6. Пассивные ауры кастуются всегда через `QueryAura` (см. ниже).
 
 ## Анимации способностей (`AbilityAnimRules`)
