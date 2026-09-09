@@ -220,19 +220,14 @@ namespace Game.Tests
         }
 
         [Test]
-        public void IsSlotAvailable_FacelessGatesUnimplementedUniques()
+        public void IsSlotAvailable_FacelessAllTwelveSlotsImplemented()
         {
-            // Unit bonuses 1–6 (FACELESS-011) + veteran champions 7–10 (FACELESS-012).
-            for (var slot = 1; slot <= 10; slot++)
+            // Unit bonuses 1–6 (FACELESS-011) + veteran champions 7–10 (FACELESS-012)
+            // + race uniques 11–12 (FACELESS-013).
+            for (var slot = 1; slot <= 12; slot++)
             {
                 Assert.IsTrue(BonusPickRules.IsSlotAvailable(slot, GameIds.Races.Faceless), $"slot {slot}");
-            }
-
-            // Race uniques 11–12 (FACELESS-013) are not implemented yet → greyed out.
-            for (var slot = 11; slot <= 12; slot++)
-            {
-                Assert.IsFalse(BonusPickRules.IsSlotAvailable(slot, GameIds.Races.Faceless), $"slot {slot}");
-                Assert.IsFalse(BonusPickRules.IsSlotImplemented(slot, GameIds.Races.Faceless), $"slot {slot}");
+                Assert.IsTrue(BonusPickRules.IsSlotImplemented(slot, GameIds.Races.Faceless), $"slot {slot}");
             }
         }
 

@@ -32,6 +32,8 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.HumanPortraitBonusHeroes);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitUnits);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitHeroes);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitBonusUnits);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessPortraitBonusHeroes);
             BakeRace(catalog, GameIds.Races.Human);
             BakeRace(catalog, GameIds.Races.Faceless);
             EditorUtility.SetDirty(catalog);
@@ -54,6 +56,12 @@ namespace Game.Editor
             var heroPortraitFolder = raceId == GameIds.Races.Faceless
                 ? ContentAssetPaths.FacelessPortraitHeroes
                 : ContentAssetPaths.HumanPortraitHeroes;
+            var bonusUnitPortraitFolder = raceId == GameIds.Races.Faceless
+                ? ContentAssetPaths.FacelessPortraitBonusUnits
+                : ContentAssetPaths.HumanPortraitBonusUnits;
+            var bonusHeroPortraitFolder = raceId == GameIds.Races.Faceless
+                ? ContentAssetPaths.FacelessPortraitBonusHeroes
+                : ContentAssetPaths.HumanPortraitBonusHeroes;
 
             var roles = new[]
             {
@@ -95,22 +103,16 @@ namespace Game.Editor
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanPortrait",
                 $"{heroPortraitFolder}/Titan.png");
 
-            if (raceId != GameIds.Races.Human)
-            {
-                so.ApplyModifiedPropertiesWithoutUndo();
-                return;
-            }
-
-            BakeBonusPortraits(catalog, set, raceId);
+            BakeBonusPortraits(catalog, set, raceId, bonusUnitPortraitFolder);
 
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 1, "_hero1BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero1.png", BonusKitRules.BonusSlotForHeroSlot(1));
+                $"{bonusHeroPortraitFolder}/Hero1.png", BonusKitRules.BonusSlotForHeroSlot(1));
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 2, "_hero2BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero2.png", BonusKitRules.BonusSlotForHeroSlot(2));
+                $"{bonusHeroPortraitFolder}/Hero2.png", BonusKitRules.BonusSlotForHeroSlot(2));
             BakeChampion(catalog, set, raceId, UnitRole.Hero, 3, "_hero3BonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Hero3.png", BonusKitRules.BonusSlotForHeroSlot(3));
+                $"{bonusHeroPortraitFolder}/Hero3.png", BonusKitRules.BonusSlotForHeroSlot(3));
             BakeChampion(catalog, set, raceId, UnitRole.Titan, 0, "_titanBonusPortrait",
-                $"{ContentAssetPaths.HumanPortraitBonusHeroes}/Titan.png", BonusKitRules.TitanBonusSlot);
+                $"{bonusHeroPortraitFolder}/Titan.png", BonusKitRules.TitanBonusSlot);
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -118,7 +120,8 @@ namespace Game.Editor
         static void BakeBonusPortraits(
             UnitVisualCatalog catalog,
             SerializedProperty set,
-            string raceId)
+            string raceId,
+            string portraitFolder)
         {
             var portraitProps = new[]
             {
@@ -148,7 +151,7 @@ namespace Game.Editor
                     continue;
                 }
 
-                var path = $"{ContentAssetPaths.HumanPortraitBonusUnits}/{roles[i]}.png";
+                var path = $"{portraitFolder}/{roles[i]}.png";
                 var texture = RenderPrefabThumbnail(prefab, path);
                 set.FindPropertyRelative(portraitProps[i]).objectReferenceValue = texture;
             }
@@ -205,6 +208,14 @@ namespace Game.Editor
                 var instance = preview.InstantiatePrefabInScene(prefab);
                 instance.transform.position = Vector3.zero;
                 instance.transform.rotation = Quaternion.Euler(0f, YawDegrees, 0f);
+
+                // Runtime-only markers build their visuals in Awake, which never runs in the
+                // preview scene — invoke them so baked portraits match the in-game look
+                // (e.g. the Faceless bonus flame).
+                foreach (var flame in instance.GetComponentsInChildren<BonusFlameMarker>(true))
+                {
+                    flame.BuildFlame();
+                }
 
                 var bounds = CalculateBounds(instance);
                 var captured = CapturePreview(preview, bounds);

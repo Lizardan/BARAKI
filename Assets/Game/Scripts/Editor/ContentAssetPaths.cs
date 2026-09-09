@@ -95,6 +95,20 @@ namespace Game.Editor
         public const string FacelessHero3Abilities = FacelessHero3 + "/Abilities";
         public const string FacelessTitanAbilities = FacelessTitan + "/Abilities";
 
+        public const string FacelessBonusUnits = Faceless + "/BonusUnits";
+        public const string FacelessMeleeBonus = FacelessBonusUnits + "/Melee";
+        public const string FacelessRangedBonus = FacelessBonusUnits + "/Ranged";
+        public const string FacelessCasterBonus = FacelessBonusUnits + "/Caster";
+        public const string FacelessSiegeBonus = FacelessBonusUnits + "/Siege";
+        public const string FacelessFlyingBonus = FacelessBonusUnits + "/Flying";
+        public const string FacelessSuperBonus = FacelessBonusUnits + "/Super";
+        public const string FacelessMeleeBonusAbilities = FacelessMeleeBonus + "/Abilities";
+        public const string FacelessRangedBonusAbilities = FacelessRangedBonus + "/Abilities";
+        public const string FacelessCasterBonusAbilities = FacelessCasterBonus + "/Abilities";
+        public const string FacelessSiegeBonusAbilities = FacelessSiegeBonus + "/Abilities";
+        public const string FacelessFlyingBonusAbilities = FacelessFlyingBonus + "/Abilities";
+        public const string FacelessSuperBonusAbilities = FacelessSuperBonus + "/Abilities";
+
         public const string Shared = Root + "/Shared";
         public const string SharedSquads = Shared + "/Squads";
         public const string SharedUpgrades = Shared + "/Upgrades";
@@ -109,6 +123,8 @@ namespace Game.Editor
         public const string FacelessPortraits = PortraitRoot + "/Faceless";
         public const string FacelessPortraitUnits = FacelessPortraits + "/Units";
         public const string FacelessPortraitHeroes = FacelessPortraits + "/Heroes";
+        public const string FacelessPortraitBonusUnits = FacelessPortraits + "/BonusUnits";
+        public const string FacelessPortraitBonusHeroes = FacelessPortraits + "/BonusHeroes";
 
         public static string HumanHeroFolder(int slot) =>
             slot switch
@@ -286,8 +302,8 @@ namespace Game.Editor
         }
 
         /// <summary>
-        /// Faceless unit/hero folders. No bonus units nor buildings exist for the race yet —
-        /// only folders that will hold real assets are created.
+        /// Faceless unit/hero/bonus-unit folders. Only folders that will hold real assets
+        /// are created.
         /// </summary>
         public static void EnsureFacelessUnitFolders()
         {
@@ -309,9 +325,24 @@ namespace Game.Editor
             EnsureFolder(FacelessHero2Abilities);
             EnsureFolder(FacelessHero3Abilities);
             EnsureFolder(FacelessTitanAbilities);
+            EnsureFolder(FacelessBonusUnits);
+            EnsureFolder(FacelessMeleeBonus);
+            EnsureFolder(FacelessRangedBonus);
+            EnsureFolder(FacelessCasterBonus);
+            EnsureFolder(FacelessSiegeBonus);
+            EnsureFolder(FacelessFlyingBonus);
+            EnsureFolder(FacelessSuperBonus);
+            EnsureFolder(FacelessMeleeBonusAbilities);
+            EnsureFolder(FacelessRangedBonusAbilities);
+            EnsureFolder(FacelessCasterBonusAbilities);
+            EnsureFolder(FacelessSiegeBonusAbilities);
+            EnsureFolder(FacelessFlyingBonusAbilities);
+            EnsureFolder(FacelessSuperBonusAbilities);
             EnsureFolder(FacelessPortraits);
             EnsureFolder(FacelessPortraitUnits);
             EnsureFolder(FacelessPortraitHeroes);
+            EnsureFolder(FacelessPortraitBonusUnits);
+            EnsureFolder(FacelessPortraitBonusHeroes);
         }
     }
 }

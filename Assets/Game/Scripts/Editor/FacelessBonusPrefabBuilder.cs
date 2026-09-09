@@ -10,11 +10,13 @@ namespace Game.Editor
 {
     /// <summary>
     /// Builds Faceless bonus / veteran prefabs (slots 1–10) by cloning the base unit / hero / titan
-    /// prefab and reusing the SAME model, then attaching the blue <see cref="BonusFlameMarker"/>
-    /// above the head — the glowing "enhanced variant" cue (per design the Faceless bonus/veteran
-    /// units never get a separate mesh, only the head glow). Structure mirrors Humans'
-    /// <c>VeteranPrefabBuilder</c> (BonusUnits / BonusHeroes) so the two races stay uniform.
-    /// Balance and readable spells are seeded afterwards by Sync Balance / Seed Unit Abilities.
+    /// prefab and reusing the SAME model for now, then attaching the blue <see cref="BonusFlameMarker"/>
+    /// above the head — a temporary placeholder cue until dedicated bonus/new models for the Raceless
+    /// units land. By design every bonus unit owns a REPLACED (separate) model like Humans do, with
+    /// its own <c>Faceless_*_BONUS.controller</c> next to the prefab; the flame is only a stand-in.
+    /// Structure mirrors Humans' <c>VeteranPrefabBuilder</c> (BonusUnits / BonusHeroes) so the two
+    /// races stay uniform. Balance and readable spells are seeded afterwards by Sync Balance / Seed
+    /// Unit Abilities.
     /// </summary>
     public static class FacelessBonusPrefabBuilder
     {

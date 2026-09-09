@@ -112,8 +112,14 @@ namespace Game.Editor
             yield return AbilityKitDefaults.CreatePriestBonus();
             yield return AbilityKitDefaults.CreateTitanBonus();
 
-            // --- Faceless kits (FACELESS-012 / FACELESS-016): caster + champion veterans 7–10 ---
+            // --- Faceless kits (FACELESS-012 / FACELESS-016 / FACELESS-011): caster, champions 7–10, unit bonuses 1–6 ---
             yield return AbilityKitDefaults.CreateFacelessCaster();
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Melee);
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Ranged);
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Caster);
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Siege);
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Flying);
+            yield return AbilityKitDefaults.CreateFacelessBonus(UnitRole.Super);
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero1BonusSlot);
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero2BonusSlot);
             yield return AbilityKitDefaults.CreateVeteranKit(GameIds.Races.Faceless, BonusKitRules.Hero3BonusSlot);
@@ -135,6 +141,15 @@ namespace Game.Editor
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessHero2Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessHero3Abilities);
             ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessTitanAbilities);
+
+            // Bonus-unit marker def folders (slots 1–6, FACELESS-011).
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessBonusUnits);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessMeleeBonusAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessRangedBonusAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessCasterBonusAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessSiegeBonusAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessFlyingBonusAbilities);
+            ContentAssetPaths.EnsureFolder(ContentAssetPaths.FacelessSuperBonusAbilities);
         }
 
         /// <summary>"Holy Nova" -> "holy-nova" (ASCII, kebab-case).</summary>
@@ -258,6 +273,12 @@ namespace Game.Editor
             AbilityIds.AreaOfMiss => ContentAssetPaths.FacelessHero2Abilities,
             AbilityIds.FeastZone => ContentAssetPaths.FacelessHero3Abilities,
             AbilityIds.AuraOfHunger => ContentAssetPaths.FacelessTitanAbilities,
+            AbilityIds.FacelessHunger => ContentAssetPaths.FacelessMeleeBonusAbilities,
+            AbilityIds.FacelessTaint => ContentAssetPaths.FacelessRangedBonusAbilities,
+            AbilityIds.FacelessCallOfAbyss => ContentAssetPaths.FacelessCasterBonusAbilities,
+            AbilityIds.FacelessDeathExplosion => ContentAssetPaths.FacelessSiegeBonusAbilities,
+            AbilityIds.FacelessHungeringFlight => ContentAssetPaths.FacelessFlyingBonusAbilities,
+            AbilityIds.FacelessFeast => ContentAssetPaths.FacelessSuperBonusAbilities,
 
             AbilityIds.AuraHpRegen => ContentAssetPaths.HumanSiegeAbilities,
             AbilityIds.MeleeCleave => ContentAssetPaths.HumanMeleeAbilities,

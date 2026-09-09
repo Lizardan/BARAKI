@@ -78,6 +78,63 @@ Player-level модификаторы (как March Discipline / Stone Masonry �
 | `Combat/MatchCombatSystem.cs` | хуки бонусов (см. ниже) |
 | `Combat/MatchUnitState.cs` | `FeastStacks` / `FeastRemainingSeconds` / `FeastAttackSpeedPerStack` (стаки 5–6) |
 | `Tests/FacelessBonusUnitRulesTests.cs` | 8 тестов: вампиризм, дот, мини-меле, взрыв, стаки AS, экспара стаков, гейт расы/слота |
+| `Combat/AbilityIds.cs` | def-маркеры 64–69 (`FacelessHunger`..`FacelessFeast`) |
+| `Combat/AbilityKitDefaults.cs` | `CreateFacelessBonus(role)` — Passive-маркер на роль (Caster: спеллы + Call of the Abyss) |
+| `Editor/UnitAbilityAssetBuilder.cs` | билд def-ассетов в `Faceless*/BonusUnits/*/Abilities` |
+| `Editor/UnitAbilitySeeder.cs` | запись дефов в `_abilities` бонус-префабов |
+| `Editor/FacelessBonusPrefabBuilder.cs` | сам канон бонус-префабов (см. «Канон префабов…» ниже) |
+
+**Def-маркеры (2026-09-08):** механика — хуки, но у каждого бонус-слота 1–6 есть пассивный
+`UnitAbilityDef` (IDs 64–69), как у Human (Cleave/Deadeye/…): карточка видна в инспекторе
+`UnitCombatSettings` на `Faceless_*_BONUS.prefab` и ведёт к редактируемому SO (`UnitAbilityDefEditor`).
+Caster-бонус (3) = `CreateFacelessCaster()` + маркер «Call of the Abyss» (зеркало `CreateCasterBonus`).
+Рантайм-киты бонус-юнитов теперь непустые (`MatchesUnit` → `CreateFacelessBonus(role)`).
+FX проков подбираются позже в BARAKI Studio (отдельный таб; пока дефы несут только цвет).
+
+### Канон префабов бонусных юнитов (вид + структура папок)
+
+Источник истины — `Editor/FacelessBonusPrefabBuilder.cs` (меню `BARAKI/Faceless/Build Bonus
+Prefabs`), зеркало Human-`VeteranPrefabBuilder` по формату папок и контракту.
+
+**Вид (как задумано):** у бонус-юнита — **заменённая (отдельная) модель**, как у Human
+(`Human_*_BONUS` — своя моделька на каждый слот 1–6/7–10). Бонусный префаб **не** должен
+показывать базовую модель.
+
+**Вид (сейчас, временная заглушка):** новых моделей для Древних пока нет, поэтому бонусный
+префаб клонируется из **базовой** модели той же роли (тот же меш), а единственный признак
+усиленного юнита — **`BonusFlameMarker`** (синее свечение) в дочернем `BonusFlame` над головой
+(позиция = `bounds.max.y + 0.15`). Это **заглушка до появления новых моделей**, не канон.
+Когда модели появятся — бонус-префаб получает свою модель (replacement), свечение убирается.
+Билдер идемпотентен (повторный прогон не копит маркеры).
+
+**Контракт корня (компоненты на `Faceless_*_BONUS.prefab`):**
+- `SkinnedMeshRenderer` + `Animator` → **задумано: свой `.controller` рядом** с бонус-префабом
+  (`Faceless_*_BONUS.controller`) — под собственную (новую) модель, как у Human
+  (`Human_*_BONUS.controller`). **Сейчас (заглушка):** переиспользуется контроллер базового юнита
+  той же роли (`Faceless_Melee_BONUS` → `Faceless_Melee.controller`), своего `.controller` нет.
+- `FacelessUnitTeamColor` (командный цвет, как у базовых).
+- `UnitCombatSettings` — инспектируемый баланс + `_abilities[]` (см. def-маркеры выше).
+- Ориентация/скейл — как у базовой роли (клонирование без смены): юниты Melee `1.75`, Flying
+  `1.0`, остальные `1.5`; герои/титан `2.0`; yaw 270° (таблица `faceless-assets.md`).
+  С появлением новых моделей скейл/yaw выверяются под каждую бонус-модель заново.
+
+**Структура папок** — единый шаблон расы (как Human, `content-assets.md`), бонусы идут
+категориями `BonusUnits/` (слоты 1–6) и `BonusHeroes/` (слоты 7–10), не в `Units/{Role}/Bonus/`:
+
+```text
+Prefabs/Races/Faceless/
+├── Units/{Role}/Faceless_{Role}.prefab (+ Faceless_{Role}.controller)   # база
+├── BonusUnits/{Role}/Faceless_{Role}_BONUS.prefab                        # бонусы 1–6 (заглушка: берёт базовый контроллер; задумано: свой Faceless_{Role}_BONUS.controller)
+├── Heroes/{HeroN|Titan}/… (+ .controller)
+└── BonusHeroes/{HeroN|Titan}/Faceless_{…}_BONUS.prefab                   # ветераны 7–10
+
+ScriptableObjects/Races/Faceless/BonusUnits/{Role}/Abilities/*.asset      # def-маркеры 64–69 (только Caster — 4 шт.)
+```
+
+Билд (`Build Bonus Prefabs`) создаёт префабы, потом `BARAKI/Units/Sync Balance to Prefabs`
+(баланс) и `BARAKI/Units/Seed Unit Abilities` (дефы в `_abilities[]`). После сида имена
+бонус-префабов и их `_BONUS`-суффикс сохраняются; `UnitVisualPrefabBuilder` регистрирует их в
+`UnitVisualCatalog` по `raceId`/роли.
 
 Хуки в `MatchCombatSystem`:
 
@@ -110,7 +167,8 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 - `BonusPickController` красит недоступные слоты классом `bonus-pick__slot--locked` и
   дописывает в тултип «(в разработке)».
 
-После FACELESS-013 (11–12) расширить `FacelessImplementedSlots` до всех 12 слотов.
+- `FacelessImplementedSlots` — полный набор {1..12}: юниты 1–6 (FACELESS-011),
+  ветераны 7–10 (FACELESS-012), уники 11–12 (FACELESS-013).
 
 ## Реализация слотов 7–10 (FACELESS-012, 2026-09-08)
 
@@ -149,6 +207,64 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 - Сами хуки в `ApplyDamage` гейтированы расой и наличием живого ветерана/титана, поэтому
   до FACELESS-014 не срабатывают.
 
+### Ветеранские статы (префаб-синк) и портреты (2026-09-08)
+
+- **`UnitBalanceSetup.SyncRace`** — ветеранский блок 7–10 (`CopyFromVeteran`) теперь общий для
+  обеих рас: раньше Faceless-ветка выходила по `return` до ветеранов. Бонус-юниты 1–6
+  синхронизируются только для Human (`includeHumanExtras`) — у Faceless они маркерные клоны базы.
+- **Титан-ветеран = сид 3× героя 1, и уже поверх него ×1.4 HP / ×1.35 dmg / +2 брони**
+  (HP `×3×1.4`, dmg `×3×1.35`, armor `базовый×3+2`; range 3, цена 2500g без изменений).
+  Латентный фикс касается и Human (`Human_Titan_BONUS` теперь 2520 HP / 14 брони / 141.75–182.25 dmg
+  вместо ошибочных 6/47.25). Fallback-путь `UnitStatsResolver.ResolveBase` (3× сид →
+  `ApplyVeteranMultipliers`) был корректен изначально — расхождение источников устранено.
+  Итог ветеранов Faceless: герои 840 HP / 6 брони / 47.25–60.75 dmg; титан 2520 / 14 / 141.75–182.25.
+- **Портреты:** `UnitPortraitBaker` печёт бонус-портреты для **обеих** рас — новые папки
+  `Faceless/BonusUnits/{Role}.png` (1–6) и `Faceless/BonusHeroes/{Hero1..3,Titan}.png` (7–10),
+  пути `ContentAssetPaths.FacelessPortraitBonusUnits/BonusHeroes`. Запечь —
+  `BARAKI/Faceless/Update Visual Catalog`.
+- **Fallback снят:** `UnitVisualCatalog.TryGetBonusPortrait` больше не подменяет Faceless-портреты
+  базовыми; `GetBonusPortraitFallback` удалён. Тест `BonusPortraits_AreAssignedPerRace`
+  (слоты 1–10 × обе расы) закрепляет контракт.
+- **Пламя в портрете:** `BonusFlameMarker.BuildFlame()` — публичный идемпотентный метод
+  (очищает старые `FlamePlane_*`, работает и в edit-mode через `DestroyImmediate`);
+  `UnitPortraitBaker.RenderPrefabThumbnail` вызывает его на превью-инстансе, поэтому ветераны
+  Faceless отличимы от базы даже без отдельных моделей. Без `[ExecuteAlways]` — префабы не засоряются.
+- **VFX маркеров 64–69:** presentation-контракт (`PresentationCatalogTests`) требует `VfxPrefab`
+  на каждом def каталога — назначены тематические CFXR (Blood Shape Splash / Poison Cloud /
+  Magic Poof / WW Enemy Explosion / Wind Trails / Souls Escape); тинт — из `AbilityFx.Color`.
+  Дальнейший подбор — BARAKI Studio (замены сохраняются).
+
+## Реализация слотов 11–12 (FACELESS-013, 2026-09-09)
+
+Расовые уники (player-level, как March Discipline / Stone Masonry у Людей), без замены юнитов.
+
+| Файл | Роль |
+|------|------|
+| `Combat/FacelessBonusUnitRules.cs` | `ShadowEvadeChance = 0.08f`, `VoidBastionMissChance = 0.20f`, `HasShadowOfTheVoid(player)` / `HasVoidBastion(player)` (Faceless + слот 11 / 12) |
+| `Combat/MatchUnitState.cs` | `ShadowEvadeActive` (bool; host-only, флаг при спавне) |
+| `Combat/MatchCombatSystem.cs` | `ApplySpawnUniqueModifiers(unit)` (+вызовы в `SpawnUnit`, `CommitPendingSpawn`, `TrySpawnFlyingBonusOnDeath`, `ResurrectUnit`, `ApplyAuthoritativeUnits`); roll в `ApplyDamage`; `RollVoidBastionMiss(buildingInstanceId)` |
+| `Match/BonusPickRules.cs` | `FacelessImplementedSlots = {1..12}` (UI-оверлей: слоты доступны, не «в разработке») |
+| `Tests/FacelessRaceUniqueBonusTests.cs` | 11 тестов: пик 11/12, флаг при спавне (replacement policy), герои/титан, roll evade (seed-прок), Void Bastion (меле/снаряд vs здания), race-гейт March Discipline / Stone Masonry |
+| `Combat/HumanBonusUnitRules.cs` | **race-гейт** `ApplyMarchDiscipline`: только `RaceId == Human` |
+| `Combat/MatchController.cs` | **race-гейт** `ResolveBuildingMaxHp`: только `RaceId == Human` |
+
+Механики:
+- **Shadow of the Void (11)**: roll в `ApplyDamage` после гейта Area of Miss (`ShadowEvadeActive &&
+  RollProc(0.08f)` → `return 0f`) — весь входящий урон (юниты/герои/титан). Флаг выставляется
+  при спавне (`ApplySpawnUniqueModifiers`), поэтому работает replacement policy: только юниты,
+  заспавненные после пика (включая героев/титана), получают флаг. Снапшот-путь
+  `ApplyAuthoritativeUnits` пересчитывает флаг — задокументированное приближение.
+- **Void Bastion (12)**: протектор-перед попыткой урона зданию на двух прямых ветках
+  (`ResolveMeleeImpact` / `ResolveProjectileImpact`, `RollVoidBastionMiss` → ранний return;
+  пропускает и снаряд-сплэш катапульты). AoE-сплэш и способности зданиям не роллят.
+  Применяется ретро + будущие здания (решает владелец здания на момент удара).
+
+**Важно — race-гейт Human-уников:** ранее задачи уникальных слотов Людей (11 March Discipline,
+12 Stone Masonry) вешались по слоту без проверки расы — Faceless с пиками 11/12 унаследовал бы
+чужие бонусы. Теперь оба гейтированы расой (`RaceId == Human`), Faceless-уники не конфликтуют.
+
+Тесты: полный EditMode-прогон `Game.Tests` — 1335 passed (2026-09-09).
+
 ## Статус
 
 - [x] Дизайн слотов 1–12 утверждён пользователем (2026-09-08).
@@ -161,11 +277,20 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
       31/32/30/33, 40/41/42/43 — те же Human-дефы, что использует кит ветеранов). Префаб-сеттинг
       авторитетен; обычный герой = база, ветеран = база с заменой одной сигнатуры. Eдиный канон
       подтверждён карточкой FACELESS-012 (#68).
+- [x] Сидер исправлен (2026-09-08): `UnitAbilitySeeder.SeedFaceless` сидирует базовые герои/титан
+      Faceless **базовыми** китами (`AbilityKitDefaults.Create(Hero, slot)` / `Create(Titan)`),
+      guid-в-guid с Human-префабами; прежний прогон через `CreateForSpawn` (пустой кит из-за
+      гейта FACELESS-014) затирал способности на базовых префабах. Runtime-фолбэк
+      `CreateForSpawn` остаётся гейтнутым — префаб авторитетен.
+- [x] Ветеранские статы/портреты/контент FACELESS-012 (2026-09-08): ветеранский синк 7–10 в
+      `SyncRace` для обеих рас (фикс титан-ветерана = сид 3× + кит, касался и Human), бонус-портреты
+      1–10 для Faceless, снятие `TryGetBonusPortrait`-fallback, VFX на маркерах 64–69. Тесты 1324
+      passed (EditMode). Гейт `HasBonusKit` снят не был (follow-up FACELESS-014).
 - [ ] Снятие runtime-гейта (`NoBonusKitRaceIds`) — FACELESS-014: разблокировать проставление
       `BonusSlot` для Faceless (резолвер + `MatchController`) и подключить `FacelessBonusUnitRules`
       в `UnitStatsResolver.ResolveBase` (ветеранские множители и префабы). Критерий
       «Do not enable selection before visual+kit ready».
-- [ ] Реализация слотов 11–12 (FACELESS-013): Shadow of the Void, Void Bastion.
+- [x] Реализация слотов 11–12 (FACELESS-013): Shadow of the Void, Void Bastion — 2026-09-09.
 - [x] Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — FACELESS-008, дизайн 2026-09-08 (`GameDesign/Races.md`).
 
 Связанные правила: `wiki/rules/human-unit-bonuses.md` (формат ветеранов/китов/UI как Люди),

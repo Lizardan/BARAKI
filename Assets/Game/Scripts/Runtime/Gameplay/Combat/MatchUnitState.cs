@@ -107,6 +107,11 @@ namespace Game.Gameplay.Combat
         public float AbsorbSecondsRemaining { get; set; }
         /// <summary>Host-only: remaining seconds the unit evades all incoming attacks (Area of Miss).</summary>
         public float EvadeRemainingSeconds { get; set; }
+        /// <summary>
+        /// Host-only: unit avoids 8% of incoming attacks (Shadow of the Void, Faceless unique slot 11).
+        /// Captured at spawn — only units spawned after the pick carry the flag (replacement policy).
+        /// </summary>
+        public bool ShadowEvadeActive { get; set; }
         /// <summary>Remaining hard-stun seconds from Frost. &gt;0 = unit frozen (<see cref="BehaviorState"/> = Frozen).</summary>
         public float FrozenRemainingSeconds { get; set; }
         /// <summary>

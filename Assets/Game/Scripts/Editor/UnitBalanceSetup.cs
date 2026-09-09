@@ -105,75 +105,33 @@ namespace Game.Editor
                 synced.Add($"{raceId} {role}: {path}");
             }
 
-            if (!includeHumanExtras)
+            // Bonus units 1–6 come from race-specific bonus definitions (Human-authored).
+            // Faceless bonus units are marker-only clones of the base units and keep the base stats.
+            if (includeHumanExtras)
             {
-                for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+                for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
                 {
-                    var hero = race.GetHeroBySlot(slot);
-                    if (hero == null)
+                    var role = BonusKitRules.RoleForBonusSlot(bonusSlot);
+                    var definition = race.GetUnitBonus(role);
+                    if (definition == null)
                     {
-                        Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for slot {slot} ({raceId}).");
                         continue;
                     }
 
                     if (!TrySyncPrefab(
                             visualCatalog,
                             raceId,
-                            UnitRole.Hero,
-                            slot,
-                            settings => settings.CopyFrom(hero),
-                            out var path))
+                            role,
+                            heroSlot: 0,
+                            settings => settings.CopyFrom(definition),
+                            out var path,
+                            bonusSlot))
                     {
                         continue;
                     }
 
-                    synced.Add($"Hero{slot} ({raceId}): {path}");
+                    synced.Add($"{role} BONUS ({raceId}): {path}");
                 }
-
-                var titanBase = race.GetHeroBySlot(1);
-                if (titanBase == null)
-                {
-                    Debug.LogWarning($"UnitBalanceSetup: no HeroDefinition for titan seed (slot 1, {raceId}).");
-                }
-                else if (TrySyncPrefab(
-                             visualCatalog,
-                             raceId,
-                             UnitRole.Titan,
-                             heroSlot: 0,
-                             settings => settings.CopyFrom(
-                                 titanBase,
-                                 TitanRules.BaseStatMultiplier,
-                                 TitanRules.AttackRange),
-                             out var titanPath))
-                {
-                    synced.Add($"Titan ({raceId}): {titanPath}");
-                }
-
-                return;
-            }
-
-            for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
-            {
-                var role = BonusKitRules.RoleForBonusSlot(bonusSlot);
-                var definition = race.GetUnitBonus(role);
-                if (definition == null)
-                {
-                    continue;
-                }
-
-                if (!TrySyncPrefab(
-                        visualCatalog,
-                        raceId,
-                        role,
-                        heroSlot: 0,
-                        settings => settings.CopyFrom(definition),
-                        out var path,
-                        bonusSlot))
-                {
-                    continue;
-                }
-
-                synced.Add($"{role} BONUS ({raceId}): {path}");
             }
 
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
@@ -218,7 +176,7 @@ namespace Game.Editor
                 synced.Add($"Titan ({raceId}): {titanPath}");
             }
 
-            // Veteran champions (bonus slots 7–10, PRE-006b).
+            // Veteran champions (bonus slots 7–10, PRE-006b / FACELESS-012): both races sync here.
             for (var bonusSlot = BonusKitRules.Hero1BonusSlot;
                  bonusSlot <= BonusKitRules.TitanBonusSlot;
                  bonusSlot++)
@@ -233,7 +191,12 @@ namespace Game.Editor
                 }
 
                 float? rangeOverride = isTitan ? TitanRules.AttackRange : null;
-                var hpMultiplier = (isTitan ? TitanRules.BaseStatMultiplier : 1f) * BonusKitRules.VeteranHpMultiplier;
+                // The titan veteran kit multiplies the 3× titan seed (hero1 × BaseStatMultiplier),
+                // not the raw hero1 numbers — HP ×1.4, damage ×1.35, armor +2 on top of it.
+                var titanScale = isTitan ? TitanRules.BaseStatMultiplier : 1f;
+                var hpMultiplier = titanScale * BonusKitRules.VeteranHpMultiplier;
+                var damageMultiplier = titanScale * BonusKitRules.VeteranDamageMultiplier;
+                var armorBonus = baseHero.Armor * (titanScale - 1f) + BonusKitRules.VeteranArmorBonus;
                 if (!TrySyncPrefab(
                         visualCatalog,
                         raceId,
@@ -242,8 +205,8 @@ namespace Game.Editor
                         settings => settings.CopyFromVeteran(
                             baseHero,
                             hpMultiplier,
-                            BonusKitRules.VeteranDamageMultiplier,
-                            BonusKitRules.VeteranArmorBonus,
+                            damageMultiplier,
+                            armorBonus,
                             rangeOverride),
                         out var veteranPath,
                         bonusSlot))

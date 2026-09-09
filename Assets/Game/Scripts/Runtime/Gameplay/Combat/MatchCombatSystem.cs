@@ -737,9 +737,24 @@ namespace Game.Gameplay.Combat
             ApplySpawnFacing(unit, route, distanceAlongLane);
             ApplyMarchFocusFromLane(unit, ownerSlot, laneId);
             AttachAbilities(unit);
+            ApplySpawnUniqueModifiers(unit);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
             return unit;
+        }
+
+        /// <summary>
+        /// FACELESS-013: captures the owner's Shadow of the Void pick at spawn time.
+        /// Replacement policy — only units spawned after the pick carry the evade flag.
+        /// </summary>
+        void ApplySpawnUniqueModifiers(MatchUnitState unit)
+        {
+            if (unit == null || unit.OwnerSlot < 0 || unit.OwnerSlot >= _players.Count)
+            {
+                return;
+            }
+
+            unit.ShadowEvadeActive = FacelessBonusUnitRules.HasShadowOfTheVoid(_players[unit.OwnerSlot]);
         }
 
         public MatchUnitState GetUnit(int unitId) => GetUnitById(unitId);
@@ -1041,6 +1056,7 @@ namespace Game.Gameplay.Combat
                 unit.MarchWaypointIndex = spawnRoute.FindMarchWaypointIndex(position);
             }
 
+            ApplySpawnUniqueModifiers(unit);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
             AttachAbilities(unit);
@@ -1409,6 +1425,7 @@ namespace Game.Gameplay.Combat
             ApplySpawnFacing(unit, route, pending.SpawnDistance);
             ApplyMarchFocusFromLane(unit, pending.OwnerSlot, pending.LaneId);
             AttachAbilities(unit);
+            ApplySpawnUniqueModifiers(unit);
             _units.Add(unit);
             _unitById[unit.UnitId] = unit;
         }
@@ -2492,6 +2509,12 @@ namespace Game.Gameplay.Combat
         {
             if (projectile.TargetBuildingInstanceId.HasValue)
             {
+                // FACELESS-013: Void Bastion — 20% of direct attacks against an owner building miss.
+                if (RollVoidBastionMiss(projectile.TargetBuildingInstanceId.Value))
+                {
+                    return;
+                }
+
                 _buildings?.TryApplyDamage(
                     projectile.TargetBuildingInstanceId.Value,
                     GetVsBuildingDamage(projectile.AttackerOwnerSlot, projectile.AttackerRole, projectile.RawDamage),
@@ -2606,6 +2629,12 @@ namespace Game.Gameplay.Combat
             var attacker = GetUnitById(strike.AttackerUnitId);
             if (strike.TargetBuildingInstanceId.HasValue)
             {
+                // FACELESS-013: Void Bastion — 20% of direct attacks against an owner building miss.
+                if (RollVoidBastionMiss(strike.TargetBuildingInstanceId.Value))
+                {
+                    return;
+                }
+
                 var killerSlot = attacker?.OwnerSlot ?? GetUnitOwnerSlot(strike.AttackerUnitId);
                 var buildingDamage = attacker != null
                     ? GetVsBuildingDamage(killerSlot, attacker.Role, strike.RawDamage)
@@ -2713,6 +2742,13 @@ namespace Game.Gameplay.Combat
 
             // FACELESS-012: Area of Miss — an evading target avoids all incoming attacks.
             if (target.EvadeRemainingSeconds > 0f)
+            {
+                return 0f;
+            }
+
+            // FACELESS-013: Shadow of the Void — a flagged target avoids 8% of all incoming attacks.
+            if (target.ShadowEvadeActive
+                && BonusKitRules.RollProc(_random, FacelessBonusUnitRules.ShadowEvadeChance))
             {
                 return 0f;
             }
@@ -2832,6 +2868,7 @@ namespace Game.Gameplay.Combat
             ApplySpawnFacing(spawned, route, progressDistance);
             ApplyMarchFocusFromLane(spawned, ownerSlot, laneId);
             AttachAbilities(spawned);
+            ApplySpawnUniqueModifiers(spawned);
             _units.Add(spawned);
             _unitById[spawned.UnitId] = spawned;
             EmitTraitFxUnbound(ownerSlot, AbilityIds.FlyingSpawn, worldPosition);
@@ -2925,6 +2962,30 @@ namespace Game.Gameplay.Combat
             }
 
             return 1f + TowerTrackRules.BloodrageAttackSpeedPercentByLevel[level - 1];
+        }
+
+        /// <summary>
+        /// FACELESS-013 (Void Bastion): 20% of direct attacks against an owner building miss.
+        /// Checked at attack time against the owner's current pick — existing and newly built
+        /// buildings are both protected (retro).
+        /// </summary>
+        bool RollVoidBastionMiss(int buildingInstanceId)
+        {
+            if (_buildings == null)
+            {
+                return false;
+            }
+
+            var building = _buildings.GetByInstanceId(buildingInstanceId);
+            if (building == null
+                || building.OwnerSlot < 0
+                || building.OwnerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            return FacelessBonusUnitRules.HasVoidBastion(_players[building.OwnerSlot])
+                && BonusKitRules.RollProc(_random, FacelessBonusUnitRules.VoidBastionMissChance);
         }
 
         /// <summary>Battering Rams (tower track 4): bonus damage against buildings.</summary>
@@ -3993,6 +4054,7 @@ namespace Game.Gameplay.Combat
             ApplySpawnFacing(revived, route, progressDistance);
             ApplyMarchFocusFromLane(revived, corpse.OwnerSlot, corpse.LaneId);
             AttachAbilities(revived);
+            ApplySpawnUniqueModifiers(revived);
             _units.Add(revived);
             _unitById[revived.UnitId] = revived;
             _corpses.Remove(corpse);

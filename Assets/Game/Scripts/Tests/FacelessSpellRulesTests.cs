@@ -118,7 +118,7 @@ namespace Game.Tests
             Assert.Greater(high.BurnDamagePerSecond, 0f, "Gaze should rot the higher-HP enemy.");
             Assert.AreEqual(0f, low.BurnDamagePerSecond, 0.01f, "The lower-HP enemy must be left untouched.");
             Assert.AreEqual(50f, low.CurrentHp, 0.5f, "Lower-HP enemy should take no damage this tick.");
-            Assert.AreEqual(100f, high.CurrentHp, 2f, "Higher-HP enemy takes the 30 burst.");
+            Assert.AreEqual(70f, high.CurrentHp, 2f, "Higher-HP enemy takes the 30 burst.");
         }
 
         [Test]

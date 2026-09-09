@@ -1857,6 +1857,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12a5201659861a64d8f918bf5d0e6b20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.BonusFlameMarker
+  _planeCount: 3
   _coreScale: 0.42
   _glowScale: 0.95
   _coreColor: {r: 0.8, g: 0.96, b: 1, a: 1}
@@ -2211,10 +2212,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e91a2d6256e88f24cb2c7251f2b25325, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitCombatSettings
-  _maxHp: 1800
-  _armor: 12
-  _damageMin: 105
-  _damageMax: 135
+  _maxHp: 2520
+  _armor: 14
+  _damageMin: 141.75
+  _damageMax: 182.25002
   _attackSpeed: 1
   _attackRange: 3
   _moveSpeed: 4

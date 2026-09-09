@@ -760,16 +760,22 @@ namespace Game.Gameplay.Combat
         {
             if (raceId == GameIds.Races.Faceless)
             {
-                // FACELESS-012: a champion veteran (slots 7–10) gets its Faceless-flavoured kit when
-                // the pick matches this hero/titan slot.
-                if (BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot)
-                    && BonusKitRules.IsChampionBonusSlot(bonusSlot))
+                // Matching bonus slot wins (mirrors the Human resolution order).
+                if (BonusKitRules.MatchesUnit(bonusSlot, role, heroSlot))
                 {
-                    return CreateVeteranKit(raceId, bonusSlot);
+                    // FACELESS-012: a champion veteran (slots 7–10) gets its Faceless-flavoured kit.
+                    if (BonusKitRules.IsChampionBonusSlot(bonusSlot))
+                    {
+                        return CreateVeteranKit(raceId, bonusSlot);
+                    }
+
+                    // FACELESS-011: unit bonuses 1–6 resolve a passive marker def — visible on the
+                    // bonus prefab and navigable in the inspector (mechanics stay in combat hooks).
+                    return CreateFacelessBonus(role);
                 }
 
-                // FACELESS-016: the caster kit is authored. Other roles stay gated — the unit
-                // (1–6) and base hero/veteran (non-bonus) kits are separate cards.
+                // FACELESS-016: the caster kit is authored. Other roles stay gated — the base
+                // hero/veteran (non-bonus) kits are separate cards.
                 if (role == UnitRole.Caster)
                 {
                     return CreateFacelessCaster();
@@ -870,6 +876,102 @@ namespace Game.Gameplay.Combat
                 cooldownSeconds: FacelessSpellRules.RaiseCooldownSeconds,
                 manaCost: FacelessSpellRules.RaiseManaCost),
         };
+
+        /// <summary>
+        /// Faceless unit bonus kit (slots 1–6, FACELESS-011): one passive marker def per role,
+        /// mirroring the Human bonus cards (<see cref="CreateBonus"/>). The mechanics are combat
+        /// hooks in <see cref="MatchCombatSystem"/>; the defs exist so every bonus ability is
+        /// visible and navigable on the bonus prefab in the inspector.
+        /// </summary>
+        public static UnitAbilityDef[] CreateFacelessBonus(UnitRole role) => role switch
+        {
+            UnitRole.Melee => new[]
+            {
+                Passive(
+                    AbilityIds.FacelessHunger,
+                    "Hunger of the Old One",
+                    "При ударе 15% шанс: лечение на 50% от фактически нанесённого урона.",
+                    0,
+                    Trait(),
+                    unlock: AbilityUnlock.Always,
+                    percent: FacelessBonusUnitRules.VampiricProcChance,
+                    fx: new AbilityFx { Color = AbilityFxColors.VoidDrain }),
+            },
+            UnitRole.Ranged => new[]
+            {
+                Passive(
+                    AbilityIds.FacelessTaint,
+                    "Tainting Bolt",
+                    "При попадании 15% шанс: отравить цель — 3 ед. урона в секунду на 3 с.",
+                    0,
+                    Trait(),
+                    unlock: AbilityUnlock.Always,
+                    percent: FacelessBonusUnitRules.TaintingBoltProcChance,
+                    fx: new AbilityFx { Color = AbilityFxColors.Blight }),
+            },
+            UnitRole.Caster => CreateFacelessCasterBonus(),
+            UnitRole.Siege => new[]
+            {
+                Passive(
+                    AbilityIds.FacelessDeathExplosion,
+                    "Death Explosion",
+                    "При гибели взрыв: урон по врагам в радиусе 3 = 10% от макс. здоровья юнита (здания не страдают).",
+                    0,
+                    Trait(),
+                    unlock: AbilityUnlock.Always,
+                    percent: FacelessBonusUnitRules.DeathExplosionMaxHpPercent,
+                    radius: FacelessBonusUnitRules.DeathExplosionRadius,
+                    fx: new AbilityFx { Color = AbilityFxColors.AuraDamage }),
+            },
+            UnitRole.Flying => new[]
+            {
+                Passive(
+                    AbilityIds.FacelessHungeringFlight,
+                    "Hungering Flight",
+                    "При убийстве: +15% скорости атаки на 3 с, стаки до 3.",
+                    0,
+                    Trait(),
+                    unlock: AbilityUnlock.Always,
+                    percent: FacelessBonusUnitRules.HungeringFlightAttackSpeedPerStack,
+                    fx: new AbilityFx { Color = AbilityFxColors.AuraAttackSpeed }),
+            },
+            UnitRole.Super => new[]
+            {
+                Passive(
+                    AbilityIds.FacelessFeast,
+                    "Feast on the Fallen",
+                    "При убийстве: +80 макс. здоровья и +10% скорости атаки на 3 с, стаки до 3.",
+                    0,
+                    Trait(),
+                    unlock: AbilityUnlock.Always,
+                    percent: FacelessBonusUnitRules.FeastAttackSpeedPerStack,
+                    flatBonus: FacelessBonusUnitRules.FeastHealFlat,
+                    fx: new AbilityFx { Color = AbilityFxColors.AuraMaxHp }),
+            },
+            _ => System.Array.Empty<UnitAbilityDef>(),
+        };
+
+        /// <summary>
+        /// Faceless caster bonus kit (slot 3): the full caster spell kit plus the
+        /// Call of the Abyss passive marker (mirrors the Human caster bonus pattern).
+        /// </summary>
+        static UnitAbilityDef[] CreateFacelessCasterBonus()
+        {
+            var spells = CreateFacelessCaster();
+            var call = Passive(
+                AbilityIds.FacelessCallOfAbyss,
+                "Call of the Abyss",
+                "При убийстве: призыв минимеле со статами ×0.5 от расового меле-базиса.",
+                0,
+                Trait(),
+                unlock: AbilityUnlock.Always,
+                percent: FacelessBonusUnitRules.MiniMeleeStatScale,
+                fx: new AbilityFx { Color = AbilityFxColors.RaiseDrowned });
+            var kit = new UnitAbilityDef[spells.Length + 1];
+            System.Array.Copy(spells, kit, spells.Length);
+            kit[spells.Length] = call;
+            return kit;
+        }
 
         static UnitAbilityDef Active(
             int abilityId,

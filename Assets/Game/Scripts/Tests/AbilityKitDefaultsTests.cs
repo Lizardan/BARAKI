@@ -150,6 +150,50 @@ namespace Game.Tests
         }
 
         [Test]
+        public void CreateForSpawn_Faceless_UnitBonusSlotsReturnMarkerKits()
+        {
+            // FACELESS-011: bonus slots 1–6 resolve one passive marker def per role (visible on
+            // the bonus prefab; the mechanics stay in combat hooks). Mirrors the Human bonus kit.
+            var melee = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Melee, 0, bonusSlot: 1);
+            Assert.AreEqual(1, melee.Length);
+            Assert.AreEqual(AbilityIds.FacelessHunger, melee[0].AbilityId);
+
+            var ranged = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Ranged, 0, bonusSlot: 2);
+            Assert.AreEqual(1, ranged.Length);
+            Assert.AreEqual(AbilityIds.FacelessTaint, ranged[0].AbilityId);
+
+            var caster = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Caster, 0, bonusSlot: 3);
+            Assert.AreEqual(4, caster.Length, "Faceless caster bonus keeps its spells + Call of the Abyss marker.");
+            Assert.AreEqual(AbilityIds.FacelessCallOfAbyss, caster[^1].AbilityId);
+
+            var siege = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Siege, 0, bonusSlot: 4);
+            Assert.AreEqual(1, siege.Length);
+            Assert.AreEqual(AbilityIds.FacelessDeathExplosion, siege[0].AbilityId);
+
+            var flying = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Flying, 0, bonusSlot: 5);
+            Assert.AreEqual(1, flying.Length);
+            Assert.AreEqual(AbilityIds.FacelessHungeringFlight, flying[0].AbilityId);
+
+            var super = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Super, 0, bonusSlot: 6);
+            Assert.AreEqual(1, super.Length);
+            Assert.AreEqual(AbilityIds.FacelessFeast, super[0].AbilityId);
+        }
+
+        [Test]
+        public void CreateFacelessBonus_MarkersCarryTuningNumbers()
+        {
+            var melee = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Melee, 0, bonusSlot: 1)[0];
+            Assert.AreEqual(FacelessBonusUnitRules.VampiricProcChance, melee.Percent, 0.0001f);
+
+            var siege = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Siege, 0, bonusSlot: 4)[0];
+            Assert.AreEqual(FacelessBonusUnitRules.DeathExplosionRadius, siege.Radius, 0.0001f);
+
+            var super = AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Super, 0, bonusSlot: 6)[0];
+            Assert.AreEqual(FacelessBonusUnitRules.FeastHealFlat, super.FlatBonus, 0.0001f);
+            Assert.AreEqual(FacelessBonusUnitRules.FeastAttackSpeedPerStack, super.Percent, 0.0001f);
+        }
+
+        [Test]
         public void CreateFacelessCaster_UnlocksByMagicLevel()
         {
             var kit = AbilityKitDefaults.CreateFacelessCaster();

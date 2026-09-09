@@ -1,5 +1,6 @@
 using Game.Core;
 using Game.Gameplay.Data;
+using Game.Gameplay.Match;
 
 namespace Game.Gameplay.Combat
 {
@@ -85,5 +86,30 @@ namespace Game.Gameplay.Combat
 
         /// <summary>Aura of Hunger (slot 10): each owner unit lifesteals this fraction of the damage it deals.</summary>
         public const float AuraOfHungerHealFraction = 0.15f;
+
+        // --- Race unique slots 11–12 (FACELESS-013) ---
+
+        /// <summary>Shadow of the Void (slot 11): chance an owner troop fully avoids any incoming attack.</summary>
+        public const float ShadowEvadeChance = 0.08f;
+        /// <summary>Void Bastion (slot 12): chance a direct attack against an owner building misses.</summary>
+        public const float VoidBastionMissChance = 0.20f;
+
+        /// <summary>
+        /// True when the player owns Shadow of the Void (Faceless race unique slot 11).
+        /// Player-level pick, independent of the Faceless <c>HasBonusKit</c> runtime gate.
+        /// </summary>
+        public static bool HasShadowOfTheVoid(MatchPlayerState player) =>
+            player != null
+            && player.RaceId == GameIds.Races.Faceless
+            && player.BonusPickSlot == BonusKitRules.RaceUnique1Slot;
+
+        /// <summary>
+        /// True when the player owns Void Bastion (Faceless race unique slot 12).
+        /// Player-level pick, independent of the Faceless <c>HasBonusKit</c> runtime gate.
+        /// </summary>
+        public static bool HasVoidBastion(MatchPlayerState player) =>
+            player != null
+            && player.RaceId == GameIds.Races.Faceless
+            && player.BonusPickSlot == BonusKitRules.RaceUnique2Slot;
     }
 }

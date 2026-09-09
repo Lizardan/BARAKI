@@ -233,6 +233,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12a5201659861a64d8f918bf5d0e6b20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Match.BonusFlameMarker
+  _planeCount: 3
   _coreScale: 0.42
   _glowScale: 0.95
   _coreColor: {r: 0.8, g: 0.96, b: 1, a: 1}
@@ -779,7 +780,8 @@ MonoBehaviour:
   _goldBounty: 50
   _maxMana: 0
   _marchSpeedOverride: 0
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: 2a17403c173e55841864f1984f2ff083, type: 2}
 --- !u!1 &6843078518026149558
 GameObject:
   m_ObjectHideFlags: 0

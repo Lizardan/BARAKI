@@ -32,10 +32,16 @@ namespace Game.Gameplay.Combat
         /// <summary>Stone Masonry (slot 12): max HP multiplier for all owner buildings.</summary>
         public const float StoneMasonryHpMultiplier = 1.2f;
 
-        /// <summary>March Discipline speed for any owner troop (units, heroes, titan).</summary>
+        /// <summary>
+        /// March Discipline speed for any owner troop (units, heroes, titan).
+        /// Human-only: other races picking slot 11 (e.g. Faceless 11) must not inherit it.
+        /// </summary>
         public static float ApplyMarchDiscipline(MatchPlayerState player, float speed)
         {
-            if (player == null || player.BonusPickSlot != BonusKitRules.RaceUnique1Slot || speed <= 0f)
+            if (player == null
+                || player.RaceId != GameIds.Races.Human
+                || player.BonusPickSlot != BonusKitRules.RaceUnique1Slot
+                || speed <= 0f)
             {
                 return speed;
             }

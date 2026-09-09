@@ -65,6 +65,19 @@ namespace Game.Gameplay.Combat
         /// <summary>Faceless Titan veteran (bonus slot 10): army lifesteals 15% of damage dealt (FACELESS-012).</summary>
         public const int AuraOfHunger = 63;
 
+        /// <summary>Faceless Melee bonus (slot 1): 15% on-hit heal for 50% of damage dealt (FACELESS-011).</summary>
+        public const int FacelessHunger = 64;
+        /// <summary>Faceless Ranged bonus (slot 2): 15% on-hit dot 3 dmg/s for 3 s (FACELESS-011).</summary>
+        public const int FacelessTaint = 65;
+        /// <summary>Faceless Caster bonus (slot 3): on kill spawn a ×0.5 mini-melee (FACELESS-011).</summary>
+        public const int FacelessCallOfAbyss = 66;
+        /// <summary>Faceless Siege bonus (slot 4): on death explode for 10% max HP in radius 3 (FACELESS-011).</summary>
+        public const int FacelessDeathExplosion = 67;
+        /// <summary>Faceless Flying bonus (slot 5): on kill +15% attack speed, stacks to 3 (FACELESS-011).</summary>
+        public const int FacelessHungeringFlight = 68;
+        /// <summary>Faceless Super bonus (slot 6): on kill +80 HP and +10% attack speed, stacks to 3 (FACELESS-011).</summary>
+        public const int FacelessFeast = 69;
+
         /// <summary>Main extra: Кара зданий (Divine Blessing pick id 1).</summary>
         public const int MainBuildingSmite = 100;
         /// <summary>Main extra: Кара юнитов (Divine Blessing pick id 2).</summary>

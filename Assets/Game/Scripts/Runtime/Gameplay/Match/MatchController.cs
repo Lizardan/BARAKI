@@ -1879,12 +1879,14 @@ namespace Game.Gameplay.Match
 
         /// <summary>
         /// Level max HP, scaled by the owner's Stone Masonry pick (+20%, PRE-006b).
+        /// Human-only: other races picking slot 12 (e.g. Faceless 12) must not inherit it.
         /// </summary>
         float ResolveBuildingMaxHp(BuildingState building, int level)
         {
             var maxHp = BuildingRules.GetMaxHp(building.BuildingId, level);
             if (building.OwnerSlot >= 0
                 && building.OwnerSlot < _players.Count
+                && _players[building.OwnerSlot].RaceId == GameIds.Races.Human
                 && _players[building.OwnerSlot].BonusPickSlot
                     == BonusKitRules.RaceUnique2Slot)
             {

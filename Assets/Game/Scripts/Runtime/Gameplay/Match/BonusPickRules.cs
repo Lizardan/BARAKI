@@ -54,10 +54,12 @@ namespace Game.Gameplay.Match
 
         /// <summary>
         /// Faceless slots already implemented in code (FACELESS-011: unit bonuses 1–6;
-        /// FACELESS-012: veteran heroes 7–9 + titan 10). Slots 11–12 stay greyed out
-        /// until FACELESS-013 lands.
+        /// FACELESS-012: veteran heroes 7–9 + titan 10; FACELESS-013: race uniques 11–12).
         /// </summary>
-        public static readonly int[] FacelessImplementedSlots = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        public static readonly int[] FacelessImplementedSlots =
+        {
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+        };
 
         /// <summary>True when this slot has working mechanics for the race (greyed out otherwise).</summary>
         public static bool IsSlotImplemented(int slot, string raceId)

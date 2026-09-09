@@ -104,6 +104,22 @@ namespace Game.Tests
         }
 
         [Test]
+        public void BonusPortraits_AreAssignedPerRace()
+        {
+            UnitPortraitBaker.BakeIntoCatalog(_catalog);
+            foreach (var raceId in new[] { GameIds.Races.Human, GameIds.Races.Faceless })
+            {
+                for (var bonusSlot = 1; bonusSlot <= BonusKitRules.TitanBonusSlot; bonusSlot++)
+                {
+                    Assert.IsTrue(
+                        _catalog.TryGetBonusPortrait(raceId, bonusSlot, out var portrait),
+                        $"Missing bonus portrait for {raceId} slot {bonusSlot}");
+                    Assert.IsNotNull(portrait, $"Null bonus portrait for {raceId} slot {bonusSlot}");
+                }
+            }
+        }
+
+        [Test]
         public void HumanMeleePrefab_HasAnimatorWithCombatParameters()
         {
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Melee, out var prefab));

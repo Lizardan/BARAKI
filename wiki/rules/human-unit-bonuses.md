@@ -71,6 +71,10 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 | 11 | March Discipline | +10% скорости всем войскам: `HumanBonusUnitRules.ApplyMarchDiscipline` в `RaceUpgradeStatsRules.Apply` (статы) и в `HandleWave` (march speed волн) |
 | 12 | Stone Masonry | +20% max HP зданий: `MatchController.ResolveBuildingMaxHp` учитывает пик; `BuildingState.SetMaxHp(scaleCurrentProportionally: true)` — текущий HP масштабируется пропорционально; применяется при пике (ретро) и при каждом синке уровней |
 
+> **Race-гейт (FACELESS-013, 2026-09-09):** `ApplyMarchDiscipline` и `ResolveBuildingMaxHp`
+> дополнительно требуют `player.RaceId == GameIds.Races.Human` — иначе инопланетная раса с пиком
+> 11/12 унаследовала бы чужие уники. Детали — `faceless-unit-bonuses.md`.
+
 Общее:
 
 - Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`BonusKitRules.Veteran*`). Префаб-сеттингс

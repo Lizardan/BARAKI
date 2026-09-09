@@ -42,15 +42,6 @@ namespace Game.Gameplay.Match
         /// <summary>Portrait of the enhanced variant for a bonus pick slot (1..10); null if not baked.</summary>
         public bool TryGetBonusPortrait(string raceId, int bonusSlot, out Texture2D portrait)
         {
-            // Faceless has no dedicated bonus models yet — show the regular unit/hero portrait for the
-            // slot instead of the placeholder (currently Human-baked) bonus portrait fields. Once real
-            // Faceless bonus portraits exist, drop this branch and let GetBonusPortrait serve them.
-            if (raceId == GameIds.Races.Faceless)
-            {
-                portrait = GetSet(raceId)?.GetBonusPortraitFallback(bonusSlot);
-                return portrait != null;
-            }
-
             portrait = GetSet(raceId)?.GetBonusPortrait(bonusSlot);
             return portrait != null;
         }
@@ -209,25 +200,6 @@ namespace Game.Gameplay.Match
                 8 => _hero2BonusPortrait,
                 9 => _hero3BonusPortrait,
                 10 => _titanBonusPortrait,
-                _ => null,
-            };
-
-            /// <summary>
-            /// Regular (non-enhanced) unit/hero portrait for a bonus slot — used as the placeholder
-            /// icon for races that have no dedicated bonus models yet (e.g. Faceless).
-            /// </summary>
-            public Texture2D GetBonusPortraitFallback(int bonusSlot) => bonusSlot switch
-            {
-                1 => _meleePortrait,
-                2 => _rangedPortrait,
-                3 => _casterPortrait,
-                4 => _siegePortrait,
-                5 => _flyingPortrait,
-                6 => _superPortrait,
-                7 => _hero1Portrait,
-                8 => _hero2Portrait,
-                9 => _hero3Portrait,
-                10 => _titanPortrait,
                 _ => null,
             };
 

@@ -85,11 +85,13 @@ namespace Game.Editor
         }
 
         /// <summary>
-        /// Seeds Faceless prefabs with the same readable-spell kits the runtime resolves via
-        /// <see cref="AbilityKitDefaults.CreateForSpawn(string,UnitRole,int,int)"/> — the Faceless
-        /// caster kit (FACELESS-016) and the champion veteran kits (slots 7–10, FACELESS-012). Unit
-        /// bonus slots 1–6 and base heroes/titan resolve to an empty kit (no Faceless card authored
-        /// yet), which intentionally clears their ability list so the prefab matches runtime.
+        /// Seeds Faceless prefabs with the readable-spell kits:
+        /// caster kit (FACELESS-016), unit bonus marker kits (slots 1–6, FACELESS-011), champion
+        /// veteran kits (slots 7–10, FACELESS-012) and the shared base hero/titan kits on the base
+        /// hero/titan prefabs (FACELESS-012 canon: a race's base hero = the base kit, veteran =
+        /// base with one signature replaced). The runtime reads abilities from the prefab settings
+        /// (authoritative); the <see cref="AbilityKitDefaults.CreateForSpawn"/> fallback stays
+        /// gated for Faceless non-caster roles (FACELESS-014).
         /// </summary>
         static int SeedFaceless(UnitVisualCatalog visualCatalog, UnitAbilityCatalog abilityCatalog)
         {
@@ -119,6 +121,7 @@ namespace Game.Editor
                 }
             }
 
+            // Base heroes/titan carry the shared base kits (same Human defs; FACELESS-012 canon).
             for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
             {
                 if (Seed(
@@ -127,7 +130,7 @@ namespace Game.Editor
                         GameIds.Races.Faceless,
                         UnitRole.Hero,
                         slot,
-                        AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Hero, slot, 0),
+                        AbilityKitDefaults.Create(UnitRole.Hero, slot),
                         bonusSlot: 0))
                 {
                     seeded++;
@@ -140,7 +143,7 @@ namespace Game.Editor
                     GameIds.Races.Faceless,
                     UnitRole.Titan,
                     0,
-                    AbilityKitDefaults.CreateForSpawn(GameIds.Races.Faceless, UnitRole.Titan, 0, 0),
+                    AbilityKitDefaults.Create(UnitRole.Titan, 0),
                     bonusSlot: 0))
             {
                 seeded++;

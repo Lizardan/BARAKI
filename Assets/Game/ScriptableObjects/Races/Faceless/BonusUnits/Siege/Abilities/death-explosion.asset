@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c3557e0a7507b4587490bcae444fef, type: 3}
+  m_Name: death-explosion
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitAbilityDef
+  _abilityId: 67
+  _displayName: Death Explosion
+  _description: "\u041F\u0440\u0438 \u0433\u0438\u0431\u0435\u043B\u0438 \u0432\u0437\u0440\u044B\u0432: \u0443\u0440\u043E\u043D \u043F\u043E \u0432\u0440\u0430\u0433\u0430\u043C \u0432 \u0440\u0430\u0434\u0438\u0443\u0441\u0435 3 = 10% \u043E\u0442 \u043C\u0430\u043A\u0441. \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u044E\u043D\u0438\u0442\u0430 (\u0437\u0434\u0430\u043D\u0438\u044F \u043D\u0435 \u0441\u0442\u0440\u0430\u0434\u0430\u044E\u0442)."
+  _kind: 1
+  _unlock: 0
+  _unlockValue: 0
+  _damage: 0
+  _heal: 0
+  _healPerSecond: 0
+  _radius: 3
+  _castRange: 0
+  _cooldownSeconds: 0
+  _durationSeconds: 0
+  _percent: 0.1
+  _manaCost: 0
+  _stunSeconds: 0
+  _flatBonus: 0
+  _secondaryRadius: 0
+  _secondaryHeal: 0
+  _fx:
+    Color: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+    VfxPrefab: {fileID: 7226888052703040409, guid: 7ec363c8df426644ea85f8d6d570561c, type: 3}
+    Anchor: 2
+    AnimKind: 1
+    AnimState: 
+    AnimVariant: 0
+    Scale: 0
+    Euler: {x: 0, y: 0, z: 0}
+  _behaviour: {fileID: 5071161375195827283}
+--- !u!114 &5071161375195827283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7ad132048d4c444963b2637e51d984, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Combat.PassiveTraitBehaviour

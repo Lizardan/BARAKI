@@ -54,11 +54,21 @@ Prefabs/Fx/Custom/                             # BARAKI Studio, чип «Кас�
 Art/UI/UnitPortraits/Humans/
 ├── Units/{Melee|Ranged|Caster|Siege|Flying|Super}.png
 ├── BonusUnits/{Melee|…|Super}.png
-└── Heroes/{Hero1|Hero2|Hero3|Titan}.png
+├── Heroes/{Hero1|Hero2|Hero3|Titan}.png
+└── BonusHeroes/{Hero1|Hero2|Hero3|Titan}.png
+
+Art/UI/UnitPortraits/Faceless/                 # та же раскладка, что Humans:
+├── Units/…  ├── BonusUnits/…                  # пекутся тем же UnitPortraitBaker
+├── Heroes/… └── BonusHeroes/…                 # (BARAKI/Faceless/Update Visual Catalog)
 ```
 
 **Единый шаблон расы** (все расы — одинаково, в т.ч. Faceless):
 префаб и его `AnimatorController` лежат рядом, имя контроллера = имя префаба.
+**Особый случай — бонус-префабы Faceless:** `Faceless_*_BONUS.prefab` лежит в `BonusUnits/{Role}/`.
+**Задумано:** у бонуса своя (заменённая) модель + свой `Faceless_*_BONUS.controller` рядом (как
+`Human_*_BONUS`). **Сейчас (временная заглушка, пока нет моделей Древних):** клонируется базовая
+модель и переиспользуется её контроллер, признак усиленного юнита — `BonusFlameMarker`.
+Канон — `wiki/rules/faceless-unit-bonuses.md` § «Канон префабов бонусных юнитов».
 Арт-ассеты (клипы, меши, материалы) — централизованно в `Art/Races/<Race>/`
 (у самого арта из внешнего пакета — клипы не кладутся в `Assets/Game`).
 
