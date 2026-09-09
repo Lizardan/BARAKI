@@ -645,6 +645,7 @@ namespace Game.Gameplay.Combat
                     ? _players[wave.OwnerSlot]
                     : null;
                 var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(
+                    player?.RaceId,
                     player?.BonusPickSlot ?? 0,
                     slot.Role);
                 var stats = UnitStatsResolver.Resolve(

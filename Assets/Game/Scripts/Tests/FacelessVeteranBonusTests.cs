@@ -84,13 +84,15 @@ namespace Game.Tests
         }
 
         [Test]
-        public void EffectiveBonusSlotForHeroTitan_FacelessGated()
+        public void EffectiveBonusSlotForHeroTitan_FacelessGateLifted()
         {
-            // The Faceless bonus kit is GATE-locked (FACELESS-014): no veteran slot resolves
-            // until the gate is lifted, same as any other race without a kit.
-            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(
+            // FACELESS-014 lifted the gate: Faceless veteran hero/titan slots now resolve.
+            Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
+            Assert.AreEqual(7, BonusKitRules.EffectiveBonusSlotForHero(
                 GameIds.Races.Faceless, 7, 1));
-            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForTitan(
+            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(
+                GameIds.Races.Faceless, 8, 1), "wrong hero slot must still resolve to 0");
+            Assert.AreEqual(10, BonusKitRules.EffectiveBonusSlotForTitan(
                 GameIds.Races.Faceless, 10));
 
             // A race with a kit resolves slots normally.
@@ -102,6 +104,34 @@ namespace Game.Tests
                 GameIds.Races.Human, 10));
             Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForTitan(
                 GameIds.Races.Human, 7));
+        }
+
+        [Test]
+        public void VeteranStats_MultipliersAppliedToFallback_Faceless()
+        {
+            // AC of FACELESS-014: the numeric transfer — a veteran Faceless hero receives the
+            // shared PRE-006b multipliers over its race fallback (600 HP / 4 armor / 35–45 dmg).
+            var veteran = UnitStatsResolver.ResolveBase(
+                null, null, GameIds.Races.Faceless, UnitRole.Hero, heroSlot: 1, bonusSlot: 7);
+            Assert.AreEqual(600f * BonusKitRules.VeteranHpMultiplier, veteran.MaxHp, 0.001f);
+            Assert.AreEqual(4f + BonusKitRules.VeteranArmorBonus, veteran.Armor, 0.001f);
+            Assert.AreEqual(35f * BonusKitRules.VeteranDamageMultiplier, veteran.DamageMin, 0.001f);
+            Assert.AreEqual(45f * BonusKitRules.VeteranDamageMultiplier, veteran.DamageMax, 0.001f);
+
+            // A non-veteran Faceless hero stays at the plain fallback.
+            var baseHero = UnitStatsResolver.ResolveBase(
+                null, null, GameIds.Races.Faceless, UnitRole.Hero, heroSlot: 1, bonusSlot: 0);
+            Assert.AreEqual(600f, baseHero.MaxHp, 0.001f);
+
+            // The veteran titan multiplies the titan-scale fallback.
+            var baseTitan = UnitStatsResolver.ResolveBase(
+                null, null, GameIds.Races.Faceless, UnitRole.Titan, heroSlot: 0, bonusSlot: 0);
+            var veteranTitan = UnitStatsResolver.ResolveBase(
+                null, null, GameIds.Races.Faceless, UnitRole.Titan, heroSlot: 0, bonusSlot: 10);
+            Assert.AreEqual(baseTitan.MaxHp * BonusKitRules.VeteranHpMultiplier, veteranTitan.MaxHp, 0.001f);
+            Assert.AreEqual(baseTitan.Armor + BonusKitRules.VeteranArmorBonus, veteranTitan.Armor, 0.001f);
+            Assert.AreEqual(baseTitan.DamageMin * BonusKitRules.VeteranDamageMultiplier, veteranTitan.DamageMin, 0.001f);
+            Assert.AreEqual(baseTitan.DamageMax * BonusKitRules.VeteranDamageMultiplier, veteranTitan.DamageMax, 0.001f);
         }
 
         [Test]

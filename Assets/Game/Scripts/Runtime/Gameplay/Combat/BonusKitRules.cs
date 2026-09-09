@@ -1,5 +1,4 @@
 using System;
-using Game.Core;
 using Game.Gameplay.Data;
 
 namespace Game.Gameplay.Combat
@@ -44,9 +43,10 @@ namespace Game.Gameplay.Combat
         /// <summary>
         /// Races that currently have no bonus kit (GATE). Their bonus pick is
         /// neutralized so they never inherit veteran multipliers or enhanced units.
-        /// Brightens per race when FACELESS-014 or the equivalent lands.
+        /// Add a race id here while its kit is still work-in-progress and remove
+        /// it once the kit + visual ship (FACELESS-014 flipped the Faceless gate).
         /// </summary>
-        public static readonly string[] NoBonusKitRaceIds = { GameIds.Races.Faceless };
+        public static readonly string[] NoBonusKitRaceIds = { };
 
         /// <summary>True when a race has an authored bonus kit (unit 1–6 + veteran 7–10 + uniques 11–12).</summary>
         public static bool HasBonusKit(string raceId)

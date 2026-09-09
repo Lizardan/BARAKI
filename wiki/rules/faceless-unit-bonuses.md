@@ -2,11 +2,13 @@
 
 Дизайн утверждён пользователем **2026-09-08** (сессия 1 юнит за юнитом + слоты 11–12). Все **12 слотов**. Полный asymmetry kit (пассивы/магия/треки башен) — **FACELESS-008**, дизайн 2026-09-08: `GameDesign/Races.md` § Древние.
 
-> **Runtime-гейт Фазы 1 активен:** `BonusKitRules.HasBonusKit(raceId)` = false для
-> `RACE_FACELESS` (`NoBonusKitRaceIds`); race-aware `EffectiveBonusSlotForRole/Hero/Titan`
-> → 0; `UnitStatsResolver.ResolveBase` охраняет bonus/veteran-ветки. Faceless **не получает**
-> множители ветеранов (veteran ×1.4/×1.35/+2 — только расы с китом). Снятие гейта и реализация —
-> **отдельные follow-up карточки** (код здесь не менялся).
+> **Runtime-гейт снят (FACELESS-014, 2026-09-09):** `NoBonusKitRaceIds` пуст —
+> `BonusKitRules.HasBonusKit(RACE_FACELESS)` = true. Race-aware
+> `EffectiveBonusSlotForRole/Hero/Titan` возвращают бонус-слот, `UnitStatsResolver.ResolveBase`
+> разблокировал bonus/veteran-ветки: Faceless получает свои бонус-префабы и ветеранские
+> множители (×1.4/×1.35/+2). Слои `MatchCombatSystem` (волна) и `MatchController` (ручной найм)
+> стали race-aware (`player.RaceId`). Выбор расы в лобби (`SelectableRaceIds`) — по-прежнему
+> отдельный гейт, не трогается в этой карточке.
 
 ## Боевые идентичности (контекст дизайна)
 
@@ -46,7 +48,7 @@
 Формат — **как у Human PRE-006b**: статы ×1.4 HP / ×1.35 dmg / +2 брони, morale +15% (тот же
 стат, что у базового героя), остальные 3 способности с числами ×~1.35, заменяется **одна сигнатура**.
 Префаб-сеттингс авторитетен; фолбэк без префаба — `BonusKitRules.ApplyVeteranMultipliers`
-(заглушка для Faceless не применяется до снятия гейта).
+(применяется для Faceless после снятия гейта FACELESS-014).
 
 | Слот | Герой | Имя (EN) | Сигнатурная замена | Morale |
 |------|-------|----------|--------------------|--------|
@@ -150,9 +152,8 @@ ScriptableObjects/Races/Faceless/BonusUnits/{Role}/Abilities/*.asset      # def-
 AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен в `GetUnitAttackInterval`
 (делит интервал, как Bloodrage); decay — в `TickTowerTrackStatus`.
 
-Гейт: механика работает, но `HasBonusKit(RACE_FACELESS)` всё ещё `false` — бонус-слот
-юнитам присваивается только после снятия гейта (FACELESS-014, #70). Тесты задают
-`bonusSlot` вручную через `SpawnUnit`.
+Гейт снят (FACELESS-014): `HasBonusKit(RACE_FACELESS)` = true — бонус-слот присваивается юнитам
+и волной, и ручным наймом. Тесты задают `bonusSlot` вручную через `SpawnUnit`.
 
 ### UI бонус-пика (race-aware)
 
@@ -198,14 +199,12 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 | 9 | Hero3 Берсерк | Feast Zone (62) | `FeastZoneBehaviour`: зона 10 с следует за героем, союзники внутри лечатся на 30% от урона; morale +15% брони |
 | 10 | Titan | Aura of Hunger (63) | `AuraOfHungerBehaviour` (маркер) + хук `TryApplyAuraOfHunger`: пока титан жив, каждый юнит армии лечится на 15% от нанесённого им урона |
 
-**Важно — гейт:** механика реализована, но `HasBonusKit(RACE_FACELESS)` всё ещё `false`
-(`HumanBonusUnitRules.NoBonusKitRaceIds`). Пока гейт стоит:
-- `BonusPickRules.FacelessImplementedSlots` расширен до **{1..10}** — слоты 7–10 доступны
-  в оверлее (не серые), но реально не навешивают статы/киты до снятия гейта (FACELESS-014).
-- `CreateForSpawn` уже вернёт ветеранский кит, как только `BonusSlot` начнёт проставляться
-  (его проставляет резолвер по `BonusKitRules.EffectiveBonusSlotForHero/Titan`, заблокированный гейтом).
-- Сами хуки в `ApplyDamage` гейтированы расой и наличием живого ветерана/титана, поэтому
-  до FACELESS-014 не срабатывают.
+**Гейт снят (FACELESS-014, 2026-09-09):** `NoBonusKitRaceIds` пуст — слоты 7–10 реально
+навешивают ветеранские статы и киты для Faceless:
+- `BonusPickRules.FacelessImplementedSlots = {1..12}` — все слоты доступны в оверлее.
+- `CreateForSpawn(raceId, …)` возвращает ветеранский кит по `BonusSlot`
+  (`EffectiveBonusSlotForHero/Titan` больше не гейтирует расу).
+- Хуки в `ApplyDamage` включены расой и наличием живого ветерана/титана (были готовы заранее).
 
 ### Ветеранские статы (префаб-синк) и портреты (2026-09-08)
 
@@ -263,7 +262,7 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
 12 Stone Masonry) вешались по слоту без проверки расы — Faceless с пиками 11/12 унаследовал бы
 чужие бонусы. Теперь оба гейтированы расой (`RaceId == Human`), Faceless-уники не конфликтуют.
 
-Тесты: полный EditMode-прогон `Game.Tests` — 1335 passed (2026-09-09).
+Тесты: полный EditMode-прогон `Game.Tests` — 1336 passed (2026-09-09).
 
 ## Статус
 
@@ -281,15 +280,18 @@ AS-стаки: множитель `GetFacelessFeastAsMultiplier` встроен 
       Faceless **базовыми** китами (`AbilityKitDefaults.Create(Hero, slot)` / `Create(Titan)`),
       guid-в-guid с Human-префабами; прежний прогон через `CreateForSpawn` (пустой кит из-за
       гейта FACELESS-014) затирал способности на базовых префабах. Runtime-фолбэк
-      `CreateForSpawn` остаётся гейтнутым — префаб авторитетен.
+      `CreateForSpawn` для не-кастера остаётся пустым (базовые киты — отдельные карточки) —
+      префаб авторитетен.
 - [x] Ветеранские статы/портреты/контент FACELESS-012 (2026-09-08): ветеранский синк 7–10 в
       `SyncRace` для обеих рас (фикс титан-ветерана = сид 3× + кит, касался и Human), бонус-портреты
       1–10 для Faceless, снятие `TryGetBonusPortrait`-fallback, VFX на маркерах 64–69. Тесты 1324
       passed (EditMode). Гейт `HasBonusKit` снят не был (follow-up FACELESS-014).
-- [ ] Снятие runtime-гейта (`NoBonusKitRaceIds`) — FACELESS-014: разблокировать проставление
-      `BonusSlot` для Faceless (резолвер + `MatchController`) и подключить `FacelessBonusUnitRules`
-      в `UnitStatsResolver.ResolveBase` (ветеранские множители и префабы). Критерий
-      «Do not enable selection before visual+kit ready».
+- [x] Снятие runtime-гейта — FACELESS-014 (2026-09-09): `NoBonusKitRaceIds` пуст;
+      `HasBonusKit(RACE_FACELESS)` = true; эффективные слоты 1–6 / 7–9 / 10; `ResolveBase`
+      разблокирует ветеранские множители и бонус-префабы Faceless. Слои волны и ручного
+      найма race-aware (`player.RaceId` — Human без изменений). Добавлен тест числового
+      трансфера ветеранов Faceless (fallback). EditMode 1336 passed. Выбор расы в лобби
+      (`SelectableRaceIds`) остаётся отдельным гейтом (`GameDesign/Races.md`, EA-001).
 - [x] Реализация слотов 11–12 (FACELESS-013): Shadow of the Void, Void Bastion — 2026-09-09.
 - [x] Полный asymmetry kit (пассивы, кастер-кит, magic upgrades, tower-треки Faceless) — FACELESS-008, дизайн 2026-09-08 (`GameDesign/Races.md`).
 

@@ -127,10 +127,11 @@ namespace Game.Tests
         [Test]
         public void CreateForSpawn_Faceless_NonCasterRolesReturnEmptyKit()
         {
-            Assert.IsFalse(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
+            // FACELESS-014 flipped the gate: Faceless now owns a bonus kit, but its *spawn* kit
+            // stays empty for non-caster roles without a bonus slot (base hero/titan kits are
+            // separate cards), so it never inherits the Human defaults.
+            Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
 
-            // FACELESS-016: only the Caster kit is authored so far. Other roles stay gated
-            // (bonus / veteran kits are separate cards FACELESS-011 / FACELESS-012).
             foreach (var role in new[] { UnitRole.Melee, UnitRole.Ranged, UnitRole.Titan })
             {
                 var kit = AbilityKitDefaults.CreateForSpawn(
@@ -207,15 +208,22 @@ namespace Game.Tests
         }
 
         [Test]
-        public void EffectiveBonusSlots_Faceless_AlwaysZero()
+        public void EffectiveBonusSlots_Faceless_ResolveAfterGateFlip()
         {
-            Assert.IsFalse(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
+            Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Faceless));
             Assert.IsTrue(BonusKitRules.HasBonusKit(GameIds.Races.Human));
 
+            Assert.AreEqual(BonusKitRules.BonusSlotForRole(UnitRole.Melee),
+                BonusKitRules.EffectiveBonusSlotForRole(
+                    GameIds.Races.Faceless, BonusKitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
+            Assert.AreEqual(BonusKitRules.Hero2BonusSlot,
+                BonusKitRules.EffectiveBonusSlotForHero(GameIds.Races.Faceless, BonusKitRules.Hero2BonusSlot, 2));
+            Assert.AreEqual(BonusKitRules.TitanBonusSlot,
+                BonusKitRules.EffectiveBonusSlotForTitan(GameIds.Races.Faceless, BonusKitRules.TitanBonusSlot));
+
+            // A Faceless pick for the wrong role resolves to 0 — no cross-race / cross-role leak.
             Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForRole(
-                GameIds.Races.Faceless, BonusKitRules.BonusSlotForRole(UnitRole.Melee), UnitRole.Melee));
-            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForHero(GameIds.Races.Faceless, 8, 2));
-            Assert.AreEqual(0, BonusKitRules.EffectiveBonusSlotForTitan(GameIds.Races.Faceless, 10));
+                GameIds.Races.Faceless, BonusKitRules.BonusSlotForRole(UnitRole.Caster), UnitRole.Melee));
 
             Assert.AreEqual(BonusKitRules.BonusSlotForRole(UnitRole.Melee),
                 BonusKitRules.EffectiveBonusSlotForRole(

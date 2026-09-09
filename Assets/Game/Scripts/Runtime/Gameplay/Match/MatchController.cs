@@ -1047,10 +1047,10 @@ namespace Game.Gameplay.Match
 
             player.Gold = remaining;
             // Flow the player's bonus pick the same way the auto-wave spawn does, so the enhanced
-            // variant (and the Faceless blue-flame placeholder) appears consistently via both the
-            // barracks button and waves. Bonus *stats* stay gated per-race in the stats resolver,
-            // so Faceless still receives base stats with the flame marker — never a red capsule.
-            var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(player.BonusPickSlot, role);
+            // variant appears consistently via both the barracks button and waves. The race-aware
+            // resolver picks the race's own bonus preview/stats (Faceless BONUS prefab since
+            // FACELESS-014; its placeholder clone carries the blue-flame marker, never a capsule).
+            var bonusSlot = BonusKitRules.EffectiveBonusSlotForRole(player.RaceId, player.BonusPickSlot, role);
             var stats = ResolveUnitStats(player, role, bonusSlot);
             // Same forward clearance band as auto-wave creeps (not barracks center / inside mesh).
             var spawnDistance = CombatFormationRules.BarracksSpawnForwardClearance;

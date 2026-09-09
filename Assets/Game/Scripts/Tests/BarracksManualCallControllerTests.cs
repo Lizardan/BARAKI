@@ -68,11 +68,15 @@ namespace Game.Tests
         }
 
         [Test]
-        public void TryManualCallUnit_FacelessBonusPick_FlowsSlotKeepsBaseStats()
+        public void TryManualCallUnit_FacelessBonusPick_FlowsSlotResolvesBonusPrefab()
         {
-            // Regression: a Faceless bonus pick must spawn the base model (marked with the blue
-            // flame placeholder by the presenter) — never a red capsule — and must NOT apply bonus
-            // stats, because Faceless has no bonus kit yet (gated in the stats resolver).
+            // FACELESS-014 lifted the gate: a Faceless bonus pick flows its slot and resolves the
+            // race's own BONUS prefab. The Faceless BONUS prefab is a placeholder clone of the
+            // base model (stats mirror the plain melee) carrying the blue-flame marker — never a
+            // red capsule or a Human-statted unit.
+            Assume.That(BonusKitRules.HasBonusKit(GameIds.Races.Faceless),
+                "Faceless bonus kit gate (FACELESS-014) must be lifted.");
+
             var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
             Assume.That(raceCatalog != null, "RaceCatalog missing.");
             var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(
@@ -92,11 +96,12 @@ namespace Game.Tests
 
             var spawned = FindOwnedMelee(controller, 0);
             Assert.IsNotNull(spawned);
-            // Slot flows through so the presenter can attach the blue flame marker.
+            // Slot flows through so the presenter can attach the bonus variant marker.
             Assert.AreEqual(1, spawned.BonusSlot);
-            // No bonus kit yet — stats stay at plain base melee values.
-            Assert.AreEqual(1.5f, spawned.Stats.AttackRange, 0.01f, "Faceless bonus pick must not apply bonus stats.");
-            Assert.AreEqual(120f, spawned.Stats.MaxHp, 0.01f, "Faceless bonus pick must not apply bonus HP.");
+            // The Faceless BONUS prefab is a placeholder clone of the base model: stats stay at
+            // the plain base melee values, but they now come from the race's own prefab.
+            Assert.AreEqual(1.5f, spawned.Stats.AttackRange, 0.01f, "Faceless BONUS melee keeps the base range.");
+            Assert.AreEqual(120f, spawned.Stats.MaxHp, 0.01f, "Faceless BONUS melee keeps the base HP.");
         }
 
         static MatchUnitState FindOwnedMelee(MatchController controller, int ownerSlot)
