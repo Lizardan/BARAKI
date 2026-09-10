@@ -19,6 +19,14 @@ namespace Game.Gameplay.Data
         [SerializeField] private float _maxMana;
         [SerializeField] private float _marchSpeedOverride;
 
+        /// <summary>
+        /// Authoritative uniform visual scale. 0 means "keep the prefab's baked root scale"
+        /// (pre-migration assets); &gt; 0 overrides it everywhere the unit is presented
+        /// (<see cref="Game.Gameplay.Match.MatchCombatPresenter"/>,
+        /// <see cref="Game.Gameplay.Match.ArenaDuelPresenter"/>).
+        /// </summary>
+        [SerializeField, Min(0f)] private float _visualScale;
+
         public string Id => _id;
         public string RaceId => _raceId;
         public UnitRole Role => _role;
@@ -32,5 +40,9 @@ namespace Game.Gameplay.Data
         public int GoldBounty => _goldBounty;
         public float MaxMana => _maxMana;
         public float MarchSpeedOverride => _marchSpeedOverride;
+        public float VisualScale => _visualScale;
+
+        /// <summary>Editor migration helper — bakes the authored prefab scale into the asset.</summary>
+        public void SetVisualScale(float scale) => _visualScale = Mathf.Max(0f, scale);
     }
 }

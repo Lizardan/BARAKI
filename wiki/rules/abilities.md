@@ -12,7 +12,7 @@ ScriptableObject-ассеты (`UnitAbilityDef` + поведение-субас�
 | `UnitAbilityDef` | SO-ассет одной способности: id, display name, описание, kind, unlock, все тюнинг-параметры, `AbilityFx`, поведение |
 | `UnitAbilityBehaviour` | SO-субассет внутри def: структурная логика (`TryCast`, `QueryAura`, `DescribeParams`) |
 | `UnitAbilityCatalog` | Общий список всех def-ов (29 шт.), сериализован в `Assets/Game/ScriptableObjects/Catalogs/UnitAbilityCatalog.asset` |
-| `UnitCombatSettings` | Единственный боевой компонент префаба: runtime-снапшот статов + массив ссылок на def-ы. **Порядок списка = приоритет каста AI** |
+| `UnitCombatSettings` | Единственный боевой компонент префаба: ссылка на `UnitDefinition`/`HeroDefinition` (чисел на префабе нет) + массив ссылок на def-ы способностей. **Порядок списка = приоритет каста AI** |
 | `AbilityKitDefaults` | Источник истины тюнинга: фабрики китов `CreateKing/Paladin/Priest/Titan/Caster` + runtime-фолбэк |
 
 ## Правила именования
@@ -176,6 +176,9 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
 - **`UnitCombatSettingsEditor`** — единый read-only viewer префаба: сверху красиво оформленные
   боевые статы и кнопка перехода к `UnitDefinition` / `HeroDefinition`, ниже — карточки способностей.
   Если у юнита нет способностей, секция способностей не рисуется вообще.
+  Статы карточки **резолвятся из definition-ассета** (`UnitStatsResolver.ResolveBase` по ключу
+  race/role/heroSlot/bonusSlot, в т.ч. титан ×3 и ветеранские множители), поэтому при выделении
+  префаба Inspector всегда показывает актуальный баланс.
 - Каждая карточка способности показывает номер+имя (цвет = kind), цвет FX-свач, описание,
   только ненулевые числовые параметры, правило unlock, поведение и FX. Кнопка **«Открыть»**
   выделяет и пингует `UnitAbilityDef`-ассет.
@@ -183,9 +186,11 @@ Cast-lock: staff cast **1.5 с**, Rally punch **1 с**.
   (ноль не мусорит — например, у не-хилящих нет поля «Heal»); toggle «Показать все» раскрывает нулевые.
   Read-only-сводку см. выше; урон/хил/CD пересобираются из дефолтов. `AbilityFx` и ненулевые
   `Radius` / `CastRange` **не** затираются — их правит BARAKI Studio (`ability-fx.md`).
-- Статы и способности на префабе не редактируются: баланс правится в definition-ассете и переносится
-  через `BARAKI/Units/Sync Balance to Prefabs`, способности — в def-ассетах и затем сидируются через
-  `BARAKI/Units/Seed Unit Abilities`.
+- Статы и способности на префабе не редактируются: префаб хранит **только ссылки** — на
+  `UnitDefinition`/`HeroDefinition` (числа) и на `UnitAbilityDef[]` (кит). Баланс живёт в
+  definition-ассетах и применяется без пересинки; способности сидируются через
+  `BARAKI/Units/Seed Unit Abilities`. Ссылки на статы перевыставляются
+  `BARAKI/Units/Assign Stats Sources` (разово/после пересборки префабов).
 
 ## Main extra ability (Divine Blessing)
 

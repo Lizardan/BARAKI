@@ -9,13 +9,23 @@
     flex-grow: 1;
 }
 
-/* ── Таймер до арены (внутри верхней полоски HUD) ───────────────── */
+/* ── Таймер до арены (по центру верхней полоски HUD) ────────────── */
 
+/*
+ * Раскладка верхней полоски: время матча слева, таймер арены по центру, золото справа.
+ * Абсолютное позиционирование выводит ряд из потока TopBar, поэтому он не сдвигает
+ * крайние элементы, а растягивается на всю ширину полоски и центрирует содержимое
+ * через justify-content.
+ */
 .arena-hud__timer-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
     flex-direction: row;
     align-items: center;
-    margin-left: 20px;
-    flex-shrink: 0;
+    justify-content: center;
 }
 
 .arena-hud__timer-row--hidden {
@@ -30,8 +40,9 @@
 }
 
 .arena-hud__timer-caption {
-    margin-left: 8px;
-    font-size: 11px;
+    margin-left: 10px;
+    font-size: 22px;
+    -unity-font-style: bold;
     color: rgb(133, 137, 128);
     letter-spacing: 1px;
     -unity-text-align: middle-left;
@@ -96,6 +107,12 @@
     justify-content: center;
 }
 
+/* Герои арены — ровно в ряд (как в меню очерёдности после бонусов), без переноса.
+   Выбор соперника (несколько игроков) по-прежнему переносится. */
+.arena-pick__list--heroes {
+    flex-wrap: nowrap;
+}
+
 .arena-pick__option {
     width: 120px;
     height: 132px;
@@ -140,6 +157,65 @@
 
 .arena-pick__option-meta {
     margin-top: 4px;
+    font-size: 12px;
+    color: rgb(133, 137, 128);
+    -unity-text-align: middle-center;
+}
+
+/* ── Карточки героев (idle-превью как в меню очерёдности) ────────── */
+
+.arena-pick__card {
+    width: 124px;
+    height: 158px;
+    margin-left: 6px;
+    margin-right: 6px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgb(21, 23, 22);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-color: rgb(52, 56, 50);
+}
+
+.arena-pick__card:hover {
+    border-color: rgb(185, 154, 98);
+}
+
+.arena-pick__card--selected {
+    border-color: rgb(185, 154, 98);
+    background-color: rgb(38, 32, 22);
+}
+
+.arena-pick__card--locked {
+    opacity: 0.38;
+}
+
+.arena-pick__card--locked:hover {
+    border-color: rgb(52, 56, 50);
+}
+
+.arena-pick__preview {
+    width: 100%;
+    height: 104px;
+    margin-top: 4px;
+    background-color: rgb(12, 13, 12);
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.arena-pick__card-title {
+    margin-top: 6px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(222, 219, 210);
+    -unity-text-align: middle-center;
+}
+
+.arena-pick__card-meta {
+    margin-top: 2px;
     font-size: 12px;
     color: rgb(133, 137, 128);
     -unity-text-align: middle-center;

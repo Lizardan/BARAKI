@@ -1,112 +1,49 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace Game.Gameplay.Data
 {
     /// <summary>
-    /// Read-only combat profile stored on the unit prefab: synchronized balance values and shared
-    /// <see cref="UnitAbilityDef"/> references. Definition assets remain the editing source;
-    /// editor sync/seed commands refresh this runtime snapshot.
+    /// Runtime combat profile stored on the unit prefab. The prefab owns NO numbers — it only holds
+    /// a reference to its source definition asset (<see cref="UnitDefinition"/> or
+    /// <see cref="HeroDefinition"/>, exactly one) and references to the <see cref="UnitAbilityDef"/>
+    /// kit it carries (0/1/…/4 abilities). Stats resolve live from the referenced ScriptableObject;
+    /// hero/titan/veteran variants are derived by <see cref="Game.Gameplay.Combat.UnitStatsResolver"/>
+    /// with the canonical multipliers. Editing a definition asset applies everywhere immediately —
+    /// no sync step.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("BARAKI/Unit Combat Settings")]
-    [MovedFrom(true, "Game.Gameplay.Data", "Game.Gameplay", "UnitBalanceSettings")]
     public sealed class UnitCombatSettings : MonoBehaviour
     {
-        [SerializeField] private float _maxHp = 100f;
-        [SerializeField] private float _armor;
-        [SerializeField] private float _damageMin = 8f;
-        [SerializeField] private float _damageMax = 10f;
-        [SerializeField] private float _attackSpeed = 1f;
-        [SerializeField] private float _attackRange = 1.5f;
-        [SerializeField] private float _moveSpeed = 4f;
-        [SerializeField] private int _goldBounty = 8;
-        [SerializeField] private float _maxMana;
-        [SerializeField] private float _marchSpeedOverride;
+        [SerializeField] private UnitDefinition _unitDefinition;
+        [SerializeField] private HeroDefinition _heroDefinition;
         [SerializeField] private UnitAbilityDef[] _abilities = System.Array.Empty<UnitAbilityDef>();
 
-        public float MaxHp => _maxHp;
-        public float Armor => _armor;
-        public float DamageMin => _damageMin;
-        public float DamageMax => _damageMax;
-        public float AttackSpeed => _attackSpeed;
-        public float AttackRange => _attackRange;
-        public float MoveSpeed => _moveSpeed;
-        public int GoldBounty => _goldBounty;
-        public float MaxMana => _maxMana;
-        public float MarchSpeedOverride => _marchSpeedOverride;
+        /// <summary>Stats source for a plain unit (incl. Human bonus units). Null for heroes/titan.</summary>
+        public UnitDefinition UnitDefinition => _unitDefinition;
+
+        /// <summary>Stats source for a hero / titan / veteran (titan &amp; veteran variants multiply it).</summary>
+        public HeroDefinition HeroDefinition => _heroDefinition;
+
         public UnitAbilityDef[] Abilities => _abilities ?? System.Array.Empty<UnitAbilityDef>();
+
+        public bool HasStatsSource => _unitDefinition != null || _heroDefinition != null;
+
+        public void AssignSource(UnitDefinition definition)
+        {
+            _unitDefinition = definition;
+            _heroDefinition = null;
+        }
+
+        public void AssignSource(HeroDefinition definition)
+        {
+            _heroDefinition = definition;
+            _unitDefinition = null;
+        }
 
         public void ReplaceAbilities(UnitAbilityDef[] abilities)
         {
             _abilities = abilities ?? System.Array.Empty<UnitAbilityDef>();
-        }
-
-        public void CopyFrom(UnitDefinition definition)
-        {
-            if (definition == null)
-            {
-                return;
-            }
-
-            _maxHp = definition.MaxHp;
-            _armor = definition.Armor;
-            _damageMin = definition.DamageMin;
-            _damageMax = definition.DamageMax;
-            _attackSpeed = definition.AttackSpeed;
-            _attackRange = definition.AttackRange;
-            _moveSpeed = definition.MoveSpeed;
-            _goldBounty = definition.GoldBounty;
-            _maxMana = definition.MaxMana;
-            _marchSpeedOverride = definition.MarchSpeedOverride;
-        }
-
-        public void CopyFrom(HeroDefinition definition, float hpArmorDamageMultiplier = 1f, float? attackRangeOverride = null)
-        {
-            if (definition == null)
-            {
-                return;
-            }
-
-            var scale = hpArmorDamageMultiplier > 0f ? hpArmorDamageMultiplier : 1f;
-            _maxHp = definition.MaxHp * scale;
-            _armor = definition.Armor * scale;
-            _damageMin = definition.DamageMin * scale;
-            _damageMax = definition.DamageMax * scale;
-            _attackSpeed = definition.AttackSpeed;
-            _attackRange = attackRangeOverride ?? definition.AttackRange;
-            _moveSpeed = definition.MoveSpeed;
-            _goldBounty = definition.GoldBounty;
-            _maxMana = 0f;
-            _marchSpeedOverride = 0f;
-        }
-
-        /// <summary>
-        /// Veteran champion profile (PRE-006b): base hero numbers with separate HP / damage
-        /// multipliers and a flat armor bonus.
-        /// </summary>
-        public void CopyFromVeteran(
-            HeroDefinition definition,
-            float hpMultiplier,
-            float damageMultiplier,
-            float armorBonus,
-            float? attackRangeOverride = null)
-        {
-            if (definition == null)
-            {
-                return;
-            }
-
-            _maxHp = definition.MaxHp * (hpMultiplier > 0f ? hpMultiplier : 1f);
-            _armor = definition.Armor + Mathf.Max(0f, armorBonus);
-            _damageMin = definition.DamageMin * (damageMultiplier > 0f ? damageMultiplier : 1f);
-            _damageMax = definition.DamageMax * (damageMultiplier > 0f ? damageMultiplier : 1f);
-            _attackSpeed = definition.AttackSpeed;
-            _attackRange = attackRangeOverride ?? definition.AttackRange;
-            _moveSpeed = definition.MoveSpeed;
-            _goldBounty = definition.GoldBounty;
-            _maxMana = 0f;
-            _marchSpeedOverride = 0f;
         }
 
         public void CopyFrom(UnitCombatSettings other)
@@ -116,16 +53,8 @@ namespace Game.Gameplay.Data
                 return;
             }
 
-            _maxHp = other._maxHp;
-            _armor = other._armor;
-            _damageMin = other._damageMin;
-            _damageMax = other._damageMax;
-            _attackSpeed = other._attackSpeed;
-            _attackRange = other._attackRange;
-            _moveSpeed = other._moveSpeed;
-            _goldBounty = other._goldBounty;
-            _maxMana = other._maxMana;
-            _marchSpeedOverride = other._marchSpeedOverride;
+            _unitDefinition = other._unitDefinition;
+            _heroDefinition = other._heroDefinition;
             _abilities = other.Abilities;
         }
     }

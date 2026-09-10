@@ -9697,16 +9697,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e91a2d6256e88f24cb2c7251f2b25325, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitCombatSettings
-  _maxHp: 840
-  _armor: 6
-  _damageMin: 47.25
-  _damageMax: 60.75
-  _attackSpeed: 1
-  _attackRange: 12
-  _moveSpeed: 4
-  _goldBounty: 80
-  _maxMana: 0
-  _marchSpeedOverride: 0
+  _unitDefinition: {fileID: 0}
+  _heroDefinition: {fileID: 11400000, guid: cf45f96ded94778498eeb9b450ba8cf0, type: 2}
   _abilities:
   - {fileID: 11400000, guid: faa74b223f1843b4884025412f62a310, type: 2}
   - {fileID: 11400000, guid: 78c601de0a1075a4fa152dd880ebb01f, type: 2}

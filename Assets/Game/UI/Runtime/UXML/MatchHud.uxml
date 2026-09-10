@@ -6,8 +6,8 @@
     <Style src="../USS/ArenaHud.uss" />
     <ui:VisualElement name="MatchHudRoot" class="match-hud" picking-mode="Ignore">
         <ui:VisualElement name="TopBar" class="match-hud__top-bar match-hud-chrome" picking-mode="Position">
-            <ui:Label name="PhaseLabel" text="—" class="match-hud__phase" />
             <ui:Label name="TimeLabel" text="00:00" class="match-hud__time" />
+            <ui:Label name="TimeCaption" text="Время" class="match-hud__time-caption" />
             <ui:VisualElement name="ArenaTimerBadge"
                               class="arena-hud__timer-row arena-hud__timer-row--hidden"
                               picking-mode="Ignore">
@@ -15,10 +15,9 @@
                 <ui:Label name="ArenaTimerCaption" text="ДО АРЕНЫ" class="arena-hud__timer-caption" />
             </ui:VisualElement>
             <ui:VisualElement class="match-hud__gold-row">
-                <ui:VisualElement class="ui-icon ui-icon--coins match-hud__gold-icon" />
+                <ui:Label name="GoldCaption" text="Золото" class="match-hud__gold-caption" />
                 <ui:Label name="GoldLabel" text="0" class="match-hud__gold" />
             </ui:VisualElement>
-            <ui:Label name="BountyPopupLabel" text="" class="match-hud__bounty-popup match-hud__bounty-popup--hidden" />
             <ui:Label name="CommandFeedbackLabel" text="" class="match-hud__command-feedback match-hud__command-feedback--hidden" />
             <ui:Label name="StartCountdownLabel" text="" class="match-hud__start-countdown" />
         </ui:VisualElement>
@@ -63,7 +62,7 @@
                     <ui:Label name="ArenaPickReward" text="" class="arena-pick__reward" />
                     <ui:Label name="ArenaPickTimer" text="30" class="arena-pick__timer" />
                     <ui:Label name="ArenaPickHint" text="Выберите бойца" class="ui-panel__note arena-pick__hint" />
-                    <ui:VisualElement name="ArenaHeroList" class="arena-pick__list" />
+                    <ui:VisualElement name="ArenaHeroList" class="arena-pick__list arena-pick__list--heroes" />
                     <ui:Label name="ArenaOpponentTitle"
                               text="Выберите соперника"
                               class="arena-pick__opponent-title arena-pick__opponent-title--hidden" />
@@ -79,6 +78,8 @@
             <ui:Button name="DebugAddGoldButton" text="+1000 Gold" class="ui-btn match-hud__debug-btn" />
             <ui:Button name="DebugAddPassiveButton" text="+1 Passive" class="ui-btn match-hud__debug-btn" />
             <ui:Button name="DebugSkipResearchButton" text="Skip research" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugPrepareArenaButton" text="Prepare arena" class="ui-btn match-hud__debug-btn" />
+            <ui:Button name="DebugArenaSoonButton" text="Arena in 5s" class="ui-btn match-hud__debug-btn" />
             <ui:Button name="DebugWinButton" text="Win local" class="ui-btn match-hud__debug-btn" />
             <ui:Button name="DebugFireAllBarracksButton" text="Fire all barracks" class="ui-btn match-hud__debug-btn" />
             <ui:Button name="DebugSpawnPointsButton" text="Spawn points: OFF" class="ui-btn match-hud__debug-btn" />

@@ -17,11 +17,13 @@ namespace Game.Gameplay.Networking
         {
                         Instance = this;
             BonusPickNetworkFacade.Register(this);
+            HeroOrderNetworkFacade.Register(this);
         }
 
         public override void OnNetworkDespawn()
         {
                         BonusPickNetworkFacade.Unregister(this);
+            HeroOrderNetworkFacade.Unregister(this);
             if (Instance == this)
             {
                 Instance = null;

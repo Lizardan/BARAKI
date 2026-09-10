@@ -6,7 +6,7 @@ namespace Game.Gameplay.Combat
     /// Прислужник Древних (servant) — ключевой юнит-мотив расы (Plan0909, Фаза 1).
     /// Заменяет прежний масштабируемый от живого Melee мини-юнит: фиксированный профиль.
     /// Спавн всегда через <see cref="MatchCombatSystem.SummonMinion"/> (bonusSlot = SummonBonusSlot-маркер),
-    /// визуал — отдельный префаб Faceless_Servant (scale 1.25, без оружия).
+    /// визуал — префаб Faceless_Servant: меш/материалы как у Melee, оружие скрыто через AxHandle01_16 scale 0.
     /// Источник дизайн-чисел — ассет UNIT_FACELESS_SERVANT (зеркало этих констант).
     /// </summary>
     public static class FacelessServantRules

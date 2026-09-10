@@ -486,6 +486,91 @@ namespace Game.Gameplay.Match
             return granted;
         }
 
+        /// <summary>
+        /// Debug/чит: нанять всех героев (слоты 1..3) каждому не-выбывшему игроку.
+        /// Идёт напрямую через ростер, минуя экономику, уровень main и порядок героев —
+        /// нужно для отладки арены, где у неигранных слотов иначе нет бойцов
+        /// и арена «сгорает» из-за нехватки участников.
+        /// </summary>
+        public int DebugHireAllHeroes()
+        {
+            if (!IsRunning)
+            {
+                return 0;
+            }
+
+            var hired = 0;
+            var slotCount = Math.Min(_players.Count, _heroRosters.Count);
+            for (var slot = 0; slot < slotCount; slot++)
+            {
+                if (_players[slot].IsEliminated)
+                {
+                    continue;
+                }
+
+                var roster = _heroRosters[slot];
+                for (var heroSlot = 1; heroSlot <= HeroRules.MaxHeroSlots; heroSlot++)
+                {
+                    var state = roster.Get(heroSlot);
+                    if (state.State != HeroLifecycleState.None)
+                    {
+                        continue;
+                    }
+
+                    state.State = HeroLifecycleState.IdleAtBase;
+                    SpawnParkedHero(slot, heroSlot);
+                    hired++;
+                }
+            }
+
+            return hired;
+        }
+
+        /// <summary>
+        /// Debug/чит: открыть титана каждому не-выбывшему игроку — то же состояние, что
+        /// по завершении полоски 180 с. Нужно для отладки 4-й (титановой) арены.
+        /// </summary>
+        public int DebugUnlockTitanAll()
+        {
+            if (!IsRunning)
+            {
+                return 0;
+            }
+
+            var unlocked = 0;
+            var slotCount = Math.Min(_players.Count, _titanStates.Count);
+            for (var slot = 0; slot < slotCount; slot++)
+            {
+                if (_players[slot].IsEliminated)
+                {
+                    continue;
+                }
+
+                var titan = _titanStates[slot];
+                if (titan.IsUnlocked)
+                {
+                    continue;
+                }
+
+                titan.ResearchProgressSeconds = TitanRules.ResearchSeconds;
+                titan.State = TitanLifecycleState.IdleAtBase;
+                SpawnParkedTitan(slot);
+                unlocked++;
+            }
+
+            return unlocked;
+        }
+
+        /// <summary>
+        /// Debug/чит: подготовить матч к арене — герои всем слотам + открытый титан.
+        /// Отсчёт до арены подтягивается отдельной кнопкой.
+        /// </summary>
+        public void DebugPrepareArena()
+        {
+            DebugHireAllHeroes();
+            DebugUnlockTitanAll();
+        }
+
         public bool TryStartResearch(int ownerSlot, int buildingInstanceId, string upgradeId)
         {
             if (!IsRunning || Phase == MatchPhase.Start)

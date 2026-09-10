@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Gameplay.Match;
 using UnityEngine;
 
 namespace Game.Gameplay.Match.Fog
@@ -25,7 +26,8 @@ namespace Game.Gameplay.Match.Fog
         public float VisionRadius => _visionRadius;
         public FogPermanentZones PermanentZones => _permanent;
         public bool FogDisabled =>
-            !_fogEnabled || IsLocalPlayerEliminated() || IsLocalPlayerDivineBlessingComplete();
+            !_fogEnabled || IsLocalPlayerEliminated() || IsLocalPlayerDivineBlessingComplete()
+            || IsArenaActive();
         public bool IsInitialized => _initialized;
 
         /// <summary>
@@ -143,6 +145,14 @@ namespace Game.Gameplay.Match.Fog
                     _localUnitPositions.Add(position);
                 }
             }
+        }
+
+        /// <summary>Во время арены камера улетает на (0,0,-4000) — за пределы области тумана,
+        /// поэтому полноэкранный оверлей заливал бы арену темнотой. Прячем туман целиком.</summary>
+        bool IsArenaActive()
+        {
+            var arena = ArenaDirector.Current;
+            return arena != null && arena.IsArenaActive;
         }
 
         bool IsLocalPlayerEliminated()

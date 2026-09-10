@@ -35,10 +35,41 @@ namespace Game.Editor
         readonly struct BalanceSourceInfo
         {
             public ScriptableObject Definition { get; }
+            public string RaceId { get; }
+            public UnitRole Role { get; }
+            public int HeroSlot { get; }
+            public int BonusSlot { get; }
+            public bool HasKey { get; }
 
             public BalanceSourceInfo(ScriptableObject definition)
+                : this(definition, null, default, 0, 0, false)
+            {
+            }
+
+            public BalanceSourceInfo(
+                ScriptableObject definition,
+                string raceId,
+                UnitRole role,
+                int heroSlot,
+                int bonusSlot)
+                : this(definition, raceId, role, heroSlot, bonusSlot, true)
+            {
+            }
+
+            BalanceSourceInfo(
+                ScriptableObject definition,
+                string raceId,
+                UnitRole role,
+                int heroSlot,
+                int bonusSlot,
+                bool hasKey)
             {
                 Definition = definition;
+                RaceId = raceId;
+                Role = role;
+                HeroSlot = heroSlot;
+                BonusSlot = bonusSlot;
+                HasKey = hasKey;
             }
         }
 
@@ -46,7 +77,12 @@ namespace Game.Editor
 
         public static void DrawBalanceCard(UnitCombatSettings settings, GameObject prefabRoot)
         {
-            var source = ResolveBalanceSource(prefabRoot);
+            if (settings == null)
+            {
+                return;
+            }
+
+            var source = ResolveBalanceSource(settings, prefabRoot);
 
             EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUILayout.BeginHorizontal();
@@ -55,25 +91,172 @@ namespace Game.Editor
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(5);
 
-            DrawStatRow("Запас здоровья", FormatNumber(settings.MaxHp));
-            DrawStatRow("Броня", FormatNumber(settings.Armor));
-            DrawStatRow("Урон", $"{FormatNumber(settings.DamageMin)}–{FormatNumber(settings.DamageMax)}");
-            DrawStatRow("Скорость атаки", $"{FormatNumber(settings.AttackSpeed)}/с");
-            DrawStatRow("Дальность атаки", FormatNumber(settings.AttackRange));
-            DrawStatRow("Скорость", FormatNumber(settings.MoveSpeed));
-            DrawStatRow("Награда золотом", settings.GoldBounty.ToString());
-
-            if (settings.MaxMana > 0f)
+            // Prefer resolved stats from the source definition asset, so the inspector always
+            // shows the latest values (including derived hero/titan/veteran variants).
+            if (source.HasKey)
             {
-                DrawStatRow("Макс. мана", FormatNumber(settings.MaxMana));
+                var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(ContentAssetPaths.RaceCatalog);
+                var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(UnitVisualPrefabBuilder.CatalogPath);
+                if (raceCatalog != null && visualCatalog != null)
+                {
+                    var adapter = new RaceCatalogCombatCatalog(raceCatalog);
+                    DrawStats(UnitStatsResolver.ResolveBase(
+                        adapter,
+                        visualCatalog,
+                        source.RaceId,
+                        source.Role,
+                        source.HeroSlot,
+                        source.BonusSlot));
+                    DrawVariantBadge(source);
+                }
+            }
+            else if (source.Definition is HeroDefinition hero)
+            {
+                DrawRawHero(hero);
+            }
+            else if (source.Definition is UnitDefinition unit)
+            {
+                DrawRawUnit(unit);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "Источник статов не задан — запусти BARAKI/Units/Assign Stats Sources.",
+                    MessageType.Warning);
             }
 
-            if (settings.MarchSpeedOverride > 0f)
-            {
-                DrawStatRow("Скорость марша", FormatNumber(settings.MarchSpeedOverride));
-            }
+            DrawVisualScaleRow(settings, prefabRoot);
 
             EditorGUILayout.EndVertical();
+        }
+
+        static void DrawVisualScaleRow(UnitCombatSettings settings, GameObject prefabRoot)
+        {
+            if (settings == null)
+            {
+                return;
+            }
+
+            var definition = settings.UnitDefinition != null
+                ? (ScriptableObject)settings.UnitDefinition
+                : settings.HeroDefinition;
+
+            var authored = 0f;
+            if (definition is UnitDefinition unit)
+            {
+                authored = unit.VisualScale;
+            }
+            else if (definition is HeroDefinition hero)
+            {
+                authored = hero.VisualScale;
+            }
+
+            var prefabScale = prefabRoot != null ? prefabRoot.transform.localScale.x : 1f;
+            var effective = authored > 0f ? authored : prefabScale;
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Визуальный масштаб (в бою)", StatLabelStyle());
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.LabelField(
+                EffectiveVisualScale(settings, prefabRoot).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture),
+                StatValueStyle(),
+                GUILayout.ExpandWidth(false));
+            EditorGUILayout.EndHorizontal();
+        }
+
+        static float EffectiveVisualScale(UnitCombatSettings settings, GameObject prefabRoot)
+        {
+            var definition = settings.UnitDefinition != null
+                ? (ScriptableObject)settings.UnitDefinition
+                : settings.HeroDefinition;
+
+            var authored = 0f;
+            if (definition is UnitDefinition unit)
+            {
+                authored = unit.VisualScale;
+            }
+            else if (definition is HeroDefinition hero)
+            {
+                authored = hero.VisualScale;
+            }
+
+            return authored > 0f
+                ? authored
+                : prefabRoot != null
+                    ? prefabRoot.transform.localScale.x
+                    : 1f;
+        }
+
+        static void DrawStats(UnitCombatStats stats)
+        {
+            DrawStatRow("Запас здоровья", FormatNumber(stats.MaxHp));
+            DrawStatRow("Броня", FormatNumber(stats.Armor));
+            DrawStatRow("Урон", $"{FormatNumber(stats.DamageMin)}–{FormatNumber(stats.DamageMax)}");
+            DrawStatRow("Скорость атаки", $"{FormatNumber(stats.AttackSpeed)}/с");
+            DrawStatRow("Дальность атаки", FormatNumber(stats.AttackRange));
+            DrawStatRow("Скорость", FormatNumber(stats.MoveSpeed));
+            DrawStatRow("Награда золотом", stats.GoldBounty.ToString());
+            if (stats.HasMana)
+            {
+                DrawStatRow("Макс. мана", FormatNumber(stats.MaxMana));
+            }
+        }
+
+        static void DrawRawHero(HeroDefinition hero)
+        {
+            DrawStatRow("Запас здоровья", FormatNumber(hero.MaxHp));
+            DrawStatRow("Броня", FormatNumber(hero.Armor));
+            DrawStatRow("Урон", $"{FormatNumber(hero.DamageMin)}–{FormatNumber(hero.DamageMax)}");
+            DrawStatRow("Скорость атаки", $"{FormatNumber(hero.AttackSpeed)}/с");
+            DrawStatRow("Дальность атаки", FormatNumber(hero.AttackRange));
+            DrawStatRow("Скорость", FormatNumber(hero.MoveSpeed));
+            DrawStatRow("Награда золотом", hero.GoldBounty.ToString());
+        }
+
+        static void DrawRawUnit(UnitDefinition unit)
+        {
+            DrawStatRow("Запас здоровья", FormatNumber(unit.MaxHp));
+            DrawStatRow("Броня", FormatNumber(unit.Armor));
+            DrawStatRow("Урон", $"{FormatNumber(unit.DamageMin)}–{FormatNumber(unit.DamageMax)}");
+            DrawStatRow("Скорость атаки", $"{FormatNumber(unit.AttackSpeed)}/с");
+            DrawStatRow("Дальность атаки", FormatNumber(unit.AttackRange));
+            DrawStatRow("Скорость", FormatNumber(unit.MoveSpeed));
+            DrawStatRow("Награда золотом", unit.GoldBounty.ToString());
+            if (unit.MaxMana > 0f)
+            {
+                DrawStatRow("Макс. мана", FormatNumber(unit.MaxMana));
+            }
+
+            if (unit.MarchSpeedOverride > 0f)
+            {
+                DrawStatRow("Скорость марша", FormatNumber(unit.MarchSpeedOverride));
+            }
+        }
+
+        static void DrawVariantBadge(BalanceSourceInfo source)
+        {
+            string text;
+            if (source.Role == UnitRole.Titan)
+            {
+                text = BonusKitRules.IsChampionBonusSlot(source.BonusSlot)
+                    ? "Ветеран-титан: ×3 от героя 1 · ×1.4 HP · ×1.35 урон · броня +2"
+                    : "Титан: ×3 от героя 1";
+            }
+            else if (BonusKitRules.IsChampionBonusSlot(source.BonusSlot))
+            {
+                text = "Ветеран: ×1.4 HP · ×1.35 урон · броня +2";
+            }
+            else if (source.BonusSlot >= 1 && source.BonusSlot <= 6)
+            {
+                text = $"Бонус: слот {source.BonusSlot}";
+            }
+            else
+            {
+                return;
+            }
+
+            EditorGUILayout.LabelField(text, HintStyle());
         }
 
         static void DrawOpenBalanceButton(BalanceSourceInfo source)
@@ -94,7 +277,7 @@ namespace Game.Editor
             }
             else
             {
-                var catalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(UnitBalanceSetup.RaceCatalogPath);
+                var catalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(ContentAssetPaths.RaceCatalog);
                 if (catalog != null)
                 {
                     Selection.activeObject = catalog;
@@ -103,24 +286,24 @@ namespace Game.Editor
             }
         }
 
-        static BalanceSourceInfo ResolveBalanceSource(GameObject prefabRoot)
+        static BalanceSourceInfo ResolveBalanceSource(UnitCombatSettings settings, GameObject prefabRoot)
         {
             if (prefabRoot == null)
             {
-                return default;
+                return DefinedOrNone(settings);
             }
 
             var prefabPath = ResolvePrefabPath(prefabRoot);
             if (string.IsNullOrEmpty(prefabPath))
             {
-                return default;
+                return DefinedOrNone(settings);
             }
 
-            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(UnitBalanceSetup.RaceCatalogPath);
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(ContentAssetPaths.RaceCatalog);
             var visualCatalog = AssetDatabase.LoadAssetAtPath<UnitVisualCatalog>(UnitVisualPrefabBuilder.CatalogPath);
             if (raceCatalog == null || visualCatalog == null)
             {
-                return default;
+                return DefinedOrNone(settings);
             }
 
             // Resolve the balance source for both races so the Faceless prefabs' "Open" button
@@ -135,30 +318,117 @@ namespace Game.Editor
 
                 foreach (var role in UnitRoles)
                 {
-                    if (visualCatalog.TryGetPrefab(raceId, role, 0, out var prefab)
-                        && prefab != null
-                        && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                    if (TryMatchKey(visualCatalog, race, raceId, role, 0, 0, prefabPath, out var info))
                     {
-                        return new BalanceSourceInfo(race.GetUnit(role));
+                        return info;
+                    }
+                }
+
+                for (var bonusSlot = 1; bonusSlot <= 6; bonusSlot++)
+                {
+                    if (TryMatchKey(
+                            visualCatalog, race, raceId, BonusKitRules.RoleForBonusSlot(bonusSlot), 0, bonusSlot,
+                            prefabPath, out var info))
+                    {
+                        return info;
                     }
                 }
 
                 for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
                 {
-                    if (visualCatalog.TryGetPrefab(raceId, UnitRole.Hero, slot, out var prefab)
-                        && prefab != null
-                        && AssetDatabase.GetAssetPath(prefab) == prefabPath)
+                    if (TryMatchKey(visualCatalog, race, raceId, UnitRole.Hero, slot, 0, prefabPath, out var info))
                     {
-                        return new BalanceSourceInfo(race.GetHeroBySlot(slot));
+                        return info;
                     }
                 }
 
-                if (visualCatalog.TryGetPrefab(raceId, UnitRole.Titan, 0, out var titan)
-                    && titan != null
-                    && AssetDatabase.GetAssetPath(titan) == prefabPath)
+                if (TryMatchKey(visualCatalog, race, raceId, UnitRole.Titan, 0, 0, prefabPath, out var titanInfo))
                 {
-                    return new BalanceSourceInfo(race.GetHeroBySlot(1));
+                    return titanInfo;
                 }
+
+                for (var bonusSlot = BonusKitRules.Hero1BonusSlot;
+                     bonusSlot <= BonusKitRules.TitanBonusSlot;
+                     bonusSlot++)
+                {
+                    var isTitan = BonusKitRules.IsTitanBonusSlot(bonusSlot);
+                    var heroSlot = isTitan ? 1 : BonusKitRules.HeroSlotForBonusSlot(bonusSlot);
+                    if (TryMatchKey(
+                            visualCatalog, race, raceId,
+                            isTitan ? UnitRole.Titan : UnitRole.Hero,
+                            isTitan ? 0 : heroSlot,
+                            bonusSlot,
+                            prefabPath, out var info))
+                    {
+                        return info;
+                    }
+                }
+            }
+
+            return DefinedOrNone(settings);
+        }
+
+        static bool TryMatchKey(
+            UnitVisualCatalog visualCatalog,
+            RaceDefinition race,
+            string raceId,
+            UnitRole role,
+            int heroSlot,
+            int bonusSlot,
+            string prefabPath,
+            out BalanceSourceInfo info)
+        {
+            info = default;
+            if (!visualCatalog.TryGetPrefab(raceId, role, heroSlot, bonusSlot, out var prefab)
+                || prefab == null
+                || AssetDatabase.GetAssetPath(prefab) != prefabPath)
+            {
+                return false;
+            }
+
+            var definition = ResolveDefinition(race, role, heroSlot, bonusSlot);
+            if (definition == null)
+            {
+                return false;
+            }
+
+            info = new BalanceSourceInfo(definition, raceId, role, heroSlot, bonusSlot);
+            return true;
+        }
+
+        static ScriptableObject ResolveDefinition(RaceDefinition race, UnitRole role, int heroSlot, int bonusSlot)
+        {
+            if (bonusSlot >= BonusKitRules.Hero1BonusSlot && bonusSlot <= BonusKitRules.TitanBonusSlot)
+            {
+                var slot = bonusSlot == BonusKitRules.TitanBonusSlot
+                    ? 1
+                    : BonusKitRules.HeroSlotForBonusSlot(bonusSlot);
+                return race.GetHeroBySlot(slot);
+            }
+
+            if (role is UnitRole.Hero or UnitRole.Titan)
+            {
+                return role == UnitRole.Titan ? race.GetHeroBySlot(1) : race.GetHeroBySlot(heroSlot);
+            }
+
+            if (bonusSlot >= 1 && bonusSlot <= 6)
+            {
+                return (ScriptableObject)(race.GetUnitBonus(role) ?? race.GetUnit(role));
+            }
+
+            return race.GetUnit(role);
+        }
+
+        static BalanceSourceInfo DefinedOrNone(UnitCombatSettings settings)
+        {
+            if (settings != null && settings.HeroDefinition != null)
+            {
+                return new BalanceSourceInfo(settings.HeroDefinition);
+            }
+
+            if (settings != null && settings.UnitDefinition != null)
+            {
+                return new BalanceSourceInfo(settings.UnitDefinition);
             }
 
             return default;

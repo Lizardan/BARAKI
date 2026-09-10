@@ -137,7 +137,7 @@ namespace Game.Editor
             for (var i = 0; i < 3; i++)
             {
                 // No morale passive for Faceless (no race passives) — keep _idleMoraleId empty.
-                heroes[i] = CreateHero(ids[i], GameIds.Races.Faceless, i + 1, string.Empty);
+                heroes[i] = CreateHero(ids[i], GameIds.Races.Faceless, i + 1, string.Empty, 2);
             }
 
             return heroes;
@@ -171,7 +171,7 @@ namespace Game.Editor
             var heroes = new HeroDefinition[3];
             for (var i = 0; i < 3; i++)
             {
-                heroes[i] = CreateHero(ids[i], GameIds.Races.Human, i + 1, morale[i]);
+                heroes[i] = CreateHero(ids[i], GameIds.Races.Human, i + 1, morale[i], 3);
             }
 
             return heroes;
@@ -211,7 +211,7 @@ namespace Game.Editor
             return unit;
         }
 
-        private static HeroDefinition CreateHero(string id, string raceId, int slot, string moraleId)
+        private static HeroDefinition CreateHero(string id, string raceId, int slot, string moraleId, int rangedSlot)
         {
             var path = $"{ContentAssetPaths.RaceHeroFolder(raceId, slot)}/{id}.asset";
             var hero = LoadOrCreate<HeroDefinition>(path);
@@ -225,7 +225,7 @@ namespace Game.Editor
             so.FindProperty("_damageMin").floatValue = 35f;
             so.FindProperty("_damageMax").floatValue = 45f;
             so.FindProperty("_attackSpeed").floatValue = 1f;
-            so.FindProperty("_attackRange").floatValue = slot == 3 ? 12f : 1.5f;
+            so.FindProperty("_attackRange").floatValue = slot == rangedSlot ? 12f : 1.5f;
             so.FindProperty("_moveSpeed").floatValue = 4f;
             so.FindProperty("_goldBounty").intValue = 80;
             so.ApplyModifiedPropertiesWithoutUndo();

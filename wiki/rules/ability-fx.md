@@ -322,5 +322,5 @@ CFXR-префабы несут `CFXR_Effect.cameraShake`, который сме�
 
 ## Вне скоупа окна
 
-Боевая логика (`UnitAbilityBehaviour`), статы юнита (`Sync Balance to Prefabs`), FoW,
+Боевая логика (`UnitAbilityBehaviour`), статы юнита (читаются из `UnitDefinition`/`HeroDefinition` — префабы их не хранят), FoW,
 building destroyed / кровь / Titan rays, Canvas/uGUI.

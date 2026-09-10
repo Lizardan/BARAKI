@@ -223,11 +223,18 @@ namespace Game.Gameplay.Cameras
             return combined;
         }
 
-        public static Vector3 ClampPanPosition(Vector3 position, float boundsRadius)
+        public static Vector3 ClampPanPosition(Vector3 position, float boundsRadius) =>
+            ClampPanPosition(position, boundsRadius, Vector3.zero);
+
+        /// <summary>
+        /// Квадратный кламп панорамирования вокруг <paramref name="center"/> (используется
+        /// на арене — нельзя улететь далеко от её центра).
+        /// </summary>
+        public static Vector3 ClampPanPosition(Vector3 position, float boundsRadius, Vector3 center)
         {
             position.y = 0f;
-            position.x = Mathf.Clamp(position.x, -boundsRadius, boundsRadius);
-            position.z = Mathf.Clamp(position.z, -boundsRadius, boundsRadius);
+            position.x = Mathf.Clamp(position.x, center.x - boundsRadius, center.x + boundsRadius);
+            position.z = Mathf.Clamp(position.z, center.z - boundsRadius, center.z + boundsRadius);
             return position;
         }
 

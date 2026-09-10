@@ -279,8 +279,9 @@ gold_bounty: 80
 mvp: true
 ```
 
-Баланс героев (HP/броня/урон и т.д.) правится в `HeroDefinition`; `UnitCombatSettings` на префабе —
-read-only runtime-снапшот, обновляемый через `BARAKI/Units/Sync Balance to Prefabs`.
+Баланс героев (HP/броня/урон и т.д.) правится в `HeroDefinition`; `UnitCombatSettings` на префабе
+хранит ссылку на `HeroDefinition` (чисел нет) — статы резолвит `UnitStatsResolver`, правка SO
+применяется сразу, пересинка не нужна.
 
 ## Bonus hero variants
 

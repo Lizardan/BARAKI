@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Game.Core;
 using Game.Gameplay.Data;
 using Game.Gameplay.Dev;
 using Game.Gameplay.Match;
@@ -156,10 +157,11 @@ namespace Game.Editor
             UnitVisualPrefabBuilder.UpdateFacelessCatalog();
             log.Add("UnitVisualPrefabBuilder.UpdateFacelessCatalog: catalog re-pointed to the rebuilt prefabs");
 
-            // Rebuilding the prefab replaces UnitCombatSettings with a fresh default snapshot,
-            // wiping attack range/hp/etc. Re-sync from the RaceCatalog definitions.
-            UnitBalanceSetup.SyncFaceless();
-            log.Add($"UnitBalanceSetup.SyncFaceless: restored UnitCombatSettings from race catalog");
+            // Rebuilding the prefab replaces UnitCombatSettings with a fresh default snapshot.
+            // Re-point the source references to the RaceCatalog definitions — stats resolve live.
+            UnitStatsSourceAssigner.AssignRace(GameIds.Races.Faceless);
+            log.Add(
+                "UnitStatsSourceAssigner.AssignRace: source refs re-pointed to the RaceCatalog definitions");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

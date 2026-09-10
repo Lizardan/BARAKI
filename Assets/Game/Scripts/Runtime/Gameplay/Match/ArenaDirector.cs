@@ -34,6 +34,14 @@ namespace Game.Gameplay.Match
 
         bool IsHost => ArenaNetworkBridge.IsAuthority;
 
+        /// <summary>
+        /// True, пока арена активна (не <see cref="ArenaPhase.Idle"/>). Читается из того
+        /// состояния, которое авторитетно для этого пира: на хосте — своё, на клиенте —
+        /// реплицированное. Используется туманом войны, чтобы не заливать арену оверлеем.
+        /// </summary>
+        public bool IsArenaActive =>
+            (ArenaPhase)(IsHost ? _state.Phase : ArenaNetworkBridge.Current.Phase) != ArenaPhase.Idle;
+
         void Awake()
         {
             Current = this;
@@ -483,6 +491,38 @@ namespace Game.Gameplay.Match
             ArenaNetworkBridge.Publish(_state);
         }
 
+        /// <summary>
+        /// Debug/чит: подтянуть следующую арену — отсчёт до неё станет
+        /// <paramref name="seconds"/> игровых секунд. Работает только на авторитете
+        /// (хост/офлайн) и только пока арена не идёт.
+        /// </summary>
+        public void DebugSetArenaCountdown(float seconds)
+        {
+            if (!IsHost)
+            {
+                return;
+            }
+
+            if ((ArenaPhase)_state.Phase != ArenaPhase.Idle)
+            {
+                return;
+            }
+
+            if (_arenaIndex > ArenaRules.TotalArenas)
+            {
+                // Арен больше нет — отсчёт некуда подтягивать.
+                return;
+            }
+
+            var controller = MatchRuntime.Current?.Controller;
+            if (controller == null)
+            {
+                return;
+            }
+
+            _nextArenaMatchTime = controller.MatchTimeSeconds + Mathf.Max(0f, seconds);
+        }
+
         void PublishFighters()
         {
             _state.A = MakeFighter(_sim.A, 0);
@@ -539,8 +579,11 @@ namespace Game.Gameplay.Match
             {
                 _savedCameraPosition = pan.PanPosition;
                 _savedYawDegrees = pan.TargetYawDegrees;
+                // Мап-кламп снят (арена за пределами карты), но панорамирование
+                // ограничено квадратом вокруг центра арены — улететь далеко нельзя.
                 pan.SetPanBoundsEnabled(false);
-                pan.SetPanInputLocked(true);
+                pan.SetArenaPanBounds(true, ArenaRules.Center, ArenaRules.PanBoundsRadius);
+                pan.SetPanInputLocked(false);
                 pan.SetPanPosition(ArenaRules.Center);
             }
 
@@ -552,10 +595,13 @@ namespace Game.Gameplay.Match
             var pan = GameplayCameraPanController.Current;
             if (pan != null)
             {
-                pan.SetPanPosition(_savedCameraPosition);
-                pan.SetYawDegrees(_savedYawDegrees);
+                // Сначала вернуть режимы клампов, потом позицию: иначе сохранённая
+                // позиция на карте заклампилась бы к арене.
+                pan.SetArenaPanBounds(false, default, 0f);
                 pan.SetPanBoundsEnabled(true);
                 pan.SetPanInputLocked(false);
+                pan.SetPanPosition(_savedCameraPosition);
+                pan.SetYawDegrees(_savedYawDegrees);
             }
 
             _cameraTaken = false;

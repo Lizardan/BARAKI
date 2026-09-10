@@ -17,11 +17,9 @@ namespace Game.UI.Controllers
         private const string BarracksTimerClass = "match-hud__barracks-timer";
         private const string BarracksTimerInactiveClass = "match-hud__barracks-timer--inactive";
         private const string StartCountdownHiddenClass = "match-hud__start-countdown--hidden";
-        private const string BountyPopupHiddenClass = "match-hud__bounty-popup--hidden";
         private const string CommandFeedbackHiddenClass = "match-hud__command-feedback--hidden";
         private const string MigrationHiddenClass = "match-hud__migration--hidden";
         private const string ResultsHiddenClass = "match-hud__results--hidden";
-        private const float BountyPopupDurationSeconds = 1.5f;
         private const float CommandFeedbackDurationSeconds = 2.2f;
 
         [SerializeField] private UIDocument _uiDocument;
@@ -32,12 +30,9 @@ namespace Game.UI.Controllers
         private MatchController _subscribedController;
         private Camera _camera;
         private int _localPlayerSlot = MatchSetup.DefaultLocalPlayerSlot;
-        private float _bountyPopupUntilTime;
         private float _commandFeedbackUntilTime;
-        private Label _phaseLabel;
         private Label _timeLabel;
         private Label _goldLabel;
-        private Label _bountyPopupLabel;
         private Label _commandFeedbackLabel;
         private Label _startCountdownLabel;
         private VisualElement _migrationOverlay;
@@ -78,6 +73,7 @@ namespace Game.UI.Controllers
         private VisualElement _arenaDuelFillA;
         private VisualElement _arenaDuelFillB;
         private string _arenaListKey;
+        private ArenaHeroPreviewRuntime _arenaHeroPreview;
         private int _trackedBarracksCount = -1;
         private int _trackedBarracksLocalSlot = -1;
         private bool _resultsShown;
@@ -93,10 +89,8 @@ namespace Game.UI.Controllers
             root.style.flexGrow = 1;
             root.style.width = Length.Percent(100);
             root.style.height = Length.Percent(100);
-            _phaseLabel = root.Q<Label>("PhaseLabel");
             _timeLabel = root.Q<Label>("TimeLabel");
             _goldLabel = root.Q<Label>("GoldLabel");
-            _bountyPopupLabel = root.Q<Label>("BountyPopupLabel");
             _commandFeedbackLabel = root.Q<Label>("CommandFeedbackLabel");
             _startCountdownLabel = root.Q<Label>("StartCountdownLabel");
             _migrationOverlay = root.Q<VisualElement>("MigrationOverlay");
@@ -110,6 +104,11 @@ namespace Game.UI.Controllers
             _barracksLayer = root.Q<VisualElement>("BarracksTimerLayer");
             _passiveGoldLayer = root.Q<VisualElement>("PassiveGoldTimerLayer");
             ResolveArenaElements(root);
+
+            if (!TryGetComponent(out _arenaHeroPreview))
+            {
+                _arenaHeroPreview = gameObject.AddComponent<ArenaHeroPreviewRuntime>();
+            }
 
             if (_resultsRematchButton != null)
             {
@@ -176,7 +175,6 @@ namespace Game.UI.Controllers
                 UnsubscribeFromController();
                 if (controller != null)
                 {
-                    controller.UnitKilled += OnUnitKilled;
                     controller.MatchEnded += OnMatchEnded;
                     _subscribedController = controller;
                 }
@@ -290,18 +288,6 @@ namespace Game.UI.Controllers
             MatchNetworkSession.RequestKickDisconnected(_disconnectKickSlot);
         }
 
-        private void OnUnitKilled(UnitKillEvent killEvent)
-        {
-            if (killEvent.KillerOwnerSlot != _localPlayerSlot || killEvent.GoldGranted <= 0)
-            {
-                return;
-            }
-
-            _bountyPopupLabel.text = MatchHudFormatting.FormatBountyPopup(killEvent.GoldGranted);
-            _bountyPopupLabel.RemoveFromClassList(BountyPopupHiddenClass);
-            _bountyPopupUntilTime = Time.unscaledTime + BountyPopupDurationSeconds;
-        }
-
         private void OnMatchEnded(int winnerSlot) => ShowResults(winnerSlot);
 
         void ShowResults(int winnerSlot)
@@ -315,21 +301,17 @@ namespace Game.UI.Controllers
         {
             if (controller.Phase == MatchPhase.Start)
             {
-                _phaseLabel.text = "—";
                 _timeLabel.text = "00:00";
                 _goldLabel.text = MatchHudFormatting.FormatGold(GetLocalGold(controller));
                 _startCountdownLabel.text = string.Empty;
                 _startCountdownLabel.AddToClassList(StartCountdownHiddenClass);
-                UpdateBountyPopup();
                 return;
             }
 
-            _phaseLabel.text = MatchHudFormatting.FormatPhase(controller.Phase);
             _timeLabel.text = MatchHudFormatting.FormatMatchTime(controller.MatchTimeSeconds);
             _goldLabel.text = MatchHudFormatting.FormatGold(GetLocalGold(controller));
             _startCountdownLabel.text = string.Empty;
             _startCountdownLabel.AddToClassList(StartCountdownHiddenClass);
-            UpdateBountyPopup();
         }
 
         #region Арена
@@ -417,6 +399,7 @@ namespace Game.UI.Controllers
             if (!visible)
             {
                 _arenaListKey = null;
+                _arenaHeroPreview?.SetVisible(false);
                 return;
             }
 
@@ -434,6 +417,7 @@ namespace Game.UI.Controllers
                 RebuildArenaPickLists(controller, in state, localSlot);
             }
 
+            _arenaHeroPreview?.SetVisible(true);
             RefreshArenaPickSelection(in state, localSlot);
         }
 
@@ -444,16 +428,24 @@ namespace Game.UI.Controllers
                 return;
             }
 
+            var localPlayer = controller.Players != null && localSlot >= 0 && localSlot < controller.Players.Count
+                ? controller.Players[localSlot]
+                : null;
+
             _arenaHeroList.Clear();
+
+            // Герои показываем как idle-превью (как в меню выбора очерёдности после бонуса):
+            // карточка с рендер-текстурой стоящего в idle героя, кликабельная, с состояниями
+            // выбрано/заблокировано. Для титан-арены — единственная карточка титана.
+            var previewTargets = new List<VisualElement>();
+            var previewHeroSlots = new List<int>();
+
             if (ArenaRules.IsTitanArena(state.Index))
             {
-                AddArenaOption(
-                    _arenaHeroList,
-                    "ArenaTitan",
-                    "Титан",
-                    "единственный выбор",
-                    isHero: false,
-                    value: 0,
+                AddArenaHeroCard(
+                    _arenaHeroList, previewTargets, previewHeroSlots,
+                    isTitan: true, heroSlot: 0,
+                    "Титан", "единственный выбор",
                     enabled: true);
             }
             else
@@ -463,15 +455,22 @@ namespace Game.UI.Controllers
                     var hired = ArenaPairing.IsHeroHired(controller, localSlot, heroSlot);
                     var used = ArenaRules.HasUsedHero(state.UsedHeroMask, localSlot, heroSlot);
                     var meta = !hired ? "не нанят" : used ? "уже выступал" : "готов";
-                    AddArenaOption(
-                        _arenaHeroList,
-                        "ArenaHero" + heroSlot,
-                        "Герой " + heroSlot,
-                        meta,
-                        isHero: true,
-                        value: heroSlot,
+                    AddArenaHeroCard(
+                        _arenaHeroList, previewTargets, previewHeroSlots,
+                        isTitan: false, heroSlot: heroSlot,
+                        "Герой " + heroSlot, meta,
                         enabled: hired && !used);
                 }
+            }
+
+            if (previewTargets.Count > 0 && localPlayer != null)
+            {
+                _arenaHeroPreview?.Configure(
+                    previewTargets.ToArray(),
+                    previewHeroSlots.ToArray(),
+                    localPlayer.RaceId,
+                    localPlayer.BonusPickSlot,
+                    localPlayer.BonusPickSlot2);
             }
 
             _arenaOpponentList.Clear();
@@ -498,6 +497,51 @@ namespace Game.UI.Controllers
                     value: slot,
                     enabled: true);
             }
+        }
+
+        private void AddArenaHeroCard(
+            VisualElement container,
+            List<VisualElement> previewTargets,
+            List<int> previewHeroSlots,
+            bool isTitan,
+            int heroSlot,
+            string title,
+            string meta,
+            bool enabled)
+        {
+            var card = new VisualElement
+            {
+                name = isTitan ? "ArenaTitan" : "ArenaHero" + heroSlot,
+                pickingMode = PickingMode.Position,
+            };
+            card.AddToClassList("arena-pick__card");
+            if (!enabled)
+            {
+                card.AddToClassList("arena-pick__card--locked");
+            }
+
+            var preview = new VisualElement();
+            preview.AddToClassList("arena-pick__preview");
+            card.Add(preview);
+
+            var titleLabel = new Label(title);
+            titleLabel.AddToClassList("arena-pick__card-title");
+            card.Add(titleLabel);
+
+            var metaLabel = new Label(meta);
+            metaLabel.AddToClassList("arena-pick__card-meta");
+            card.Add(metaLabel);
+
+            if (enabled)
+            {
+                var pickHero = !isTitan;
+                var pickValue = isTitan ? 0 : heroSlot;
+                card.RegisterCallback<ClickEvent>(_ => OnArenaOptionClicked(pickHero, pickValue));
+            }
+
+            container.Add(card);
+            previewTargets.Add(preview);
+            previewHeroSlots.Add(isTitan ? 0 : heroSlot);
         }
 
         private void AddArenaOption(
@@ -670,15 +714,6 @@ namespace Game.UI.Controllers
 
         #endregion
 
-        private void UpdateBountyPopup()
-        {
-            if (Time.unscaledTime >= _bountyPopupUntilTime)
-            {
-                _bountyPopupLabel.text = string.Empty;
-                _bountyPopupLabel.AddToClassList(BountyPopupHiddenClass);
-            }
-        }
-
         private void RefreshLocalPlayerSlot()
         {
             _localPlayerSlot = (GameSession.ActiveSetup ?? MatchSetup.Default).LocalPlayerSlot;
@@ -821,11 +856,8 @@ namespace Game.UI.Controllers
 
         private void ClearHud()
         {
-            _phaseLabel.text = "—";
             _timeLabel.text = "00:00";
             _goldLabel.text = MatchHudFormatting.FormatGold(0);
-            _bountyPopupLabel.text = string.Empty;
-            _bountyPopupLabel.AddToClassList(BountyPopupHiddenClass);
             if (!_resultsShown)
             {
                 _resultsOverlay.AddToClassList(ResultsHiddenClass);
@@ -1130,7 +1162,6 @@ namespace Game.UI.Controllers
         {
             if (_subscribedController != null)
             {
-                _subscribedController.UnitKilled -= OnUnitKilled;
                 _subscribedController.MatchEnded -= OnMatchEnded;
                 _subscribedController = null;
             }

@@ -22,6 +22,8 @@ namespace Game.UI.Controllers
         Button _addGoldButton;
         Button _addPassiveButton;
         Button _skipResearchButton;
+        Button _prepareArenaButton;
+        Button _arenaSoonButton;
         Button _winButton;
         Button _fireAllBarracksButton;
         Button _spawnPointsButton;
@@ -40,6 +42,8 @@ namespace Game.UI.Controllers
             _addGoldButton = root.Q<Button>("DebugAddGoldButton");
             _addPassiveButton = root.Q<Button>("DebugAddPassiveButton");
             _skipResearchButton = root.Q<Button>("DebugSkipResearchButton");
+            _prepareArenaButton = root.Q<Button>("DebugPrepareArenaButton");
+            _arenaSoonButton = root.Q<Button>("DebugArenaSoonButton");
             _winButton = root.Q<Button>("DebugWinButton");
             _fireAllBarracksButton = root.Q<Button>("DebugFireAllBarracksButton");
             _spawnPointsButton = root.Q<Button>("DebugSpawnPointsButton");
@@ -70,6 +74,16 @@ namespace Game.UI.Controllers
             if (_skipResearchButton != null)
             {
                 _skipResearchButton.clicked += OnSkipResearch;
+            }
+
+            if (_prepareArenaButton != null)
+            {
+                _prepareArenaButton.clicked += OnPrepareArena;
+            }
+
+            if (_arenaSoonButton != null)
+            {
+                _arenaSoonButton.clicked += OnArenaSoon;
             }
 
             if (_winButton != null)
@@ -110,6 +124,16 @@ namespace Game.UI.Controllers
             if (_skipResearchButton != null)
             {
                 _skipResearchButton.clicked -= OnSkipResearch;
+            }
+
+            if (_prepareArenaButton != null)
+            {
+                _prepareArenaButton.clicked -= OnPrepareArena;
+            }
+
+            if (_arenaSoonButton != null)
+            {
+                _arenaSoonButton.clicked -= OnArenaSoon;
             }
 
             if (_winButton != null)
@@ -212,6 +236,24 @@ namespace Game.UI.Controllers
             }
 
             controller.DebugCompleteResearchForOwner(_localPlayerSlot);
+        }
+
+        void OnPrepareArena()
+        {
+            // Выдаёт всем слотам по 3 героя и открывает титана — иначе у неигранных
+            // слотов нет бойцов и арена «сгорает» без участников.
+            if (!TryGetMutableController(out var controller))
+            {
+                return;
+            }
+
+            controller.DebugPrepareArena();
+        }
+
+        void OnArenaSoon()
+        {
+            // Подтягивает следующую арену: таймер до неё станет 5 секунд.
+            ArenaDirector.Current?.DebugSetArenaCountdown(5f);
         }
 
         void OnWinLocal()

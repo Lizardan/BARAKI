@@ -77,19 +77,21 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 
 Общее:
 
-- Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`BonusKitRules.Veteran*`). Префаб-сеттингс
-  авторитетен; фолбэк без префаба — `UnitStatsResolver.ResolveBase` × `BonusKitRules.ApplyVeteranMultipliers`.
+- Статы ветеранов: HP ×1.4, dmg ×1.35, броня +2 (`BonusKitRules.Veteran*`). Префаб хранит только
+  ссылку на базового героя; числа живут в `HeroDefinition`, ветеранские множители применяет
+  `UnitStatsResolver.ResolveVeteran` (титан — ×3 поверх, range `TitanRules.AttackRange`).
 - Слот героя N усиливается пиком `6+N`; титан — пиком 10 (`BonusKitRules.EffectiveBonusSlotForHero/ForTitan`,
   race-aware версия с `raceId` гейтует расы без кита).
   `BonusSlot` юнита едет в UnitsStatic v21 без изменений кодека — клиентские визуал/портреты
   резолвятся тем же `TryGetPrefab/TryGetBonusPortrait` (каталог расширен слотами 7–10).
 - Ветеранские киты: `AbilityKitDefaults.CreateKingBonus/PaladinBonus/PriestBonus/TitanBonus`
-  (+ `CreateVeteranKit(slot)`), сидятся тем же `Build Ability Defs` → `Seed Unit Abilities`;
-  balance — `Sync Balance to Prefabs` (`UnitCombatSettings.CopyFromVeteran`).
+  (+ `CreateVeteranKit(slot)`), сидятся `Build Ability Defs` → `Seed Unit Abilities`.
+  Статы — из `HeroDefinition` (ref на префабе, слот 7–10 указывает на базового героя);
+  после правки SO ничего пересинивать не нужно.
 - Префабы: `BARAKI/Units/Build Veteran Prefabs` (`VeteranPrefabBuilder`) — копия базового
   героя/титана + child `VeteranBanner` (`TT_RTS_Banner_plain`, сид 0.6× роста тела, спина = **−Z**:
   у TT-бипеда forward после baked yaw = **+Z**, плащ/спина = −Z). Пересборка **сохраняет** ручную
-  подгонку флага (pos/rot/scale) и синхронизированные `UnitCombatSettings`/abilities существующего
+  подгонку флага (pos/rot/scale) и ссылки `UnitCombatSettings`/abilities существующего
   префаба — сид применяется только к новому префабу.
 - Портреты: `UnitPortraitBaker` печёт `Art/UI/UnitPortraits/Humans/BonusHeroes/{Hero1..3,Titan}.png`.
 
@@ -100,7 +102,8 @@ fallback `MatchFxCatalog` Runic + `PassiveAuraFxRules`. Child `Rays` снима�
 
 - Defs / префабы / портреты — по категории: `Units/{Role}/`, `BonusUnits/{Role}/`,
   `Heroes/{HeroN|Titan}/` (см. `wiki/rules/content-assets.md`).
-- Меню: `Rebuild TT Prefabs` → `Build Ability Defs` → `Sync Balance` → `Seed Unit Abilities`.
+- Меню: `Rebuild TT Prefabs` → `Build Ability Defs` → `Seed Unit Abilities`.
+  `BARAKI/Units/Assign Stats Sources` — только разово/после чистой пересборки префабов (ставит ref на def).
 - Миграция раскладки: `BARAKI/Content/Migrate Content Folders`.
 
 ## Bonus-модели и анимации (`TtUnitVisualSetup`)

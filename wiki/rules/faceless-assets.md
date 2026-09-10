@@ -191,6 +191,24 @@ production-контроллеры лежат рядом с префабами.
 localScale = таблице, высоты 1.6 (Melee)…4.3 (Titan). Консоль чистая; тесты —
 1263 passed (`Game.Tests`, EditMode). Тестовая сцена после фикса удалена.
 
+**Источник масштаба с 2026-09** — размер юнита теперь одно число в `UnitDefinition.VisualScale` /
+`HeroDefinition.VisualScale` и равен **скейлу в игре** (никаких перемножений в рантайме):
+значение = prefab root scale × role-фактор (`UnitGreyboxVisuals.ResolveAnimatedPresenterScale(role)`:
+крипы ×1.25, герой ×1.4375, титан ×3.75). Примеры: Faceless Melee = 1.75×1.25 = **2.188**,
+Faceless Servant = 1.25×1.25 = **1.563**, Human Melee = 1.0×1.25 = **1.25**,
+Faceless герой = 2.0×1.4375 = **2.875**, титан Faceless = 2.0×3.75 = **7.5**.
+Запекание: `BARAKI/Units/Assign Visual Scales (from prefabs)` заполняет только путые (0) —
+ручной тюнинг не трогает; `BARAKI/Units/Bake Visual Scales (final, role-multiplied)` — принудительно
+пересчитывает все с нуля (одноразовая миграция). В бою
+`UnitGreyboxVisuals.ResolveAuthorVisualScale` берёт `VisualScale` из def (приоритет unit, затем
+hero; если &gt; 0) — иначе fallback на prefab root scale; presenter-множитель к самому юниту больше
+не применяется (остался только в VFX-плейсменте Titan-body-Rays). На инспекторе префаба карточка
+статов показывает «Визуальный масштаб (в бою)» **read-only** (источник: ассет или префаб);
+правка — только в ассете через кнопку «Открыть». Правка масштаба
+юнита — только в ассете, префаб не трогаем; `ResolveFacelessRoleScale` остался для rebuilt-префабов.
+`Faceless_Servant` (scale 1.563): меш/материалы как у Melee, оружие скрыто через
+`AxHandle01_16` scale 0; самостоятельный ассет меша удалён.
+
 Контроллеры, клипы и материалы не менялись. Rebuild: `BARAKI/Faceless/Rebuild Unit
 Prefabs` (`RebuildProductionPrefabs`).
 
@@ -210,11 +228,11 @@ Prefabs` (`RebuildProductionPrefabs`).
 - **Ренджер/кастер/flying не стреляли на дистанции**: `BuildProductionPrefab`
   пересоздаёт префаб через `DeleteAsset` + `SaveAsPrefabAsset`, что меняет GUID и
   **рвёт ссылки `UnitVisualCatalog`** (NULL) на эти префабы. Поэтому
-  `UnitBalanceSetup.SyncFaceless()` не находил префабы и статы оставались
-  дефолтными (range=1.5). Фикс: в конце `RebuildProductionPrefabs` перед
-  `SyncFaceless()` вызывается `UnitVisualPrefabBuilder.UpdateFacelessCatalog()`
-  (пере-привязка каталога + переснапка портретов). После пересборки статы
-  префабов = `RaceCatalog` (Ranged range=8, Caster range=6/mana=200, Flying range=6,
+  ре-присвоение статов (`UnitStatsSourceAssigner.AssignRace`) не находило префабы и
+  статы оставались дефолтными (range=1.5). Фикс: в конце `RebuildProductionPrefabs`
+  перед `AssignRace()` вызывается `UnitVisualPrefabBuilder.UpdateFacelessCatalog()`
+  (пере-привязка каталога + переснапка портретов). После пересборки префаб ссылается
+  на `RaceCatalog`-default (Ranged range=8, Caster range=6/mana=200, Flying range=6,
   Super range=10, Hero3 range=12, Titan hp=1800/range=3).
 
 Верифицировано: walk-клип кастера — корень identity (`maxAbs Z-roll=0`), каталог
@@ -247,11 +265,10 @@ wire/снапшот-контракты):
   release-0.1, а mid-swing 0.5); `SpawnDeathFx` для Faceless Super — Blood
   (не `MachineDestroyed`).
 - Статы `UNIT_FACELESS_SUPER` / `UNIT_FACELESS_FLYING`: `_attackRange` 10/6 → **1.5**
-  (меле). Правка вносится **в UnitDefinition-ассеты** (`ScriptableObjects/Races/Faceless/…`),
-  затем запускать `BARAKI/Faceless/Sync Balance to Prefabs` (переносит в
-  `UnitCombatSettings` префабов). Боевые статы рантайма берёт
-  `UnitStatsResolver` из **префабов** (приоритет), определения — fallback;
-  консистентность обоих источников обязательна (при сбое каталога Super не должен
+  (меле). Правка вносится **прямо в UnitDefinition-ассеты** (`ScriptableObjects/Races/Faceless/…`)
+  и применяется автоматически: префабы не хранят чисел, `UnitStatsResolver` читает
+  `UnitCombatSettings.UnitDefinition` (приоритет), каталог — fallback;
+  консистентность ссылки и деф-ассета обязательна (при сбое каталога Super не должен
   вернуться в артиллерию range=10).
 
 Тесты: `UnitCombatIdentityTests` (9 кейсов). Тесты EditMode: **1272 passed**.

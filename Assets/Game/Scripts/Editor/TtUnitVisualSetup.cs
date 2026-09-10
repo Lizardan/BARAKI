@@ -466,16 +466,13 @@ namespace Game.Editor
 
             if (setup.Role == UnitRole.Hero)
             {
-                settings.CopyFrom(race.GetHeroBySlot(setup.HeroSlot));
+                settings.AssignSource(race.GetHeroBySlot(setup.HeroSlot));
                 return;
             }
 
             if (setup.SeedTitanStats)
             {
-                settings.CopyFrom(
-                    race.GetHeroBySlot(1),
-                    TitanRules.BaseStatMultiplier,
-                    TitanRules.AttackRange);
+                settings.AssignSource(race.GetHeroBySlot(1));
                 return;
             }
 
@@ -484,13 +481,13 @@ namespace Game.Editor
                 : race.GetUnit(setup.Role);
             if (definition != null)
             {
-                settings.CopyFrom(definition);
+                settings.AssignSource(definition);
             }
         }
 
         static RaceDefinition LoadHumanRace()
         {
-            var catalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(UnitBalanceSetup.RaceCatalogPath);
+            var catalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(ContentAssetPaths.RaceCatalog);
             return catalog?.GetRace(GameIds.Races.Human);
         }
 

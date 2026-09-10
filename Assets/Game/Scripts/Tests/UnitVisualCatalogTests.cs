@@ -624,31 +624,96 @@ namespace Game.Tests
         }
 
         [Test]
-        public void HumanChampionPrefabs_HaveUnitCombatSettings()
-        {
-            AssertBalance("Human_Hero1", UnitRole.Hero, 1, 600f);
-            AssertBalance("Human_Hero2", UnitRole.Hero, 2, 600f);
-            AssertBalance("Human_Hero3", UnitRole.Hero, 3, 600f);
-            AssertBalance("Human_Titan", UnitRole.Titan, 0, 1800f);
-        }
-
-        [Test]
-        public void ResolveBase_TitanPrefab_DoesNotApplyScaleForTitanAgain()
+        public void HumanChampionPrefabs_HaveStatsSourceRef()
         {
             RaceContentBuilder.EnsureContent();
             var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            var race = raceCatalog.GetRace(GameIds.Races.Human);
+
+            for (var slot = 1; slot <= HeroRules.MaxHeroSlots; slot++)
+            {
+                AssertStatsSource($"Human_Hero{slot}", UnitRole.Hero, slot, race.GetHeroBySlot(slot));
+            }
+
+            AssertStatsSource("Human_Titan", UnitRole.Titan, 0, race.GetHeroBySlot(1));
+        }
+
+        [Test]
+        public void ResolveBase_TitanPrefab_ScalesHero1WithTitanRules()
+        {
+            RaceContentBuilder.EnsureContent();
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            var race = raceCatalog.GetRace(GameIds.Races.Human);
+            var hero1 = race.GetHeroBySlot(1);
+            Assert.IsNotNull(hero1);
+
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Titan, out var prefab));
             var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
             Assert.IsNotNull(settings);
+            Assert.AreSame(hero1, settings.HeroDefinition);
+
             var stats = UnitStatsResolver.ResolveBase(
                 new RaceCatalogCombatCatalog(raceCatalog),
                 _catalog,
                 GameIds.Races.Human,
                 UnitRole.Titan);
-            Assert.AreEqual(settings.MaxHp, stats.MaxHp, 0.001f);
-            Assert.AreEqual(settings.Armor, stats.Armor, 0.001f);
-            Assert.AreEqual(TitanRules.AttackRange, settings.AttackRange, 0.001f);
+            Assert.AreEqual(hero1.MaxHp * TitanRules.BaseStatMultiplier, stats.MaxHp, 0.001f);
+            Assert.AreEqual(hero1.Armor * TitanRules.BaseStatMultiplier, stats.Armor, 0.001f);
             Assert.AreEqual(TitanRules.AttackRange, stats.AttackRange, 0.001f);
+        }
+
+        [Test]
+        public void ResolveBase_VeteranPrefab_AppliesCanonicalVeteranMultipliers()
+        {
+            RaceContentBuilder.EnsureContent();
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            var race = raceCatalog.GetRace(GameIds.Races.Human);
+            var bonusSlot = BonusKitRules.Hero1BonusSlot + 1;
+            var heroSlot = BonusKitRules.HeroSlotForBonusSlot(bonusSlot);
+            var hero = race.GetHeroBySlot(heroSlot);
+            Assert.IsNotNull(hero, "veteran base hero");
+
+            Assert.IsTrue(
+                _catalog.TryGetPrefab(GameIds.Races.Human, UnitRole.Hero, heroSlot, bonusSlot, out var prefab));
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings);
+            Assert.AreSame(hero, settings.HeroDefinition);
+
+            var stats = UnitStatsResolver.ResolveBase(
+                new RaceCatalogCombatCatalog(raceCatalog),
+                _catalog,
+                GameIds.Races.Human,
+                UnitRole.Hero,
+                heroSlot,
+                bonusSlot);
+            Assert.AreEqual(hero.MaxHp * BonusKitRules.VeteranHpMultiplier, stats.MaxHp, 0.001f);
+            Assert.AreEqual(hero.DamageMin * BonusKitRules.VeteranDamageMultiplier, stats.DamageMin, 0.001f);
+            Assert.AreEqual(hero.DamageMax * BonusKitRules.VeteranDamageMultiplier, stats.DamageMax, 0.001f);
+            Assert.AreEqual(hero.Armor + BonusKitRules.VeteranArmorBonus, stats.Armor, 0.001f);
+            Assert.AreEqual(hero.AttackRange, stats.AttackRange, 0.001f);
+        }
+
+        [Test]
+        public void FacelessHeroRange_ComesFromHeroDefinition()
+        {
+            RaceContentBuilder.EnsureContent();
+            var raceCatalog = AssetDatabase.LoadAssetAtPath<RaceCatalog>(RaceContentBuilder.CatalogPath);
+            var race = raceCatalog.GetRace(GameIds.Races.Faceless);
+            var hero2 = race.GetHeroBySlot(2);
+            Assert.IsNotNull(hero2);
+
+            Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Faceless, UnitRole.Hero, 2, out var prefab));
+            var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
+            Assert.IsNotNull(settings);
+            Assert.AreSame(hero2, settings.HeroDefinition);
+
+            var stats = UnitStatsResolver.ResolveBase(
+                new RaceCatalogCombatCatalog(raceCatalog),
+                _catalog,
+                GameIds.Races.Faceless,
+                UnitRole.Hero,
+                2);
+            Assert.AreEqual(hero2.AttackRange, stats.AttackRange, 0.001f);
         }
 
         void AssertHeroPrefab(int slot, string name, string path)
@@ -659,12 +724,21 @@ namespace Game.Tests
             Assert.AreEqual(path, AssetDatabase.GetAssetPath(prefab));
         }
 
-        void AssertBalance(string name, UnitRole role, int heroSlot, float expectedHp)
+        void AssertStatsSource(string name, UnitRole role, int heroSlot, ScriptableObject source)
         {
+            Assert.IsNotNull(source, $"{name} source definition");
             Assert.IsTrue(_catalog.TryGetPrefab(GameIds.Races.Human, role, heroSlot, out var prefab), name);
             var settings = prefab.GetComponentInChildren<UnitCombatSettings>(true);
             Assert.IsNotNull(settings, $"{name} UnitCombatSettings");
-            Assert.AreEqual(expectedHp, settings.MaxHp, 0.001f, $"{name} MaxHp");
+
+            if (source is HeroDefinition hero)
+            {
+                Assert.AreSame(hero, settings.HeroDefinition, $"{name} hero source ref");
+            }
+            else if (source is UnitDefinition unit)
+            {
+                Assert.AreSame(unit, settings.UnitDefinition, $"{name} unit source ref");
+            }
         }
     }
 

@@ -81,6 +81,7 @@ namespace Game.Gameplay.Match
         [SerializeField] private float _fallbackUnitScale = 2.7f;
         [SerializeField] private float _fallbackUnitHeight = 3.6f;
         [SerializeField] private float _statusBarClearance = 0.5f;
+        // VFX placement base for Titan body Rays (not the unit scale — that lives in the definition).
         [SerializeField] private float _unitVisualScale = UnitGreyboxVisuals.Scale;
         [SerializeField] private float _deathVisualSeconds = UnitCombatAnimatorDriver.DeathVisualSeconds;
 
@@ -759,14 +760,15 @@ namespace Game.Gameplay.Match
                 var instance = Instantiate(prefab, root);
                 instance.name = prefab.name;
                 animator = instance.GetComponentInChildren<Animator>();
-                var scale = UnitGreyboxVisuals.ResolveAnimatedPresenterScale(unit.Role, _unitVisualScale);
                 if (animator != null)
                 {
                     animator.applyRootMotion = false;
                 }
 
-                // Keep authored prefab normalize and apply presenter scale on top.
-                instance.transform.localScale = prefab.transform.localScale * scale;
+                // Single authored scale (definition VisualScale, baked with the role presenter
+                // factor, or the prefab root scale as fallback). No presenter multiply here.
+                instance.transform.localScale =
+                    Vector3.one * UnitGreyboxVisuals.ResolveAuthorVisualScale(prefab, instance);
                 instance.transform.localPosition = UnitGreyboxVisuals.GetModelLocalOffset(unit.Role);
                 UnitVisualAccent.ApplyTeamColor(instance.transform, MatchPlayerColors.GetSlotColor(unit.OwnerSlot));
                 model = instance.transform;

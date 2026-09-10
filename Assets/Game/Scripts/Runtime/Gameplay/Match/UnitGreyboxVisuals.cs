@@ -42,11 +42,41 @@ namespace Game.Gameplay.Match
         public const float TitanBodyRaysLocalY = 1.05f;
 
         /// <summary>
-        /// Presenter scale applied on top of the authored prefab:
-        /// <c>_unitVisualScale × AnimatedHumanScaleFactor × champion</c>.
+        /// Total aspect factor of the model at presentation: unit-scale × human animated factor ×
+        /// champion. No longer applied to the unit's own scale (final scale lives in the definition
+        /// as <see cref="UnitDefinition.VisualScale"/> / <see cref="HeroDefinition.VisualScale"/>);
+        /// used to derive VFX placement (Titan body Rays) and by editor-scale baking.
         /// </summary>
         public static float ResolveAnimatedPresenterScale(UnitRole role, float unitVisualScale = Scale) =>
             unitVisualScale * AnimatedHumanScaleFactor * GetChampionVisualScale(role);
+
+        /// <summary>
+        /// Final uniform model scale applied in-game: the definition's
+        /// <see cref="UnitDefinition.VisualScale"/> (plain unit) or
+        /// <see cref="HeroDefinition.VisualScale"/> (hero/titan) when set (&gt; 0) — already the
+        /// authored prefab scale × role presenter factor; otherwise the authored prefab root scale.
+        /// </summary>
+        public static float ResolveAuthorVisualScale(GameObject prefab, GameObject instance)
+        {
+            if (instance != null)
+            {
+                var settings = instance.GetComponentInChildren<UnitCombatSettings>(true);
+                if (settings != null)
+                {
+                    if (settings.UnitDefinition is { VisualScale: > 0f } unitDefinition)
+                    {
+                        return unitDefinition.VisualScale;
+                    }
+
+                    if (settings.HeroDefinition is { VisualScale: > 0f } heroDefinition)
+                    {
+                        return heroDefinition.VisualScale;
+                    }
+                }
+            }
+
+            return prefab != null ? prefab.transform.localScale.x : 1f;
+        }
 
         /// <summary>World scale of Titan body Rays so they fill the scaled in-game model.</summary>
         public static float ResolveTitanBodyRaysScale(float presenterScale) =>

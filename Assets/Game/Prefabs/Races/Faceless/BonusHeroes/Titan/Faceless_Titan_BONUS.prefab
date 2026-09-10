@@ -2023,7 +2023,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: -0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4092776840244860346}
@@ -2212,16 +2212,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e91a2d6256e88f24cb2c7251f2b25325, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.Data.UnitCombatSettings
-  _maxHp: 2520
-  _armor: 14
-  _damageMin: 141.75
-  _damageMax: 182.25002
-  _attackSpeed: 1
-  _attackRange: 3
-  _moveSpeed: 4
-  _goldBounty: 80
-  _maxMana: 0
-  _marchSpeedOverride: 0
+  _unitDefinition: {fileID: 0}
+  _heroDefinition: {fileID: 11400000, guid: 2ccb2c548bdee1549ac90641a7b26779, type: 2}
   _abilities:
   - {fileID: 11400000, guid: cbeca1825f35b854cad68f6924175749, type: 2}
   - {fileID: 11400000, guid: 37e9c6fd22ead0a459c8b2138fd844af, type: 2}

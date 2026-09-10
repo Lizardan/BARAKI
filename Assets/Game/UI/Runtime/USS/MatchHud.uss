@@ -105,57 +105,45 @@
     line-height: 16px;
 }
 
-.match-hud__phase {
-    min-width: 88px;
-    font-size: 15px;
-    -unity-font-style: bold;
-    color: rgb(133, 137, 128);
-    letter-spacing: 1px;
-}
-
+/* Полоска: время матча слева, таймер арены по центру (absolute),
+   золото прижато вправо через auto-margin. */
 .match-hud__time {
     min-width: 72px;
-    margin-left: 20px;
     font-size: 22px;
     -unity-font-style: bold;
     color: rgb(222, 219, 210);
     -unity-text-align: middle-left;
 }
 
-.match-hud__gold-row {
-    flex-direction: row;
-    align-items: center;
-    margin-left: 20px;
-}
-
-.match-hud__gold-icon {
-    width: 22px;
-    height: 22px;
-    margin-right: 6px;
-    background-color: rgb(28, 30, 27);
-    border-width: 1px;
-    border-color: rgb(185, 154, 98);
-    border-radius: 0;
-}
-
-.match-hud__gold {
-    min-width: 72px;
-    font-size: 18px;
+.match-hud__time-caption {
+    margin-left: 8px;
+    font-size: 22px;
     -unity-font-style: bold;
-    color: rgb(255, 214, 96);
+    color: rgb(133, 137, 128);
+    letter-spacing: 1px;
     -unity-text-align: middle-left;
 }
 
-.match-hud__bounty-popup {
-    margin-left: 8px;
-    font-size: 16px;
-    -unity-font-style: bold;
-    color: rgb(140, 255, 140);
-    letter-spacing: 0.5px;
+.match-hud__gold-row {
+    flex-direction: row;
+    align-items: center;
+    margin-left: auto;
 }
 
-.match-hud__bounty-popup--hidden {
-    display: none;
+.match-hud__gold-caption {
+    margin-right: 8px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(133, 137, 128);
+    letter-spacing: 1px;
+    -unity-text-align: middle-left;
+}
+
+.match-hud__gold {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(255, 214, 96);
+    -unity-text-align: middle-left;
 }
 
 .match-hud__command-feedback {

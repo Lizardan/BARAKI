@@ -24,6 +24,13 @@ namespace Game.Gameplay.Match
             public byte LastSwing;
             public bool DeathFired;
             public UnitBehaviorState LastBehavior = UnitBehaviorState.Move;
+
+            /// <summary>
+            /// Авторский базовый поворот префаба модели (Human: identity, Faceless: 270°).
+            /// Поворот «лицом к цели» композируется поверх него, иначе у рас с
+            /// не-identity базой модель смотрит на 90° в сторону.
+            /// </summary>
+            public Quaternion BaseRotation = Quaternion.identity;
         }
 
         readonly Fighter[] _fighters = { new(), new() };
@@ -117,7 +124,16 @@ namespace Game.Gameplay.Match
             fighter.Root.name = $"ArenaFighter_{index}_slot{slot}";
             fighter.Root.transform.position = ArenaRules.Center
                                               + new Vector3(ArenaRules.SpawnOffset * side, 0f, 0f);
-            fighter.Root.transform.rotation = Quaternion.Euler(0f, side < 0f ? 90f : -90f, 0f);
+            fighter.Root.transform.localScale =
+                Vector3.one * UnitGreyboxVisuals.ResolveAuthorVisualScale(prefab, fighter.Root);
+
+            // Мировой поворот к сопернику композируется поверх авторской базовой
+            // ротации корня префаба — иначе у рас с baked-поворотом (Faceless: 270°)
+            // модель смотрит на 90° не туда.
+            var faceYaw = side < 0f ? 90f : -90f;
+            fighter.BaseRotation = fighter.Root.transform.localRotation;
+            fighter.Root.transform.rotation =
+                Quaternion.Euler(0f, faceYaw, 0f) * fighter.BaseRotation;
 
             fighter.Animator = fighter.Root.GetComponentInChildren<Animator>();
             if (fighter.Animator != null)
@@ -130,7 +146,7 @@ namespace Game.Gameplay.Match
             fighter.DeathFired = false;
             fighter.LastBehavior = UnitBehaviorState.Move;
             fighter.Position = fighter.Root.transform.position;
-            fighter.FacingDegrees = fighter.Root.transform.eulerAngles.y;
+            fighter.FacingDegrees = faceYaw;
 
             var stats = isTitan
                 ? controller.ResolveArenaTitanStats(slot)
@@ -163,7 +179,8 @@ namespace Game.Gameplay.Match
             }
 
             fighter.Root.transform.position = fighter.Position;
-            fighter.Root.transform.rotation = Quaternion.Euler(0f, fighter.FacingDegrees, 0f);
+            fighter.Root.transform.rotation =
+                Quaternion.Euler(0f, fighter.FacingDegrees, 0f) * fighter.BaseRotation;
 
             DriveAnimator(fighter, in data);
         }
@@ -172,6 +189,14 @@ namespace Game.Gameplay.Match
         {
             if (fighter.Animator == null)
             {
+                return;
+            }
+
+            // Пока нет живых данных боя (фаза презентации/отсчёта) — стоим в idle, лицом друг к
+            // другу. Иначе дефолтный behavior=Move крутил бы walk-цикл на месте.
+            if (!data.IsPresent)
+            {
+                UnitCombatAnimatorDriver.TickStand(fighter.Animator, fighter.Playback);
                 return;
             }
 
@@ -232,6 +257,7 @@ namespace Game.Gameplay.Match
                 fighter.DeathFired = false;
                 fighter.LastSwing = 0;
                 fighter.LastBehavior = UnitBehaviorState.Move;
+                fighter.BaseRotation = Quaternion.identity;
             }
 
             if (_root != null)

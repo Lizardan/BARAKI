@@ -72,6 +72,9 @@ namespace Game.Gameplay.Match
         /// <summary>Радиус круга-арены.</summary>
         public const float Radius = 26f;
 
+        /// <summary>Насколько далеко от центра арены может отойти камера панорамированием.</summary>
+        public const float PanBoundsRadius = Radius + 16f;
+
         /// <summary>Насколько далеко от центра стоят бойцы на старте дуэли.</summary>
         public const float SpawnOffset = 9f;
 

@@ -50,6 +50,14 @@ namespace Game.Gameplay.Cameras
         /// </summary>
         bool _panBoundsEnabled = true;
 
+        /// <summary>
+        /// Кламп панорамирования вокруг центра арены: камерой можно двигать мышью,
+        /// но далеко от арены улететь нельзя.
+        /// </summary>
+        bool _arenaPanBoundsEnabled;
+        Vector3 _arenaPanBoundsCenter;
+        float _arenaPanBoundsRadius;
+
         public bool IsPanLocked => _hasFocusTarget || _externalPanLock;
 
         /// <summary>Текущая позиция следования камеры (XZ-якорь).</summary>
@@ -58,10 +66,32 @@ namespace Game.Gameplay.Cameras
         /// <summary>Включить/выключить ограничение области панорамирования.</summary>
         public void SetPanBoundsEnabled(bool enabled) => _panBoundsEnabled = enabled;
 
-        Vector3 ClampPan(Vector3 position) =>
-            _panBoundsEnabled
+        /// <summary>
+        /// Ограничить панорамирование квадратом радиуса <paramref name="radius"/> вокруг
+        /// <paramref name="center"/> (арена). Вызывается вместе с
+        /// <code>SetPanBoundsEnabled(false)</code>, иначе первым применится мап-кламп.
+        /// </summary>
+        public void SetArenaPanBounds(bool enabled, Vector3 center, float radius)
+        {
+            _arenaPanBoundsEnabled = enabled;
+            _arenaPanBoundsCenter = center;
+            _arenaPanBoundsRadius = radius;
+        }
+
+        Vector3 ClampPan(Vector3 position)
+        {
+            if (_arenaPanBoundsEnabled)
+            {
+                return GameplayCameraSettings.ClampPanPosition(
+                    position,
+                    _arenaPanBoundsRadius,
+                    _arenaPanBoundsCenter);
+            }
+
+            return _panBoundsEnabled
                 ? GameplayCameraSettings.ClampPanPosition(position, _boundsRadius)
                 : position;
+        }
 
         /// <summary>True while a scripted/minimap focus move is still in flight.</summary>
         public bool IsFocusInProgress => _hasFocusTarget;

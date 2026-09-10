@@ -25,7 +25,7 @@
 |------|---------------|----------|--------|
 | 1 Melee | `UNIT_FACELESS_MELEE` | **Hunger of the Old One** | Пассив. On-hit **15%**: лечение = **50% урона** удара (вампиризм) |
 | 2 Ranged | `UNIT_FACELESS_RANGED` | **Tainting Bolt** | Пассив. On-hit **15%**: дот **3 dmg/с × 3 с** (≈9–10 итог) |
-| 3 Caster | `UNIT_FACELESS_CASTER` | **Call of the Abyss** | On-**kill** (добивание кастером, шанс **100%**): спавн **1 прислужника (servant)** — фиксированный профиль HP **60** / броня **0** / dmg **4–5** / AS 1 / range 1.5 / speed 4 / bounty 0, префаб `Faceless_Servant` (scale **1.25**, без оружия) |
+| 3 Caster | `UNIT_FACELESS_CASTER` | **Call of the Abyss** | On-**kill** (добивание кастером, шанс **100%**): спавн **1 прислужника (servant)** — фиксированный профиль HP **60** / броня **0** / dmg **4–5** / AS 1 / range 1.5 / speed 4 / bounty 0, префаб `Faceless_Servant` (scale **1.25**, меш как у Melee, оружие скрыто AxHandle01_16 scale 0) |
 | 4 Siege | `UNIT_FACELESS_SIEGE` | **Death Explosion** | При смерти: взрыв, урон = **10% max HP** вражеским **юнитам** в радиусе **3**; здания **не** задевает |
 | 5 Flying | `UNIT_FACELESS_FLYING` | **Hungering Flight** | On-kill: **+15% AS** на 3 с, стакается до 3 |
 | 6 Super | `UNIT_FACELESS_SUPER` | **Devour Servant** | Auto, HP<**50%**: съедает ближайшего своего servant → лечение = **max HP servant (60)**, **+15% AS** на 5 с (стак, кап 3), кулдаун **3 с** |
@@ -37,7 +37,11 @@
 - **Call of the Abyss (3)**: servant — меле (роль Melee), команда владельца, спавн рядом с кастером
   (смещение ≈1.2 по X), маркер `BonusKitRules.SummonBonusSlot = 13`. Статы — фиксированный
   servant-профиль (`FacelessServantRules`, Plan0909 Фаза 1), а не ×0.5 от живого Melee;
-  презентация — отдельный префаб `Faceless_Servant` (scale 1.25, без оружия). Добивание — только
+  презентация — префаб `Faceless_Servant`: независимая копия базы, меш/материалы как у
+  `Faceless_Melee`, оружие скрыто через `AxHandle01_16` scale **0**. Префаб
+  **самостоятельный** (не вариант `Faceless_Melee`): его `UnitCombatSettings.UnitDefinition` →
+  `UNIT_FACELESS_SERVANT` (зеркало констант `FacelessServantRules`); сервант-скины не наследуют
+  ссылок базы. Добивание — только
   убийство от этого кастера (не союзников, не дот-бонуса другого юнита). Труп убитого после
   успешного спавна **потребляется** (`ConsumeCorpse`) — «no double» (Plan0909 Фаза 2).
 - **Death Explosion (4)**: срабатывает при любой смерти бонус-юнита (убит юнитом/зданием/героем).
@@ -143,10 +147,12 @@ Prefabs/Races/Faceless/
 ScriptableObjects/Races/Faceless/BonusUnits/{Role}/Abilities/*.asset      # def-маркеры 64–69 (только Caster — 4 шт.)
 ```
 
-Билд (`Build Bonus Prefabs`) создаёт префабы, потом `BARAKI/Units/Sync Balance to Prefabs`
-(баланс) и `BARAKI/Units/Seed Unit Abilities` (дефы в `_abilities[]`). После сида имена
+Билд (`Build Bonus Prefabs`) создаёт префабы, потом `UnitStatsSourceAssigner.AssignRace`
+(ссылки на статы — для Faceless бонусы берут базовый `GetUnit(role)`) и
+`BARAKI/Units/Seed Unit Abilities` (дефы в `_abilities[]`). После сида имена
 бонус-префабов и их `_BONUS`-суффикс сохраняются; `UnitVisualPrefabBuilder` регистрирует их в
-`UnitVisualCatalog` по `raceId`/роли.
+`UnitVisualCatalog` по `raceId`/роли. Числа статов живут в `UnitDefinition`/`HeroDefinition` —
+синхронизация баланса не нужна.
 
 Хуки в `MatchCombatSystem`:
 
@@ -223,16 +229,16 @@ AS-стаки (5 и 6): множитель `GetFacelessFeastAsMultiplier` вст
   (`EffectiveBonusSlotForHero/Titan` больше не гейтирует расу).
 - Хуки в `ApplyDamage` включены расой и наличием живого ветерана/титана (были готовы заранее).
 
-### Ветеранские статы (префаб-синк) и портреты (2026-09-08)
+### Ветеранские статы (источники) и портреты (2026-09-08)
 
-- **`UnitBalanceSetup.SyncRace`** — ветеранский блок 7–10 (`CopyFromVeteran`) теперь общий для
-  обеих рас: раньше Faceless-ветка выходила по `return` до ветеранов. Бонус-юниты 1–6
-  синхронизируются только для Human (`includeHumanExtras`) — у Faceless они маркерные клоны базы.
+- **Ветеранские статы** (7–10): префабы не хранят чисел — `UnitCombatSettings` несёт ссылку на
+  базового героя (`UnitStatsSourceAssigner.AssignRace`, меню `Assign Stats Sources`), множители
+  применяет `UnitStatsResolver.ResolveVeteran` для **обеих** рас. Бонус-юниты 1–6 присваивают
+  Human-дефы (`GetUnitBonus`), Faceless — базовый `GetUnit(role)` (маркерные клоны базы).
 - **Титан-ветеран = сид 3× героя 1, и уже поверх него ×1.4 HP / ×1.35 dmg / +2 брони**
   (HP `×3×1.4`, dmg `×3×1.35`, armor `базовый×3+2`; range 3, цена 2500g без изменений).
-  Латентный фикс касается и Human (`Human_Titan_BONUS` теперь 2520 HP / 14 брони / 141.75–182.25 dmg
-  вместо ошибочных 6/47.25). Fallback-путь `UnitStatsResolver.ResolveBase` (3× сид →
-  `ApplyVeteranMultipliers`) был корректен изначально — расхождение источников устранено.
+  Единая формула в `UnitStatsResolver.ResolveVeteran` (раньше префаб-снапшоты расходились с
+  fallback-путём, латентно `Human_Titan_BONUS` был 2520 HP / 14 брони / 141.75–182.25 dmg).
   Итог ветеранов Faceless: герои 840 HP / 6 брони / 47.25–60.75 dmg; титан 2520 / 14 / 141.75–182.25.
 - **Портреты:** `UnitPortraitBaker` печёт бонус-портреты для **обеих** рас — новые папки
   `Faceless/BonusUnits/{Role}.png` (1–6) и `Faceless/BonusHeroes/{Hero1..3,Titan}.png` (7–10),
