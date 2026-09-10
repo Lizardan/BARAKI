@@ -84,5 +84,35 @@ namespace Game.Tests
             Assert.IsFalse(MatchPauseGate.IsPaused);
             Assert.AreEqual(1f, Time.timeScale);
         }
+
+        [Test]
+        public void ArenaPause_BlocksSimulationButNotTimeScale()
+        {
+            MatchPauseGate.SetArenaPaused(true);
+
+            Assert.IsFalse(MatchPauseGate.IsPaused);
+            Assert.IsTrue(MatchPauseGate.IsSimulationPaused);
+            Assert.AreEqual(1f, Time.timeScale);
+        }
+
+        [Test]
+        public void ArenaPause_ClearedByResetForTests()
+        {
+            MatchPauseGate.SetArenaPaused(true);
+            MatchPauseGate.ResetForTests();
+
+            Assert.IsFalse(MatchPauseGate.IsArenaPaused);
+            Assert.IsFalse(MatchPauseGate.IsSimulationPaused);
+        }
+
+        [Test]
+        public void UserPause_AlsoBlocksSimulation()
+        {
+            MatchPauseGate.SetUserPaused(true);
+
+            Assert.IsTrue(MatchPauseGate.IsPaused);
+            Assert.IsTrue(MatchPauseGate.IsSimulationPaused);
+            Assert.AreEqual(0f, Time.timeScale);
+        }
     }
 }

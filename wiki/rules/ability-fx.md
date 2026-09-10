@@ -262,6 +262,25 @@ Def без `Behaviour`, но с `VfxPrefab`, на клиенте не дропа
 
 Константы высоты/земли общие: `AbilityVfxPlacement` (Studio и матч).
 
+### Тряска камеры запрещена
+
+CFXR-префабы несут `CFXR_Effect.cameraShake`, который смещает `Camera.main` в
+`OnPreRenderCamera` и возвращает назад в `OnPostRenderCamera` — то есть дёргает камеру
+**в обход Cinemachine**. В RTS этого быть не должно.
+
+- Рантайм: `AbilityFxCameraShakeGuard.Strip(instance)` вызывается сразу после каждого
+  `Instantiate` FX — в `MatchCombatPresenter` (`SpawnVfx`, burst Ледяного кольца и общий
+  `SpawnFx` для крови/импактов), `MatchBuildingFxPresenter` и `AuraFxVisuals.SoftenLoop`
+  (покрывает `Attach` / `AttachBodyRays`). Поля читаются рефлексией — пак сторонний.
+- Не требуют гарда: болты/камни снарядов (`CombatAttackVisualBuilder` грузит
+  `Resources/Art/Projectile*`) и визуалы юнитов — это не CFXR.
+- Данные: у всех 51 префаба пака `cameraShake.enabled = 0`. Если в Studio назначат
+  новый FX с включённой тряской, рантайм-гард её всё равно погасит, но лучше сразу
+  поправить префаб.
+- `AuraFxVisuals.PrepareEditorPreview` использует тот же гард (раньше — своя рефлексия).
+
+**Добавляешь новую точку спавна FX — вызывай `AbilityFxCameraShakeGuard.Strip`.**
+
 ## Превью: что нельзя ломать
 
 `PreviewRenderUtility` без обычного `Update` и без LightmapSettings игровой сцены.

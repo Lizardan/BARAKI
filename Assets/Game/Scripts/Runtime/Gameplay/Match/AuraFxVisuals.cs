@@ -220,11 +220,7 @@ namespace Game.Gameplay.Match
 
                 var type = behaviour.GetType();
                 type.GetField("clearBehavior")?.SetValue(behaviour, 0);
-                var shake = type.GetField("cameraShake")?.GetValue(behaviour);
-                if (shake != null)
-                {
-                    shake.GetType().GetField("enabled")?.SetValue(shake, false);
-                }
+                AbilityFxCameraShakeGuard.DisableCameraShake(behaviour);
             }
 
             MuteAudio(fx);
@@ -236,6 +232,7 @@ namespace Game.Gameplay.Match
 
         static void SoftenLoop(GameObject fx)
         {
+            AbilityFxCameraShakeGuard.Strip(fx);
             SoftenLights(fx);
             MuteAudio(fx);
         }

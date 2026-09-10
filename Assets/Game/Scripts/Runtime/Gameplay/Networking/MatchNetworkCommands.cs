@@ -18,7 +18,8 @@ namespace Game.Gameplay.Networking
             }
         }
 
-        public static bool AreCommandsBlocked => MatchPauseGate.IsPaused;
+        /// <summary>Команды недоступны на любой паузе, включая арену.</summary>
+        public static bool AreCommandsBlocked => MatchPauseGate.IsSimulationPaused;
 
         public static event Action<MatchCommandResult> CommandResultReceived
         {

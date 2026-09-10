@@ -54,6 +54,30 @@ namespace Game.UI.Controllers
         private readonly Dictionary<string, Label> _barracksLabels = new();
         private readonly Dictionary<int, VisualElement> _passiveRings = new();
         private readonly Dictionary<int, VisualElement> _titanRings = new();
+
+        private VisualElement _arenaTimerBadge;
+        private Label _arenaTimerLabel;
+        private Label _arenaTimerCaption;
+        private VisualElement _arenaPickOverlay;
+        private Label _arenaPickTitle;
+        private Label _arenaPickReward;
+        private Label _arenaPickTimer;
+        private Label _arenaPickHint;
+        private VisualElement _arenaHeroList;
+        private Label _arenaOpponentTitle;
+        private VisualElement _arenaOpponentList;
+        private VisualElement _arenaIntroOverlay;
+        private Label _arenaIntroTitle;
+        private Label _arenaIntroTimer;
+        private VisualElement _arenaResultOverlay;
+        private Label _arenaResultTitle;
+        private Label _arenaResultReward;
+        private VisualElement _arenaDuelOverlay;
+        private Label _arenaDuelNameA;
+        private Label _arenaDuelNameB;
+        private VisualElement _arenaDuelFillA;
+        private VisualElement _arenaDuelFillB;
+        private string _arenaListKey;
         private int _trackedBarracksCount = -1;
         private int _trackedBarracksLocalSlot = -1;
         private bool _resultsShown;
@@ -85,6 +109,7 @@ namespace Game.UI.Controllers
             _resultsLobbyButton = root.Q<Button>("ResultsLobbyButton");
             _barracksLayer = root.Q<VisualElement>("BarracksTimerLayer");
             _passiveGoldLayer = root.Q<VisualElement>("PassiveGoldTimerLayer");
+            ResolveArenaElements(root);
 
             if (_resultsRematchButton != null)
             {
@@ -185,6 +210,7 @@ namespace Game.UI.Controllers
             }
 
             UpdateTopBar(controller);
+            UpdateArena(controller);
             UpdateBarracksTimers(controller);
             UpdatePassiveGoldRings(controller);
             UpdateTitanRings(controller);
@@ -305,6 +331,344 @@ namespace Game.UI.Controllers
             _startCountdownLabel.AddToClassList(StartCountdownHiddenClass);
             UpdateBountyPopup();
         }
+
+        #region Арена
+
+        private void ResolveArenaElements(VisualElement root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            _arenaTimerBadge = root.Q<VisualElement>("ArenaTimerBadge");
+            _arenaTimerLabel = root.Q<Label>("ArenaTimerLabel");
+            _arenaTimerCaption = root.Q<Label>("ArenaTimerCaption");
+            _arenaPickOverlay = root.Q<VisualElement>("ArenaPickOverlay");
+            _arenaPickTitle = root.Q<Label>("ArenaPickTitle");
+            _arenaPickReward = root.Q<Label>("ArenaPickReward");
+            _arenaPickTimer = root.Q<Label>("ArenaPickTimer");
+            _arenaPickHint = root.Q<Label>("ArenaPickHint");
+            _arenaHeroList = root.Q<VisualElement>("ArenaHeroList");
+            _arenaOpponentTitle = root.Q<Label>("ArenaOpponentTitle");
+            _arenaOpponentList = root.Q<VisualElement>("ArenaOpponentList");
+            _arenaIntroOverlay = root.Q<VisualElement>("ArenaIntroOverlay");
+            _arenaIntroTitle = root.Q<Label>("ArenaIntroTitle");
+            _arenaIntroTimer = root.Q<Label>("ArenaIntroTimer");
+            _arenaResultOverlay = root.Q<VisualElement>("ArenaResultOverlay");
+            _arenaResultTitle = root.Q<Label>("ArenaResultTitle");
+            _arenaResultReward = root.Q<Label>("ArenaResultReward");
+            _arenaDuelOverlay = root.Q<VisualElement>("ArenaDuelOverlay");
+            _arenaDuelNameA = root.Q<Label>("ArenaDuelNameA");
+            _arenaDuelNameB = root.Q<Label>("ArenaDuelNameB");
+            _arenaDuelFillA = root.Q<VisualElement>("ArenaDuelFillA");
+            _arenaDuelFillB = root.Q<VisualElement>("ArenaDuelFillB");
+        }
+
+        private void UpdateArena(MatchController controller)
+        {
+            if (_arenaTimerBadge == null)
+            {
+                ResolveArenaElements(_uiDocument != null ? _uiDocument.rootVisualElement : null);
+                if (_arenaTimerBadge == null)
+                {
+                    return;
+                }
+            }
+
+            var state = ArenaNetworkBridge.Current;
+            var phase = (ArenaPhase)state.Phase;
+
+            UpdateArenaTimer(in state, phase);
+            UpdateArenaPick(controller, in state, phase);
+            UpdateArenaIntro(in state, phase);
+            UpdateArenaDuelBars(in state, phase);
+            UpdateArenaResult(in state, phase);
+        }
+
+        private void UpdateArenaTimer(in ArenaNetState state, ArenaPhase phase)
+        {
+            var visible = state.Index > 0;
+            ToggleArenaHidden(_arenaTimerBadge, "arena-hud__timer-row--hidden", !visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            if (phase == ArenaPhase.Idle)
+            {
+                _arenaTimerLabel.text = MatchHudFormatting.FormatMatchTime(Mathf.Max(0f, state.Timer));
+                _arenaTimerCaption.text = "ДО АРЕНЫ " + state.Index;
+            }
+            else
+            {
+                _arenaTimerLabel.text = "АРЕНА " + state.Index;
+                _arenaTimerCaption.text = state.DuelCount > 0
+                    ? "ДУЭЛЬ " + Mathf.Max(1, state.DuelOrdinal) + "/" + state.DuelCount
+                    : "ВЫБОР БОЙЦА";
+            }
+        }
+
+        private void UpdateArenaPick(MatchController controller, in ArenaNetState state, ArenaPhase phase)
+        {
+            var localSlot = _localPlayerSlot;
+            var visible = phase == ArenaPhase.Pick && ArenaRules.HasMask(state.Participants, localSlot);
+            ToggleArenaHidden(_arenaPickOverlay, "arena-pick--hidden", !visible);
+            if (!visible)
+            {
+                _arenaListKey = null;
+                return;
+            }
+
+            _arenaPickTitle.text = "АРЕНА " + state.Index;
+            _arenaPickReward.text = "Победитель дуэли: +" + state.RewardGold + " золота";
+            _arenaPickTimer.text = Mathf.CeilToInt(Mathf.Max(0f, state.Timer)).ToString();
+            _arenaPickHint.text = ArenaRules.HasMask(state.Submitted, localSlot)
+                ? "Выбор принят — можно изменить до конца отсчёта"
+                : "Выберите бойца";
+
+            var key = state.Index + "|" + state.Participants + "|" + state.UsedHeroMask + "|" + localSlot;
+            if (key != _arenaListKey)
+            {
+                _arenaListKey = key;
+                RebuildArenaPickLists(controller, in state, localSlot);
+            }
+
+            RefreshArenaPickSelection(in state, localSlot);
+        }
+
+        private void RebuildArenaPickLists(MatchController controller, in ArenaNetState state, int localSlot)
+        {
+            if (_arenaHeroList == null || _arenaOpponentList == null)
+            {
+                return;
+            }
+
+            _arenaHeroList.Clear();
+            if (ArenaRules.IsTitanArena(state.Index))
+            {
+                AddArenaOption(
+                    _arenaHeroList,
+                    "ArenaTitan",
+                    "Титан",
+                    "единственный выбор",
+                    isHero: false,
+                    value: 0,
+                    enabled: true);
+            }
+            else
+            {
+                for (var heroSlot = 1; heroSlot <= ArenaRules.HeroSlots; heroSlot++)
+                {
+                    var hired = ArenaPairing.IsHeroHired(controller, localSlot, heroSlot);
+                    var used = ArenaRules.HasUsedHero(state.UsedHeroMask, localSlot, heroSlot);
+                    var meta = !hired ? "не нанят" : used ? "уже выступал" : "готов";
+                    AddArenaOption(
+                        _arenaHeroList,
+                        "ArenaHero" + heroSlot,
+                        "Герой " + heroSlot,
+                        meta,
+                        isHero: true,
+                        value: heroSlot,
+                        enabled: hired && !used);
+                }
+            }
+
+            _arenaOpponentList.Clear();
+            var isChallenger = state.ChallengerSlot == localSlot;
+            ToggleArenaHidden(_arenaOpponentTitle, "arena-pick__opponent-title--hidden", !isChallenger);
+            if (!isChallenger)
+            {
+                return;
+            }
+
+            for (var slot = 0; slot < ArenaRules.MaxSlots; slot++)
+            {
+                if (slot == localSlot || !ArenaRules.HasMask(state.Participants, slot))
+                {
+                    continue;
+                }
+
+                AddArenaOption(
+                    _arenaOpponentList,
+                    "ArenaOpponent" + slot,
+                    "Игрок " + (slot + 1),
+                    ArenaRules.IsTitanArena(state.Index) ? "титан" : "герой",
+                    isHero: false,
+                    value: slot,
+                    enabled: true);
+            }
+        }
+
+        private void AddArenaOption(
+            VisualElement container,
+            string optionName,
+            string title,
+            string meta,
+            bool isHero,
+            int value,
+            bool enabled)
+        {
+            var button = new Button
+            {
+                name = optionName,
+            };
+            button.AddToClassList("arena-pick__option");
+            if (!enabled)
+            {
+                button.AddToClassList("arena-pick__option--locked");
+            }
+
+            var titleLabel = new Label(title);
+            titleLabel.AddToClassList("arena-pick__option-title");
+            button.Add(titleLabel);
+
+            var metaLabel = new Label(meta);
+            metaLabel.AddToClassList("arena-pick__option-meta");
+            button.Add(metaLabel);
+
+            if (enabled)
+            {
+                button.clicked += () => OnArenaOptionClicked(isHero, value);
+            }
+            else
+            {
+                button.SetEnabled(false);
+            }
+
+            container.Add(button);
+        }
+
+        private void OnArenaOptionClicked(bool isHero, int value)
+        {
+            var state = ArenaNetworkBridge.Current;
+            var localSlot = _localPlayerSlot;
+
+            if (isHero)
+            {
+                var target = state.ChallengerSlot == localSlot ? state.ChallengerTarget : -1;
+                ArenaNetworkBridge.RequestPick(value, target);
+                return;
+            }
+
+            // Нечётный игрок выбирает соперника (value = слот), либо подтверждает титана.
+            var hero = ArenaRules.ReadPick(state.Picks, localSlot);
+            ArenaNetworkBridge.RequestPick(
+                hero == ArenaRules.PickValueTitan ? 0 : hero,
+                state.ChallengerSlot == localSlot ? value : -1);
+        }
+
+        private void RefreshArenaPickSelection(in ArenaNetState state, int localSlot)
+        {
+            var pick = ArenaRules.ReadPick(state.Picks, localSlot);
+            if (_arenaHeroList != null)
+            {
+                MarkArenaSelected(
+                    _arenaHeroList,
+                    pick == ArenaRules.PickValueTitan ? "ArenaTitan" : pick > 0 ? "ArenaHero" + pick : null);
+            }
+
+            if (_arenaOpponentList != null && state.ChallengerSlot == localSlot)
+            {
+                MarkArenaSelected(
+                    _arenaOpponentList,
+                    state.ChallengerTarget >= 0 ? "ArenaOpponent" + state.ChallengerTarget : null);
+            }
+        }
+
+        private static void MarkArenaSelected(VisualElement container, string selectedName)
+        {
+            foreach (var child in container.Children())
+            {
+                if (string.IsNullOrEmpty(selectedName) || child.name != selectedName)
+                {
+                    child.RemoveFromClassList("arena-pick__option--selected");
+                }
+                else
+                {
+                    child.AddToClassList("arena-pick__option--selected");
+                }
+            }
+        }
+
+        private void UpdateArenaIntro(in ArenaNetState state, ArenaPhase phase)
+        {
+            var visible = phase == ArenaPhase.Intro;
+            ToggleArenaHidden(_arenaIntroOverlay, "arena-intro--hidden", !visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            _arenaIntroTitle.text = ArenaFighterLabel(state.PairASlot, state.PairAHero)
+                                    + "   VS   "
+                                    + ArenaFighterLabel(state.PairBSlot, state.PairBHero);
+            _arenaIntroTimer.text = Mathf.CeilToInt(Mathf.Max(0f, state.Timer)).ToString();
+        }
+
+        private void UpdateArenaDuelBars(in ArenaNetState state, ArenaPhase phase)
+        {
+            var visible = (phase == ArenaPhase.Duel || phase == ArenaPhase.Result)
+                          && state.A.IsPresent
+                          && state.B.IsPresent;
+            ToggleArenaHidden(_arenaDuelOverlay, "arena-duel--hidden", !visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            _arenaDuelNameA.text = ArenaFighterLabel(state.A.Slot, state.A.HeroSlot);
+            _arenaDuelNameB.text = ArenaFighterLabel(state.B.Slot, state.B.HeroSlot);
+            SetArenaHpFill(_arenaDuelFillA, state.A.Hp, state.A.MaxHp);
+            SetArenaHpFill(_arenaDuelFillB, state.B.Hp, state.B.MaxHp);
+        }
+
+        private static void SetArenaHpFill(VisualElement fill, float hp, float maxHp)
+        {
+            if (fill == null)
+            {
+                return;
+            }
+
+            var ratio = maxHp > 0f ? Mathf.Clamp01(hp / maxHp) : 0f;
+            fill.style.width = Length.Percent(ratio * 100f);
+        }
+
+        private void UpdateArenaResult(in ArenaNetState state, ArenaPhase phase)
+        {
+            var visible = phase == ArenaPhase.Result;
+            ToggleArenaHidden(_arenaResultOverlay, "arena-result--hidden", !visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            var winnerSlot = state.Winner == 0 ? state.PairASlot : state.PairBSlot;
+            _arenaResultTitle.text = "Победитель: Игрок " + (winnerSlot + 1);
+            _arenaResultReward.text = "+" + state.RewardGold + " золота";
+        }
+
+        private static string ArenaFighterLabel(int slot, int heroSlot) =>
+            "Игрок " + (slot + 1) + " · " + (heroSlot <= 0 ? "Титан" : "Герой " + heroSlot);
+
+        private static void ToggleArenaHidden(VisualElement element, string hiddenClass, bool hidden)
+        {
+            if (element == null)
+            {
+                return;
+            }
+
+            if (hidden)
+            {
+                element.AddToClassList(hiddenClass);
+            }
+            else
+            {
+                element.RemoveFromClassList(hiddenClass);
+            }
+        }
+
+        #endregion
 
         private void UpdateBountyPopup()
         {

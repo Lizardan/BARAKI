@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Gameplay.Vfx;
 using UnityEngine;
 
 namespace Game.Gameplay.Match
@@ -100,6 +101,7 @@ namespace Game.Gameplay.Match
             }
 
             var instance = Instantiate(prefab, position, prefab.transform.rotation);
+            AbilityFxCameraShakeGuard.Strip(instance);
             if (lifetimeSeconds > 0f)
             {
                 Destroy(instance, lifetimeSeconds);

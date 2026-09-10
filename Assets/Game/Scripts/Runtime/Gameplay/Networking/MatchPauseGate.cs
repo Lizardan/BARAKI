@@ -20,7 +20,17 @@ namespace Game.Gameplay.Networking
         /// <summary>Pause requested by any player via the pause menu (synchronized by RPC).</summary>
         public static bool IsUserPaused { get; private set; }
 
+        /// <summary>
+        /// Матч остановлен ареной. В отличие от остальных причин <b>не</b> обнуляет
+        /// <see cref="Time.timeScale"/>: арена должна жить (камера, анимации, VFX),
+        /// поэтому останавливается только тик симуляции и команды игроков.
+        /// </summary>
+        public static bool IsArenaPaused { get; private set; }
+
         public static bool IsPaused => IsUserPaused || IsMigrationPaused || IsDisconnectHoldPaused;
+
+        /// <summary>Что блокирует симуляцию матча и команды: любая пауза, включая арену.</summary>
+        public static bool IsSimulationPaused => IsPaused || IsArenaPaused;
 
         public static event Action PausedChanged;
 
@@ -48,6 +58,21 @@ namespace Game.Gameplay.Networking
             RefreshTimeScale();
         }
 
+        /// <summary>
+        /// Останавливает тик матча и команды на время арены, не трогая
+        /// <see cref="Time.timeScale"/> — арена тикает нескалированным временем.
+        /// </summary>
+        public static void SetArenaPaused(bool paused)
+        {
+            if (IsArenaPaused == paused)
+            {
+                return;
+            }
+
+            IsArenaPaused = paused;
+            PausedChanged?.Invoke();
+        }
+
         public static void RefreshTimeScale()
         {
             Time.timeScale = IsPaused ? 0f : 1f;
@@ -59,6 +84,7 @@ namespace Game.Gameplay.Networking
             IsDisconnectHoldPaused = false;
             IsMigrationPaused = false;
             IsUserPaused = false;
+            IsArenaPaused = false;
             Time.timeScale = 1f;
         }
     }

@@ -33,7 +33,44 @@ namespace Game.Gameplay.Networking
 
         public static MatchNetworkAuthority Instance { get; private set; }
 
+        /// <summary>
+        /// Состояние арены. Одна структура в одной NetworkVariable: NGO реплицирует её
+        /// независимо от паузы матча, что критично — арена живёт, пока матч стоит.
+        /// </summary>
+        public readonly NetworkVariable<ArenaNetState> ArenaNetworkState = new(ArenaNetState.Empty);
+
         public static event Action<MatchCommandResult> CommandResultReceived;
+
+        /// <summary>Публикация состояния арены (только хост).</summary>
+        public void SetArenaState(in ArenaNetState state)
+        {
+            if (IsServer)
+            {
+                ArenaNetworkState.Value = state;
+            }
+        }
+
+        /// <summary>Локальный слот: из лобби-стейта, иначе из сессии.</summary>
+        public int ResolveLocalSlot()
+        {
+            var lobby = NetworkLobbyState.Instance;
+            return lobby != null ? lobby.FindClientSlot(OwnerClientId) : MatchNetworkSession.LocalSlot;
+        }
+
+        /// <summary>Применить выбор игрока на арене (хост).</summary>
+        public void ApplyArenaPick(int slot, int heroSlot, int challengerTarget)
+        {
+            ArenaDirector.Current?.SubmitPick(slot, heroSlot, challengerTarget);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        public void SubmitArenaPickServerRpc(
+            int heroSlot,
+            int challengerTarget,
+            RpcParams rpcParams = default)
+        {
+            ApplyArenaPick(ResolveSenderSlot(rpcParams), heroSlot, challengerTarget);
+        }
 
         public MatchTickMode TickMode => _tickMode;
 
@@ -374,9 +411,28 @@ namespace Game.Gameplay.Networking
             _wire.ResetEncode();
             _desyncReports.Clear();
             MatchPauseGate.SetUserPaused(false);
+            // Арена обнуляется вместе с матчем: иначе следующий матч начнётся
+            // с чужим состоянием арены и залипшей паузой.
+            ResetArenaState();
             NetworkLobbyState.Instance?.ClearMatchStarted();
             NetworkRacePickState.Instance?.ResetForRematch();
             NotifyReturnToLobbyClientRpc();
+        }
+
+        /// <summary>Полный сброс арены (возврат в лобби, реванш, конец матча).</summary>
+        public void ResetArenaState()
+        {
+            MatchPauseGate.SetArenaPaused(false);
+            ArenaDirector.Current?.ResetForNewMatch();
+
+            if (IsServer)
+            {
+                ArenaNetworkState.Value = ArenaNetState.Empty;
+            }
+            else
+            {
+                ArenaNetworkBridge.PublishOffline(ArenaNetState.Empty);
+            }
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -407,6 +463,10 @@ namespace Game.Gameplay.Networking
         [ClientRpc]
         void NotifyReturnToLobbyClientRpc()
         {
+            // Клиенты тоже сбрасывают арену: у них своя локальная пауза и камера.
+            MatchPauseGate.SetArenaPaused(false);
+            ArenaDirector.Current?.ResetForNewMatch();
+            ArenaNetworkBridge.PublishOffline(ArenaNetState.Empty);
             MatchNetworkSession.LoadLobbyPreservingNetwork();
         }
 
@@ -578,7 +638,9 @@ namespace Game.Gameplay.Networking
                 PublishMatchEndedIfNeeded(controller);
             }
 
-            if (MatchPauseGate.IsPaused && !matchEnded)
+            // Арена останавливает тик матча, но не Time.timeScale, поэтому проверяется
+            // именно «симуляционная» пауза.
+            if (MatchPauseGate.IsSimulationPaused && !matchEnded)
             {
                 return;
             }
@@ -765,7 +827,7 @@ namespace Game.Gameplay.Networking
             CommandResultReceived?.Invoke(result);
         }
 
-        static bool IsCommandsBlocked() => MatchPauseGate.IsPaused;
+        static bool IsCommandsBlocked() => MatchPauseGate.IsSimulationPaused;
 
         int ResolveSenderSlot(RpcParams rpcParams)
         {

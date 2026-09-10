@@ -61,6 +61,7 @@ namespace Game.Gameplay.Match
         private void OnEnable()
         {
             Current = this;
+            EnsureArenaDirector();
             if (GameSession.IsPlaying)
             {
                 PrepareArena();
@@ -112,7 +113,21 @@ namespace Game.Gameplay.Match
                 return;
             }
 
+            // Арена останавливает симуляцию матча, но не Time.timeScale.
+            if (MatchPauseGate.IsSimulationPaused)
+            {
+                return;
+            }
+
             Controller?.Tick(Time.deltaTime);
+        }
+
+        void EnsureArenaDirector()
+        {
+            if (GetComponent<ArenaDirector>() == null)
+            {
+                gameObject.AddComponent<ArenaDirector>();
+            }
         }
 
         public void SetNetworkTickMode(MatchTickMode mode)

@@ -91,6 +91,40 @@ namespace Game.Gameplay.Match
         public TitanState GetTitanState(int ownerSlot) =>
             ownerSlot >= 0 && ownerSlot < _titanStates.Count ? _titanStates[ownerSlot] : null;
 
+        /// <summary>Статы героя для боя на арене (бой идёт вне лейнов, но по тем же правилам).</summary>
+        public UnitCombatStats ResolveArenaHeroStats(int ownerSlot, int heroSlot) =>
+            ResolveHeroStats(
+                ownerSlot >= 0 && ownerSlot < _players.Count ? _players[ownerSlot] : null,
+                heroSlot,
+                ArenaPairing.HeroLevel(this, ownerSlot, heroSlot));
+
+        /// <summary>Статы титана для боя на арене.</summary>
+        public UnitCombatStats ResolveArenaTitanStats(int ownerSlot) =>
+            ResolveTitanStats(
+                ownerSlot >= 0 && ownerSlot < _players.Count ? _players[ownerSlot] : null,
+                ArenaPairing.TitanLevel(this, ownerSlot));
+
+        /// <summary>
+        /// Награда победителю дуэли. Вызывается на хосте во время арены, когда
+        /// симуляция матча остановлена — снаружи нужен внеочередной снапшот.
+        /// </summary>
+        public bool GrantArenaGold(int ownerSlot, int amount)
+        {
+            if (amount <= 0 || ownerSlot < 0 || ownerSlot >= _players.Count)
+            {
+                return false;
+            }
+
+            var player = _players[ownerSlot];
+            if (player.IsEliminated)
+            {
+                return false;
+            }
+
+            player.Gold += amount;
+            return true;
+        }
+
         public void StartMatch(MatchConfig config)
         {
             if (config == null)

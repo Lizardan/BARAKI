@@ -24,6 +24,7 @@
 | [Economy.md](Economy.md) | Золото, доход | Экономика |
 | [Units.md](Units.md) | Типы юнитов, статы | Combat |
 | [Heroes.md](Heroes.md) | Герои, титан, summon | Hero system |
+| [Arena.md](Arena.md) | Арена: дуэли каждые 15 мин, пары по золоту, награды | Arena / дуэли |
 | [Races.md](Races.md) | Расы, tower ×9, пайплайн | Race select / PRE-007 |
 | [Buildings.md](Buildings.md) | Структуры базы | Buildings |
 | [Upgrades.md](Upgrades.md) | Дерево исследований / blessing abilities | Tech tree / PRE-005 |

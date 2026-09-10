@@ -44,7 +44,24 @@ namespace Game.Gameplay.Cameras
         private Vector3 _focusVelocity;
         private bool _externalPanLock;
 
+        /// <summary>
+        /// Арена стоит далеко за пределами игровой карты, поэтому кламп по радиусу
+        /// можно снимать на время перелёта (<see cref="SetPanBoundsEnabled"/>).
+        /// </summary>
+        bool _panBoundsEnabled = true;
+
         public bool IsPanLocked => _hasFocusTarget || _externalPanLock;
+
+        /// <summary>Текущая позиция следования камеры (XZ-якорь).</summary>
+        public Vector3 PanPosition => transform.position;
+
+        /// <summary>Включить/выключить ограничение области панорамирования.</summary>
+        public void SetPanBoundsEnabled(bool enabled) => _panBoundsEnabled = enabled;
+
+        Vector3 ClampPan(Vector3 position) =>
+            _panBoundsEnabled
+                ? GameplayCameraSettings.ClampPanPosition(position, _boundsRadius)
+                : position;
 
         /// <summary>True while a scripted/minimap focus move is still in flight.</summary>
         public bool IsFocusInProgress => _hasFocusTarget;
@@ -164,7 +181,7 @@ namespace Game.Gameplay.Cameras
         /// </summary>
         public void FocusOnPosition(Vector3 worldPosition)
         {
-            _focusTarget = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
+            _focusTarget = ClampPan(worldPosition);
             _hasFocusTarget = true;
             _minimapFocus = false;
             _focusVelocity = Vector3.zero;
@@ -173,7 +190,7 @@ namespace Game.Gameplay.Cameras
         /// <summary>Fast smooth chase used while dragging/clicking the minimap.</summary>
         public void FocusOnMinimapPosition(Vector3 worldPosition)
         {
-            _focusTarget = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
+            _focusTarget = ClampPan(worldPosition);
             _hasFocusTarget = true;
             _minimapFocus = true;
         }
@@ -184,7 +201,7 @@ namespace Game.Gameplay.Cameras
             _hasFocusTarget = false;
             _minimapFocus = false;
             _focusVelocity = Vector3.zero;
-            var clamped = GameplayCameraSettings.ClampPanPosition(worldPosition, _boundsRadius);
+            var clamped = ClampPan(worldPosition);
             transform.position = new Vector3(clamped.x, transform.position.y, clamped.z);
         }
 
@@ -310,7 +327,7 @@ namespace Game.Gameplay.Cameras
 
             var worldDirection = GameplayCameraSettings.ComputeEdgePanDirection(camera, panInput);
             var delta = worldDirection * (_panSpeed * Time.deltaTime);
-            transform.position = GameplayCameraSettings.ClampPanPosition(transform.position + delta, _boundsRadius);
+            transform.position = ClampPan(transform.position + delta);
         }
 
         private void ApplyZoom()

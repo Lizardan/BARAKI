@@ -1290,6 +1290,7 @@ namespace Game.Gameplay.Match
             }
 
             var instance = Instantiate(prefab, position, prefab.transform.rotation);
+            AbilityFxCameraShakeGuard.Strip(instance);
             if (lifetimeSeconds > 0f)
             {
                 Destroy(instance, lifetimeSeconds);
@@ -1354,6 +1355,7 @@ namespace Game.Gameplay.Match
             if (prefab != null)
             {
                 var burst = Instantiate(prefab, _root);
+                AbilityFxCameraShakeGuard.Strip(burst);
                 burst.transform.position = new Vector3(
                     state.Center.x,
                     MatchArenaGreyboxBuilder.RoadHeight + 0.15f,
@@ -1494,6 +1496,7 @@ namespace Game.Gameplay.Match
             var targetRoot = TryGetUnitRoot(cast.TargetUnitId, out var target) ? target : null;
 
             var instance = UnityEngine.Object.Instantiate(prefab, _root);
+            AbilityFxCameraShakeGuard.Strip(instance);
             AbilityVfxPlacement.ApplyOneShotTransform(
                 instance.transform,
                 anchor,

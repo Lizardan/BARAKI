@@ -23,3 +23,22 @@
 ## Паттерны (skills)
 - `add-race-tower-tracks` — добавление tower tracks новой расе (параллельная таблица,
   wire-контракт 9 слотов не меняется). Создан при FACELESS-017.
+
+## Документация: где что писать
+- Конвенция из `AGENTS.md`: технические правила → `wiki/rules/*.md` (+ строка в
+  `wiki/README.md`), геймдизайн → `GameDesign/*.md` (+ строка в `GameDesign/README.md`).
+  Поэтому у одной механики **нормально** живут два документа — технический и GDD.
+- `wiki/` и корневые `*.md` Unity **не импортирует** (нет `.meta` и не должно быть).
+  `GameDesign/` тоже вне asset database (в `Assets/` нет симлинка/junction), но там
+  лежат legacy-`.meta` из git; часть доков (`Bonuses.md`, `Platform.md`, `Arena.md`)
+  их не имеет. **Не выдумывать `.meta` руками** — файлы не в Unity-пайплайне.
+
+## Правила, выясненные на практике
+- **Пауза ≠ остановка всего.** `MatchPauseGate.IsPaused` роняет `Time.timeScale = 0`
+  (игрок/миграция/дисконнект). Для режимов, которые должны жить на паузе матча,
+  есть `IsArenaPaused`/`IsSimulationPaused` — блокируют тик матча и команды, но
+  не timeScale. Подробности — `wiki/rules/arena.md`.
+- **Batch-компиляция Unity невозможна, пока редактор открыт** — падает с
+  «another Unity instance is running». Вместо этого читать `Logs/Editor.log`
+  (проектный лог; `%LOCALAPPDATA%/Unity/Editor/Editor.log` только указывает на него)
+  и смотреть ошибки `error CS` + свежесть `Library/ScriptAssemblies/*.dll`.
