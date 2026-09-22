@@ -21,8 +21,16 @@ namespace Game.Gameplay.Networking
         static string s_cachedPlayerName = string.Empty;
         static float s_cooldownUntilRealtime;
         static string s_lastInitError = string.Empty;
+        static bool s_authEventsHooked;
+
+        static readonly Action OnAuthExpiredHandler = HandleAuthExpired;
+        static readonly Action OnAuthSignedInHandler = HandleAuthSignedIn;
+        static readonly Action OnAuthSignedOutHandler = HandleAuthSignedOut;
 
         public static event Action PlayerNameChanged;
+
+        /// <summary>Raised on UGS auth state transitions (Expired → auto re-sign-in).</summary>
+        public static event Action<AuthenticationState> AuthStateChanged;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void ResetForPlaySession()
@@ -33,12 +41,19 @@ namespace Game.Gameplay.Networking
             s_playerNameFetchStarted = false;
             s_cooldownUntilRealtime = 0f;
             s_lastInitError = string.Empty;
+            s_authEventsHooked = false;
             LoadCachedPlayerName();
         }
 
         public static bool IsReady =>
             UnityServices.State == ServicesInitializationState.Initialized
-            && AuthenticationService.Instance.IsSignedIn;
+            && AuthenticationService.Instance.IsAuthorized;
+
+        /// <summary>Current UGS authentication state (5.5+ SDK state machine).</summary>
+        public static AuthenticationState AuthState =>
+            UnityServices.State == ServicesInitializationState.Initialized
+                ? AuthenticationService.Instance.State
+                : AuthenticationState.SignedOut;
 
         public static bool IsInitCooldownActive =>
             !IsReady && Time.realtimeSinceStartup < s_cooldownUntilRealtime;
@@ -264,10 +279,12 @@ namespace Game.Gameplay.Networking
                     await UnityServices.InitializeAsync();
                 }
 
-                if (!AuthenticationService.Instance.IsSignedIn)
+                if (!AuthenticationService.Instance.IsAuthorized)
                 {
                     await AuthenticationService.Instance.SignInAnonymouslyAsync();
                 }
+
+                HookAuthEvents();
 
                 s_lastInitError = string.Empty;
                 s_cooldownUntilRealtime = 0f;
@@ -287,6 +304,51 @@ namespace Game.Gameplay.Networking
                 Debug.LogWarning(
                     $"UnityServicesBootstrap: init failed (cooldown {InitRetryCooldownSeconds:0}s): {ex.Message}");
                 ResetInitGate();
+            }
+        }
+
+        static void HookAuthEvents()
+        {
+            if (s_authEventsHooked)
+            {
+                return;
+            }
+
+            var auth = AuthenticationService.Instance;
+            auth.Expired += OnAuthExpiredHandler;
+            auth.SignedIn += OnAuthSignedInHandler;
+            auth.SignedOut += OnAuthSignedOutHandler;
+            s_authEventsHooked = true;
+        }
+
+        static void HandleAuthExpired()
+        {
+            s_lastInitError = "UGS session expired — re-signing in.";
+            Debug.LogWarning("UnityServicesBootstrap: UGS session expired; triggering auto re-auth.");
+            AuthStateChanged?.Invoke(AuthenticationState.Expired);
+            ReauthOnExpiredAsync().Forget();
+        }
+
+        static void HandleAuthSignedIn() => AuthStateChanged?.Invoke(AuthenticationState.Authorized);
+
+        static void HandleAuthSignedOut() => AuthStateChanged?.Invoke(AuthenticationState.SignedOut);
+
+        static async UniTaskVoid ReauthOnExpiredAsync()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            try
+            {
+                await EnsureInitializedAsync();
+                AuthStateChanged?.Invoke(AuthState);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"UnityServicesBootstrap: auto re-auth failed: {ex.Message}");
+                AuthStateChanged?.Invoke(AuthenticationState.Expired);
             }
         }
     }

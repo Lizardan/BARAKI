@@ -2,8 +2,9 @@
 
 ## Проект
 - Мультиплеерная FFA-стратегия BARAKI: 2–5 игроков, игрок строит базу, юниты автономны. listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friends/Cloud Save).
-- Unity `6000.6.0f1` (`F:\Unity\Editor\6000.6.0f1`), C# 12, URP 17.6, Cinemachine 6.6 (CM3 API), Input System 1.20.
+- Unity `6000.6.2f1` (`F:\Unity\Editor\6000.6.2f1`), C# 12, URP 17.6, Cinemachine 6.6 (CM3 API), Input System 1.20.
 - Асинхронность: `Awaitable` — только в bootstrap (`Game.Core`); Gameplay/UI — `UniTask`/`UniTaskVoid`. **Никогда** `Task`/`async void`.
+- Пакеты: Netcode for GameObjects 2.13.3, UGS Auth 3.8.0 (следим `AuthenticationState`) / CloudSave 3.4.1 / Friends 1.2 / Multiplayer 2.3.3.
 
 ## Коммуникация
 - Общение с пользователем — **на русском** (код/команды/пути — как есть).

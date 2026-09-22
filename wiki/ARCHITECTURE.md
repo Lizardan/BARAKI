@@ -7,14 +7,14 @@ listen-host (host-as-server) + Netcode for GameObjects + UGS (Lobby/Relay/Friend
 
 | Слой | Стек |
 |------|------|
-| Unity | 6000.6.0f1 (`F:\Unity\Editor\6000.6.0f1`), C# 12 |
+| Unity | 6000.6.2f1 (`F:\Unity\Editor\6000.6.2f1`), C# 12 |
 | Rendering | URP 17.6 — `Settings/Rendering/RPAsset.asset`, `Renderer.asset`, `DefaultVolumeProfile.asset` |
 | Cameras | Cinemachine 6.6 (CM3 API, builtin) — `Gameplay/Cameras/` |
 | UI | UI Toolkit only (UXML/USS/UIDocument) — **без** `com.unity.ugui` |
 | Reactive | UniRx (vendored, trimmed — `Assets/Plugins/UniRx/`) |
 | Async | UniTask (git, pinned); bootstrap `Game.Core` — `Awaitable` |
 | Input | Input System 1.20 — `Settings/Input/GameInputActions.inputactions` |
-| Multiplayer | Netcode for GameObjects 2.13 + UGS Auth 3.7.4 / CloudSave 3.4 / Friends 1.2 / Multiplayer 2.3 |
+| Multiplayer | Netcode for GameObjects 2.13.3 + UGS Auth 3.8.0 / CloudSave 3.4.1 / Friends 1.2 / Multiplayer 2.3.3 |
 | Прочее | Clipper2Lib |
 
 **Не установлены** (не ссылаться в правилах и коде): ProBuilder, glTFast,
@@ -82,7 +82,11 @@ Unity Editor → сервер `unityMCP` (мост `:6400`). MCP-first для ed
 
 **Взяли:** UITK `drop-shadow` на панелях; `backdrop-filter` только поверх UITK (меню/лобби), не поверх 3D;
 managed-code defines вместо `DEVELOPMENT_BUILD`; Burst built-in; Cinemachine 6.6 как core
-package (API CM3). CI: `unityci/editor:windows-6000.6.0f1-windows-il2cpp-3`.
+package (API CM3). CI: `unityci/editor:windows-6000.6.2f1-windows-il2cpp-3`.
+
+**Auth 3.8.0:** следим `AuthenticationService.Instance.State` (`AuthenticationState`:
+`SignedOut/SigningIn/Authorized/Refreshing/Expired`) в `UnityServicesBootstrap` —
+`Expired` → автореавторизация, `Refreshing` не ломает `IsReady`.
 
 **Backlog (не внедрять без нужды):** DXC для DX12 в Shader Build Settings; shader constants
 per Build Profile; `Unity.AI.Navigation.LowLevel` jobs; `NetworkTransportInterface`;

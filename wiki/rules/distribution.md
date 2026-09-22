@@ -27,7 +27,7 @@ Unity-клиент: сцена Bootstrap + define `BARAKI_UPDATER_ONLY`. Вер�
 ## Unity CI image
 
 Воркфлоу `deploy-windows.yml` / `deploy-updater-windows.yml` используют
-`unityci/editor:windows-6000.6.0f1-windows-il2cpp-3` и `unityVersion: 6000.6.0f1`
+`unityci/editor:windows-6000.6.2f1-windows-il2cpp-3` и `unityVersion: 6000.6.2f1`
 (`customParameters: -accept-apiupdate`). Тег `windows-mono` для этой версии на Windows
 runners нет — только il2cpp.
 
